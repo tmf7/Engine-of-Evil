@@ -6,14 +6,41 @@
 class Game;
 class Map;
 
+#define VectorCopy(a,b)	( b[0]=a[0], b[1]=a[1], b[2]=a[2] )
+
 class Entity {
 
 private:
 
+	typedef float vec3_t[3];
+
+	struct quat_s {
+
+		vec3_t vector;
+		float scalar;
+
+	};
+
+	struct point_s {
+
+		int x;
+		int y;
+	};
+
 	void CollisionCheck(bool horizontal, bool vertical);
-	void CheckSight();
+	void CheckFogOfWar();
+	void CheckLineOfSight();
+
 	void CheckTouch(bool self, bool horizontal, bool vertical);
 	void PrintSensors();
+
+	// vector math functions
+	void VectorNormalize(vec3_t a);
+	float DotProduct(vec3_t a, vec3_t b);
+	void VectorScale(vec3_t a, float scale, vec3_t result);
+	void CrossProduct(vec3_t a, vec3_t b, vec3_t result);
+	void QuatProduct(quat_s a, quat_s b, quat_s result);
+
 
 	Game* game;
 	SDL_Surface* sprite;
@@ -25,9 +52,11 @@ private:
 	unsigned int oldMoveState;
 	int	speed;
 	int size;
+	int collisionRadius;		// circular collision radius for prediction when using line of sight
 	int sightRange;				// range of drawable visibility (fog of war)
 	int touchRange;				// range beyond body to trigger touch sensors
 
+	// TODO: incorperate animation handling instead of static images
 	int firstFrame;
 	int lastFrame;
 	int currentFrame;
@@ -38,6 +67,10 @@ private:
 	unsigned int oldTouch;		// off-sprite sensors
 	unsigned int touch;			// off-sprite sensors
 	unsigned int watch_touch;	// marks forward-sensors to watch given the moveState
+
+	point_s waypoints[3];		// maximum of 3 waypoints for testing pathfinding
+	point_s losEndpoint;		// exact point at which the sprite restarts the movementVector update
+	vec3_t movementVector;		// currently used movement vector
 
 	enum sensors {
 

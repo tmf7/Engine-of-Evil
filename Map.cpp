@@ -114,7 +114,7 @@ void Map::Update() {
 
 				// TODO: combine the 1s/2s of entity's knownMap to fade/brighten tiles (currently either const-draws 1s OR temp-draws 2s)
 				// fog-of-war cross-check for entity's area knowledge 
-				if (game->GetEntities()->KnownMap(i,j) == 2) {			
+				if (1/*game->GetEntities()->KnownMap(i,j) == 2*/) {			
 				
 					sourceRect.w = tileSize;
 					sourceRect.h = tileSize;

@@ -149,7 +149,7 @@ void Entity::Update() {
 // Gather sensor information and decide how to follow walls
 void Entity::Move() {
 
-	CheckSight();
+	CheckFogOfWar();
 
 	oldMoveState = moveState;
 
@@ -240,15 +240,69 @@ void Entity::Move() {
 }
 
 //******************
-// CheckSight
-// FIXME: should set (other) sensor information for sightRange-based decisions (ie enemy positions, range/traversable distances, LOS, etc)
-// currently just updates the knownMap
+// CheckLineOfSight
+// Determines the optimal movement vector to reach a given waypoint coordinate on the map
+// TODO(?): plot several paths and select the *optimal*(shortest?) one and/or randomize the final BEFORE MOVING
+// TODO: add functionality to check if the sprite STARTS in water (then set a random vector and loop-check TOUCH sensors until clear)
+// TODO: check if the sprite is within RANGE of the next waypoint, if so, then set the next waypoint
+// FIXME: use a true spatial Trace algorithm (with an endpoint and cross-section)
 //******************
-void Entity::CheckSight() {
+void Entity::CheckLineOfSight() {
 
-	// highlight the subset of tiles from the tileMap that are currently visible to the entity ( ie a '2' in the array)
-	// and convert the *old* tiles no longer within sight range (that had a '2') to "known" (ie a '1' in the array)
-	// the 2's will be used by the map to draw bright tiles, the 1's will be grey tiles, the 0's will be black/background
+	vec3_t waypointVector;		// vector from the sprite to the next waypoint
+	vec3_t testVector;			// vector tested for optimal travel decision
+	vec3_t bestVector;			// vector with the highest weight < 5
+	float bestWeight;			// maximum decision weight == 5 sets movementVector = vector
+								// retains highest weight < 5 in the event of a full 360 degree sweep without a 5
+	int testAngle;				// current rotation of the testVector away from the waypointVector (CW or CCW)
+
+	//M_PI
+
+	// NEEDS:
+	// . 1) a way to hold the CURRENT/"OLD" MOVEMENT vector (will be the M.V.)
+	// . 2) a way to hold the WAYPOINT vector (will be the W.V.)
+	// . 3) a way to hold the WAYPOINT coordinates (and a list of them)
+	// . 4) a function to rotate normalized vectors by a given angle (using quaternion math) QUATERNION MULTIPLICATION
+	// . 5) a way to hold the 5 (*3) test points for the LOS tests
+	// . 6) a way to hold the CURRENT TEST vector (will be the T.V.)
+	// . 7) a way to hold the highest T.V. WEIGHT **AND** its information (vector) [optimal vector O.V.] (in the event a 5 isnt found)
+	// . 8) a way to hold the current rotation angle (CW / CCW)
+	// . 9) a way to hold the rotation axis for the quaternion (the inverse = the conjugate so no need to double down)
+	// . 10) a function to perform a dot product of two vectors and return a scalar
+	// . 11) a function to perform a cross product of two vectors and return a vector
+	// . 12) a function to perform a vector scale (scalar times vector) and return a vector
+	// . 13) a function to generate TEST POINTS (and check them AS they're being generated)
+	// . 14) a way to hold the COLLISION RADIUS of the sprite
+	// 15) a function to process input for waypoint generation
+	// . 16) a way to hold the endpoint of the movementVector's current run
+
+	// STEPS:
+	// 0) initialize movementVector to {0,0,0}, the collision radius (using raw sprite dimensions)
+
+	// 1) calculate the raw vector between the sprite CENTER and the next waypoint
+	// 2) normalize that waypointVector
+	// 3) set the testVector = waypointVector (VectorCopy)
+	// 4) begin looping a series of test point triples and determining if each lies in water (if one does, stop)
+	// 5) increment the vector weight during the loop ( +1 for every 3 position-test points)
+	// 6) multiply the final result by the product of the DotProducts of W.T * M.T (initial M = 0,0,0 ) 
+	// 7) compare that weight to the bestWeight, if greater then set bestWeight = weight and bestVector = testVector
+	// 8) if weight == 5 then set movementVector = testVector
+	// 8a) if weight < 5 pass an incremented rotation quaternion and its inverse into the QuatMultiply function to rotate the testVector
+	// 8b) if rotation angle == 360 degrees then set movementVector = bestVector (and reset both bestVector and bestWeight)
+	// 9) set the endpoint of the current movementVector's travel to determine when to test again
+
+	// 10) set the new x,y of the sprite based on movementVector and test if the endpoint/waypoint has been reached
+	// 11) repeat step 10
+	// 11a) start from step 1 in the event of exact-endpoint / approximate-waypoint
+}
+
+//******************
+// CheckFogOfWar
+// highlight the subset of tiles from the tileMap that are currently visible to the entity ( ie a '2' in the array)
+// and convert the *old* tiles no longer within sight range (that had a '2') to "known" (ie a '1' in the array)
+// the 2's will be used by the map to draw bright tiles, the 1's will be grey tiles, the 0's will be black/background
+//******************
+void Entity::CheckFogOfWar() {
 
 	// set the fog of war properties
 	sight.x = x - (sightRange / 2);
@@ -466,7 +520,62 @@ void Entity::PrintSensors() {
 }
 
 // FIXME: currently assumes row and column are within array limits
+// return values: 2 = currently visible, 1 = explored yet in shadow, 0 = unexplored
 int Entity::KnownMap(int row, int column) {
 
 	return knownMap[row][column];
+}
+
+// vector math functions
+void Entity::VectorNormalize(vec3_t a) {
+
+	float length, ilength;
+
+	length = a[0]*a[0] + a[1]*a[1] + a[2]*a[2];
+	length = (float)SDL_sqrt(length);		// FIXME
+
+	if (length)
+	{
+		ilength = 1 / length;
+		a[0] *= ilength;
+		a[1] *= ilength;
+		a[2] *= ilength;
+	}
+}
+
+float Entity::DotProduct(vec3_t a, vec3_t b) {
+
+	return (a[0]*b[0] + a[1]*b[1] + a[2]*b[2]);
+}
+
+// FIXME: ensure this modifies the proper values instead of a temp variable
+void Entity::VectorScale(vec3_t a, float scale, vec3_t result) {
+
+	result[0] = a[0] * scale;
+	result[1] = a[1] * scale;
+	result[2] = a[2] * scale;
+}
+
+void Entity::CrossProduct(vec3_t a, vec3_t b, vec3_t result) {
+
+	result[0] = a[1]*b[2] - a[2]*b[1];
+	result[1] = a[2]*b[0] - a[0]*b[2];
+	result[2] = a[0]*b[1] - a[1]*b[0];
+}
+
+//Hamiltonian of unit quaternions
+// p*q = [ (ps*qv + qs*pv + pv X qv) (ps*qs - pv.qv) ]
+void Entity::QuatProduct(quat_s p, quat_s q, quat_s result) {
+
+	vec3_t one, two, three;
+	VectorScale(p.vector, q.scalar, one);
+	VectorScale(q.vector, p.scalar, two);
+	CrossProduct(p.vector, q.vector, three);
+
+	result.vector[0] = one[0] + two[0] + three[0];
+	result.vector[1] = one[1] + two[1] + three[1];
+	result.vector[2] = one[2] + two[2] + three[2];
+
+	result.scalar = p.scalar*q.scalar - DotProduct(p.vector, q.vector);
+	
 }
