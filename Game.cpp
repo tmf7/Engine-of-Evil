@@ -99,9 +99,13 @@ bool Game::Run() {
 		{
 			case SDL_QUIT:
 				return false;
-			case SDL_MOUSEBUTTONDOWN:
-				map.BuildTiles();
+			case SDL_MOUSEBUTTONDOWN: {
+				if (event.button.button == 3)
+					map.BuildTiles();
+				if (event.button.button == 1)
+					entities.AddWaypoint(event.button.x + map.GetCamera()->x , event.button.y + map.GetCamera()->y);
 				break;
+			}
 		}
 	}
 

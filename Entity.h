@@ -7,13 +7,14 @@ class Game;
 class Map;
 
 #define VectorCopy(a,b)	( b[0]=a[0], b[1]=a[1], b[2]=a[2] )
+#define VectorClear(a) ( a[0]=0, a[1]=0, a[2]=0 )
 
 class Entity {
 
 private:
 
 	typedef float vec3_t[3];
-
+	
 	struct quat_s {
 
 		vec3_t vector;
@@ -35,11 +36,14 @@ private:
 	void PrintSensors();
 
 	// vector math functions
+	float DegreesToRadians(float degrees);
+	int FastLength(point_s *a, point_s *b);
 	void VectorNormalize(vec3_t a);
+	float VectorNormalize2(point_s *a, point_s *b, vec3_t result);
 	float DotProduct(vec3_t a, vec3_t b);
 	void VectorScale(vec3_t a, float scale, vec3_t result);
 	void CrossProduct(vec3_t a, vec3_t b, vec3_t result);
-	void QuatProduct(quat_s a, quat_s b, quat_s result);
+	void QuatProduct(quat_s *a, quat_s *b, quat_s *result);
 
 
 	Game* game;
@@ -52,9 +56,10 @@ private:
 	unsigned int oldMoveState;
 	int	speed;
 	int size;
-	int collisionRadius;		// circular collision radius for prediction when using line of sight
+	float collisionRadius;		// circular collision radius for prediction when using line of sight
 	int sightRange;				// range of drawable visibility (fog of war)
 	int touchRange;				// range beyond body to trigger touch sensors
+	int waypointRange;			// acceptable range to snap sprite position to user-defined waypoint
 
 	// TODO: incorperate animation handling instead of static images
 	int firstFrame;
@@ -71,6 +76,9 @@ private:
 	point_s waypoints[3];		// maximum of 3 waypoints for testing pathfinding
 	point_s losEndpoint;		// exact point at which the sprite restarts the movementVector update
 	vec3_t movementVector;		// currently used movement vector
+	int currentWaypoint;		// index of waypoint being tracked
+	int userWaypoint;			// index of waypoint being added
+	int maxWaypoint;			
 
 	enum sensors {
 
@@ -106,6 +114,9 @@ public:
 	void Update();
 	void Move();		// give this a broader functionality beyond pure AI movement (ie player input)
 	int KnownMap(int row, int column);
+	void AddWaypoint(int wx, int wy);
+	int GetCenterX();
+	int GetCenterY();
 };
 
 #endif

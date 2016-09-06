@@ -45,6 +45,17 @@ bool Entity::Init(char fileName[], bool key, Game *const g) {
 	sight.w = sightRange;
 	sight.h = sightRange;
 	touchRange = 1;
+	waypointRange = speed*speed/4; // squared range of speed/2 to speed up waypoint range finding
+
+	VectorClear(movementVector);
+
+	collisionRadius = (sprite->w * sprite->w) + (sprite->h * sprite->h);
+	collisionRadius = SDL_sqrtf(collisionRadius);
+	collisionRadius /= 2;
+
+	currentWaypoint = -1;
+	userWaypoint = -1;
+	maxWaypoint = 0;
 
 	Spawn();
 
@@ -143,13 +154,53 @@ void Entity::Update() {
 */
 	// FIXME: confirm that destRect is within view of the camera
 	SDL_BlitSurface(sprite, NULL, game->GetBuffer(), &destRect);
+
+	// draw the waypoints
+	for (int i = 0; i < maxWaypoint; i++) {
+
+		destRect.x = waypoints[i].x - game->GetMap()->GetCamera()->x;
+		destRect.y = waypoints[i].y - game->GetMap()->GetCamera()->y;
+		SDL_BlitSurface(sprite, NULL, game->GetBuffer(), &destRect);
+	}
 }
 
 // Ultimate Goal: select a pathfinding type (eg: compass, endpoint+obstacle adjust, waypoints+minipaths, wall follow, Area awareness, etc)
 // Gather sensor information and decide how to follow walls
 void Entity::Move() {
 
-	CheckFogOfWar();
+	point_s centerPoint;
+
+	//CheckFogOfWar();	// also uncomment the Update() code in Map.cpp
+	
+	if (userWaypoint < 0)
+		return;
+
+	if ( (!movementVector[0] && !movementVector[1] && !movementVector[2]) )
+		CheckLineOfSight();
+
+	x += float(speed)*movementVector[0];
+	y -= float(speed)*movementVector[1];
+
+	centerPoint.x = GetCenterX();
+	centerPoint.y = GetCenterY();
+
+	if (FastLength(&centerPoint, &waypoints[currentWaypoint]) <= waypointRange) {
+
+		x = waypoints[currentWaypoint].x;
+		y = waypoints[currentWaypoint].y;
+		currentWaypoint++;
+	}
+
+	if (currentWaypoint > maxWaypoint)
+		return;
+
+	if (GetCenterX() == losEndpoint.x && GetCenterY() == losEndpoint.y)
+		CheckLineOfSight();
+
+	/* 
+	////////////////////////////////////////
+	//BEGIN WALL FOLLOW MOVEMENT ALGORITHM//
+	////////////////////////////////////////
 
 	oldMoveState = moveState;
 
@@ -237,6 +288,11 @@ void Entity::Move() {
 			break;
 		}
 	}
+
+	//////////////////////////////////////
+	//END WALL FOLLOW MOVEMENT ALGORITHM//
+	//////////////////////////////////////
+	*/
 }
 
 //******************
@@ -244,56 +300,126 @@ void Entity::Move() {
 // Determines the optimal movement vector to reach a given waypoint coordinate on the map
 // TODO(?): plot several paths and select the *optimal*(shortest?) one and/or randomize the final BEFORE MOVING
 // TODO: add functionality to check if the sprite STARTS in water (then set a random vector and loop-check TOUCH sensors until clear)
-// TODO: check if the sprite is within RANGE of the next waypoint, if so, then set the next waypoint
-// FIXME: use a true spatial Trace algorithm (with an endpoint and cross-section)
+// TODO(?): use a true spatial Trace algorithm (with an endpoint and cross-section)
 //******************
 void Entity::CheckLineOfSight() {
 
-	vec3_t waypointVector;		// vector from the sprite to the next waypoint
-	vec3_t testVector;			// vector tested for optimal travel decision
-	vec3_t bestVector;			// vector with the highest weight < 5
+	quat_s rotationQuat;		// quaternion formated rotationAxis and rotationAngle
+	quat_s testQuat;			// quaternion formated testVector
+	vec3_t waypointVector;		// from the sprite to the next waypoint
+	vec3_t testVector;			// tested for optimal travel decision
+	vec3_t bestVector;			// the highest weight < 5
 	float bestWeight;			// maximum decision weight == 5 sets movementVector = vector
 								// retains highest weight < 5 in the event of a full 360 degree sweep without a 5
-	int testAngle;				// current rotation of the testVector away from the waypointVector (CW or CCW)
+	float distToWaypoint;		// **currently not fully utilized for checks, but a potentially useful metric**
+	float rotationAngle;		// current rotation of the testVector away from the waypointVector (CW or CCW)
+	point_s spriteCenter;
+	point_s testPoint;
+	float weight;
+	int temp;
+	int tileSize; 
+	int width;  
+	int height; 
 
-	//M_PI
+	tileSize = game->GetMap()->GetTileSize();
+	width = game->GetMap()->GetWidth()*tileSize;
+	height = game->GetMap()->GetHeight()*tileSize;
 
-	// NEEDS:
-	// . 1) a way to hold the CURRENT/"OLD" MOVEMENT vector (will be the M.V.)
-	// . 2) a way to hold the WAYPOINT vector (will be the W.V.)
-	// . 3) a way to hold the WAYPOINT coordinates (and a list of them)
-	// . 4) a function to rotate normalized vectors by a given angle (using quaternion math) QUATERNION MULTIPLICATION
-	// . 5) a way to hold the 5 (*3) test points for the LOS tests
-	// . 6) a way to hold the CURRENT TEST vector (will be the T.V.)
-	// . 7) a way to hold the highest T.V. WEIGHT **AND** its information (vector) [optimal vector O.V.] (in the event a 5 isnt found)
-	// . 8) a way to hold the current rotation angle (CW / CCW)
-	// . 9) a way to hold the rotation axis for the quaternion (the inverse = the conjugate so no need to double down)
-	// . 10) a function to perform a dot product of two vectors and return a scalar
-	// . 11) a function to perform a cross product of two vectors and return a vector
-	// . 12) a function to perform a vector scale (scalar times vector) and return a vector
-	// . 13) a function to generate TEST POINTS (and check them AS they're being generated)
-	// . 14) a way to hold the COLLISION RADIUS of the sprite
-	// 15) a function to process input for waypoint generation
-	// . 16) a way to hold the endpoint of the movementVector's current run
+	spriteCenter.x = GetCenterX();
+	spriteCenter.y = GetCenterY();
+	
+	distToWaypoint = VectorNormalize2(&spriteCenter, &waypoints[currentWaypoint], waypointVector); 
+	VectorCopy(waypointVector, testVector);
 
-	// STEPS:
-	// 0) initialize movementVector to {0,0,0}, the collision radius (using raw sprite dimensions)
+	rotationAngle = 0;
+	VectorClear(bestVector);
+	bestWeight = 0;
 
-	// 1) calculate the raw vector between the sprite CENTER and the next waypoint
-	// 2) normalize that waypointVector
-	// 3) set the testVector = waypointVector (VectorCopy)
-	// 4) begin looping a series of test point triples and determining if each lies in water (if one does, stop)
-	// 5) increment the vector weight during the loop ( +1 for every 3 position-test points)
-	// 6) multiply the final result by the product of the DotProducts of W.T * M.T (initial M = 0,0,0 ) 
-	// 7) compare that weight to the bestWeight, if greater then set bestWeight = weight and bestVector = testVector
-	// 8) if weight == 5 then set movementVector = testVector
-	// 8a) if weight < 5 pass an incremented rotation quaternion and its inverse into the QuatMultiply function to rotate the testVector
-	// 8b) if rotation angle == 360 degrees then set movementVector = bestVector (and reset both bestVector and bestWeight)
-	// 9) set the endpoint of the current movementVector's travel to determine when to test again
+	// FIXME: currently only uses the first waypointVector and ignores all losEndpoints and OTHER testVectors
+	// FIXME: seems to ignore smaller angled waypoints (eg moves horizontally if waypoint slightly below horizontal)
+	// SOLUTION: rounding errors? (float to int)
+	// SOLUTION: check the hamiltonian
+	// SOLUTION: ??? ***********START HERE**************
+	// collision prediction
+	while (1) { // until an optimal movementVector is found, or the bestVector in a 360 degree scan
 
-	// 10) set the new x,y of the sprite based on movementVector and test if the endpoint/waypoint has been reached
-	// 11) repeat step 10
-	// 11a) start from step 1 in the event of exact-endpoint / approximate-waypoint
+		for (weight = 0; weight < 5; weight++) {
+
+			// original test point
+			testPoint.x = spriteCenter.x + (collisionRadius + float(speed)*weight)*testVector[0];
+			testPoint.y = spriteCenter.y - (collisionRadius + float(speed)*weight)*testVector[1];
+
+			// check validity
+			if ((game->GetMap()->GetMapIndex(testPoint.x / tileSize, testPoint.y / tileSize) == 3) | 
+				(testPoint.x > width) | (testPoint.x < 0) | (testPoint.y > height) | (testPoint.y < 0))
+				break;
+
+			// test point rotated counter-clockwise 90 degrees
+			temp = testPoint.x;
+			testPoint.x = -testPoint.y;
+			testPoint.y = temp;
+
+			// check validity
+			if ((game->GetMap()->GetMapIndex(testPoint.x / tileSize, testPoint.y / tileSize) == 3) |
+				(testPoint.x > width) | (testPoint.x < 0) | (testPoint.y > height) | (testPoint.y < 0))
+				break;
+
+			// test point rotated clockwise 180 degrees
+			testPoint.x = -testPoint.x;
+			testPoint.y = -testPoint.y;
+
+			// check validity
+			if ((game->GetMap()->GetMapIndex(testPoint.x / tileSize, testPoint.y / tileSize) == 3) |
+				(testPoint.x > width) | (testPoint.x < 0) | (testPoint.y > height) | (testPoint.y < 0))
+				break;
+		}
+
+		// modify final decision weight by the relative orientation of the test vector
+		weight = weight + DotProduct(waypointVector, testVector) * DotProduct(movementVector, testVector);
+
+		// FIXME: what if weight == 0 at all times?
+		if (weight > bestWeight) {
+
+			bestWeight = weight;
+			VectorCopy(testVector, bestVector);
+
+			losEndpoint.x = spriteCenter.x + (collisionRadius*testVector[0] + speed*testVector[0] * weight);
+			losEndpoint.y = spriteCenter.y - (collisionRadius*testVector[1] + speed*testVector[1] * weight);
+		}
+
+		// highest possible weight of 4 causes an immediate decision
+		if (weight == 4) {
+
+			VectorCopy(testVector, movementVector);
+			break;
+		}
+
+		// increment the rotationAngle, rotate the testVector, and restart the loop/goto
+		rotationAngle += 10;
+
+		if (rotationAngle >= 360) {
+			VectorCopy(bestVector, movementVector);
+			break;
+		}
+
+		rotationQuat.vector[0] = 0;
+		rotationQuat.vector[1] = 0;
+		rotationQuat.vector[2] = SDL_sinf(DegreesToRadians(rotationAngle / 2.0f));
+		rotationQuat.scalar = SDL_cosf(DegreesToRadians(rotationAngle / 2.0f));
+
+		VectorCopy(testVector, testQuat.vector);
+		testQuat.scalar = 0;
+
+		// unit length quaternion => inverse == conjugate
+		// 2D rotation about the z-axis => only negate z-axis of quat vector
+		// v' = q*v*q^-1
+		QuatProduct(&rotationQuat, &testQuat, &testQuat);
+		rotationQuat.vector[2] = -rotationQuat.vector[2];
+		QuatProduct(&testQuat, &rotationQuat, &testQuat);
+
+		// extract rotated testVector from testQuat
+		VectorCopy(testQuat.vector, testVector);
+	}
 }
 
 //******************
@@ -340,7 +466,7 @@ void Entity::CheckFogOfWar() {
 	}
 }
 
-// Sets a sensor bit for every point within the entity's range in a non-traversible area
+// Sets a sensor bit for every point within the entity's range in a non-traversible area ( 3 => no-walk tile, 0,1,2 => walk tile )
 // self = true puts the sensors on the sprite's bounding box, 
 // self = false puts them at touchRange off the bounding box
 // horizontal updates the horizontally oriented sensors
@@ -520,19 +646,61 @@ void Entity::PrintSensors() {
 }
 
 // FIXME: currently assumes row and column are within array limits
-// return values: 2 = currently visible, 1 = explored yet in shadow, 0 = unexplored
+// return values: 2 = currently visible, 1 = explored but in shadow, 0 = unexplored
 int Entity::KnownMap(int row, int column) {
 
 	return knownMap[row][column];
 }
 
+void Entity::AddWaypoint(int wx, int wy) {
+
+	if (userWaypoint < 0)
+		userWaypoint = 0;
+
+	waypoints[userWaypoint].x = wx;
+	waypoints[userWaypoint].y = wy;
+	userWaypoint++;
+	maxWaypoint++;
+	
+	if (userWaypoint > 2)
+		userWaypoint = 0;
+
+	if (maxWaypoint > 3)
+		maxWaypoint = 3;
+
+	if (currentWaypoint < 0 || currentWaypoint > 2)
+		currentWaypoint = 0;
+}
+
+int Entity::GetCenterX() {
+
+	return x + sprite->w / 2;
+}
+
+int Entity::GetCenterY() {
+
+	return y + sprite->h / 2;
+}
+
 // vector math functions
+float Entity::DegreesToRadians(float degrees) {
+	
+	return (degrees *= float(M_PI)/180.0f);
+
+}
+
+int Entity::FastLength(point_s *a, point_s *b) {
+
+	return (a->x - b->x)*(a->x - b->x) + (a->y - b->y)*(a->y - b->y);
+
+}
+
 void Entity::VectorNormalize(vec3_t a) {
 
 	float length, ilength;
 
 	length = a[0]*a[0] + a[1]*a[1] + a[2]*a[2];
-	length = (float)SDL_sqrt(length);		// FIXME
+	length = SDL_sqrtf(length);		// FIXME
 
 	if (length)
 	{
@@ -541,6 +709,29 @@ void Entity::VectorNormalize(vec3_t a) {
 		a[1] *= ilength;
 		a[2] *= ilength;
 	}
+}
+
+// returns the distance between two points and generates a normalized vector
+float Entity::VectorNormalize2(point_s *from, point_s *to, vec3_t result) {
+	
+	float length, ilength;
+
+	result[0] = to->x - from->x;
+	result[1] = to->y - from->y;
+	result[2] = 0.0f;		// TODO: its a 2D game for now
+
+	length = result[0] * result[0] + result[1] * result[1] + result[2] * result[2];
+	length = SDL_sqrtf(length);		// FIXME
+
+	if (length)
+	{
+		ilength = 1 / length;
+		result[0] *= ilength;
+		result[1] *= ilength;
+		result[2] *= ilength;
+	}
+
+	return length;
 }
 
 float Entity::DotProduct(vec3_t a, vec3_t b) {
@@ -563,19 +754,19 @@ void Entity::CrossProduct(vec3_t a, vec3_t b, vec3_t result) {
 	result[2] = a[0]*b[1] - a[1]*b[0];
 }
 
-//Hamiltonian of unit quaternions
+//Hamiltonian of unit length quaternions
 // p*q = [ (ps*qv + qs*pv + pv X qv) (ps*qs - pv.qv) ]
-void Entity::QuatProduct(quat_s p, quat_s q, quat_s result) {
+void Entity::QuatProduct(quat_s *p, quat_s *q, quat_s *result) {
 
 	vec3_t one, two, three;
-	VectorScale(p.vector, q.scalar, one);
-	VectorScale(q.vector, p.scalar, two);
-	CrossProduct(p.vector, q.vector, three);
 
-	result.vector[0] = one[0] + two[0] + three[0];
-	result.vector[1] = one[1] + two[1] + three[1];
-	result.vector[2] = one[2] + two[2] + three[2];
+	VectorScale(p->vector, q->scalar, one);
+	VectorScale(q->vector, p->scalar, two);
+	CrossProduct(p->vector, q->vector, three);
 
-	result.scalar = p.scalar*q.scalar - DotProduct(p.vector, q.vector);
-	
+	result->scalar = p->scalar*q->scalar - DotProduct(p->vector, q->vector);
+
+	result->vector[0] = one[0] + two[0] + three[0];
+	result->vector[1] = one[1] + two[1] + three[1];
+	result->vector[2] = one[2] + two[2] + three[2];
 }
