@@ -6,6 +6,8 @@
 class Game;
 class Map;
 
+#define MAX_LOS_WEIGHT 5
+#define DEG2RAD(a) (a*(float(M_PI)/180.0f))
 #define VectorCopy(a,b)	( b[0]=a[0], b[1]=a[1], b[2]=a[2] )
 #define VectorClear(a) ( a[0]=0, a[1]=0, a[2]=0 )
 
@@ -36,7 +38,6 @@ private:
 	void PrintSensors();
 
 	// vector math functions
-	float DegreesToRadians(float degrees);
 	int FastLength(point_s *a, point_s *b);
 	void VectorNormalize(vec3_t a);
 	float VectorNormalize2(point_s *a, point_s *b, vec3_t result);
@@ -74,11 +75,12 @@ private:
 	unsigned int watch_touch;	// marks forward-sensors to watch given the moveState
 
 	point_s waypoints[3];		// maximum of 3 waypoints for testing pathfinding
-	point_s losEndpoint;		// exact point at which the sprite restarts the movementVector update
 	vec3_t movementVector;		// currently used movement vector
 	int currentWaypoint;		// index of waypoint being tracked
 	int userWaypoint;			// index of waypoint being added
-	int maxWaypoint;			
+	int maxWaypoint;			// highest filled waypoints array index
+	int stepCount;				// current number of moves made
+	int maxStepCount;			// number of moves to make along the movementVector at speed before CheckLineOfSight()
 
 	enum sensors {
 

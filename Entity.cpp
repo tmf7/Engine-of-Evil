@@ -172,14 +172,19 @@ void Entity::Move() {
 
 	//CheckFogOfWar();	// also uncomment the Update() code in Map.cpp
 	
-	if (userWaypoint < 0)
+	if ((userWaypoint < 0) || (currentWaypoint > maxWaypoint) )
 		return;
 
 	if ( (!movementVector[0] && !movementVector[1] && !movementVector[2]) )
 		CheckLineOfSight();
 
 	x += float(speed)*movementVector[0];
-	y -= float(speed)*movementVector[1];
+	y += float(speed)*movementVector[1];
+
+	stepCount++;
+
+	if (stepCount == maxStepCount)
+		CheckLineOfSight();
 
 	centerPoint.x = GetCenterX();
 	centerPoint.y = GetCenterY();
@@ -190,12 +195,6 @@ void Entity::Move() {
 		y = waypoints[currentWaypoint].y;
 		currentWaypoint++;
 	}
-
-	if (currentWaypoint > maxWaypoint)
-		return;
-
-	if (GetCenterX() == losEndpoint.x && GetCenterY() == losEndpoint.y)
-		CheckLineOfSight();
 
 	/* 
 	////////////////////////////////////////
@@ -312,11 +311,11 @@ void Entity::CheckLineOfSight() {
 	float bestWeight;			// maximum decision weight == 5 sets movementVector = vector
 								// retains highest weight < 5 in the event of a full 360 degree sweep without a 5
 	float distToWaypoint;		// **currently not fully utilized for checks, but a potentially useful metric**
-	float rotationAngle;		// current rotation of the testVector away from the waypointVector (CW or CCW)
+	float rotationAngle;		// amount to rotate the testVector away from the waypointVector (CW or CCW)
 	point_s spriteCenter;
 	point_s testPoint;
 	float weight;
-	int temp;
+	float weight_mod;
 	int tileSize; 
 	int width;  
 	int height; 
@@ -331,71 +330,82 @@ void Entity::CheckLineOfSight() {
 	distToWaypoint = VectorNormalize2(&spriteCenter, &waypoints[currentWaypoint], waypointVector); 
 	VectorCopy(waypointVector, testVector);
 
+	stepCount = 0;
+	maxStepCount = 0;
 	rotationAngle = 0;
 	VectorClear(bestVector);
 	bestWeight = 0;
 
 	// FIXME: currently only uses the first waypointVector and ignores all losEndpoints and OTHER testVectors
-	// FIXME: seems to ignore smaller angled waypoints (eg moves horizontally if waypoint slightly below horizontal)
+	// FIXME: seems to only begin travel in one direction regardless of collision or waypointVector
+	// FIXME: currently allowed to take a number of "verified" steps, but it seems those steps may take it into no-walk areas
+	// FIXME: some rounding errors eventually push the sprite into no-walk, which causes it to go straight forever and away
+	// FIXME: the final weight_mod needs some work to predispose the sprite to continue of the path is clear (especially if towards the waypoint)
+	// FIXME: doesn't actually stop moving in the event it manages to snap to the waypoint (because currentWaypoint increased, regardless, and CheckLineOfSight still happens)
+	// FIXME: what if weight remains 0 at all times?
 	// SOLUTION: rounding errors? (float to int)
-	// SOLUTION: check the hamiltonian
-	// SOLUTION: ??? ***********START HERE**************
+	// SOLUTIN: change the VALIDATION logic???
+	// ***********START HERE**************
 	// collision prediction
 	while (1) { // until an optimal movementVector is found, or the bestVector in a 360 degree scan
 
-		for (weight = 0; weight < 5; weight++) {
+		weight = 0;
+		
+		do {
 
-			// original test point
-			testPoint.x = spriteCenter.x + (collisionRadius + float(speed)*weight)*testVector[0];
-			testPoint.y = spriteCenter.y - (collisionRadius + float(speed)*weight)*testVector[1];
-
-			// check validity
-			if ((game->GetMap()->GetMapIndex(testPoint.x / tileSize, testPoint.y / tileSize) == 3) | 
-				(testPoint.x > width) | (testPoint.x < 0) | (testPoint.y > height) | (testPoint.y < 0))
-				break;
-
-			// test point rotated counter-clockwise 90 degrees
-			temp = testPoint.x;
-			testPoint.x = -testPoint.y;
-			testPoint.y = temp;
+			// original test point (starts on sprite)
+			testPoint.x = (spriteCenter.x + (collisionRadius*testVector[0])) + (speed*testVector[0]*weight);
+			testPoint.y = (spriteCenter.y + (collisionRadius*testVector[1])) + (speed*testVector[1]*weight);
 
 			// check validity
-			if ((game->GetMap()->GetMapIndex(testPoint.x / tileSize, testPoint.y / tileSize) == 3) |
-				(testPoint.x > width) | (testPoint.x < 0) | (testPoint.y > height) | (testPoint.y < 0))
+			// FIXME: make this a general function of Map class
+			if ((game->GetMap()->GetMapIndex(testPoint.x / tileSize, testPoint.y / tileSize) == 3) || 
+				(testPoint.x > width) || (testPoint.x < 0) || (testPoint.y > height) || (testPoint.y < 0))
 				break;
 
-			// test point rotated clockwise 180 degrees
-			testPoint.x = -testPoint.x;
-			testPoint.y = -testPoint.y;
+			// original test point rotated counter-clockwise 90 degrees
+			testPoint.x = (spriteCenter.x + (collisionRadius*testVector[1])) + (speed*testVector[0]*weight);
+			testPoint.y = (spriteCenter.y - (collisionRadius*testVector[0])) + (speed*testVector[1]*weight);
 
 			// check validity
-			if ((game->GetMap()->GetMapIndex(testPoint.x / tileSize, testPoint.y / tileSize) == 3) |
-				(testPoint.x > width) | (testPoint.x < 0) | (testPoint.y > height) | (testPoint.y < 0))
+			// FIXME: make this a general function of Map class
+			if ((game->GetMap()->GetMapIndex(testPoint.x / tileSize, testPoint.y / tileSize) == 3) ||
+				(testPoint.x > width) || (testPoint.x < 0) || (testPoint.y > height) || (testPoint.y < 0))
 				break;
-		}
+
+			// original test point rotated clockwise 90 degrees
+			testPoint.x = (spriteCenter.x - (collisionRadius*testVector[1])) + (speed*testVector[0]*weight);
+			testPoint.y = (spriteCenter.y + (collisionRadius*testVector[0])) + (speed*testVector[1]*weight);
+
+			// check validity
+			// FIXME: make this a general function of Map class
+			if ((game->GetMap()->GetMapIndex(testPoint.x / tileSize, testPoint.y / tileSize) == 3) ||
+				(testPoint.x > width) || (testPoint.x < 0) || (testPoint.y > height) || (testPoint.y < 0))
+				break;
+
+			weight++;
+
+		} while (weight <= MAX_LOS_WEIGHT);
 
 		// modify final decision weight by the relative orientation of the test vector
-		weight = weight + DotProduct(waypointVector, testVector) * DotProduct(movementVector, testVector);
+		weight_mod = DotProduct(waypointVector, testVector) * DotProduct(movementVector, testVector);
+		weight += weight_mod;
 
 		// FIXME: what if weight == 0 at all times?
 		if (weight > bestWeight) {
 
 			bestWeight = weight;
 			VectorCopy(testVector, bestVector);
-
-			losEndpoint.x = spriteCenter.x + (collisionRadius*testVector[0] + speed*testVector[0] * weight);
-			losEndpoint.y = spriteCenter.y - (collisionRadius*testVector[1] + speed*testVector[1] * weight);
+			maxStepCount = int(weight - weight_mod) - 1;
 		}
 
-		// highest possible weight of 4 causes an immediate decision
-		if (weight == 4) {
+		if (weight == MAX_LOS_WEIGHT) {
 
 			VectorCopy(testVector, movementVector);
 			break;
 		}
 
-		// increment the rotationAngle, rotate the testVector, and restart the loop/goto
-		rotationAngle += 10;
+		rotationAngle += 1.0f;
 
 		if (rotationAngle >= 360) {
 			VectorCopy(bestVector, movementVector);
@@ -404,15 +414,16 @@ void Entity::CheckLineOfSight() {
 
 		rotationQuat.vector[0] = 0;
 		rotationQuat.vector[1] = 0;
-		rotationQuat.vector[2] = SDL_sinf(DegreesToRadians(rotationAngle / 2.0f));
-		rotationQuat.scalar = SDL_cosf(DegreesToRadians(rotationAngle / 2.0f));
+		rotationQuat.vector[2] = SDL_sinf(DEG2RAD(rotationAngle) / 2.0f);
+		rotationQuat.scalar = SDL_cosf(DEG2RAD(rotationAngle) / 2.0f);
 
-		VectorCopy(testVector, testQuat.vector);
+		VectorCopy(waypointVector, testQuat.vector);
 		testQuat.scalar = 0;
 
 		// unit length quaternion => inverse == conjugate
 		// 2D rotation about the z-axis => only negate z-axis of quat vector
 		// v' = q*v*q^-1
+		// FIXME: possibly incorrect pointer target swapping here
 		QuatProduct(&rotationQuat, &testQuat, &testQuat);
 		rotationQuat.vector[2] = -rotationQuat.vector[2];
 		QuatProduct(&testQuat, &rotationQuat, &testQuat);
@@ -683,12 +694,6 @@ int Entity::GetCenterY() {
 }
 
 // vector math functions
-float Entity::DegreesToRadians(float degrees) {
-	
-	return (degrees *= float(M_PI)/180.0f);
-
-}
-
 int Entity::FastLength(point_s *a, point_s *b) {
 
 	return (a->x - b->x)*(a->x - b->x) + (a->y - b->y)*(a->y - b->y);
