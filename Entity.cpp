@@ -49,9 +49,9 @@ bool Entity::Init(char fileName[], bool key, Game *const g) {
 
 	VectorClear(movementVector);
 
-	collisionRadius = (sprite->w * sprite->w) + (sprite->h * sprite->h);
+	collisionRadius = (float)((sprite->w * sprite->w) + (sprite->h * sprite->h));
 	collisionRadius = SDL_sqrtf(collisionRadius);
-	collisionRadius /= 2;
+	collisionRadius /= 2.0f;
 
 	currentWaypoint = -1;
 	userWaypoint = -1;
@@ -88,8 +88,8 @@ void Entity::Spawn()
 	// Check the top-left corner first
 	if (game->GetMap()->GetMapIndex(0,0) < 3) {
 
-		x = 0;
-		y = 0;
+		spritePos.x = 0;
+		spritePos.y = 0;
 		return;
 	}
 
@@ -100,8 +100,8 @@ void Entity::Spawn()
 		for (i = radius, j = 0; j <= radius && !entity_placed; j++) {
 
 			if (game->GetMap()->GetMapIndex(i, j) < 3) {
-				x = i*tileSize;
-				y = j*tileSize;
+				spritePos.x = i*tileSize;
+				spritePos.y = j*tileSize;
 				entity_placed = true;
 			}
 		}
@@ -112,8 +112,8 @@ void Entity::Spawn()
 
 			if (game->GetMap()->GetMapIndex(i, j) < 3) {
 
-				x = i*tileSize;
-				y = j*tileSize;
+				spritePos.x = i*tileSize;
+				spritePos.y = j*tileSize;
 				entity_placed = true;
 			}
 		}
@@ -131,8 +131,8 @@ void Entity::Update() {
 	Move();
 
 	// Account for camera movement when drawing
-	destRect.x = x - game->GetMap()->GetCamera()->x;
-	destRect.y = y - game->GetMap()->GetCamera()->y;
+	destRect.x = spritePos.x - game->GetMap()->GetCamera()->x;
+	destRect.y = spritePos.y - game->GetMap()->GetCamera()->y;
 
 /*
 	if (frameDelayCount > frameDelay){
@@ -165,34 +165,28 @@ void Entity::Update() {
 }
 
 // Ultimate Goal: select a pathfinding type (eg: compass, endpoint+obstacle adjust, waypoints+minipaths, wall follow, Area awareness, etc)
-// Gather sensor information and decide how to follow walls
+// Gather sensor information and decide how to move
 void Entity::Move() {
-
-	point_s centerPoint;
 
 	//CheckFogOfWar();	// also uncomment the Update() code in Map.cpp
 	
-	if ((userWaypoint < 0) || (currentWaypoint > maxWaypoint) )
+	// FIXME: second condition needs some work to ensure the sprite follows the full trail, then stops/waits
+	if ((userWaypoint < 0) || (currentWaypoint == userWaypoint) )
 		return;
 
-	if ( (!movementVector[0] && !movementVector[1] && !movementVector[2]) )
+	// FIXME: ignores CheckLOS too much... (goes off map in one direction)
+	// ignore checking LOS if a movementVector is already established, wait until a better position is acquired to check.
+	if ( (!movementVector[0] && !movementVector[1] && !movementVector[2]) || 
+		(spritePos.x == maxMovePoint.x && spritePos.y == maxMovePoint.y) )
 		CheckLineOfSight();
 
-	x += float(speed)*movementVector[0];
-	y += float(speed)*movementVector[1];
+	spritePos.x += (int)(speed*movementVector[0]);
+	spritePos.y += (int)(speed*movementVector[1]);
 
-	stepCount++;
+	if (FastLength(&spritePos, &waypoints[currentWaypoint]) <= waypointRange) {
 
-	if (stepCount == maxStepCount)
-		CheckLineOfSight();
-
-	centerPoint.x = GetCenterX();
-	centerPoint.y = GetCenterY();
-
-	if (FastLength(&centerPoint, &waypoints[currentWaypoint]) <= waypointRange) {
-
-		x = waypoints[currentWaypoint].x;
-		y = waypoints[currentWaypoint].y;
+		spritePos.x = waypoints[currentWaypoint].x;
+		spritePos.y = waypoints[currentWaypoint].y;
 		currentWaypoint++;
 	}
 
@@ -314,8 +308,8 @@ void Entity::CheckLineOfSight() {
 	float rotationAngle;		// amount to rotate the testVector away from the waypointVector (CW or CCW)
 	point_s spriteCenter;
 	point_s testPoint;
-	float weight;
 	float weight_mod;
+	int weight;
 	int tileSize; 
 	int width;  
 	int height; 
@@ -330,32 +324,23 @@ void Entity::CheckLineOfSight() {
 	distToWaypoint = VectorNormalize2(&spriteCenter, &waypoints[currentWaypoint], waypointVector); 
 	VectorCopy(waypointVector, testVector);
 
-	stepCount = 0;
-	maxStepCount = 0;
 	rotationAngle = 0;
 	VectorClear(bestVector);
 	bestWeight = 0;
 
-	// FIXME: currently only uses the first waypointVector and ignores all losEndpoints and OTHER testVectors
-	// FIXME: seems to only begin travel in one direction regardless of collision or waypointVector
-	// FIXME: currently allowed to take a number of "verified" steps, but it seems those steps may take it into no-walk areas
-	// FIXME: some rounding errors eventually push the sprite into no-walk, which causes it to go straight forever and away
-	// FIXME: the final weight_mod needs some work to predispose the sprite to continue of the path is clear (especially if towards the waypoint)
-	// FIXME: doesn't actually stop moving in the event it manages to snap to the waypoint (because currentWaypoint increased, regardless, and CheckLineOfSight still happens)
-	// FIXME: what if weight remains 0 at all times?
-	// SOLUTION: rounding errors? (float to int)
-	// SOLUTIN: change the VALIDATION logic???
-	// ***********START HERE**************
+	// FIXME: some rounding errors(?) may eventually push the sprite into no-walk, which may cause it to go straight forever
+	// FIXME: rounding errors? (float to int)
+
 	// collision prediction
 	while (1) { // until an optimal movementVector is found, or the bestVector in a 360 degree scan
 
 		weight = 0;
 		
-		do {
+		while (1) {// TODO: check if the waypoint landed somewhere in a set, or between sets (along the swept area)
 
 			// original test point (starts on sprite)
-			testPoint.x = (spriteCenter.x + (collisionRadius*testVector[0])) + (speed*testVector[0]*weight);
-			testPoint.y = (spriteCenter.y + (collisionRadius*testVector[1])) + (speed*testVector[1]*weight);
+			testPoint.x = (int)((spriteCenter.x + (collisionRadius*testVector[0])) + (speed*testVector[0]*weight));
+			testPoint.y = (int)((spriteCenter.y + (collisionRadius*testVector[1])) + (speed*testVector[1]*weight));
 
 			// check validity
 			// FIXME: make this a general function of Map class
@@ -364,8 +349,8 @@ void Entity::CheckLineOfSight() {
 				break;
 
 			// original test point rotated counter-clockwise 90 degrees
-			testPoint.x = (spriteCenter.x + (collisionRadius*testVector[1])) + (speed*testVector[0]*weight);
-			testPoint.y = (spriteCenter.y - (collisionRadius*testVector[0])) + (speed*testVector[1]*weight);
+			testPoint.x = (int)((spriteCenter.x + (collisionRadius*testVector[1])) + (speed*testVector[0]*weight));
+			testPoint.y = (int)((spriteCenter.y - (collisionRadius*testVector[0])) + (speed*testVector[1]*weight));
 
 			// check validity
 			// FIXME: make this a general function of Map class
@@ -374,8 +359,8 @@ void Entity::CheckLineOfSight() {
 				break;
 
 			// original test point rotated clockwise 90 degrees
-			testPoint.x = (spriteCenter.x - (collisionRadius*testVector[1])) + (speed*testVector[0]*weight);
-			testPoint.y = (spriteCenter.y + (collisionRadius*testVector[0])) + (speed*testVector[1]*weight);
+			testPoint.x = (int)((spriteCenter.x - (collisionRadius*testVector[1])) + (speed*testVector[0]*weight));
+			testPoint.y = (int)((spriteCenter.y + (collisionRadius*testVector[0])) + (speed*testVector[1]*weight));
 
 			// check validity
 			// FIXME: make this a general function of Map class
@@ -385,51 +370,62 @@ void Entity::CheckLineOfSight() {
 
 			weight++;
 
-		} while (weight <= MAX_LOS_WEIGHT);
-
-		// modify final decision weight by the relative orientation of the test vector
-		weight_mod = DotProduct(waypointVector, testVector) * DotProduct(movementVector, testVector);
-		weight += weight_mod;
-
-		// FIXME: what if weight == 0 at all times?
-		if (weight > bestWeight) {
-
-			bestWeight = weight;
-			VectorCopy(testVector, bestVector);
-			maxStepCount = int(weight - weight_mod) - 1;
+			if (weight == MAX_LOS_WEIGHT)
+				break;
 		}
 
+		weight_mod = DotProduct(waypointVector, testVector);
+
+		if ( (weight+weight_mod) > bestWeight) {
+
+			bestWeight = weight + weight_mod;
+			VectorCopy(testVector, bestVector);
+		}
+/*
+		// rotation direction decision bias
 		if (weight == MAX_LOS_WEIGHT) {
 
-			VectorCopy(testVector, movementVector);
-			break;
-		}
-
-		rotationAngle += 1.0f;
-
-		if (rotationAngle >= 360) {
 			VectorCopy(bestVector, movementVector);
 			break;
 		}
+*/
 
-		rotationQuat.vector[0] = 0;
-		rotationQuat.vector[1] = 0;
-		rotationQuat.vector[2] = SDL_sinf(DEG2RAD(rotationAngle) / 2.0f);
-		rotationQuat.scalar = SDL_cosf(DEG2RAD(rotationAngle) / 2.0f);
+		do {
+			rotationAngle += 1.0f;
 
-		VectorCopy(waypointVector, testQuat.vector);
-		testQuat.scalar = 0;
+			rotationQuat.vector[0] = 0;
+			rotationQuat.vector[1] = 0;
+			rotationQuat.vector[2] = SDL_sinf(DEG2RAD(rotationAngle) / 2.0f);
+			rotationQuat.scalar = SDL_cosf(DEG2RAD(rotationAngle) / 2.0f);
 
-		// unit length quaternion => inverse == conjugate
-		// 2D rotation about the z-axis => only negate z-axis of quat vector
-		// v' = q*v*q^-1
-		// FIXME: possibly incorrect pointer target swapping here
-		QuatProduct(&rotationQuat, &testQuat, &testQuat);
-		rotationQuat.vector[2] = -rotationQuat.vector[2];
-		QuatProduct(&testQuat, &rotationQuat, &testQuat);
+			VectorCopy(waypointVector, testQuat.vector);
+			testQuat.scalar = 0;
 
-		// extract rotated testVector from testQuat
-		VectorCopy(testQuat.vector, testVector);
+			// unit length quaternion => inverse == conjugate
+			// 2D rotation about the z-axis => only negate z-axis of quat vector
+			// v' = q*v*q^-1
+			QuatProduct(&rotationQuat, &testQuat, &testQuat);
+			rotationQuat.vector[2] = -rotationQuat.vector[2];
+			QuatProduct(&testQuat, &rotationQuat, &testQuat);
+
+			// extract rotated testVector from testQuat
+			VectorCopy(testQuat.vector, testVector);
+		} while (DotProduct(movementVector, testVector) < 0 && rotationAngle < 360.0f);	// avoid testVectors that backtrack directly
+
+		if (rotationAngle >= 360) {
+
+			if (bestWeight <= 2) {
+
+				VectorClear(movementVector);
+
+			} else {
+
+				VectorCopy(bestVector, movementVector);
+				maxMovePoint.x = (int)(spritePos.x + (speed*movementVector[0]*weight));
+				maxMovePoint.y = (int)(spritePos.y + (speed*movementVector[1]*weight));
+			}
+			break;
+		}
 	}
 }
 
@@ -442,8 +438,8 @@ void Entity::CheckLineOfSight() {
 void Entity::CheckFogOfWar() {
 
 	// set the fog of war properties
-	sight.x = x - (sightRange / 2);
-	sight.y = y - (sightRange / 2);
+	sight.x = spritePos.x - (sightRange / 2);
+	sight.y = spritePos.y - (sightRange / 2);
 
 	// FIXME: inefficient allocation of pre-existing data as well as repetitive function calls to (currently) constant data
 	int tileSize = game->GetMap()->GetTileSize();
@@ -495,21 +491,21 @@ void Entity::CheckTouch(bool self, bool horizontal, bool vertical) {
 
 		if (horizontal) {
 
-			localTouch |= (RIGHT_TOP		* ((game->GetMap()->GetMapIndex((x + size) / tileSize, (y + 1) / tileSize) == 3)		| ((x + size + 1) > width)));
-			localTouch |= (RIGHT_BOTTOM		* ((game->GetMap()->GetMapIndex((x + size) / tileSize, (y + size - 1) / tileSize) == 3)	| ((x + size + 1) > width)));
+			localTouch |= (RIGHT_TOP		* ((game->GetMap()->GetMapIndex((spritePos.x + size) / tileSize, (spritePos.y + 1) / tileSize) == 3)		| ((spritePos.x + size + 1) > width)));
+			localTouch |= (RIGHT_BOTTOM		* ((game->GetMap()->GetMapIndex((spritePos.x + size) / tileSize, (spritePos.y + size - 1) / tileSize) == 3)	| ((spritePos.x + size + 1) > width)));
 			
-			localTouch |= (LEFT_BOTTOM		* ((game->GetMap()->GetMapIndex(x / tileSize, (y + size - 1) / tileSize) == 3)			| (x < 0)));
-			localTouch |= (LEFT_TOP			* ((game->GetMap()->GetMapIndex(x / tileSize, (y + 1) / tileSize) == 3)					| (x < 0)));
+			localTouch |= (LEFT_BOTTOM		* ((game->GetMap()->GetMapIndex(spritePos.x / tileSize, (spritePos.y + size - 1) / tileSize) == 3)			| (spritePos.x < 0)));
+			localTouch |= (LEFT_TOP			* ((game->GetMap()->GetMapIndex(spritePos.x / tileSize, (spritePos.y + 1) / tileSize) == 3)					| (spritePos.x < 0)));
 
 		}
 
 		if (vertical) {
 
-			localTouch |= (TOP_LEFT		* ((game->GetMap()->GetMapIndex((x + 1) / tileSize, y / tileSize) == 3)					| (y < 0)));
-			localTouch |= (TOP_RIGHT	* ((game->GetMap()->GetMapIndex((x + size - 1) / tileSize, y / tileSize) == 3)			| (y < 0)));
+			localTouch |= (TOP_LEFT		* ((game->GetMap()->GetMapIndex((spritePos.x + 1) / tileSize, spritePos.y / tileSize) == 3)					| (spritePos.y < 0)));
+			localTouch |= (TOP_RIGHT	* ((game->GetMap()->GetMapIndex((spritePos.x + size - 1) / tileSize, spritePos.y / tileSize) == 3)			| (spritePos.y < 0)));
 
-			localTouch |= (BOTTOM_RIGHT	* ((game->GetMap()->GetMapIndex((x + size - 1) / tileSize, (y + size) / tileSize) == 3)	| ((y + size + 1) > height)));
-			localTouch |= (BOTTOM_LEFT	* ((game->GetMap()->GetMapIndex((x + 1) / tileSize, (y + size) / tileSize) == 3)		| ((y + size + 1) > height)));
+			localTouch |= (BOTTOM_RIGHT	* ((game->GetMap()->GetMapIndex((spritePos.x + size - 1) / tileSize, (spritePos.y + size) / tileSize) == 3)	| ((spritePos.y + size + 1) > height)));
+			localTouch |= (BOTTOM_LEFT	* ((game->GetMap()->GetMapIndex((spritePos.x + 1) / tileSize, (spritePos.y + size) / tileSize) == 3)		| ((spritePos.y + size + 1) > height)));
 
 		}
 
@@ -520,21 +516,21 @@ void Entity::CheckTouch(bool self, bool horizontal, bool vertical) {
 
 		if (horizontal) {
 			
-			touch |= (RIGHT_TOP		* ((game->GetMap()->GetMapIndex((x + size + touchRange) / tileSize, y / tileSize) == 3)			| ((x + touchRange + size) > width)));
-			touch |= (RIGHT_BOTTOM	* ((game->GetMap()->GetMapIndex((x + size + touchRange) / tileSize, (y + size) / tileSize) == 3)	| ((x + touchRange + size) > width)));
+			touch |= (RIGHT_TOP		* ((game->GetMap()->GetMapIndex((spritePos.x + size + touchRange) / tileSize, spritePos.y / tileSize) == 3)				| ((spritePos.x + touchRange + size) > width)));
+			touch |= (RIGHT_BOTTOM	* ((game->GetMap()->GetMapIndex((spritePos.x + size + touchRange) / tileSize, (spritePos.y + size) / tileSize) == 3)	| ((spritePos.x + touchRange + size) > width)));
 
-			touch |= (LEFT_TOP		* ((game->GetMap()->GetMapIndex((x - touchRange) / tileSize, y / tileSize) == 3)					| ((x - touchRange) < 0)));
-			touch |= (LEFT_BOTTOM	* ((game->GetMap()->GetMapIndex((x - touchRange) / tileSize, (y + size) / tileSize) == 3)		| ((x - touchRange) < 0)));
+			touch |= (LEFT_TOP		* ((game->GetMap()->GetMapIndex((spritePos.x - touchRange) / tileSize, spritePos.y / tileSize) == 3)					| ((spritePos.x - touchRange) < 0)));
+			touch |= (LEFT_BOTTOM	* ((game->GetMap()->GetMapIndex((spritePos.x - touchRange) / tileSize, (spritePos.y + size) / tileSize) == 3)			| ((spritePos.x - touchRange) < 0)));
 
 		}
 
 		if (vertical) {
 		
-			touch |= (TOP_RIGHT		* ((game->GetMap()->GetMapIndex((x + size) / tileSize, (y - touchRange) / tileSize) == 3)		| ((y - touchRange) < 0)));
-			touch |= (TOP_LEFT		* ((game->GetMap()->GetMapIndex(x / tileSize, (y - touchRange) / tileSize) == 3)					| ((y - touchRange) < 0)));
+			touch |= (TOP_RIGHT		* ((game->GetMap()->GetMapIndex((spritePos.x + size) / tileSize, (spritePos.y - touchRange) / tileSize) == 3)			| ((spritePos.y - touchRange) < 0)));
+			touch |= (TOP_LEFT		* ((game->GetMap()->GetMapIndex(spritePos.x / tileSize, (spritePos.y - touchRange) / tileSize) == 3)					| ((spritePos.y - touchRange) < 0)));
 			
-			touch |= (BOTTOM_RIGHT	* ((game->GetMap()->GetMapIndex((x + size) / tileSize, (y + size + touchRange) / tileSize) == 3)	| ((y + touchRange + size) > height)));
-			touch |= (BOTTOM_LEFT	* ((game->GetMap()->GetMapIndex(x / tileSize, (y + size + touchRange) / tileSize) == 3)			| ((y + touchRange + size) > height)));
+			touch |= (BOTTOM_RIGHT	* ((game->GetMap()->GetMapIndex((spritePos.x + size) / tileSize, (spritePos.y + size + touchRange) / tileSize) == 3)	| ((spritePos.y + touchRange + size) > height)));
+			touch |= (BOTTOM_LEFT	* ((game->GetMap()->GetMapIndex(spritePos.x / tileSize, (spritePos.y + size + touchRange) / tileSize) == 3)				| ((spritePos.y + touchRange + size) > height)));
 
 		}
 	}
@@ -544,35 +540,35 @@ void Entity::CheckTouch(bool self, bool horizontal, bool vertical) {
 void Entity::CollisionCheck(bool horizontal, bool vertical) {
 
 	int tileSize = game->GetMap()->GetTileSize();
-	int x1 = x/tileSize;
-	int x2 = (x+size)/tileSize;
-	int y1 = y/tileSize;
-	int y2 = (y+size)/tileSize;
+	int x1 = spritePos.x/tileSize;
+	int x2 = (spritePos.x+size)/tileSize;
+	int y1 = spritePos.y/tileSize;
+	int y2 = (spritePos.y+size)/tileSize;
 	int width = game->GetMap()->GetWidth()*tileSize;
 	int height = game->GetMap()->GetHeight()*tileSize;
-	int oldX = x;
-	int oldY = y;
+	int oldX = spritePos.x;
+	int oldY = spritePos.y;
 
 	// default map-edge collision
 	if (horizontal) {
 
-		if (x < 0) 
-			x = 0;
-		else if (x > (width - size))
-			x = width - 15;
+		if (spritePos.x < 0)
+			spritePos.x = 0;
+		else if (spritePos.x > (width - size))
+			spritePos.x = width - 15;
 	
 	}
 
 	if (vertical) {
 
-		if (y < 0) 
-			y = 0;
-		else if (y > (height - size))
-			y = height - size;
+		if (spritePos.y < 0)
+			spritePos.y = 0;
+		else if (spritePos.y > (height - size))
+			spritePos.y = height - size;
 
 	}
 	
-	if ( x != oldX || y != oldY )
+	if (spritePos.x != oldX || spritePos.y != oldY )
 		return;
 
 	// check the immediate boarder of the sprite
@@ -582,22 +578,22 @@ void Entity::CollisionCheck(bool horizontal, bool vertical) {
 	if (horizontal) {
 
 		if (localTouch & (RIGHT_TOP | RIGHT_BOTTOM) && moveState & MOVE_RIGHT)
-			x = x2*tileSize - (size+1);
+			spritePos.x = x2*tileSize - (size+1);
 		else if (localTouch & (LEFT_TOP | LEFT_BOTTOM) && moveState & MOVE_LEFT)
-			x = x1*tileSize + tileSize;
+			spritePos.x = x1*tileSize + tileSize;
 
 	}
 
 	if (vertical) {
 
 		if (localTouch & (TOP_RIGHT | TOP_LEFT) && moveState & MOVE_UP)
-			y = y1*tileSize + tileSize;
+			spritePos.y = y1*tileSize + tileSize;
 		else if (localTouch & (BOTTOM_RIGHT | BOTTOM_LEFT) && moveState & MOVE_DOWN)
-			y = y2*tileSize - (size+1);
+			spritePos.y = y2*tileSize - (size+1);
 
 	}
 
-	if (x != oldX || y != oldY)
+	if (spritePos.x != oldX || spritePos.y != oldY)
 		return;
 
 	// wall-follower AI outside turn wall alignment
@@ -606,18 +602,18 @@ void Entity::CollisionCheck(bool horizontal, bool vertical) {
 	if (horizontal) {
 
 		if (oldTouch & ~touch & (BOTTOM_LEFT | TOP_LEFT) && moveState & MOVE_RIGHT)
-			x = x1*tileSize;
+			spritePos.x = x1*tileSize;
 		else if (oldTouch & ~touch & (BOTTOM_RIGHT | TOP_RIGHT) && moveState & MOVE_LEFT)
-			x = x2*tileSize + tileSize - (size+1);
+			spritePos.x = x2*tileSize + tileSize - (size+1);
 
 	}
 
 	if (vertical) {
 
 		if (oldTouch & ~touch & (LEFT_BOTTOM | RIGHT_BOTTOM) && moveState & MOVE_UP)
-			y = y2*tileSize + tileSize - (size+1);
+			spritePos.y = y2*tileSize + tileSize - (size+1);
 		else if (oldTouch & ~touch & (LEFT_TOP | RIGHT_TOP) && moveState & MOVE_DOWN)
-			y = y1*tileSize;
+			spritePos.y = y1*tileSize;
 
 	}
 
@@ -651,7 +647,7 @@ void Entity::PrintSensors() {
 	game->DrawOutlineText(buffer, 150, 300, 255, 255, 0);
 
 	// sprite position (top-left corner of bounding box)
-	sprintf_s(buffer, "%i, %i", x, y);
+	sprintf_s(buffer, "%i, %i", spritePos.x, spritePos.y);
 	game->DrawOutlineText(buffer, 150, 350, 255, 255, 255);
 
 }
@@ -685,12 +681,12 @@ void Entity::AddWaypoint(int wx, int wy) {
 
 int Entity::GetCenterX() {
 
-	return x + sprite->w / 2;
+	return spritePos.x + (sprite->w / 2);
 }
 
 int Entity::GetCenterY() {
 
-	return y + sprite->h / 2;
+	return spritePos.y + (sprite->h / 2);
 }
 
 // vector math functions
@@ -721,8 +717,8 @@ float Entity::VectorNormalize2(point_s *from, point_s *to, vec3_t result) {
 	
 	float length, ilength;
 
-	result[0] = to->x - from->x;
-	result[1] = to->y - from->y;
+	result[0] = (float)(to->x - from->x);
+	result[1] = (float)(to->y - from->y);
 	result[2] = 0.0f;		// TODO: its a 2D game for now
 
 	length = result[0] * result[0] + result[1] * result[1] + result[2] * result[2];
