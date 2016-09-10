@@ -177,16 +177,17 @@ void Entity::Move() {
 	// FIXME: ignores CheckLOS too much... (goes off map in one direction)
 	// ignore checking LOS if a movementVector is already established, wait until a better position is acquired to check.
 	if ( (!movementVector[0] && !movementVector[1] && !movementVector[2]) || 
-		(spritePos.x == maxMovePoint.x && spritePos.y == maxMovePoint.y) )
+		(GetCenterX() == maxMovePoint.x && GetCenterY() == maxMovePoint.y) )
 		CheckLineOfSight();
 
-	spritePos.x += (int)(speed*movementVector[0]);
-	spritePos.y += (int)(speed*movementVector[1]);
+	spritePos.x = (int)(spritePos.x + speed*movementVector[0]);
+	spritePos.y = (int)(spritePos.y + speed*movementVector[1]);
 
 	if (FastLength(&spritePos, &waypoints[currentWaypoint]) <= waypointRange) {
 
 		spritePos.x = waypoints[currentWaypoint].x;
 		spritePos.y = waypoints[currentWaypoint].y;
+		VectorClear(movementVector);
 		currentWaypoint++;
 	}
 
@@ -306,7 +307,8 @@ void Entity::CheckLineOfSight() {
 								// retains highest weight < 5 in the event of a full 360 degree sweep without a 5
 	float distToWaypoint;		// **currently not fully utilized for checks, but a potentially useful metric**
 	float rotationAngle;		// amount to rotate the testVector away from the waypointVector (CW or CCW)
-	point_s spriteCenter;
+	point_s testSpritePos;
+	point_s testSpriteCenter;
 	point_s testPoint;
 	float weight_mod;
 	int weight;
@@ -318,10 +320,12 @@ void Entity::CheckLineOfSight() {
 	width = game->GetMap()->GetWidth()*tileSize;
 	height = game->GetMap()->GetHeight()*tileSize;
 
-	spriteCenter.x = GetCenterX();
-	spriteCenter.y = GetCenterY();
+	testSpritePos.x = spritePos.x;
+	testSpritePos.y = spritePos.y;
+	testSpriteCenter.x = GetCenterX();
+	testSpriteCenter.y = GetCenterY();
 	
-	distToWaypoint = VectorNormalize2(&spriteCenter, &waypoints[currentWaypoint], waypointVector); 
+	distToWaypoint = VectorNormalize2(&testSpriteCenter, &waypoints[currentWaypoint], waypointVector);
 	VectorCopy(waypointVector, testVector);
 
 	rotationAngle = 0;
@@ -332,37 +336,41 @@ void Entity::CheckLineOfSight() {
 	// FIXME: rounding errors? (float to int)
 
 	// collision prediction
-	while (1) { // until an optimal movementVector is found, or the bestVector in a 360 degree scan
+	while (1) { // until the bestVector for the movementVector is found in a 360 degree scan
 
 		weight = 0;
 		
-		while (1) {// TODO: check if the waypoint landed somewhere in a set, or between sets (along the swept area)
+		// FIXME: either there is a cumulative rounding error that causes maxMovePoint != spritePos after weight # of frames,
+		// or my equation for the testPoints is wrong. I'm leaning towards a rounding error based off spriteCenter
+		// FIXME: ***START HERE*** its always choosing the same starting movementVector, and anything more than ONE step along
+		// causes the final tested position to be ignored (still possible rounding errors between spriteCenter to spritePos checks)
+		while (1) {// TODO: check if the waypoint landed somewhere in a set, or between sets (along the swept area), and immediatly set THAT as the movementVector
 
-			// original test point (starts on sprite)
-			testPoint.x = (int)((spriteCenter.x + (collisionRadius*testVector[0])) + (speed*testVector[0]*weight));
-			testPoint.y = (int)((spriteCenter.y + (collisionRadius*testVector[1])) + (speed*testVector[1]*weight));
+			// forward test point (starts on sprite)
+			testPoint.x = (int)(testSpriteCenter.x + collisionRadius*testVector[0]);
+			testPoint.y = (int)(testSpriteCenter.y + collisionRadius*testVector[1]);
 
-			// check validity
+			// check for collision
 			// FIXME: make this a general function of Map class
 			if ((game->GetMap()->GetMapIndex(testPoint.x / tileSize, testPoint.y / tileSize) == 3) || 
 				(testPoint.x > width) || (testPoint.x < 0) || (testPoint.y > height) || (testPoint.y < 0))
 				break;
 
-			// original test point rotated counter-clockwise 90 degrees
-			testPoint.x = (int)((spriteCenter.x + (collisionRadius*testVector[1])) + (speed*testVector[0]*weight));
-			testPoint.y = (int)((spriteCenter.y - (collisionRadius*testVector[0])) + (speed*testVector[1]*weight));
+			// forward test point rotated counter-clockwise 90 degrees
+			testPoint.x = (int)(testSpriteCenter.x + collisionRadius*testVector[1]);
+			testPoint.y = (int)(testSpriteCenter.y - collisionRadius*testVector[0]);
 
-			// check validity
+			// check for collision
 			// FIXME: make this a general function of Map class
 			if ((game->GetMap()->GetMapIndex(testPoint.x / tileSize, testPoint.y / tileSize) == 3) ||
 				(testPoint.x > width) || (testPoint.x < 0) || (testPoint.y > height) || (testPoint.y < 0))
 				break;
 
-			// original test point rotated clockwise 90 degrees
-			testPoint.x = (int)((spriteCenter.x - (collisionRadius*testVector[1])) + (speed*testVector[0]*weight));
-			testPoint.y = (int)((spriteCenter.y + (collisionRadius*testVector[0])) + (speed*testVector[1]*weight));
+			// forward test point rotated clockwise 90 degrees
+			testPoint.x = (int)(testSpriteCenter.x - collisionRadius*testVector[1]);
+			testPoint.y = (int)(testSpriteCenter.y + collisionRadius*testVector[0]);
 
-			// check validity
+			// check for collision
 			// FIXME: make this a general function of Map class
 			if ((game->GetMap()->GetMapIndex(testPoint.x / tileSize, testPoint.y / tileSize) == 3) ||
 				(testPoint.x > width) || (testPoint.x < 0) || (testPoint.y > height) || (testPoint.y < 0))
@@ -372,6 +380,11 @@ void Entity::CheckLineOfSight() {
 
 			if (weight == MAX_LOS_WEIGHT)
 				break;
+
+			testSpritePos.x = (int)(testSpritePos.x + speed*testVector[0]);
+			testSpritePos.y = (int)(testSpritePos.y + speed*testVector[1]);
+			testSpriteCenter.x = testSpritePos.x + (sprite->w / 2);
+			testSpriteCenter.y = testSpritePos.y + (sprite->h / 2);
 		}
 
 		weight_mod = DotProduct(waypointVector, testVector);
@@ -380,9 +393,12 @@ void Entity::CheckLineOfSight() {
 
 			bestWeight = weight + weight_mod;
 			VectorCopy(testVector, bestVector);
+			maxMovePoint.x = testSpriteCenter.x;
+			maxMovePoint.y = testSpriteCenter.y;
 		}
 /*
-		// rotation direction decision bias
+		// rotation direction decision bias, and quicker exit
+		// FIXME: improve this shortcut exit statement
 		if (weight == MAX_LOS_WEIGHT) {
 
 			VectorCopy(bestVector, movementVector);
@@ -392,6 +408,15 @@ void Entity::CheckLineOfSight() {
 
 		do {
 			rotationAngle += 1.0f;
+
+			if (rotationAngle >= 360) {
+
+				if (bestWeight <= 2)
+					VectorClear(movementVector);
+				else
+					VectorCopy(bestVector, movementVector);
+				return;
+			}
 
 			rotationQuat.vector[0] = 0;
 			rotationQuat.vector[1] = 0;
@@ -410,22 +435,8 @@ void Entity::CheckLineOfSight() {
 
 			// extract rotated testVector from testQuat
 			VectorCopy(testQuat.vector, testVector);
-		} while (DotProduct(movementVector, testVector) < 0 && rotationAngle < 360.0f);	// avoid testVectors that backtrack directly
 
-		if (rotationAngle >= 360) {
-
-			if (bestWeight <= 2) {
-
-				VectorClear(movementVector);
-
-			} else {
-
-				VectorCopy(bestVector, movementVector);
-				maxMovePoint.x = (int)(spritePos.x + (speed*movementVector[0]*weight));
-				maxMovePoint.y = (int)(spritePos.y + (speed*movementVector[1]*weight));
-			}
-			break;
-		}
+		} while (DotProduct(testVector, movementVector) < 0);	// avoid testVectors that backtrack
 	}
 }
 
@@ -726,7 +737,7 @@ float Entity::VectorNormalize2(point_s *from, point_s *to, vec3_t result) {
 
 	if (length)
 	{
-		ilength = 1 / length;
+		ilength = 1.0f / length;
 		result[0] *= ilength;
 		result[1] *= ilength;
 		result[2] *= ilength;
