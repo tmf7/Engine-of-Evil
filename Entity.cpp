@@ -53,9 +53,12 @@ bool Entity::Init(char fileName[], bool key, Game *const g) {
 	collisionRadius = SDL_sqrtf(collisionRadius);
 	collisionRadius /= 2.0f;
 
+
 	currentWaypoint = -1;
 	userWaypoint = -1;
 	maxWaypoint = 0;
+	atWaypoint = false;
+	moving = false;
 
 	Spawn();
 
@@ -88,8 +91,8 @@ void Entity::Spawn()
 	// Check the top-left corner first
 	if (game->GetMap()->GetMapIndex(0,0) < 3) {
 
-		spritePos.x = 0;
-		spritePos.y = 0;
+		spritePos.x = 16;
+		spritePos.y = 16;
 		return;
 	}
 
@@ -97,12 +100,13 @@ void Entity::Spawn()
 	while (!entity_placed) {
 
 		// down from the top
-		for (i = radius, j = 0; j <= radius && !entity_placed; j++) {
+		for (i = radius, j = 0; j <= radius; j++) {
 
 			if (game->GetMap()->GetMapIndex(i, j) < 3) {
-				spritePos.x = i*tileSize;
-				spritePos.y = j*tileSize;
+				spritePos.x = i*tileSize + 5;
+				spritePos.y = j*tileSize + 5;
 				entity_placed = true;
+				break;
 			}
 		}
 
@@ -112,9 +116,10 @@ void Entity::Spawn()
 
 			if (game->GetMap()->GetMapIndex(i, j) < 3) {
 
-				spritePos.x = i*tileSize;
-				spritePos.y = j*tileSize;
+				spritePos.x = i*tileSize + 5;
+				spritePos.y = j*tileSize + 5;
 				entity_placed = true;
+				break;
 			}
 		}
 
@@ -162,11 +167,33 @@ void Entity::Update() {
 		destRect.y = waypoints[i].y - game->GetMap()->GetCamera()->y;
 		SDL_BlitSurface(sprite, NULL, game->GetBuffer(), &destRect);
 	}
+
+// FREEHILL BEGIN DEBUG COLLISION CIRCLE
+	// TODO: draw one pink pixel for each unique x,y point on the current collision circle
+	float rotationAngle = 0.0f;
+	vec3_t debugVector = {1,0,0};
+	int collisionX, collisionY;
+	point_s center;
+
+	center.x = GetCenterX();
+	center.y = GetCenterY();
+
+	while (rotationAngle < 360.0f) {
+
+		collisionX = center.x + (int)(collisionRadius*debugVector[0]) - game->GetMap()->GetCamera()->x;
+		collisionY = center.y + (int)(collisionRadius*debugVector[1]) - game->GetMap()->GetCamera()->y;
+		DrawPixel(game->GetBuffer(), collisionX, collisionY, 255, 0, 255);
+		rotationAngle++;
+		RotateVector(debugVector, rotationAngle, debugVector);
+	}
+// FREEHILL END DEBUG COLLISION CIRCLE
 }
 
 // Ultimate Goal: select a pathfinding type (eg: compass, endpoint+obstacle adjust, waypoints+minipaths, wall follow, Area awareness, etc)
 // Gather sensor information and decide how to move
 void Entity::Move() {
+
+	point_s spriteCenter;
 
 	//CheckFogOfWar();	// also uncomment the Update() code in Map.cpp
 	
@@ -174,21 +201,29 @@ void Entity::Move() {
 	if ((userWaypoint < 0) || (currentWaypoint == userWaypoint) )
 		return;
 
-	// FIXME: ignores CheckLOS too much... (goes off map in one direction)
 	// ignore checking LOS if a movementVector is already established, wait until a better position is acquired to check.
-	if ( (!movementVector[0] && !movementVector[1] && !movementVector[2]) || 
-		(GetCenterX() == maxMovePoint.x && GetCenterY() == maxMovePoint.y) )
+	if ( !moving || (GetCenterX() == maxMovePoint.x && GetCenterY() == maxMovePoint.y) )
 		CheckLineOfSight();
 
-	spritePos.x = (int)(spritePos.x + speed*movementVector[0]);
-	spritePos.y = (int)(spritePos.y + speed*movementVector[1]);
+	spritePos.x += (int)(speed*movementVector[0]);
+	spritePos.y += (int)(speed*movementVector[1]);
 
-	if (FastLength(&spritePos, &waypoints[currentWaypoint]) <= waypointRange) {
+	spriteCenter.x = GetCenterX();
+	spriteCenter.y = GetCenterY();
+
+	// FIXME: the snap-to-waypoint protocol needs some work (as does the transition to the next waypoint)
+	if ( !atWaypoint && moving && FastLength(&spriteCenter, &waypoints[currentWaypoint]) <= waypointRange ) {
 
 		spritePos.x = waypoints[currentWaypoint].x;
 		spritePos.y = waypoints[currentWaypoint].y;
 		VectorClear(movementVector);
+		moving = false;
 		currentWaypoint++;
+		atWaypoint = true;
+
+	} else {
+
+		atWaypoint = false;
 	}
 
 	/* 
@@ -298,8 +333,6 @@ void Entity::Move() {
 //******************
 void Entity::CheckLineOfSight() {
 
-	quat_s rotationQuat;		// quaternion formated rotationAxis and rotationAngle
-	quat_s testQuat;			// quaternion formated testVector
 	vec3_t waypointVector;		// from the sprite to the next waypoint
 	vec3_t testVector;			// tested for optimal travel decision
 	vec3_t bestVector;			// the highest weight < 5
@@ -309,7 +342,8 @@ void Entity::CheckLineOfSight() {
 	float rotationAngle;		// amount to rotate the testVector away from the waypointVector (CW or CCW)
 	point_s testSpritePos;
 	point_s testSpriteCenter;
-	point_s testPoint;
+	//point_s testPoint;
+	float testX, testY;			// DEBUG: used to preserve precision instead of converting to int twice when validating
 	float weight_mod;
 	int weight;
 	int tileSize; 
@@ -324,21 +358,24 @@ void Entity::CheckLineOfSight() {
 	testSpritePos.y = spritePos.y;
 	testSpriteCenter.x = GetCenterX();
 	testSpriteCenter.y = GetCenterY();
-	
+
 	distToWaypoint = VectorNormalize2(&testSpriteCenter, &waypoints[currentWaypoint], waypointVector);
 	VectorCopy(waypointVector, testVector);
 
-	rotationAngle = 0;
+	rotationAngle = 0.0f;
 	VectorClear(bestVector);
-	bestWeight = 0;
-
-	// FIXME: some rounding errors(?) may eventually push the sprite into no-walk, which may cause it to go straight forever
-	// FIXME: rounding errors? (float to int)
+	bestWeight = 0.0f;
 
 	// collision prediction
 	while (1) { // until the bestVector for the movementVector is found in a 360 degree scan
 
 		weight = 0;
+
+		// FIXME: simplify these operaions (done too many times, just preserve the value somehow)
+		testSpritePos.x = spritePos.x;
+		testSpritePos.y = spritePos.y;
+		testSpriteCenter.x = GetCenterX();
+		testSpriteCenter.y = GetCenterY();
 		
 		// FIXME: either there is a cumulative rounding error that causes maxMovePoint != spritePos after weight # of frames,
 		// or my equation for the testPoints is wrong. I'm leaning towards a rounding error based off spriteCenter
@@ -347,33 +384,45 @@ void Entity::CheckLineOfSight() {
 		while (1) {// TODO: check if the waypoint landed somewhere in a set, or between sets (along the swept area), and immediatly set THAT as the movementVector
 
 			// forward test point (starts on sprite)
-			testPoint.x = (int)(testSpriteCenter.x + collisionRadius*testVector[0]);
-			testPoint.y = (int)(testSpriteCenter.y + collisionRadius*testVector[1]);
+			//testPoint.x = testSpriteCenter.x + (int)(collisionRadius*testVector[0]);
+			//testPoint.y = testSpriteCenter.y + (int)(collisionRadius*testVector[1]);
+			testX = testSpriteCenter.x + collisionRadius*testVector[0];
+			testY = testSpriteCenter.y + collisionRadius*testVector[1];
 
 			// check for collision
 			// FIXME: make this a general function of Map class
-			if ((game->GetMap()->GetMapIndex(testPoint.x / tileSize, testPoint.y / tileSize) == 3) || 
-				(testPoint.x > width) || (testPoint.x < 0) || (testPoint.y > height) || (testPoint.y < 0))
+			if ((game->GetMap()->GetMapIndex((int)(testX / tileSize), (int)(testY / tileSize)) == 3) || 
+				(((int)(testX) > width) || ((int)(testX) < 0) || ((int)(testY) > height) || ((int)(testY) < 0)))
 				break;
-
+			
 			// forward test point rotated counter-clockwise 90 degrees
-			testPoint.x = (int)(testSpriteCenter.x + collisionRadius*testVector[1]);
-			testPoint.y = (int)(testSpriteCenter.y - collisionRadius*testVector[0]);
+			//testPoint.x = testSpriteCenter.x + (int)(collisionRadius*testVector[1]);
+			//testPoint.y = testSpriteCenter.y - (int)(collisionRadius*testVector[0]);
+			testX = testSpriteCenter.x + collisionRadius*testVector[1];
+			testY = testSpriteCenter.y - collisionRadius*testVector[0];
 
 			// check for collision
 			// FIXME: make this a general function of Map class
-			if ((game->GetMap()->GetMapIndex(testPoint.x / tileSize, testPoint.y / tileSize) == 3) ||
-				(testPoint.x > width) || (testPoint.x < 0) || (testPoint.y > height) || (testPoint.y < 0))
+			//if ((game->GetMap()->GetMapIndex(testPoint.x / tileSize, testPoint.y / tileSize) == 3) ||
+			//	(testPoint.x > width) || (testPoint.x < 0) || (testPoint.y > height) || (testPoint.y < 0))
+			//	break;
+			if ((game->GetMap()->GetMapIndex((int)(testX / tileSize), (int)(testY / tileSize)) == 3) ||
+				(((int)(testX) > width) || ((int)(testX) < 0) || ((int)(testY) > height) || ((int)(testY) < 0)))
 				break;
 
 			// forward test point rotated clockwise 90 degrees
-			testPoint.x = (int)(testSpriteCenter.x - collisionRadius*testVector[1]);
-			testPoint.y = (int)(testSpriteCenter.y + collisionRadius*testVector[0]);
+			//testPoint.x = testSpriteCenter.x - (int)(collisionRadius*testVector[1]);
+			//testPoint.y = testSpriteCenter.y + (int)(collisionRadius*testVector[0]);
+			testX = testSpriteCenter.x - collisionRadius*testVector[1];
+			testY = testSpriteCenter.y + collisionRadius*testVector[0];
 
 			// check for collision
 			// FIXME: make this a general function of Map class
-			if ((game->GetMap()->GetMapIndex(testPoint.x / tileSize, testPoint.y / tileSize) == 3) ||
-				(testPoint.x > width) || (testPoint.x < 0) || (testPoint.y > height) || (testPoint.y < 0))
+			//if ((game->GetMap()->GetMapIndex(testPoint.x / tileSize, testPoint.y / tileSize) == 3) ||
+			//	(testPoint.x > width) || (testPoint.x < 0) || (testPoint.y > height) || (testPoint.y < 0))
+			//	break;
+			if ((game->GetMap()->GetMapIndex((int)(testX / tileSize), (int)(testY / tileSize)) == 3) ||
+				(((int)(testX) > width) || ((int)(testX) < 0) || ((int)(testY) > height) || ((int)(testY) < 0)))
 				break;
 
 			weight++;
@@ -381,13 +430,13 @@ void Entity::CheckLineOfSight() {
 			if (weight == MAX_LOS_WEIGHT)
 				break;
 
-			testSpritePos.x = (int)(testSpritePos.x + speed*testVector[0]);
-			testSpritePos.y = (int)(testSpritePos.y + speed*testVector[1]);
+			testSpritePos.x += (int)(speed*testVector[0]);
+			testSpritePos.y += (int)(speed*testVector[1]);
 			testSpriteCenter.x = testSpritePos.x + (sprite->w / 2);
 			testSpriteCenter.y = testSpritePos.y + (sprite->h / 2);
 		}
 
-		weight_mod = DotProduct(waypointVector, testVector);
+		weight_mod = DotProduct(testVector, waypointVector);
 
 		if ( (weight+weight_mod) > bestWeight) {
 
@@ -411,30 +460,28 @@ void Entity::CheckLineOfSight() {
 
 			if (rotationAngle >= 360) {
 
-				if (bestWeight <= 2)
-					VectorClear(movementVector);
-				else
+				// TODO: this  condition indicates that on the 180 degress of vectors in-line with the movementVector 
+				// none had a longer LOS than ON-SPRITE. This then means one of two things 1) its a good time to
+				// consider defacto backtracking by zeroing the movementVector (thus giving equal weight to all vectors)
+				// or 2) perform a second sweep using ALL testPoints (ie no breaks) and choose the first one with the
+				// shortest LOS-weight to VALID points that gets a weight_mod according to its DotProduct with the
+				// waypointVector (again...all vectors would need equal weight in general, ie none ignored)
+				// NOTE: utilize the "moving" bool to perform different testPoint VALIDATION checks
+				if (bestWeight <= 2) {
+
+					VectorClear(movementVector);	
+					moving = false;
+
+				} else {
+
 					VectorCopy(bestVector, movementVector);
+					moving = true;
+
+				}
 				return;
 			}
 
-			rotationQuat.vector[0] = 0;
-			rotationQuat.vector[1] = 0;
-			rotationQuat.vector[2] = SDL_sinf(DEG2RAD(rotationAngle) / 2.0f);
-			rotationQuat.scalar = SDL_cosf(DEG2RAD(rotationAngle) / 2.0f);
-
-			VectorCopy(waypointVector, testQuat.vector);
-			testQuat.scalar = 0;
-
-			// unit length quaternion => inverse == conjugate
-			// 2D rotation about the z-axis => only negate z-axis of quat vector
-			// v' = q*v*q^-1
-			QuatProduct(&rotationQuat, &testQuat, &testQuat);
-			rotationQuat.vector[2] = -rotationQuat.vector[2];
-			QuatProduct(&testQuat, &rotationQuat, &testQuat);
-
-			// extract rotated testVector from testQuat
-			VectorCopy(testQuat.vector, testVector);
+			RotateVector(waypointVector, rotationAngle, testVector);
 
 		} while (DotProduct(testVector, movementVector) < 0);	// avoid testVectors that backtrack
 	}
@@ -781,4 +828,53 @@ void Entity::QuatProduct(quat_s *p, quat_s *q, quat_s *result) {
 	result->vector[0] = one[0] + two[0] + three[0];
 	result->vector[1] = one[1] + two[1] + three[1];
 	result->vector[2] = one[2] + two[2] + three[2];
+}
+
+// rotate the given vector about the z-axis by the given angle in degrees
+void Entity::RotateVector(vec3_t v, float degrees, vec3_t result) {
+
+	quat_s rotationQuat;		// quaternion formated rotationAxis and rotationAngle
+	quat_s testQuat;			// quaternion formated testVector
+
+	rotationQuat.vector[0] = 0;
+	rotationQuat.vector[1] = 0;
+	rotationQuat.vector[2] = SDL_sinf(DEG2RAD(degrees) / 2.0f);
+	rotationQuat.scalar = SDL_cosf(DEG2RAD(degrees) / 2.0f);
+
+	VectorCopy(v, testQuat.vector);		// DEBUG: was waypointVector
+	testQuat.scalar = 0;
+
+	// unit length quaternion => inverse == conjugate
+	// 2D rotation about the z-axis => only negate z-axis of quat vector
+	// v' = q*v*q^-1
+	QuatProduct(&rotationQuat, &testQuat, &testQuat);
+	rotationQuat.vector[2] = -rotationQuat.vector[2];
+	QuatProduct(&testQuat, &rotationQuat, &testQuat);
+
+	// extract rotated testVector from testQuat
+	VectorCopy(testQuat.vector, result);		// DEBUG: was testVector
+
+}
+
+void Entity::DrawPixel(SDL_Surface *surface, int x, int y, Uint8 r, Uint8 g, Uint8 b)
+{
+	if (SDL_MUSTLOCK(surface))
+	{
+		if (SDL_LockSurface(surface) < 0)
+			return;
+	}
+
+	if (x >= surface->w || x < 0 || y >= surface->h || y < 0)
+		return;
+
+	Uint32 *buffer;
+	Uint32 color;
+
+	color = SDL_MapRGB(surface->format, r, g, b);
+
+	buffer = (Uint32*)surface->pixels + y*surface->pitch / 4 + x;
+	(*buffer) = color;
+
+	if (SDL_MUSTLOCK(surface))
+		SDL_UnlockSurface(surface);
 }

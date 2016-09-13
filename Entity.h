@@ -45,6 +45,8 @@ private:
 	void VectorScale(vec3_t a, float scale, vec3_t result);
 	void CrossProduct(vec3_t a, vec3_t b, vec3_t result);
 	void QuatProduct(quat_s *a, quat_s *b, quat_s *result);
+	void RotateVector(vec3_t v, float degrees, vec3_t result);			// simplified rotation about the z-axis only
+	void DrawPixel(SDL_Surface *surface, int x, int y, Uint8 r, Uint8 g, Uint8 b); // DEBUG: collision circle testing
 
 
 	Game* game;
@@ -79,6 +81,8 @@ private:
 	int currentWaypoint;		// index of waypoint being tracked
 	int userWaypoint;			// index of waypoint being added
 	int maxWaypoint;			// highest filled waypoints array index
+	bool atWaypoint;
+	bool moving;
 
 	enum sensors {
 
