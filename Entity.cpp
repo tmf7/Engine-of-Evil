@@ -91,8 +91,8 @@ void Entity::Spawn()
 	// Check the top-left corner first
 	if (game->GetMap()->GetMapIndex(0,0) < 3) {
 
-		spritePos.x = 16;
-		spritePos.y = 16;
+		spritePos.x = 5;
+		spritePos.y = 5;
 		return;
 	}
 
@@ -157,7 +157,6 @@ void Entity::Update() {
 
 //	SDL_BlitSurface(sprite, &sourceRect, game->GetBuffer, &destRect);
 */
-	// FIXME: confirm that destRect is within view of the camera
 	SDL_BlitSurface(sprite, NULL, game->GetBuffer(), &destRect);
 
 	// draw the waypoints
@@ -184,7 +183,7 @@ void Entity::Update() {
 		collisionY = center.y + (int)(collisionRadius*debugVector[1]) - game->GetMap()->GetCamera()->y;
 		DrawPixel(game->GetBuffer(), collisionX, collisionY, 255, 0, 255);
 		rotationAngle++;
-		RotateVector(debugVector, rotationAngle, debugVector);
+		RotateVector(debugVector, 1.0f, debugVector);
 	}
 // FREEHILL END DEBUG COLLISION CIRCLE
 }
@@ -328,7 +327,6 @@ void Entity::Move() {
 // CheckLineOfSight
 // Determines the optimal movement vector to reach a given waypoint coordinate on the map
 // TODO(?): plot several paths and select the *optimal*(shortest?) one and/or randomize the final BEFORE MOVING
-// TODO: add functionality to check if the sprite STARTS in water (then set a random vector and loop-check TOUCH sensors until clear)
 // TODO(?): use a true spatial Trace algorithm (with an endpoint and cross-section)
 //******************
 void Entity::CheckLineOfSight() {
@@ -342,8 +340,7 @@ void Entity::CheckLineOfSight() {
 	float rotationAngle;		// amount to rotate the testVector away from the waypointVector (CW or CCW)
 	point_s testSpritePos;
 	point_s testSpriteCenter;
-	//point_s testPoint;
-	float testX, testY;			// DEBUG: used to preserve precision instead of converting to int twice when validating
+	point_s testPoint;
 	float weight_mod;
 	int weight;
 	int tileSize; 
@@ -360,7 +357,7 @@ void Entity::CheckLineOfSight() {
 	testSpriteCenter.y = GetCenterY();
 
 	distToWaypoint = VectorNormalize2(&testSpriteCenter, &waypoints[currentWaypoint], waypointVector);
-	VectorCopy(waypointVector, testVector);
+	VectorCopy(waypointVector, testVector); 
 
 	rotationAngle = 0.0f;
 	VectorClear(bestVector);
@@ -377,52 +374,39 @@ void Entity::CheckLineOfSight() {
 		testSpriteCenter.x = GetCenterX();
 		testSpriteCenter.y = GetCenterY();
 		
-		// FIXME: either there is a cumulative rounding error that causes maxMovePoint != spritePos after weight # of frames,
-		// or my equation for the testPoints is wrong. I'm leaning towards a rounding error based off spriteCenter
-		// FIXME: ***START HERE*** its always choosing the same starting movementVector, and anything more than ONE step along
-		// causes the final tested position to be ignored (still possible rounding errors between spriteCenter to spritePos checks)
-		while (1) {// TODO: check if the waypoint landed somewhere in a set, or between sets (along the swept area), and immediatly set THAT as the movementVector
+		while (1) {
+			
+			// TODO: check if the waypoint landed somewhere in a set, or between sets (along the swept area), 
+			// and immediatly set THAT as the movementVector. This avoids temporarily bypassing the waypoint for a "better" LOS
 
 			// forward test point (starts on sprite)
-			//testPoint.x = testSpriteCenter.x + (int)(collisionRadius*testVector[0]);
-			//testPoint.y = testSpriteCenter.y + (int)(collisionRadius*testVector[1]);
-			testX = testSpriteCenter.x + collisionRadius*testVector[0];
-			testY = testSpriteCenter.y + collisionRadius*testVector[1];
+			testPoint.x = testSpriteCenter.x + (int)(collisionRadius*testVector[0]);
+			testPoint.y = testSpriteCenter.y + (int)(collisionRadius*testVector[1]);
 
 			// check for collision
 			// FIXME: make this a general function of Map class
-			if ((game->GetMap()->GetMapIndex((int)(testX / tileSize), (int)(testY / tileSize)) == 3) || 
-				(((int)(testX) > width) || ((int)(testX) < 0) || ((int)(testY) > height) || ((int)(testY) < 0)))
+			if ((game->GetMap()->GetMapIndex(testPoint.x / tileSize, testPoint.y / tileSize) == 3) ||
+			(testPoint.x > width) || (testPoint.x < 0) || (testPoint.y > height) || (testPoint.y < 0))
 				break;
 			
 			// forward test point rotated counter-clockwise 90 degrees
-			//testPoint.x = testSpriteCenter.x + (int)(collisionRadius*testVector[1]);
-			//testPoint.y = testSpriteCenter.y - (int)(collisionRadius*testVector[0]);
-			testX = testSpriteCenter.x + collisionRadius*testVector[1];
-			testY = testSpriteCenter.y - collisionRadius*testVector[0];
+			testPoint.x = testSpriteCenter.x + (int)(collisionRadius*testVector[1]);
+			testPoint.y = testSpriteCenter.y - (int)(collisionRadius*testVector[0]);
 
 			// check for collision
 			// FIXME: make this a general function of Map class
-			//if ((game->GetMap()->GetMapIndex(testPoint.x / tileSize, testPoint.y / tileSize) == 3) ||
-			//	(testPoint.x > width) || (testPoint.x < 0) || (testPoint.y > height) || (testPoint.y < 0))
-			//	break;
-			if ((game->GetMap()->GetMapIndex((int)(testX / tileSize), (int)(testY / tileSize)) == 3) ||
-				(((int)(testX) > width) || ((int)(testX) < 0) || ((int)(testY) > height) || ((int)(testY) < 0)))
+			if ((game->GetMap()->GetMapIndex(testPoint.x / tileSize, testPoint.y / tileSize) == 3) ||
+				(testPoint.x > width) || (testPoint.x < 0) || (testPoint.y > height) || (testPoint.y < 0))
 				break;
 
 			// forward test point rotated clockwise 90 degrees
-			//testPoint.x = testSpriteCenter.x - (int)(collisionRadius*testVector[1]);
-			//testPoint.y = testSpriteCenter.y + (int)(collisionRadius*testVector[0]);
-			testX = testSpriteCenter.x - collisionRadius*testVector[1];
-			testY = testSpriteCenter.y + collisionRadius*testVector[0];
+			testPoint.x = testSpriteCenter.x - (int)(collisionRadius*testVector[1]);
+			testPoint.y = testSpriteCenter.y + (int)(collisionRadius*testVector[0]);
 
 			// check for collision
 			// FIXME: make this a general function of Map class
-			//if ((game->GetMap()->GetMapIndex(testPoint.x / tileSize, testPoint.y / tileSize) == 3) ||
-			//	(testPoint.x > width) || (testPoint.x < 0) || (testPoint.y > height) || (testPoint.y < 0))
-			//	break;
-			if ((game->GetMap()->GetMapIndex((int)(testX / tileSize), (int)(testY / tileSize)) == 3) ||
-				(((int)(testX) > width) || ((int)(testX) < 0) || ((int)(testY) > height) || ((int)(testY) < 0)))
+			if ((game->GetMap()->GetMapIndex(testPoint.x / tileSize, testPoint.y / tileSize) == 3) ||
+				(testPoint.x > width) || (testPoint.x < 0) || (testPoint.y > height) || (testPoint.y < 0))
 				break;
 
 			weight++;
@@ -430,8 +414,20 @@ void Entity::CheckLineOfSight() {
 			if (weight == MAX_LOS_WEIGHT)
 				break;
 
+			// move to the next potential sprite position along the testVector
 			testSpritePos.x += (int)(speed*testVector[0]);
 			testSpritePos.y += (int)(speed*testVector[1]);
+			testSpriteCenter.x = testSpritePos.x + (sprite->w / 2);
+			testSpriteCenter.y = testSpritePos.y + (sprite->h / 2);
+		}
+
+		// FIXME: this additional operation on the testSpriteCenter may cause a int to float to int rounding error
+		// and thus an unattainable secondary waypoint
+		// move back to the last valid position if they weren't all valid
+		if (weight < MAX_LOS_WEIGHT) {
+
+			testSpritePos.x -= (int)(speed*testVector[0]);
+			testSpritePos.y -= (int)(speed*testVector[1]);
 			testSpriteCenter.x = testSpritePos.x + (sprite->w / 2);
 			testSpriteCenter.y = testSpritePos.y + (sprite->h / 2);
 		}
