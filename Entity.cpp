@@ -47,17 +47,14 @@ bool Entity::Init(char fileName[], bool key, Game *const g) {
 	touchRange = 1;
 	waypointRange = speed*speed/4; // squared range of speed/2 to speed up waypoint range finding
 
-	VectorClear(movementVector);
-	VectorClear(wallVector);
+	VectorClear(forward);
+	VectorClear(left);
+	VectorClear(right);
 
 	collisionRadius = (float)((sprite->w * sprite->w) + (sprite->h * sprite->h));
 	collisionRadius = SDL_sqrtf(collisionRadius);
 	collisionRadius /= 2.0f;
 
-
-	currentWaypoint = -1;
-	userWaypoint = -1;
-	maxWaypoint = 0;
 	atWaypoint = false;
 	moving = false;
 
@@ -161,12 +158,21 @@ void Entity::Update() {
 	SDL_BlitSurface(sprite, NULL, game->GetBuffer(), &destRect);
 
 	// draw the waypoints
+	waypoint_s * p = &waypoints;
+	while (p) {
+	
+		p->location.x;
+		p->location.y;
+		p = p->next;
+	}
+/*
 	for (int i = 0; i < maxWaypoint; i++) {
 
 		destRect.x = waypoints[i].x - game->GetMap()->GetCamera()->x;
 		destRect.y = waypoints[i].y - game->GetMap()->GetCamera()->y;
 		SDL_BlitSurface(sprite, NULL, game->GetBuffer(), &destRect);
 	}
+*/
 
 // FREEHILL BEGIN DEBUG COLLISION CIRCLE
 	// TODO: draw one pink pixel for each unique x,y point on the current collision circle
@@ -180,7 +186,7 @@ void Entity::Update() {
 
 	while (rotationAngle < 360.0f) {
 
-		if (DotProduct(debugVector, movementVector) >= 0 && DotProduct(debugVector, wallVector) >= 0) {
+		if (DotProduct(debugVector, forward) >= 0) {
 
 			collisionX = center.x + (int)(collisionRadius*debugVector[0]) - game->GetMap()->GetCamera()->x;
 			collisionY = center.y + (int)(collisionRadius*debugVector[1]) - game->GetMap()->GetCamera()->y;
@@ -204,28 +210,24 @@ void Entity::Move() {
 	//BEGIN WAYPOINT VECTOR MOVEMENT ALGORITHM//
 	////////////////////////////////////////////
 
-	// FIXME: second condition needs some work to ensure the sprite follows the full trail, then stops/waits
-	if ((userWaypoint < 0) || (currentWaypoint == userWaypoint) )
+	// TODO: dont even think about moving under the following conditions
+	if (1/*no waypoints exist...AKA: just popped the last waypoint from the stack*/ )
 		return;
 
-	// ignore checking LOS if a movementVector is already established, wait until a better position is acquired to check.
-	if ( !moving || (GetCenterX() == maxMovePoint.x && GetCenterY() == maxMovePoint.y) )
-		CheckLineOfSight();
+	CheckLineOfSight();
 
-	spritePos.x += (int)(speed*movementVector[0]);
-	spritePos.y += (int)(speed*movementVector[1]);
+	spritePos.x += (int)(speed*forward[0]);
+	spritePos.y += (int)(speed*forward[1]);
 
 	spriteCenter.x = GetCenterX();
 	spriteCenter.y = GetCenterY();
 
-	// FIXME: the snap-to-waypoint protocol needs some work (as does the transition to the next waypoint)
-	if ( !atWaypoint && moving && FastLength(&spriteCenter, &waypoints[currentWaypoint]) <= waypointRange ) {
+	// TODO: complete this code
+	if ( !atWaypoint && moving && 1 /*ARRIVED AT A WAYPOINT EXACTLY*/) {
 
-		spritePos.x = waypoints[currentWaypoint].x;
-		spritePos.y = waypoints[currentWaypoint].y;
-		VectorClear(movementVector);
+		VectorClear(forward);
 		moving = false;
-		currentWaypoint++;
+		//TODO: pop the recently attained waypoint, and point to the next one (if any)
 		atWaypoint = true;
 
 	} else {
@@ -370,8 +372,8 @@ void Entity::CheckLineOfSight() {
 	testSpriteCenter.x = GetCenterX();
 	testSpriteCenter.y = GetCenterY();
 
-	distToWaypoint = VectorNormalize2(&testSpriteCenter, &waypoints[currentWaypoint], waypointVector);
-	//VectorCopy(waypointVector, testVector); 
+	// FIXME: second parameter should be a point_s*
+	distToWaypoint = VectorNormalize2(&testSpriteCenter, 0/*&waypoints[currentWaypoint]*/, waypointVector);
 	VectorCopy(originVector, testVector);
 
 	rotationAngle = 0.0f;
@@ -431,10 +433,6 @@ void Entity::CheckLineOfSight() {
 			if (weight == MAX_LOS_WEIGHT)
 				break;
 
-			// save the old testSpriteCenter in case the new point is no good (and to avoid re-calculation rouding errors)
-			lastGoodCenter.x = testSpriteCenter.x;
-			lastGoodCenter.y = testSpriteCenter.y;
-			
 			// move to the next potential sprite position along the testVector
 			testSpritePos.x += (int)(speed*testVector[0]);
 			testSpritePos.y += (int)(speed*testVector[1]);
@@ -442,22 +440,12 @@ void Entity::CheckLineOfSight() {
 			testSpriteCenter.y = testSpritePos.y + (sprite->h / 2);
 		}
 
-		// move back the last good point if they weren't all good
-		if (weight < MAX_LOS_WEIGHT) {
-
-			testSpriteCenter.x = lastGoodCenter.x;
-			testSpriteCenter.y = lastGoodCenter.y;
-
-		}
-	
 		weight_mod = DotProduct(testVector, waypointVector);
 
 		if ( (weight+weight_mod) > bestWeight) {
 
 			bestWeight = weight + weight_mod;
 			VectorCopy(testVector, bestVector);
-			maxMovePoint.x = testSpriteCenter.x;
-			maxMovePoint.y = testSpriteCenter.y;
 		}
 
 		do {
@@ -467,13 +455,14 @@ void Entity::CheckLineOfSight() {
 
 				if (bestWeight <= 2) {
 
-					VectorClear(movementVector);
-					VectorClear(wallVector);
+					VectorClear(forward);
+					VectorClear(left);
+					VectorClear(right);
 					moving = false;
 
 				} else {
 
-					VectorCopy(bestVector, movementVector);
+					VectorCopy(bestVector, forward);
 					moving = true;
 
 				}
@@ -483,8 +472,7 @@ void Entity::CheckLineOfSight() {
 			//RotateVector(waypointVector, rotationAngle, testVector);
 			RotateVector(originVector, rotationAngle, testVector);
 
-		} while (DotProduct(testVector, movementVector) < 0 ||
-				 DotProduct(testVector, wallVector) < 0);	// avoid testVectors that backtrack
+		} while (DotProduct(testVector, forward) < 0);	// avoid testVectors that backtrack
 	}
 }
 
@@ -718,6 +706,7 @@ int Entity::KnownMap(int row, int column) {
 	return knownMap[row][column];
 }
 
+// FIXME: this should be the function that pushes a waypoint onto the stack
 void Entity::AddWaypoint(int wx, int wy) {
 
 	if (userWaypoint < 0)

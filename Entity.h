@@ -30,6 +30,17 @@ private:
 		int y;
 	};
 
+	// FIXME: create a templated STACK class
+	// top of stack => prev == null
+	// bottom of stack => next == null
+	struct waypoint_s {
+
+		waypoint_s * prev;
+		point_s location;
+		bool userDefined;
+		waypoint_s * next;
+	};
+
 	void CollisionCheck(bool horizontal, bool vertical);
 	void CheckFogOfWar();
 	void CheckLineOfSight();
@@ -76,15 +87,12 @@ private:
 	unsigned int watch_touch;	// marks forward-sensors to watch given the moveState
 
 	// TODO: make this a doubly-linked list (stack, LIFO) to allow for insertion of user-defined and AI-defined waypoints
-	point_s waypoints[3];		// maximum of 3 waypoints for testing pathfinding
+	waypoint_s waypoints;		// AI movement goal
 
-	point_s maxMovePoint;		// farthest verfied position along movementVector
-	vec3_t movementVector;		// currently used movement vector
-	vec3_t wallVector;			// currently followed wall (used to avoid more complex obstacles)
-	int wallWeight;				// original weight when the wallVector was set (any increase causes wallVector to zero)
-	int currentWaypoint;		// index of waypoint being tracked
-	int userWaypoint;			// index of waypoint being added
-	int maxWaypoint;			// highest filled waypoints array index
+	vec3_t forward;				// currently used movement vector
+	vec3_t left;				// perpendicular to forward_v counter-clockwise
+	vec3_t right;				// perpendicular to forward_v clockwise
+
 	bool atWaypoint;
 	bool moving;
 
@@ -122,7 +130,7 @@ public:
 	void Update();
 	void Move();		// give this a broader functionality beyond pure AI movement (ie player input)
 	int KnownMap(int row, int column);
-	void AddWaypoint(int wx, int wy);
+	void AddWaypoint(int wx, int wy, bool userDefined);
 	int GetCenterX();
 	int GetCenterY();
 };
