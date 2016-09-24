@@ -48,6 +48,7 @@ bool Entity::Init(char fileName[], bool key, Game *const g) {
 	waypointRange = speed*speed/4; // squared range of speed/2 to speed up waypoint range finding
 
 	VectorClear(movementVector);
+	VectorClear(wallVector);
 
 	collisionRadius = (float)((sprite->w * sprite->w) + (sprite->h * sprite->h));
 	collisionRadius = SDL_sqrtf(collisionRadius);
@@ -179,9 +180,12 @@ void Entity::Update() {
 
 	while (rotationAngle < 360.0f) {
 
-		collisionX = center.x + (int)(collisionRadius*debugVector[0]) - game->GetMap()->GetCamera()->x;
-		collisionY = center.y + (int)(collisionRadius*debugVector[1]) - game->GetMap()->GetCamera()->y;
-		DrawPixel(game->GetBuffer(), collisionX, collisionY, 255, 0, 255);
+		if (DotProduct(debugVector, movementVector) >= 0 && DotProduct(debugVector, wallVector) >= 0) {
+
+			collisionX = center.x + (int)(collisionRadius*debugVector[0]) - game->GetMap()->GetCamera()->x;
+			collisionY = center.y + (int)(collisionRadius*debugVector[1]) - game->GetMap()->GetCamera()->y;
+			DrawPixel(game->GetBuffer(), collisionX, collisionY, 255, 0, 255);
+		}
 		rotationAngle++;
 		RotateVector(debugVector, 1.0f, debugVector);
 	}
@@ -195,7 +199,11 @@ void Entity::Move() {
 	point_s spriteCenter;
 
 	//CheckFogOfWar();	// also uncomment the Update() code in Map.cpp
-	
+
+	////////////////////////////////////////////
+	//BEGIN WAYPOINT VECTOR MOVEMENT ALGORITHM//
+	////////////////////////////////////////////
+
 	// FIXME: second condition needs some work to ensure the sprite follows the full trail, then stops/waits
 	if ((userWaypoint < 0) || (currentWaypoint == userWaypoint) )
 		return;
@@ -224,6 +232,10 @@ void Entity::Move() {
 
 		atWaypoint = false;
 	}
+
+	//////////////////////////////////////////
+	//END WAYPOINT VECTOR MOVEMENT ALGORITHM//
+	//////////////////////////////////////////
 
 	/* 
 	////////////////////////////////////////
@@ -331,15 +343,17 @@ void Entity::Move() {
 //******************
 void Entity::CheckLineOfSight() {
 
-	vec3_t waypointVector;		// from the sprite to the next waypoint
-	vec3_t testVector;			// tested for optimal travel decision
-	vec3_t bestVector;			// the highest weight < 5
-	float bestWeight;			// maximum decision weight == 5 sets movementVector = vector
-								// retains highest weight < 5 in the event of a full 360 degree sweep without a 5
-	float distToWaypoint;		// **currently not fully utilized for checks, but a potentially useful metric**
-	float rotationAngle;		// amount to rotate the testVector away from the waypointVector (CW or CCW)
+	vec3_t originVector = {1,0,0};		// standardized vector for consistent collision testing
+	vec3_t waypointVector;				// from the sprite to the next waypoint
+	vec3_t testVector;					// tested for optimal travel decision
+	vec3_t bestVector;					// the highest weight < 5
+	float bestWeight;					// maximum decision weight == 5 sets movementVector = vector
+										// retains highest weight < 5 in the event of a full 360 degree sweep without a 5
+	float distToWaypoint;				// **currently not fully utilized for checks, but a potentially useful metric**
+	float rotationAngle;				// amount to rotate the testVector away from the waypointVector (CW or CCW)
 	point_s testSpritePos;
 	point_s testSpriteCenter;
+	point_s lastGoodCenter;
 	point_s testPoint;
 	float weight_mod;
 	int weight;
@@ -357,7 +371,8 @@ void Entity::CheckLineOfSight() {
 	testSpriteCenter.y = GetCenterY();
 
 	distToWaypoint = VectorNormalize2(&testSpriteCenter, &waypoints[currentWaypoint], waypointVector);
-	VectorCopy(waypointVector, testVector); 
+	//VectorCopy(waypointVector, testVector); 
+	VectorCopy(originVector, testVector);
 
 	rotationAngle = 0.0f;
 	VectorClear(bestVector);
@@ -368,13 +383,15 @@ void Entity::CheckLineOfSight() {
 
 		weight = 0;
 
-		// FIXME: simplify these operaions (done too many times, just preserve the value somehow)
+		// FIXME: simplify these operations (done too many times, just preserve the value somehow)
 		testSpritePos.x = spritePos.x;
 		testSpritePos.y = spritePos.y;
 		testSpriteCenter.x = GetCenterX();
 		testSpriteCenter.y = GetCenterY();
 		
 		while (1) {
+
+			// TODO: add functionality to navigate out of a no-walk starting position
 			
 			// TODO: check if the waypoint landed somewhere in a set, or between sets (along the swept area), 
 			// and immediatly set THAT as the movementVector. This avoids temporarily bypassing the waypoint for a "better" LOS
@@ -414,6 +431,10 @@ void Entity::CheckLineOfSight() {
 			if (weight == MAX_LOS_WEIGHT)
 				break;
 
+			// save the old testSpriteCenter in case the new point is no good (and to avoid re-calculation rouding errors)
+			lastGoodCenter.x = testSpriteCenter.x;
+			lastGoodCenter.y = testSpriteCenter.y;
+			
 			// move to the next potential sprite position along the testVector
 			testSpritePos.x += (int)(speed*testVector[0]);
 			testSpritePos.y += (int)(speed*testVector[1]);
@@ -421,17 +442,14 @@ void Entity::CheckLineOfSight() {
 			testSpriteCenter.y = testSpritePos.y + (sprite->h / 2);
 		}
 
-		// FIXME: this additional operation on the testSpriteCenter may cause a int to float to int rounding error
-		// and thus an unattainable secondary waypoint
-		// move back to the last valid position if they weren't all valid
+		// move back the last good point if they weren't all good
 		if (weight < MAX_LOS_WEIGHT) {
 
-			testSpritePos.x -= (int)(speed*testVector[0]);
-			testSpritePos.y -= (int)(speed*testVector[1]);
-			testSpriteCenter.x = testSpritePos.x + (sprite->w / 2);
-			testSpriteCenter.y = testSpritePos.y + (sprite->h / 2);
-		}
+			testSpriteCenter.x = lastGoodCenter.x;
+			testSpriteCenter.y = lastGoodCenter.y;
 
+		}
+	
 		weight_mod = DotProduct(testVector, waypointVector);
 
 		if ( (weight+weight_mod) > bestWeight) {
@@ -441,31 +459,16 @@ void Entity::CheckLineOfSight() {
 			maxMovePoint.x = testSpriteCenter.x;
 			maxMovePoint.y = testSpriteCenter.y;
 		}
-/*
-		// rotation direction decision bias, and quicker exit
-		// FIXME: improve this shortcut exit statement
-		if (weight == MAX_LOS_WEIGHT) {
-
-			VectorCopy(bestVector, movementVector);
-			break;
-		}
-*/
 
 		do {
 			rotationAngle += 1.0f;
 
 			if (rotationAngle >= 360) {
 
-				// TODO: this  condition indicates that on the 180 degress of vectors in-line with the movementVector 
-				// none had a longer LOS than ON-SPRITE. This then means one of two things 1) its a good time to
-				// consider defacto backtracking by zeroing the movementVector (thus giving equal weight to all vectors)
-				// or 2) perform a second sweep using ALL testPoints (ie no breaks) and choose the first one with the
-				// shortest LOS-weight to VALID points that gets a weight_mod according to its DotProduct with the
-				// waypointVector (again...all vectors would need equal weight in general, ie none ignored)
-				// NOTE: utilize the "moving" bool to perform different testPoint VALIDATION checks
 				if (bestWeight <= 2) {
 
-					VectorClear(movementVector);	
+					VectorClear(movementVector);
+					VectorClear(wallVector);
 					moving = false;
 
 				} else {
@@ -477,9 +480,11 @@ void Entity::CheckLineOfSight() {
 				return;
 			}
 
-			RotateVector(waypointVector, rotationAngle, testVector);
+			//RotateVector(waypointVector, rotationAngle, testVector);
+			RotateVector(originVector, rotationAngle, testVector);
 
-		} while (DotProduct(testVector, movementVector) < 0);	// avoid testVectors that backtrack
+		} while (DotProduct(testVector, movementVector) < 0 ||
+				 DotProduct(testVector, wallVector) < 0);	// avoid testVectors that backtrack
 	}
 }
 

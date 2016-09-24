@@ -7,9 +7,9 @@ class Game;
 class Map;
 
 #define MAX_LOS_WEIGHT 5
-#define DEG2RAD(a) (a*((float)(M_PI)/180.0f))
-#define VectorCopy(a,b)	( b[0]=a[0], b[1]=a[1], b[2]=a[2] )
-#define VectorClear(a) ( a[0]=0, a[1]=0, a[2]=0 )
+#define DEG2RAD(angle)			(angle*((float)(M_PI)/180.0f))
+#define VectorCopy(src,dest)	( dest[0]=src[0], dest[1]=src[1], dest[2]=src[2] )
+#define VectorClear(v)			( v[0]=0, v[1]=0, v[2]=0 )
 
 class Entity {
 
@@ -75,9 +75,13 @@ private:
 	unsigned int touch;			// off-sprite sensors
 	unsigned int watch_touch;	// marks forward-sensors to watch given the moveState
 
+	// TODO: make this a doubly-linked list (stack, LIFO) to allow for insertion of user-defined and AI-defined waypoints
 	point_s waypoints[3];		// maximum of 3 waypoints for testing pathfinding
+
 	point_s maxMovePoint;		// farthest verfied position along movementVector
 	vec3_t movementVector;		// currently used movement vector
+	vec3_t wallVector;			// currently followed wall (used to avoid more complex obstacles)
+	int wallWeight;				// original weight when the wallVector was set (any increase causes wallVector to zero)
 	int currentWaypoint;		// index of waypoint being tracked
 	int userWaypoint;			// index of waypoint being added
 	int maxWaypoint;			// highest filled waypoints array index
