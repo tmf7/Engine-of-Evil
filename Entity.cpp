@@ -2,10 +2,29 @@
 
 Entity::Entity() {
 
-}
+	speed = 10;
+	size = 15;
+	sightRange = 128;
+	sight.w = sightRange;
+	sight.h = sightRange;
+	touchRange = 1;
+	waypointRange = (float)(speed*speed) / 4.0f; // squared range of speed/2 to speed up waypoint range finding
 
-Entity::~Entity() {
-	
+	forward = ZERO_VEC3;
+	left = ZERO_VEC3;
+	right = ZERO_VEC3;
+	rotationQuat.Set(0.0f, 0.0f, SDL_sinf(DEG2RAD(ROTATION_INCREMENT) / 2.0f), SDL_cosf(DEG2RAD(ROTATION_INCREMENT) / 2.0f));
+	atWaypoint = false;
+	moving = false;
+	goals = nullptr;
+	trail = nullptr;
+	currentWaypoint = nullptr;
+	moveState = MOVE_TO_GOAL;	// MOVE_RIGHT;
+	oldTouch = 0;
+	touch = 0;
+
+	frameDelayCount = 0;
+
 }
 
 // TODO: insert use of the sourceRect for initial frame of animation
@@ -28,8 +47,6 @@ bool Entity::Init(char fileName[], bool key, Game *const g) {
 
 	sprite = SDL_ConvertSurface(surface, game->GetBuffer()->format, 0);
 
-	frameDelayCount = 0;
-
 	SDL_FreeSurface(surface);
 	surface = NULL;
 
@@ -39,24 +56,9 @@ bool Entity::Init(char fileName[], bool key, Game *const g) {
 		SDL_SetColorKey(sprite, SDL_TRUE, colorKey);
 	}
 
-	speed = 10;
-	size = 15;
-	sightRange = 128;
-	sight.w = sightRange;
-	sight.h = sightRange;
-	touchRange = 1;
-	waypointRange = speed*speed/4; // squared range of speed/2 to speed up waypoint range finding
-
-	VectorClear(forward);
-	VectorClear(left);
-	VectorClear(right);
-
 	collisionRadius = (float)((sprite->w * sprite->w) + (sprite->h * sprite->h));
 	collisionRadius = SDL_sqrtf(collisionRadius);
 	collisionRadius /= 2.0f;
-
-	atWaypoint = false;
-	moving = false;
 
 	Spawn();
 
@@ -83,8 +85,6 @@ void Entity::Spawn()
 	int radius = 1;
 	int tileSize = game->GetMap()->GetTileSize();
 	bool entity_placed = false;
-	moveState = MOVE_RIGHT;
-	oldTouch = touch = 0;
 
 	// Check the top-left corner first
 	if (game->GetMap()->GetMapIndex(0,0) < 3) {
@@ -101,8 +101,8 @@ void Entity::Spawn()
 		for (i = radius, j = 0; j <= radius; j++) {
 
 			if (game->GetMap()->GetMapIndex(i, j) < 3) {
-				spritePos.x = i*tileSize + 5;
-				spritePos.y = j*tileSize + 5;
+				spritePos.x = (float)(i*tileSize + 5);
+				spritePos.y = (float)(j*tileSize + 5);
 				entity_placed = true;
 				break;
 			}
@@ -114,8 +114,8 @@ void Entity::Spawn()
 
 			if (game->GetMap()->GetMapIndex(i, j) < 3) {
 
-				spritePos.x = i*tileSize + 5;
-				spritePos.y = j*tileSize + 5;
+				spritePos.x = (float)(i*tileSize + 5);
+				spritePos.y = (float)(j*tileSize + 5);
 				entity_placed = true;
 				break;
 			}
@@ -134,8 +134,8 @@ void Entity::Update() {
 	Move();
 
 	// Account for camera movement when drawing
-	destRect.x = spritePos.x - game->GetMap()->GetCamera()->x;
-	destRect.y = spritePos.y - game->GetMap()->GetCamera()->y;
+	destRect.x = (int)(spritePos.x) - game->GetMap()->GetCamera()->x;
+	destRect.y = (int)(spritePos.y) - game->GetMap()->GetCamera()->y;
 
 /*
 	if (frameDelayCount > frameDelay){
@@ -158,12 +158,12 @@ void Entity::Update() {
 	SDL_BlitSurface(sprite, NULL, game->GetBuffer(), &destRect);
 
 	// draw the waypoints
-	waypoint_s * p = &waypoints;
-	while (p) {
+	EvilStack<eVec2> * node;
+	for (node = goals; node; node = EvilStack<eVec2>::NextNode(&node)) {
 	
-		p->location.x;
-		p->location.y;
-		p = p->next;
+		destRect.x = (int)(EvilStack<eVec2>::Peek(&node)->x) - game->GetMap()->GetCamera()->x;
+		destRect.y = (int)(EvilStack<eVec2>::Peek(&node)->y) - game->GetMap()->GetCamera()->y;
+		SDL_BlitSurface(sprite, NULL, game->GetBuffer(), &destRect);
 	}
 /*
 	for (int i = 0; i < maxWaypoint; i++) {
@@ -176,24 +176,22 @@ void Entity::Update() {
 
 // FREEHILL BEGIN DEBUG COLLISION CIRCLE
 	// TODO: draw one pink pixel for each unique x,y point on the current collision circle
-	float rotationAngle = 0.0f;
-	vec3_t debugVector = {1,0,0};
+	eVec3 debugVector = ORIGIN_VEC3;
+	float rotationAngle;
 	int collisionX, collisionY;
-	point_s center;
-
-	center.x = GetCenterX();
-	center.y = GetCenterY();
+	
+	rotationAngle = 0.0f;
 
 	while (rotationAngle < 360.0f) {
 
-		if (DotProduct(debugVector, forward) >= 0) {
+		if (forward*debugVector >= 0) {
 
-			collisionX = center.x + (int)(collisionRadius*debugVector[0]) - game->GetMap()->GetCamera()->x;
-			collisionY = center.y + (int)(collisionRadius*debugVector[1]) - game->GetMap()->GetCamera()->y;
+			collisionX = GetCenterX() + (int)(collisionRadius*debugVector.x) - game->GetMap()->GetCamera()->x;
+			collisionY = GetCenterY() + (int)(collisionRadius*debugVector.y) - game->GetMap()->GetCamera()->y;
 			DrawPixel(game->GetBuffer(), collisionX, collisionY, 255, 0, 255);
 		}
 		rotationAngle++;
-		RotateVector(debugVector, 1.0f, debugVector);
+		debugVector = rotationQuat*debugVector;
 	}
 // FREEHILL END DEBUG COLLISION CIRCLE
 }
@@ -202,7 +200,8 @@ void Entity::Update() {
 // Gather sensor information and decide how to move
 void Entity::Move() {
 
-	point_s spriteCenter;
+	eVec2 spriteCenter;
+	eVec2 waypoint;
 
 	//CheckFogOfWar();	// also uncomment the Update() code in Map.cpp
 
@@ -210,24 +209,27 @@ void Entity::Move() {
 	//BEGIN WAYPOINT VECTOR MOVEMENT ALGORITHM//
 	////////////////////////////////////////////
 
-	// TODO: dont even think about moving under the following conditions
-	if (1/*no waypoints exist...AKA: just popped the last waypoint from the stack*/ )
+	// don't move without an objective
+	if (currentWaypoint == nullptr)
 		return;
+
+	waypoint = *EvilStack<eVec2>::Peek(&currentWaypoint);
 
 	CheckLineOfSight();
 
-	spritePos.x += (int)(speed*forward[0]);
-	spritePos.y += (int)(speed*forward[1]);
+	spritePos.x += (int)(speed*forward.x);
+	spritePos.y += (int)(speed*forward.y);
 
-	spriteCenter.x = GetCenterX();
-	spriteCenter.y = GetCenterY();
+	spriteCenter.x = (float)GetCenterX();
+	spriteCenter.y = (float)GetCenterY();
 
 	// TODO: complete this code
-	if ( !atWaypoint && moving && 1 /*ARRIVED AT A WAYPOINT EXACTLY*/) {
+	if ( !atWaypoint && moving && spriteCenter.Compare(waypoint, waypointRange) ) {
 
-		VectorClear(forward);
-		moving = false;
-		//TODO: pop the recently attained waypoint, and point to the next one (if any)
+		spritePos.Set(waypoint.x, waypoint.y);
+		StopMoving();
+		EvilStack<eVec2>::Pop(&currentWaypoint);
+		CheckWaypointStack();
 		atWaypoint = true;
 
 	} else {
@@ -345,18 +347,17 @@ void Entity::Move() {
 //******************
 void Entity::CheckLineOfSight() {
 
-	vec3_t originVector = {1,0,0};		// standardized vector for consistent collision testing
-	vec3_t waypointVector;				// from the sprite to the next waypoint
-	vec3_t testVector;					// tested for optimal travel decision
-	vec3_t bestVector;					// the highest weight < 5
+	eVec3 waypointVector;				// from the sprite to the next waypoint
+	eVec3 testVector;					// tested for optimal travel decision
+	eVec3 bestVector;					// the highest weight < 5
 	float bestWeight;					// maximum decision weight == 5 sets movementVector = vector
 										// retains highest weight < 5 in the event of a full 360 degree sweep without a 5
 	float distToWaypoint;				// **currently not fully utilized for checks, but a potentially useful metric**
 	float rotationAngle;				// amount to rotate the testVector away from the waypointVector (CW or CCW)
-	point_s testSpritePos;
-	point_s testSpriteCenter;
-	point_s lastGoodCenter;
-	point_s testPoint;
+	eVec2 testSpritePos;
+	eVec2 testSpriteCenter;
+	eVec2 lastGoodCenter;
+	eVec2 testPoint;
 	float weight_mod;
 	int weight;
 	int tileSize; 
@@ -369,15 +370,17 @@ void Entity::CheckLineOfSight() {
 
 	testSpritePos.x = spritePos.x;
 	testSpritePos.y = spritePos.y;
-	testSpriteCenter.x = GetCenterX();
-	testSpriteCenter.y = GetCenterY();
+	testSpriteCenter.x = (float)GetCenterX();
+	testSpriteCenter.y = (float)GetCenterY();
 
-	// FIXME: second parameter should be a point_s*
-	distToWaypoint = VectorNormalize2(&testSpriteCenter, 0/*&waypoints[currentWaypoint]*/, waypointVector);
-	VectorCopy(originVector, testVector);
+	testPoint = *EvilStack<eVec2>::Peek(&currentWaypoint);
+	testPoint -= testSpriteCenter;
+	distToWaypoint = testPoint.Normalize();
+	waypointVector.Set(testPoint.x, testPoint.y, 0.0f);
+	testVector = ORIGIN_VEC3;
 
 	rotationAngle = 0.0f;
-	VectorClear(bestVector);
+	bestVector = ZERO_VEC3;
 	bestWeight = 0.0f;
 
 	// collision prediction
@@ -388,8 +391,8 @@ void Entity::CheckLineOfSight() {
 		// FIXME: simplify these operations (done too many times, just preserve the value somehow)
 		testSpritePos.x = spritePos.x;
 		testSpritePos.y = spritePos.y;
-		testSpriteCenter.x = GetCenterX();
-		testSpriteCenter.y = GetCenterY();
+		testSpriteCenter.x = (float)GetCenterX();
+		testSpriteCenter.y = (float)GetCenterY();
 		
 		while (1) {
 
@@ -399,8 +402,8 @@ void Entity::CheckLineOfSight() {
 			// and immediatly set THAT as the movementVector. This avoids temporarily bypassing the waypoint for a "better" LOS
 
 			// forward test point (starts on sprite)
-			testPoint.x = testSpriteCenter.x + (int)(collisionRadius*testVector[0]);
-			testPoint.y = testSpriteCenter.y + (int)(collisionRadius*testVector[1]);
+			testPoint.x = testSpriteCenter.x + (int)(collisionRadius*testVector.x);
+			testPoint.y = testSpriteCenter.y + (int)(collisionRadius*testVector.y);
 
 			// check for collision
 			// FIXME: make this a general function of Map class
@@ -409,8 +412,8 @@ void Entity::CheckLineOfSight() {
 				break;
 			
 			// forward test point rotated counter-clockwise 90 degrees
-			testPoint.x = testSpriteCenter.x + (int)(collisionRadius*testVector[1]);
-			testPoint.y = testSpriteCenter.y - (int)(collisionRadius*testVector[0]);
+			testPoint.x = testSpriteCenter.x + (int)(collisionRadius*testVector.y);
+			testPoint.y = testSpriteCenter.y - (int)(collisionRadius*testVector.x);
 
 			// check for collision
 			// FIXME: make this a general function of Map class
@@ -419,8 +422,8 @@ void Entity::CheckLineOfSight() {
 				break;
 
 			// forward test point rotated clockwise 90 degrees
-			testPoint.x = testSpriteCenter.x - (int)(collisionRadius*testVector[1]);
-			testPoint.y = testSpriteCenter.y + (int)(collisionRadius*testVector[0]);
+			testPoint.x = testSpriteCenter.x - (int)(collisionRadius*testVector.y);
+			testPoint.y = testSpriteCenter.y + (int)(collisionRadius*testVector.x);
 
 			// check for collision
 			// FIXME: make this a general function of Map class
@@ -434,45 +437,41 @@ void Entity::CheckLineOfSight() {
 				break;
 
 			// move to the next potential sprite position along the testVector
-			testSpritePos.x += (int)(speed*testVector[0]);
-			testSpritePos.y += (int)(speed*testVector[1]);
+			testSpritePos.x += (int)(speed*testVector.x);
+			testSpritePos.y += (int)(speed*testVector.y);
 			testSpriteCenter.x = testSpritePos.x + (sprite->w / 2);
 			testSpriteCenter.y = testSpritePos.y + (sprite->h / 2);
 		}
 
-		weight_mod = DotProduct(testVector, waypointVector);
+		weight_mod = testVector*waypointVector;
 
 		if ( (weight+weight_mod) > bestWeight) {
 
 			bestWeight = weight + weight_mod;
-			VectorCopy(testVector, bestVector);
+			bestVector.Set(testVector.x, testVector.y, testVector.z);
 		}
 
 		do {
-			rotationAngle += 1.0f;
+			rotationAngle += ROTATION_INCREMENT;
 
 			if (rotationAngle >= 360) {
 
 				if (bestWeight <= 2) {
 
-					VectorClear(forward);
-					VectorClear(left);
-					VectorClear(right);
-					moving = false;
+					StopMoving();
 
 				} else {
 
-					VectorCopy(bestVector, forward);
+					forward.Set(bestVector.x, bestVector.y, bestVector.z);
 					moving = true;
 
 				}
 				return;
 			}
 
-			//RotateVector(waypointVector, rotationAngle, testVector);
-			RotateVector(originVector, rotationAngle, testVector);
+			testVector = rotationQuat*testVector;
 
-		} while (DotProduct(testVector, forward) < 0);	// avoid testVectors that backtrack
+		} while (testVector*forward < 0);	// avoid testVectors that backtrack
 	}
 }
 
@@ -485,8 +484,8 @@ void Entity::CheckLineOfSight() {
 void Entity::CheckFogOfWar() {
 
 	// set the fog of war properties
-	sight.x = spritePos.x - (sightRange / 2);
-	sight.y = spritePos.y - (sightRange / 2);
+	sight.x = (int)(spritePos.x) - (sightRange / 2);
+	sight.y = (int)(spritePos.y) - (sightRange / 2);
 
 	// FIXME: inefficient allocation of pre-existing data as well as repetitive function calls to (currently) constant data
 	int tileSize = game->GetMap()->GetTileSize();
@@ -587,14 +586,14 @@ void Entity::CheckTouch(bool self, bool horizontal, bool vertical) {
 void Entity::CollisionCheck(bool horizontal, bool vertical) {
 
 	int tileSize = game->GetMap()->GetTileSize();
-	int x1 = spritePos.x/tileSize;
-	int x2 = (spritePos.x+size)/tileSize;
-	int y1 = spritePos.y/tileSize;
-	int y2 = (spritePos.y+size)/tileSize;
+	int x1 = (int)(spritePos.x/tileSize);
+	int x2 = (int)((spritePos.x+size)/tileSize);
+	int y1 = (int)(spritePos.y/tileSize);
+	int y2 = (int)((spritePos.y+size)/tileSize);
 	int width = game->GetMap()->GetWidth()*tileSize;
 	int height = game->GetMap()->GetHeight()*tileSize;
-	int oldX = spritePos.x;
-	int oldY = spritePos.y;
+	int oldX = (int)spritePos.x;
+	int oldY = (int)spritePos.y;
 
 	// default map-edge collision
 	if (horizontal) {
@@ -602,7 +601,7 @@ void Entity::CollisionCheck(bool horizontal, bool vertical) {
 		if (spritePos.x < 0)
 			spritePos.x = 0;
 		else if (spritePos.x > (width - size))
-			spritePos.x = width - 15;
+			spritePos.x = (float)(width - 15);
 	
 	}
 
@@ -611,7 +610,7 @@ void Entity::CollisionCheck(bool horizontal, bool vertical) {
 		if (spritePos.y < 0)
 			spritePos.y = 0;
 		else if (spritePos.y > (height - size))
-			spritePos.y = height - size;
+			spritePos.y = (float)(height - size);
 
 	}
 	
@@ -625,18 +624,18 @@ void Entity::CollisionCheck(bool horizontal, bool vertical) {
 	if (horizontal) {
 
 		if (localTouch & (RIGHT_TOP | RIGHT_BOTTOM) && moveState & MOVE_RIGHT)
-			spritePos.x = x2*tileSize - (size+1);
+			spritePos.x = (float)(x2*tileSize - (size+1));
 		else if (localTouch & (LEFT_TOP | LEFT_BOTTOM) && moveState & MOVE_LEFT)
-			spritePos.x = x1*tileSize + tileSize;
+			spritePos.x = (float)(x1*tileSize + tileSize);
 
 	}
 
 	if (vertical) {
 
 		if (localTouch & (TOP_RIGHT | TOP_LEFT) && moveState & MOVE_UP)
-			spritePos.y = y1*tileSize + tileSize;
+			spritePos.y = (float)(y1*tileSize + tileSize);
 		else if (localTouch & (BOTTOM_RIGHT | BOTTOM_LEFT) && moveState & MOVE_DOWN)
-			spritePos.y = y2*tileSize - (size+1);
+			spritePos.y = (float)(y2*tileSize - (size+1));
 
 	}
 
@@ -649,18 +648,18 @@ void Entity::CollisionCheck(bool horizontal, bool vertical) {
 	if (horizontal) {
 
 		if (oldTouch & ~touch & (BOTTOM_LEFT | TOP_LEFT) && moveState & MOVE_RIGHT)
-			spritePos.x = x1*tileSize;
+			spritePos.x = (float)(x1*tileSize);
 		else if (oldTouch & ~touch & (BOTTOM_RIGHT | TOP_RIGHT) && moveState & MOVE_LEFT)
-			spritePos.x = x2*tileSize + tileSize - (size+1);
+			spritePos.x = (float)(x2*tileSize + tileSize - (size+1));
 
 	}
 
 	if (vertical) {
 
 		if (oldTouch & ~touch & (LEFT_BOTTOM | RIGHT_BOTTOM) && moveState & MOVE_UP)
-			spritePos.y = y2*tileSize + tileSize - (size+1);
+			spritePos.y = (float)(y2*tileSize + tileSize - (size+1));
 		else if (oldTouch & ~touch & (LEFT_TOP | RIGHT_TOP) && moveState & MOVE_DOWN)
-			spritePos.y = y1*tileSize;
+			spritePos.y = (float)(y1*tileSize);
 
 	}
 
@@ -694,156 +693,36 @@ void Entity::PrintSensors() {
 	game->DrawOutlineText(buffer, 150, 300, 255, 255, 0);
 
 	// sprite position (top-left corner of bounding box)
-	sprintf_s(buffer, "%i, %i", spritePos.x, spritePos.y);
+	sprintf_s(buffer, "%i, %i", (int)spritePos.x, (int)spritePos.y);
 	game->DrawOutlineText(buffer, 150, 350, 255, 255, 255);
 
 }
 
 // FIXME: currently assumes row and column are within array limits
 // return values: 2 = currently visible, 1 = explored but in shadow, 0 = unexplored
-int Entity::KnownMap(int row, int column) {
+int Entity::GetKnownMap(int row, int column) {
 
 	return knownMap[row][column];
 }
 
-// FIXME: this should be the function that pushes a waypoint onto the stack
-void Entity::AddWaypoint(int wx, int wy) {
+void Entity::AddWaypoint(eVec2 &waypoint, EvilStack<eVec2> &node, bool userDefined) {
 
-	if (userWaypoint < 0)
-		userWaypoint = 0;
+	if (userDefined)
+		EvilStack<eVec2>::Push(waypoint, node, &goals);
+	else
+		EvilStack<eVec2>::Push(waypoint, node, &trail);
 
-	waypoints[userWaypoint].x = wx;
-	waypoints[userWaypoint].y = wy;
-	userWaypoint++;
-	maxWaypoint++;
-	
-	if (userWaypoint > 2)
-		userWaypoint = 0;
-
-	if (maxWaypoint > 3)
-		maxWaypoint = 3;
-
-	if (currentWaypoint < 0 || currentWaypoint > 2)
-		currentWaypoint = 0;
+	CheckWaypointStack();
 }
 
 int Entity::GetCenterX() {
 
-	return spritePos.x + (sprite->w / 2);
+	return (int)(spritePos.x + (sprite->w / 2));
 }
 
 int Entity::GetCenterY() {
 
-	return spritePos.y + (sprite->h / 2);
-}
-
-// vector math functions
-int Entity::FastLength(point_s *a, point_s *b) {
-
-	return (a->x - b->x)*(a->x - b->x) + (a->y - b->y)*(a->y - b->y);
-
-}
-
-void Entity::VectorNormalize(vec3_t a) {
-
-	float length, ilength;
-
-	length = a[0]*a[0] + a[1]*a[1] + a[2]*a[2];
-	length = SDL_sqrtf(length);		// FIXME
-
-	if (length)
-	{
-		ilength = 1 / length;
-		a[0] *= ilength;
-		a[1] *= ilength;
-		a[2] *= ilength;
-	}
-}
-
-// returns the distance between two points and generates a normalized vector
-float Entity::VectorNormalize2(point_s *from, point_s *to, vec3_t result) {
-	
-	float length, ilength;
-
-	result[0] = (float)(to->x - from->x);
-	result[1] = (float)(to->y - from->y);
-	result[2] = 0.0f;		// TODO: its a 2D game for now
-
-	length = result[0] * result[0] + result[1] * result[1] + result[2] * result[2];
-	length = SDL_sqrtf(length);		// FIXME
-
-	if (length)
-	{
-		ilength = 1.0f / length;
-		result[0] *= ilength;
-		result[1] *= ilength;
-		result[2] *= ilength;
-	}
-
-	return length;
-}
-
-float Entity::DotProduct(vec3_t a, vec3_t b) {
-
-	return (a[0]*b[0] + a[1]*b[1] + a[2]*b[2]);
-}
-
-// FIXME: ensure this modifies the proper values instead of a temp variable
-void Entity::VectorScale(vec3_t a, float scale, vec3_t result) {
-
-	result[0] = a[0] * scale;
-	result[1] = a[1] * scale;
-	result[2] = a[2] * scale;
-}
-
-void Entity::CrossProduct(vec3_t a, vec3_t b, vec3_t result) {
-
-	result[0] = a[1]*b[2] - a[2]*b[1];
-	result[1] = a[2]*b[0] - a[0]*b[2];
-	result[2] = a[0]*b[1] - a[1]*b[0];
-}
-
-//Hamiltonian of unit length quaternions
-// p*q = [ (ps*qv + qs*pv + pv X qv) (ps*qs - pv.qv) ]
-void Entity::QuatProduct(quat_s *p, quat_s *q, quat_s *result) {
-
-	vec3_t one, two, three;
-
-	VectorScale(p->vector, q->scalar, one);
-	VectorScale(q->vector, p->scalar, two);
-	CrossProduct(p->vector, q->vector, three);
-
-	result->scalar = p->scalar*q->scalar - DotProduct(p->vector, q->vector);
-
-	result->vector[0] = one[0] + two[0] + three[0];
-	result->vector[1] = one[1] + two[1] + three[1];
-	result->vector[2] = one[2] + two[2] + three[2];
-}
-
-// rotate the given vector about the z-axis by the given angle in degrees
-void Entity::RotateVector(vec3_t v, float degrees, vec3_t result) {
-
-	quat_s rotationQuat;		// quaternion formated rotationAxis and rotationAngle
-	quat_s testQuat;			// quaternion formated testVector
-
-	rotationQuat.vector[0] = 0;
-	rotationQuat.vector[1] = 0;
-	rotationQuat.vector[2] = SDL_sinf(DEG2RAD(degrees) / 2.0f);
-	rotationQuat.scalar = SDL_cosf(DEG2RAD(degrees) / 2.0f);
-
-	VectorCopy(v, testQuat.vector);		// DEBUG: was waypointVector
-	testQuat.scalar = 0;
-
-	// unit length quaternion => inverse == conjugate
-	// 2D rotation about the z-axis => only negate z-axis of quat vector
-	// v' = q*v*q^-1
-	QuatProduct(&rotationQuat, &testQuat, &testQuat);
-	rotationQuat.vector[2] = -rotationQuat.vector[2];
-	QuatProduct(&testQuat, &rotationQuat, &testQuat);
-
-	// extract rotated testVector from testQuat
-	VectorCopy(testQuat.vector, result);		// DEBUG: was testVector
-
+	return (int)(spritePos.y + (sprite->h / 2));
 }
 
 void Entity::DrawPixel(SDL_Surface *surface, int x, int y, Uint8 r, Uint8 g, Uint8 b)
@@ -867,4 +746,34 @@ void Entity::DrawPixel(SDL_Surface *surface, int x, int y, Uint8 r, Uint8 g, Uin
 
 	if (SDL_MUSTLOCK(surface))
 		SDL_UnlockSurface(surface);
+}
+
+void Entity::CheckWaypointStack() {
+
+	// the ai should decide the moment, according to dead-end protocols, when to 
+	// change over to MOVE_TO_TRAIL, and also set currentWaypoint = trail
+
+	switch (moveState) {
+
+		case MOVE_TO_GOAL: {
+			currentWaypoint = goals;
+			break;
+		}
+
+		case MOVE_TO_TRAIL: {
+			
+			if (trail == nullptr) {
+				moveState = MOVE_TO_GOAL;
+				currentWaypoint = goals;
+			}
+			break;
+		}
+	}
+}
+
+void Entity::StopMoving() {
+	forward.Zero();
+	left.Zero();
+	right.Zero();
+	moving = false;
 }

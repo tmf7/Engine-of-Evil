@@ -4,11 +4,6 @@ Map::Map() {
 
 }
 
-
-Map::~Map() {
-	
-}
-
 bool Map::Init (char fileName[], Game *const g, int xTiles, int yTiles) {
 
 	if (!g)

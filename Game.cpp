@@ -5,10 +5,6 @@ Game::Game() {
 }
 
 
-Game::~Game() {
-
-}
-
 bool Game::Init() {
 
 	int error = 0;
@@ -45,6 +41,8 @@ bool Game::Init() {
 		Shutdown(error);
 		return false;
 	}
+
+	numActiveWaypoints = 0;
 	
 	return true;
 
@@ -81,7 +79,10 @@ void Game::FreeAssets() {
 // TODO: check victory condition here or in the entities for alternate quit
 bool Game::Run() {
 
-	static SDL_Event event;
+	static SDL_Event	event;
+	waypoint_t *		waypointPtr = nullptr;
+	EvilStack<eVec2> *	newNode = nullptr;
+	eVec2 *				newWaypoint = nullptr;
 
 	// FIXME: currently the clear image and the window are the same dimensions (issue in fullscreen/scaling?)
 	// clear the window for fresh drawing
@@ -91,7 +92,7 @@ bool Game::Run() {
 	entities.Update();
 	SDL_UpdateWindowSurface(window);
 
-	SDL_Delay(20);
+	SDL_Delay(20);	// TODO: make this dynamic based on how long each frame took to produce (smooth the framerate)
 
 	while (SDL_PollEvent(&event))
 	{
@@ -102,8 +103,12 @@ bool Game::Run() {
 			case SDL_MOUSEBUTTONDOWN: {
 				if (event.button.button == 3)
 					map.BuildTiles();
-				if (event.button.button == 1)
-					entities.AddWaypoint(event.button.x + map.GetCamera()->x , event.button.y + map.GetCamera()->y);
+				if (event.button.button == 1) {
+					waypointPtr = GetNewWaypoint();
+					newWaypoint = &(waypointPtr->point);
+					newWaypoint->Set((float)(event.button.x + map.GetCamera()->x), (float)(event.button.y + map.GetCamera()->y));
+					entities.AddWaypoint(*newWaypoint, waypointPtr->node, true);
+				}
 				break;
 			}
 		}
@@ -146,3 +151,16 @@ Entity* Game::GetEntities() {
 	return &entities;
 }
 
+// assumes that the returned waypoint_t* will be used
+// multiple calls will return different pointers
+Game::waypoint_t* Game::GetNewWaypoint() {
+
+	// TODO: **NEW STACK MEMORY OVERWRITE POLICY** 
+	// if intended index is occupied then sweep from start to next empty
+	// if at max_waypoints then re-sweep from start for current oldest waypoint_s
+	
+	if (numActiveWaypoints == MAX_WAYPOINTS)
+		numActiveWaypoints = 0;
+
+	return &waypointPool[numActiveWaypoints++];
+}
