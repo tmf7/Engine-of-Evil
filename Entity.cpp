@@ -8,7 +8,7 @@ Entity::Entity() {
 	sight.w = sightRange;
 	sight.h = sightRange;
 	touchRange = 1;
-	waypointRange = (float)(speed*speed) / 4.0f; // squared range of speed/2 to speed up waypoint range finding
+	waypointRange = size / 2.0f;
 
 	forward = ZERO_VEC3;
 	left = ZERO_VEC3;
@@ -16,9 +16,7 @@ Entity::Entity() {
 	rotationQuat.Set(0.0f, 0.0f, SDL_sinf(DEG2RAD(ROTATION_INCREMENT) / 2.0f), SDL_cosf(DEG2RAD(ROTATION_INCREMENT) / 2.0f));
 	atWaypoint = false;
 	moving = false;
-	goals = nullptr;
-	trail = nullptr;
-	currentWaypoint = nullptr;
+	currentWaypoint = goals.Back();
 	moveState = MOVE_TO_GOAL;	// MOVE_RIGHT;
 	oldTouch = 0;
 	touch = 0;
@@ -157,28 +155,13 @@ void Entity::Update() {
 */
 	SDL_BlitSurface(sprite, NULL, game->GetBuffer(), &destRect);
 
-	// draw the waypoints
-	EvilStack<eVec2> * node;
-	for (node = goals; node; node = EvilStack<eVec2>::NextNode(&node)) {
-	
-		destRect.x = (int)(EvilStack<eVec2>::Peek(&node)->x) - game->GetMap()->GetCamera()->x;
-		destRect.y = (int)(EvilStack<eVec2>::Peek(&node)->y) - game->GetMap()->GetCamera()->y;
-		SDL_BlitSurface(sprite, NULL, game->GetBuffer(), &destRect);
-	}
-/*
-	for (int i = 0; i < maxWaypoint; i++) {
-
-		destRect.x = waypoints[i].x - game->GetMap()->GetCamera()->x;
-		destRect.y = waypoints[i].y - game->GetMap()->GetCamera()->y;
-		SDL_BlitSurface(sprite, NULL, game->GetBuffer(), &destRect);
-	}
-*/
-
 // FREEHILL BEGIN DEBUG COLLISION CIRCLE
-	// TODO: draw one pink pixel for each unique x,y point on the current collision circle
+	// draws one pink pixel for each unique x,y point on the current collision circle
 	eVec3 debugVector = ORIGIN_VEC3;
+	eVec2 * debugWaypoint;
 	float rotationAngle;
 	int collisionX, collisionY;
+	size_t node;
 	
 	rotationAngle = 0.0f;
 
@@ -194,6 +177,22 @@ void Entity::Update() {
 		debugVector = rotationQuat*debugVector;
 	}
 // FREEHILL END DEBUG COLLISION CIRCLE
+
+	// draw the waypoints
+	if (goals.IsEmpty())
+		return;
+
+	node = 0;
+	debugWaypoint = goals.Back();
+	while(debugWaypoint != nullptr) {
+
+		destRect.x = (int)(debugWaypoint->x) - game->GetMap()->GetCamera()->x;
+		destRect.y = (int)(debugWaypoint->y) - game->GetMap()->GetCamera()->y;
+		SDL_BlitSurface(sprite, NULL, game->GetBuffer(), &destRect);
+		node++;
+		debugWaypoint = goals.FromBack(node);
+	}
+
 }
 
 // Ultimate Goal: select a pathfinding type (eg: compass, endpoint+obstacle adjust, waypoints+minipaths, wall follow, Area awareness, etc)
@@ -201,7 +200,6 @@ void Entity::Update() {
 void Entity::Move() {
 
 	eVec2 spriteCenter;
-	eVec2 waypoint;
 
 	//CheckFogOfWar();	// also uncomment the Update() code in Map.cpp
 
@@ -213,8 +211,6 @@ void Entity::Move() {
 	if (currentWaypoint == nullptr)
 		return;
 
-	waypoint = *EvilStack<eVec2>::Peek(&currentWaypoint);
-
 	CheckLineOfSight();
 
 	spritePos.x += (int)(speed*forward.x);
@@ -223,13 +219,12 @@ void Entity::Move() {
 	spriteCenter.x = (float)GetCenterX();
 	spriteCenter.y = (float)GetCenterY();
 
-	// TODO: complete this code
-	if ( !atWaypoint && moving && spriteCenter.Compare(waypoint, waypointRange) ) {
+	if ( !atWaypoint && moving && spriteCenter.Compare(*currentWaypoint, waypointRange) ) {	// use the waypointRange to snap?
 
-		spritePos.Set(waypoint.x, waypoint.y);
+		spritePos.Set(currentWaypoint->x, currentWaypoint->y);
 		StopMoving();
-		EvilStack<eVec2>::Pop(&currentWaypoint);
-		CheckWaypointStack();
+		RemoveWaypoint();
+		SetNextWaypoint();
 		atWaypoint = true;
 
 	} else {
@@ -373,7 +368,7 @@ void Entity::CheckLineOfSight() {
 	testSpriteCenter.x = (float)GetCenterX();
 	testSpriteCenter.y = (float)GetCenterY();
 
-	testPoint = *EvilStack<eVec2>::Peek(&currentWaypoint);
+	testPoint = *currentWaypoint;
 	testPoint -= testSpriteCenter;
 	distToWaypoint = testPoint.Normalize();
 	waypointVector.Set(testPoint.x, testPoint.y, 0.0f);
@@ -705,14 +700,14 @@ int Entity::GetKnownMap(int row, int column) {
 	return knownMap[row][column];
 }
 
-void Entity::AddWaypoint(eVec2 &waypoint, EvilStack<eVec2> &node, bool userDefined) {
+void Entity::AddWaypoint(const eVec2 & waypoint, bool userDefined) {
 
 	if (userDefined)
-		EvilStack<eVec2>::Push(waypoint, node, &goals);
+		goals.PushFront(waypoint);
 	else
-		EvilStack<eVec2>::Push(waypoint, node, &trail);
+		trail.PushFront(waypoint);
 
-	CheckWaypointStack();
+	SetNextWaypoint();
 }
 
 int Entity::GetCenterX() {
@@ -748,23 +743,23 @@ void Entity::DrawPixel(SDL_Surface *surface, int x, int y, Uint8 r, Uint8 g, Uin
 		SDL_UnlockSurface(surface);
 }
 
-void Entity::CheckWaypointStack() {
+void Entity::SetNextWaypoint() {
 
-	// the ai should decide the moment, according to dead-end protocols, when to 
-	// change over to MOVE_TO_TRAIL, and also set currentWaypoint = trail
+	// TODO: the ai should decide the moment, according to dead-end protocols, when to 
+	// change over to MOVE_TO_TRAIL, and also set currentWaypoint = trail.Front()
 
 	switch (moveState) {
 
 		case MOVE_TO_GOAL: {
-			currentWaypoint = goals;
+			currentWaypoint = goals.Back();
 			break;
 		}
 
 		case MOVE_TO_TRAIL: {
 			
-			if (trail == nullptr) {
+			if (trail.IsEmpty()) {
 				moveState = MOVE_TO_GOAL;
-				currentWaypoint = goals;
+				currentWaypoint = goals.Back();
 			}
 			break;
 		}
@@ -776,4 +771,19 @@ void Entity::StopMoving() {
 	left.Zero();
 	right.Zero();
 	moving = false;
+}
+
+void Entity::RemoveWaypoint() {
+	switch (moveState) {
+
+		case MOVE_TO_GOAL: {
+			goals.PopBack();
+			break;
+		}
+
+		case MOVE_TO_TRAIL: {
+			trail.PopFront();
+			break;
+		}
+	}
 }

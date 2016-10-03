@@ -16,8 +16,9 @@ private:
 	void			CollisionCheck(bool horizontal, bool vertical);
 	void			CheckFogOfWar();
 	void			CheckLineOfSight();
-	void			CheckWaypointStack();
+	void			SetNextWaypoint();
 	void			StopMoving();
+	void			RemoveWaypoint();
 
 	void			CheckTouch(bool self, bool horizontal, bool vertical);
 	void			PrintSensors();
@@ -51,9 +52,9 @@ private:
 	unsigned int	watch_touch;	// marks forward-sensors to watch given the moveState
 
 	// these nodes function as the top of their stack for this entity
-	EvilStack<eVec2> * trail;		// AI-defined AI movement tracking ( points into Game.h's waypointNodes array )
-	EvilStack<eVec2> * goals;		// User-defined AI movement goals ( points into Game.h's waypointNodes array )
-	EvilStack<eVec2> * currentWaypoint;	// simplifies switching between the stack being tracked
+	EvilDeque<eVec2> trail;		// AI-defined AI movement tracking ( points into Game.h's waypointNodes array )
+	EvilDeque<eVec2> goals;		// User-defined AI movement goals ( points into Game.h's waypointNodes array )
+	eVec2 * currentWaypoint;		// simplifies switching between the deque being tracked
 
 	eVec3			forward;				// currently used movement vector
 	eVec3			left;					// perpendicular to forward_v counter-clockwise
@@ -98,7 +99,7 @@ public:
 	void			Update();
 	void			Move();		// give this a broader functionality beyond pure AI movement (ie player input)
 	int				GetKnownMap(int row, int column);
-	void			AddWaypoint(eVec2 &waypoint, EvilStack<eVec2> &node, bool userDefined);
+	void			AddWaypoint(const eVec2 & waypoint, bool userDefined);
 	// TODO: add GetTrailTop() function for other entities to track this entity's path 
 	// or something similar (ie the enemy doesn't know where the entity is going, only where its been
 	// and picks up the trail where it last saw the entity
