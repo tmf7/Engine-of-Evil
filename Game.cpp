@@ -4,7 +4,7 @@ Game::Game() {
 
 }
 
-
+// FIXME: this initialization error handling needs adjustment
 bool Game::Init() {
 
 	int error = 0;

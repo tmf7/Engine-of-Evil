@@ -10,10 +10,11 @@ Entity::Entity() {
 	touchRange = 1;
 	waypointRange = size / 2.0f;
 
-	forward = ZERO_VEC3;
-	left = ZERO_VEC3;
-	right = ZERO_VEC3;
-	rotationQuat.Set(0.0f, 0.0f, SDL_sinf(DEG2RAD(ROTATION_INCREMENT) / 2.0f), SDL_cosf(DEG2RAD(ROTATION_INCREMENT) / 2.0f));
+	forward = ZERO_VEC2;
+	left = ZERO_VEC2;
+	right = ZERO_VEC2;
+
+	rotationQuat_Z.Set(0.0f, 0.0f, SDL_sinf(DEG2RAD(ROTATION_INCREMENT) / 2.0f), SDL_cosf(DEG2RAD(ROTATION_INCREMENT) / 2.0f));
 	atWaypoint = false;
 	moving = false;
 	currentWaypoint = goals.Back();
@@ -26,14 +27,14 @@ Entity::Entity() {
 }
 
 // TODO: insert use of the sourceRect for initial frame of animation
-bool Entity::Init(char fileName[], bool key, Game *const g) {
+bool Entity::Init(char fileName[], bool key, Game * const game) {
 
 	SDL_Surface* surface = NULL;
 
-	if (!g)
+	if (!game || !game->GetMap())
 		return false;
 
-	game = g;
+	this->game = game;
 
 	if (!fileName[0])
 		return false;
@@ -57,6 +58,10 @@ bool Entity::Init(char fileName[], bool key, Game *const g) {
 	collisionRadius = (float)((sprite->w * sprite->w) + (sprite->h * sprite->h));
 	collisionRadius = SDL_sqrtf(collisionRadius);
 	collisionRadius /= 2.0f;
+
+	knownMapRows = game->GetMap()->GetRows();
+	knownMapCols = game->GetMap()->GetColumns();
+	memset(knownMap, 0, MAX_MAP_SIZE*MAX_MAP_SIZE * sizeof(int));	// ensure all initilized to 0
 
 	Spawn();
 
@@ -85,10 +90,11 @@ void Entity::Spawn()
 	bool entity_placed = false;
 
 	// Check the top-left corner first
-	if (game->GetMap()->GetMapIndex(0,0) < 3) {
+	if (game->GetMap()->GetIndexValue(0,0) < 3) {
 
 		spritePos.x = 5;
 		spritePos.y = 5;
+		UpdateCenter();
 		return;
 	}
 
@@ -98,7 +104,7 @@ void Entity::Spawn()
 		// down from the top
 		for (i = radius, j = 0; j <= radius; j++) {
 
-			if (game->GetMap()->GetMapIndex(i, j) < 3) {
+			if (game->GetMap()->GetIndexValue(i, j) < 3) {
 				spritePos.x = (float)(i*tileSize + 5);
 				spritePos.y = (float)(j*tileSize + 5);
 				entity_placed = true;
@@ -110,7 +116,7 @@ void Entity::Spawn()
 		// in from the bottom of the last search
 		for (i = radius - 1, j = radius; i >= 0 && !entity_placed; i--) {
 
-			if (game->GetMap()->GetMapIndex(i, j) < 3) {
+			if (game->GetMap()->GetIndexValue(i, j) < 3) {
 
 				spritePos.x = (float)(i*tileSize + 5);
 				spritePos.y = (float)(j*tileSize + 5);
@@ -121,6 +127,7 @@ void Entity::Spawn()
 
 		radius++;
 	}
+	UpdateCenter();
 }
 
 // TODO: add animation frame selection here
@@ -157,7 +164,7 @@ void Entity::Update() {
 
 // FREEHILL BEGIN DEBUG COLLISION CIRCLE
 	// draws one pink pixel for each unique x,y point on the current collision circle
-	eVec3 debugVector = ORIGIN_VEC3;
+	eVec2 debugVector = ORIGIN_VEC2;
 	eVec2 * debugWaypoint;
 	float rotationAngle;
 	int collisionX, collisionY;
@@ -169,12 +176,12 @@ void Entity::Update() {
 
 		if (forward*debugVector >= 0) {
 
-			collisionX = GetCenterX() + (int)(collisionRadius*debugVector.x) - game->GetMap()->GetCamera()->x;
-			collisionY = GetCenterY() + (int)(collisionRadius*debugVector.y) - game->GetMap()->GetCamera()->y;
+			collisionX = spriteCenter.x + (int)(collisionRadius*debugVector.x) - game->GetMap()->GetCamera()->x;
+			collisionY = spriteCenter.y + (int)(collisionRadius*debugVector.y) - game->GetMap()->GetCamera()->y;
 			DrawPixel(game->GetBuffer(), collisionX, collisionY, 255, 0, 255);
 		}
 		rotationAngle++;
-		debugVector = rotationQuat*debugVector;
+		debugVector = rotationQuat_Z*debugVector;
 	}
 // FREEHILL END DEBUG COLLISION CIRCLE
 
@@ -199,8 +206,6 @@ void Entity::Update() {
 // Gather sensor information and decide how to move
 void Entity::Move() {
 
-	eVec2 spriteCenter;
-
 	//CheckFogOfWar();	// also uncomment the Update() code in Map.cpp
 
 	////////////////////////////////////////////
@@ -211,17 +216,12 @@ void Entity::Move() {
 	if (currentWaypoint == nullptr)
 		return;
 
-	CheckLineOfSight();
-
-	spritePos.x += (int)(speed*forward.x);
-	spritePos.y += (int)(speed*forward.y);
-
-	spriteCenter.x = (float)GetCenterX();
-	spriteCenter.y = (float)GetCenterY();
-
+	UpdateMovement();
+	UpdatePosition();
+	
 	if ( !atWaypoint && moving && spriteCenter.Compare(*currentWaypoint, waypointRange) ) {	// use the waypointRange to snap?
 
-		spritePos.Set(currentWaypoint->x, currentWaypoint->y);
+		SetPosition(*currentWaypoint);
 		StopMoving();
 		RemoveWaypoint();
 		SetNextWaypoint();
@@ -231,6 +231,11 @@ void Entity::Move() {
 
 		atWaypoint = false;
 	}
+
+	// FIXME: knownMap is also used for Fog of war information
+	// anywhere the sprite has stood is marked as visited
+	// this information is currently used to make a movement decision
+	knownMap[(int)(spriteCenter.x/game->GetMap()->GetTileSize())][(int)(spriteCenter.y / game->GetMap()->GetTileSize())] = VISITED_TILE;
 
 	//////////////////////////////////////////
 	//END WAYPOINT VECTOR MOVEMENT ALGORITHM//
@@ -335,120 +340,67 @@ void Entity::Move() {
 }
 
 //******************
-// CheckLineOfSight
-// Determines the optimal movement vector to reach a given waypoint coordinate on the map
-// TODO(?): plot several paths and select the *optimal*(shortest?) one and/or randomize the final BEFORE MOVING
-// TODO(?): use a true spatial Trace algorithm (with an endpoint and cross-section)
+// UpdateMovement
+// Determines the optimal movement vector to reach the current waypoint
 //******************
-void Entity::CheckLineOfSight() {
+void Entity::UpdateMovement() {
+	eVec2 waypointVector;				// from the sprite to the next waypoint
+	eVec2 testVector;					// tested for optimal travel decision
+	eVec2 bestVector;					// optimal movement vector
+	float bestWeight;					// to rank bestVectors
+	//float distToWaypoint;				// **currently not fully utilized for checks, but a potentially useful metric**
+	float rotationAngle;				// cumulative amount the testVector has rotated in its search
+	float weight_mod;					// net bias for a decision about a testVector
+	int validSteps;						// collision-free steps that could be taken along a testVector
+	int revisitSteps;					// number of valid steps that land on previously visited tiles
 
-	eVec3 waypointVector;				// from the sprite to the next waypoint
-	eVec3 testVector;					// tested for optimal travel decision
-	eVec3 bestVector;					// the highest weight < 5
-	float bestWeight;					// maximum decision weight == 5 sets movementVector = vector
-										// retains highest weight < 5 in the event of a full 360 degree sweep without a 5
-	float distToWaypoint;				// **currently not fully utilized for checks, but a potentially useful metric**
-	float rotationAngle;				// amount to rotate the testVector away from the waypointVector (CW or CCW)
-	eVec2 testSpritePos;
-	eVec2 testSpriteCenter;
-	eVec2 lastGoodCenter;
-	eVec2 testPoint;
-	float weight_mod;
-	int weight;
-	int tileSize; 
-	int width;  
-	int height; 
+	waypointVector = *currentWaypoint - spriteCenter;
+	// distToWaypoint = testPoint.LengthSquared;	// TODO: have the range to the waypoint affect movement speed
+													// and have raw weight (los) affect it too (ie dont RUN at walls)
+	waypointVector.Normalize();
 
-	tileSize = game->GetMap()->GetTileSize();
-	width = game->GetMap()->GetWidth()*tileSize;
-	height = game->GetMap()->GetHeight()*tileSize;
+	// FIXME: testVector should start 90-ROTATION_INCREMENT degrees clockwise from forward, 
+	// to minimize sweep-time; further, it should only progress to 90-ROTATION_INCREMENT degrees 
+	// counter-clockwise from forward; AND it should skip over the forward angle;
+	// ALL OF THIS BECAUSE THOSE 3 VECTOR LOS would have already been checked
+	// and testVector should default to ORIGIN_VEC3 if forward ==  ZERO_VEC3
+	// SOLUTION: certainly save bestVector, bestWeight, and leastRevisit
+	// but in the event of a deadlock (==> ALL raw weight == #revisits, ratio-wise that is)
+	// TODO: further condition the weight_mod according to the left/right/forward check (function return?)
+	if (forward == ZERO_VEC2)
+		testVector = ORIGIN_VEC2;
+	else
+		testVector.Set( -forward.y, forward.x ); // forward vector rotated 90 degrees clockwise
 
-	testSpritePos.x = spritePos.x;
-	testSpritePos.y = spritePos.y;
-	testSpriteCenter.x = (float)GetCenterX();
-	testSpriteCenter.y = (float)GetCenterY();
-
-	testPoint = *currentWaypoint;
-	testPoint -= testSpriteCenter;
-	distToWaypoint = testPoint.Normalize();
-	waypointVector.Set(testPoint.x, testPoint.y, 0.0f);
-	testVector = ORIGIN_VEC3;
-
+	//****START HERE*****
+	// TODO: CheckMovement ont the 3 primary vectors' first (forward, left, right) (IF moving == true?)
+	//testVector = rotationQuat_Z*testVector;  // rotate ROTATION_INCREMENT CCW from the first testVector
+												// because the 3 primary ones are already tested (&saved?)
+	bestVector = ZERO_VEC2;
 	rotationAngle = 0.0f;
-	bestVector = ZERO_VEC3;
 	bestWeight = 0.0f;
 
-	// collision prediction
-	while (1) { // until the bestVector for the movementVector is found in a 360 degree scan
+	// TODO: use this information to navigate/snap to valid terrain
+	//CheckFloor();
 
-		weight = 0;
+	while (1) {
 
-		// FIXME: simplify these operations (done too many times, just preserve the value somehow)
-		testSpritePos.x = spritePos.x;
-		testSpritePos.y = spritePos.y;
-		testSpriteCenter.x = (float)GetCenterX();
-		testSpriteCenter.y = (float)GetCenterY();
+		// check how clear the path is starting one step along it
+		CheckMovement(spriteCenter+(testVector*speed), testVector, validSteps, revisitSteps);
 		
-		while (1) {
+		weight_mod = testVector*waypointVector;		
 
-			// TODO: add functionality to navigate out of a no-walk starting position
-			
-			// TODO: check if the waypoint landed somewhere in a set, or between sets (along the swept area), 
-			// and immediatly set THAT as the movementVector. This avoids temporarily bypassing the waypoint for a "better" LOS
+		if ( (validSteps+weight_mod) > bestWeight) {
 
-			// forward test point (starts on sprite)
-			testPoint.x = testSpriteCenter.x + (int)(collisionRadius*testVector.x);
-			testPoint.y = testSpriteCenter.y + (int)(collisionRadius*testVector.y);
-
-			// check for collision
-			// FIXME: make this a general function of Map class
-			if ((game->GetMap()->GetMapIndex(testPoint.x / tileSize, testPoint.y / tileSize) == 3) ||
-			(testPoint.x > width) || (testPoint.x < 0) || (testPoint.y > height) || (testPoint.y < 0))
-				break;
-			
-			// forward test point rotated counter-clockwise 90 degrees
-			testPoint.x = testSpriteCenter.x + (int)(collisionRadius*testVector.y);
-			testPoint.y = testSpriteCenter.y - (int)(collisionRadius*testVector.x);
-
-			// check for collision
-			// FIXME: make this a general function of Map class
-			if ((game->GetMap()->GetMapIndex(testPoint.x / tileSize, testPoint.y / tileSize) == 3) ||
-				(testPoint.x > width) || (testPoint.x < 0) || (testPoint.y > height) || (testPoint.y < 0))
-				break;
-
-			// forward test point rotated clockwise 90 degrees
-			testPoint.x = testSpriteCenter.x - (int)(collisionRadius*testVector.y);
-			testPoint.y = testSpriteCenter.y + (int)(collisionRadius*testVector.x);
-
-			// check for collision
-			// FIXME: make this a general function of Map class
-			if ((game->GetMap()->GetMapIndex(testPoint.x / tileSize, testPoint.y / tileSize) == 3) ||
-				(testPoint.x > width) || (testPoint.x < 0) || (testPoint.y > height) || (testPoint.y < 0))
-				break;
-
-			weight++;
-
-			if (weight == MAX_LOS_WEIGHT)
-				break;
-
-			// move to the next potential sprite position along the testVector
-			testSpritePos.x += (int)(speed*testVector.x);
-			testSpritePos.y += (int)(speed*testVector.y);
-			testSpriteCenter.x = testSpritePos.x + (sprite->w / 2);
-			testSpriteCenter.y = testSpritePos.y + (sprite->h / 2);
-		}
-
-		weight_mod = testVector*waypointVector;
-
-		if ( (weight+weight_mod) > bestWeight) {
-
-			bestWeight = weight + weight_mod;
-			bestVector.Set(testVector.x, testVector.y, testVector.z);
+			bestWeight = validSteps + weight_mod;
+			bestVector = testVector;
 		}
 
 		do {
 			rotationAngle += ROTATION_INCREMENT;
 
+			// FIXME: only do the full rotation if forward == ZERO_VEC2
+			// otherwise only do 180 degrees
 			if (rotationAngle >= 360) {
 
 				if (bestWeight <= 2) {
@@ -457,17 +409,84 @@ void Entity::CheckLineOfSight() {
 
 				} else {
 
-					forward.Set(bestVector.x, bestVector.y, bestVector.z);
+					forward = bestVector;
 					moving = true;
 
 				}
 				return;
 			}
 
-			testVector = rotationQuat*testVector;
+			testVector = rotationQuat_Z*testVector;
 
 		} while (testVector*forward < 0);	// avoid testVectors that backtrack
 	}
+}
+
+//******************
+// CheckLineOfSight
+//******************
+void Entity::CheckMovement(eVec2 from, const eVec2 & along, int & validSteps, int & revisitSteps) {
+	eVec2 testPoint;
+
+	validSteps = 0;
+	revisitSteps = 0;
+	while (1) {
+		
+		// TODO: check if the waypoint landed somewhere in a set, or between sets (along the swept area), 
+		// and immediatly set THAT as the movementVector. This avoids temporarily bypassing the waypoint for a "better" LOS
+
+		// forward test point (starts on circle circumscribed around sprite bounding box)
+		testPoint.x = from.x + (collisionRadius*along.x);
+		testPoint.y = from.y + (collisionRadius*along.y);
+
+		// check for collision
+		if (!(game->GetMap()->IsValid(testPoint)))
+			return;
+
+		// forward test point rotated counter-clockwise 90 degrees
+		testPoint.x = from.x + (collisionRadius*along.y);
+		testPoint.y = from.y - (collisionRadius*along.x);
+
+		// check for collision
+		if (!(game->GetMap()->IsValid(testPoint)))
+			return;
+
+		// forward test point rotated clockwise 90 degrees
+		testPoint.x = from.x - (collisionRadius*along.y);
+		testPoint.y = from.y + (collisionRadius*along.x);
+
+		// check for collision
+		if (!(game->GetMap()->IsValid(testPoint)))
+			return;
+
+		validSteps++;
+
+		// check for new tiles
+		if ( GetKnownMapValue(from) == VISITED_TILE )
+			revisitSteps++;
+
+		if (validSteps == MAX_LOS_STEPS)
+			return;
+
+		// move to check validity of next position
+		from += along*speed;
+	}
+}
+
+//****************
+// CheckFloor
+// TODO: this should do more than a CheckTouch(...) call
+// it should set a parameter for PARTIAL_GROUND 
+// or IN_WATER (etc) as a means to specifically rectify it
+//****************
+bool Entity::CheckFloor() {
+	bool safe = true;
+
+	CheckTouch(true, true, true);
+	if (localTouch)
+		safe = false;
+
+	return safe;
 }
 
 //******************
@@ -484,8 +503,6 @@ void Entity::CheckFogOfWar() {
 
 	// FIXME: inefficient allocation of pre-existing data as well as repetitive function calls to (currently) constant data
 	int tileSize = game->GetMap()->GetTileSize();
-	int width = game->GetMap()->GetWidth();
-	int height = game->GetMap()->GetHeight();
 
 	// continue just beyond the sightRange to account for 2s to 1s visibility transitions
 	int rows = (sight.h / tileSize) + 2;
@@ -502,18 +519,19 @@ void Entity::CheckFogOfWar() {
 
 		for (j = startJ; j < startJ + rows; j++) {
 
-			if (i >= 0 && i < width && j >= 0 && j < height) {
+			if (i >= 0 && i < knownMapRows && j >= 0 && j < knownMapCols) {
 
 				if ( i > startI && i < (startI + columns - 1) &&
 					j > startJ && j < (startJ + rows - 1) ) 
-					knownMap[i][j] = 2;
+					knownMap[i][j] = VISIBLE_TILE;
 				else
-					knownMap[i][j] = 1;
+					knownMap[i][j] = VISITED_TILE;
 			}
 		}
 	}
 }
 
+// FIXME: use the new GetMapIndex(eVec2) function to return point-wise snesor checks with (fewer?) operations
 // Sets a sensor bit for every point within the entity's range in a non-traversible area ( 3 => no-walk tile, 0,1,2 => walk tile )
 // self = true puts the sensors on the sprite's bounding box, 
 // self = false puts them at touchRange off the bounding box
@@ -522,8 +540,8 @@ void Entity::CheckFogOfWar() {
 void Entity::CheckTouch(bool self, bool horizontal, bool vertical) {
 
 	int tileSize = game->GetMap()->GetTileSize();
-	int width = game->GetMap()->GetWidth()*tileSize;
-	int height = game->GetMap()->GetHeight()*tileSize;
+	int width = game->GetMap()->GetWidth();
+	int height = game->GetMap()->GetHeight();
 
 	// on-sprite checks
 	if (self) {
@@ -532,21 +550,21 @@ void Entity::CheckTouch(bool self, bool horizontal, bool vertical) {
 
 		if (horizontal) {
 
-			localTouch |= (RIGHT_TOP		* ((game->GetMap()->GetMapIndex((spritePos.x + size) / tileSize, (spritePos.y + 1) / tileSize) == 3)		| ((spritePos.x + size + 1) > width)));
-			localTouch |= (RIGHT_BOTTOM		* ((game->GetMap()->GetMapIndex((spritePos.x + size) / tileSize, (spritePos.y + size - 1) / tileSize) == 3)	| ((spritePos.x + size + 1) > width)));
+			localTouch |= (RIGHT_TOP		* ((game->GetMap()->GetIndexValue((spritePos.x + size) / tileSize, (spritePos.y + 1) / tileSize) == NONSOLID_TILE)		| ((spritePos.x + size + 1) > width)));
+			localTouch |= (RIGHT_BOTTOM		* ((game->GetMap()->GetIndexValue((spritePos.x + size) / tileSize, (spritePos.y + size - 1) / tileSize) == NONSOLID_TILE)	| ((spritePos.x + size + 1) > width)));
 			
-			localTouch |= (LEFT_BOTTOM		* ((game->GetMap()->GetMapIndex(spritePos.x / tileSize, (spritePos.y + size - 1) / tileSize) == 3)			| (spritePos.x < 0)));
-			localTouch |= (LEFT_TOP			* ((game->GetMap()->GetMapIndex(spritePos.x / tileSize, (spritePos.y + 1) / tileSize) == 3)					| (spritePos.x < 0)));
+			localTouch |= (LEFT_BOTTOM		* ((game->GetMap()->GetIndexValue(spritePos.x / tileSize, (spritePos.y + size - 1) / tileSize) == NONSOLID_TILE)			| (spritePos.x < 0)));
+			localTouch |= (LEFT_TOP			* ((game->GetMap()->GetIndexValue(spritePos.x / tileSize, (spritePos.y + 1) / tileSize) == NONSOLID_TILE)					| (spritePos.x < 0)));
 
 		}
 
 		if (vertical) {
 
-			localTouch |= (TOP_LEFT		* ((game->GetMap()->GetMapIndex((spritePos.x + 1) / tileSize, spritePos.y / tileSize) == 3)					| (spritePos.y < 0)));
-			localTouch |= (TOP_RIGHT	* ((game->GetMap()->GetMapIndex((spritePos.x + size - 1) / tileSize, spritePos.y / tileSize) == 3)			| (spritePos.y < 0)));
+			localTouch |= (TOP_LEFT		* ((game->GetMap()->GetIndexValue((spritePos.x + 1) / tileSize, spritePos.y / tileSize) == NONSOLID_TILE)					| (spritePos.y < 0)));
+			localTouch |= (TOP_RIGHT	* ((game->GetMap()->GetIndexValue((spritePos.x + size - 1) / tileSize, spritePos.y / tileSize) == NONSOLID_TILE)			| (spritePos.y < 0)));
 
-			localTouch |= (BOTTOM_RIGHT	* ((game->GetMap()->GetMapIndex((spritePos.x + size - 1) / tileSize, (spritePos.y + size) / tileSize) == 3)	| ((spritePos.y + size + 1) > height)));
-			localTouch |= (BOTTOM_LEFT	* ((game->GetMap()->GetMapIndex((spritePos.x + 1) / tileSize, (spritePos.y + size) / tileSize) == 3)		| ((spritePos.y + size + 1) > height)));
+			localTouch |= (BOTTOM_RIGHT	* ((game->GetMap()->GetIndexValue((spritePos.x + size - 1) / tileSize, (spritePos.y + size) / tileSize) == NONSOLID_TILE)	| ((spritePos.y + size + 1) > height)));
+			localTouch |= (BOTTOM_LEFT	* ((game->GetMap()->GetIndexValue((spritePos.x + 1) / tileSize, (spritePos.y + size) / tileSize) == NONSOLID_TILE)		| ((spritePos.y + size + 1) > height)));
 
 		}
 
@@ -557,21 +575,21 @@ void Entity::CheckTouch(bool self, bool horizontal, bool vertical) {
 
 		if (horizontal) {
 			
-			touch |= (RIGHT_TOP		* ((game->GetMap()->GetMapIndex((spritePos.x + size + touchRange) / tileSize, spritePos.y / tileSize) == 3)				| ((spritePos.x + touchRange + size) > width)));
-			touch |= (RIGHT_BOTTOM	* ((game->GetMap()->GetMapIndex((spritePos.x + size + touchRange) / tileSize, (spritePos.y + size) / tileSize) == 3)	| ((spritePos.x + touchRange + size) > width)));
+			touch |= (RIGHT_TOP		* ((game->GetMap()->GetIndexValue((spritePos.x + size + touchRange) / tileSize, spritePos.y / tileSize) == NONSOLID_TILE)				| ((spritePos.x + touchRange + size) > width)));
+			touch |= (RIGHT_BOTTOM	* ((game->GetMap()->GetIndexValue((spritePos.x + size + touchRange) / tileSize, (spritePos.y + size) / tileSize) == NONSOLID_TILE)	| ((spritePos.x + touchRange + size) > width)));
 
-			touch |= (LEFT_TOP		* ((game->GetMap()->GetMapIndex((spritePos.x - touchRange) / tileSize, spritePos.y / tileSize) == 3)					| ((spritePos.x - touchRange) < 0)));
-			touch |= (LEFT_BOTTOM	* ((game->GetMap()->GetMapIndex((spritePos.x - touchRange) / tileSize, (spritePos.y + size) / tileSize) == 3)			| ((spritePos.x - touchRange) < 0)));
+			touch |= (LEFT_TOP		* ((game->GetMap()->GetIndexValue((spritePos.x - touchRange) / tileSize, spritePos.y / tileSize) == NONSOLID_TILE)					| ((spritePos.x - touchRange) < 0)));
+			touch |= (LEFT_BOTTOM	* ((game->GetMap()->GetIndexValue((spritePos.x - touchRange) / tileSize, (spritePos.y + size) / tileSize) == NONSOLID_TILE)			| ((spritePos.x - touchRange) < 0)));
 
 		}
 
 		if (vertical) {
 		
-			touch |= (TOP_RIGHT		* ((game->GetMap()->GetMapIndex((spritePos.x + size) / tileSize, (spritePos.y - touchRange) / tileSize) == 3)			| ((spritePos.y - touchRange) < 0)));
-			touch |= (TOP_LEFT		* ((game->GetMap()->GetMapIndex(spritePos.x / tileSize, (spritePos.y - touchRange) / tileSize) == 3)					| ((spritePos.y - touchRange) < 0)));
+			touch |= (TOP_RIGHT		* ((game->GetMap()->GetIndexValue((spritePos.x + size) / tileSize, (spritePos.y - touchRange) / tileSize) == NONSOLID_TILE)			| ((spritePos.y - touchRange) < 0)));
+			touch |= (TOP_LEFT		* ((game->GetMap()->GetIndexValue(spritePos.x / tileSize, (spritePos.y - touchRange) / tileSize) == NONSOLID_TILE)					| ((spritePos.y - touchRange) < 0)));
 			
-			touch |= (BOTTOM_RIGHT	* ((game->GetMap()->GetMapIndex((spritePos.x + size) / tileSize, (spritePos.y + size + touchRange) / tileSize) == 3)	| ((spritePos.y + touchRange + size) > height)));
-			touch |= (BOTTOM_LEFT	* ((game->GetMap()->GetMapIndex(spritePos.x / tileSize, (spritePos.y + size + touchRange) / tileSize) == 3)				| ((spritePos.y + touchRange + size) > height)));
+			touch |= (BOTTOM_RIGHT	* ((game->GetMap()->GetIndexValue((spritePos.x + size) / tileSize, (spritePos.y + size + touchRange) / tileSize) == NONSOLID_TILE)	| ((spritePos.y + touchRange + size) > height)));
+			touch |= (BOTTOM_LEFT	* ((game->GetMap()->GetIndexValue(spritePos.x / tileSize, (spritePos.y + size + touchRange) / tileSize) == NONSOLID_TILE)				| ((spritePos.y + touchRange + size) > height)));
 
 		}
 	}
@@ -695,9 +713,25 @@ void Entity::PrintSensors() {
 
 // FIXME: currently assumes row and column are within array limits
 // return values: 2 = currently visible, 1 = explored but in shadow, 0 = unexplored
-int Entity::GetKnownMap(int row, int column) {
+// returns the tile type at the given index
+int Entity::GetKnownMapValue(int row, int column) const {
 
-	return knownMap[row][column];
+	if (row >= 0 && row < knownMapRows  && column >= 0 && column < knownMapCols)
+		return knownMap[row][column];
+	else
+		return INVALID_TILE;
+}
+
+// return the tile type at the given point
+int Entity::GetKnownMapValue(const eVec2 & point) const {
+	int row;
+	int column;
+
+	game->GetMap()->GetIndex(point, row, column);
+	if (row >= 0 && row < knownMapRows  && column >= 0 && column < knownMapCols)
+		return knownMap[row][column];
+	else
+		return INVALID_TILE;
 }
 
 void Entity::AddWaypoint(const eVec2 & waypoint, bool userDefined) {
@@ -710,14 +744,13 @@ void Entity::AddWaypoint(const eVec2 & waypoint, bool userDefined) {
 	SetNextWaypoint();
 }
 
-int Entity::GetCenterX() {
+const eVec2 & Entity::GetCenter() const {
 
-	return (int)(spritePos.x + (sprite->w / 2));
+	return spriteCenter;
 }
 
-int Entity::GetCenterY() {
-
-	return (int)(spritePos.y + (sprite->h / 2));
+void Entity::UpdateCenter() {
+	spriteCenter.Set(spritePos.x + (sprite->w / 2), spritePos.y + (sprite->h / 2));
 }
 
 void Entity::DrawPixel(SDL_Surface *surface, int x, int y, Uint8 r, Uint8 g, Uint8 b)
@@ -786,4 +819,15 @@ void Entity::RemoveWaypoint() {
 			break;
 		}
 	}
+}
+
+void Entity::UpdatePosition() {
+	spritePos.x += (int)(speed*forward.x);
+	spritePos.y += (int)(speed*forward.y);
+	UpdateCenter();
+}
+
+void Entity::SetPosition(const eVec2 & point) {
+	spritePos.Set(point.x, point.y);
+	UpdateCenter();
 }

@@ -4,12 +4,12 @@ Map::Map() {
 
 }
 
-bool Map::Init (char fileName[], Game *const g, int xTiles, int yTiles) {
+bool Map::Init (char fileName[], Game * const game, int maxRows, int maxCols) {
 
-	if (!g)
+	if (!game)
 		return false;
 
-	game = g;
+	this->game = game;
 
 	if (!fileName[0])
 		return false;
@@ -25,10 +25,10 @@ bool Map::Init (char fileName[], Game *const g, int xTiles, int yTiles) {
 	camera.y = 0;
 	camera.speed = 10;
 
-	//map dimensions
+	// map dimensions
 	tileSize = 32;
-	width = xTiles;
-	height = yTiles;
+	mapRows = maxRows;
+	mapCols = maxCols;
 
 	BuildTiles();
 
@@ -47,11 +47,16 @@ void Map::Free() {
 // Populates a matrix for future collision and redraw
 void Map::BuildTiles() {
 
-	int x, y;
+	int row, col;
+	int solid;
 
-	for (x = 0; x < width; x++) {
-		for (y = 0; y < height; y++) {
-			tileMap[x][y] = rand() % 4;
+	for (row = 0; row < mapRows; row++) {
+		for (col = 0; col < mapCols; col++) {
+			solid = rand() % 4;
+			if(solid < 3)
+				tileMap[row][col] = SOLID_TILE;
+			else 
+				tileMap[row][col] = NONSOLID_TILE;
 		}
 	}
 }
@@ -61,27 +66,70 @@ Map::viewport* Map::GetCamera() {
 	return &camera;
 }
 
-int Map::GetWidth() {
+int Map::GetRows() const {
 
-	return width;
+	return mapRows;
 }
 
-int Map::GetHeight() {
+int Map::GetColumns() const {
 
-	return height;
+	return mapCols;
 }
 
-int Map::GetTileSize() {
+int Map::GetWidth() const {
+	return mapRows*tileSize;
+}
+
+int Map::GetHeight() const {
+	return mapCols*tileSize;
+}
+
+int Map::GetTileSize() const {
 
 	return tileSize;
 }
 
-int Map::GetMapIndex(int row, int column) {
+// returns the tile type at the given index
+int Map::GetIndexValue(int row, int column) const {
 
-	if (row >= 0 && row < width  && column >= 0 && column < height)
+	if (row >= 0 && row < mapRows  && column >= 0 && column < mapCols)
 		return tileMap[row][column];
 	else
-		return -1;
+		return INVALID_TILE;
+}
+
+// return the tile type at the given point
+int Map::GetIndexValue(const eVec2 & point) const {
+	int row;
+	int column;
+
+	row = (int)(point.x / tileSize);
+	column = (int)(point.y / tileSize);
+	if (row >= 0 && row < mapRows  && column >= 0 && column < mapCols)
+		return tileMap[row][column];
+	else
+		return INVALID_TILE;
+}
+
+
+// returns true if a sprite can walk onto the given point, false otherwise
+bool Map::IsValid(const eVec2 & point) const {
+	bool	validity = true;
+	int		mapWidth = mapRows*tileSize;
+	int		mapHeight = mapCols*tileSize;
+
+	if ( GetIndexValue(point) < SOLID_TILE ||
+		(point.x > mapWidth) || (point.x < 0) || (point.y > mapHeight) || (point.y < 0) )
+		validity = false;
+
+	return validity;
+}
+
+// sets the reference row and column to scaled, but not ranged, 
+// values given a point on the tileMap
+void Map::GetIndex(const eVec2 & point, int & row, int & column)  const {
+	row = (int)(point.x / tileSize);
+	column = (int)(point.y / tileSize);
 }
 
 // TODO: determine which tiles to use from the tileSet image
@@ -105,7 +153,7 @@ void Map::Update() {
 
 		for (j = startJ; j < startJ + rows; j++) {
 
-			if (i >= 0 && i < width && j >= 0 && j < height ) {
+			if (i >= 0 && i < mapRows && j >= 0 && j < mapCols ) {
 
 				// TODO: combine the 1s/2s of entity's knownMap to fade/brighten tiles (currently either const-draws 1s OR temp-draws 2s)
 				// fog-of-war cross-check for entity's area knowledge 
@@ -120,12 +168,10 @@ void Map::Update() {
 
 				
 					switch (tileMap[i][j]) {
-						case 0:
-						case 1:
-						case 2: // walk
+						case SOLID_TILE:
 							sourceRect.x = 0;
 							break;
-						case 3:	// no_walk
+						case NONSOLID_TILE:
 							sourceRect.x = tileSize;
 							break;
 					}
@@ -151,9 +197,9 @@ void Map::CheckInput() {
 
 	// Adjust the user's view within map
 	camera.y -= camera.speed * keys[SDL_SCANCODE_W] * (camera.y > 0);
-	camera.y += camera.speed * keys[SDL_SCANCODE_S] * (camera.y < (height*tileSize) - game->GetBuffer()->h);
+	camera.y += camera.speed * keys[SDL_SCANCODE_S] * (camera.y < (mapCols*tileSize) - game->GetBuffer()->h);
 	camera.x -= camera.speed * keys[SDL_SCANCODE_A] * (camera.x > 0);
-	camera.x += camera.speed * keys[SDL_SCANCODE_D] * (camera.x < (width*tileSize) - game->GetBuffer()->w);
+	camera.x += camera.speed * keys[SDL_SCANCODE_D] * (camera.x < (mapRows*tileSize) - game->GetBuffer()->w);
 
 }
 

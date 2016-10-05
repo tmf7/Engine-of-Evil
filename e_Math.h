@@ -4,6 +4,7 @@
 #include "SDL.h"			// for SDL_fabs
 
 #define DEG2RAD(angle)	( angle*((float)(M_PI)/180.0f) )
+#define ORIGIN_VEC2		eVec2( 1.0f, 0.0f )
 #define ZERO_VEC2		eVec2( 0.0f, 0.0f )
 #define ZERO_VEC3		eVec3( 0.0f, 0.0f, 0.0f )
 #define ORIGIN_VEC3		eVec3( 1.0f, 0.0f, 0.0f )
@@ -380,6 +381,7 @@ public:
 
 	eQuat			operator*(const eQuat &a) const;
 	eVec3			operator*(const eVec3 &a) const;
+	eVec2			operator*(const eVec2 &a) const;
 	eQuat &			operator*=(const eQuat &a);
 };
 
@@ -416,7 +418,7 @@ inline eQuat & eQuat::operator*=(const eQuat &a) {
 
 // expanded and factored version of:
 // (*this) * eQuat( a.x, a.y, a.z, 0.0f ) * (*this)^-1
-// a.z == 0 implies a counter-clockwise vector rotation
+// implies a counter-clockwise vector rotation for a right-handed coordinate system
 // as stated at the top: this class only deals with unit length quaternions
 inline eVec3 eQuat::operator*(const eVec3 &a) const {
 	float xxzz = x*x - z*z;
@@ -432,7 +434,24 @@ inline eVec3 eQuat::operator*(const eVec3 &a) const {
 	return eVec3(
 		(xxzz + wwyy)*a.x + (xy2 - zw2)*a.y + (xz2 + yw2)*a.z,
 		(xy2 + zw2)*a.x + (y*y + w*w - x*x - z*z)*a.y + (yz2 - xw2)*a.z,
-		(xz2 - yw2)*a.x + (yz2 + xw2)*a.y + (wwyy - xxzz)*a.z
+		(xz2 - yw2)*a.x + (yz2 + xw2)*a.y + (wwyy - xxzz)*a.z 
+	);
+}
+
+// expanded and factored version of:
+// (*this) * eQuat( a.x, a.y, 0.0f, 0.0f ) * (*this)^-1
+// implies a counter-clockwise vector rotation for a right-handed coordinate system
+// as stated at the top: this class only deals with unit length quaternions
+inline eVec2 eQuat::operator*(const eVec2 &a) const {
+	float xxzz = x*x - z*z;
+	float wwyy = w*w - y*y;
+
+	float xy2 = x*y*2.0f;
+	float zw2 = z*w*2.0f;
+
+	return eVec2(
+		(xxzz + wwyy)*a.x + (xy2 - zw2)*a.y,
+		(xy2 + zw2)*a.x + (y*y + w*w - x*x - z*z)*a.y
 	);
 }
 
