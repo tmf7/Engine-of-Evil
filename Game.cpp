@@ -99,8 +99,8 @@ bool Game::Run() {
 				if (event.button.button == 3)
 					map.BuildTiles();
 				if (event.button.button == 1)
-					entities.AddWaypoint(eVec2((float)(event.button.x + map.GetCamera()->x), 
-											   (float)(event.button.y + map.GetCamera()->y)), true);
+					entities.AddUserWaypoint(eVec2((float)(event.button.x + map.GetCamera()->x), 
+												   (float)(event.button.y + map.GetCamera()->y)));
 				break;
 			}
 		}

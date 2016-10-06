@@ -10,13 +10,8 @@ Entity::Entity() {
 	touchRange = 1;
 	waypointRange = size / 2.0f;
 
-	forward = ZERO_VEC2;
-	left = ZERO_VEC2;
-	right = ZERO_VEC2;
-
 	rotationQuat_Z.Set(0.0f, 0.0f, SDL_sinf(DEG2RAD(ROTATION_INCREMENT) / 2.0f), SDL_cosf(DEG2RAD(ROTATION_INCREMENT) / 2.0f));
 	atWaypoint = false;
-	moving = false;
 	currentWaypoint = goals.Back();
 	moveState = MOVE_TO_GOAL;	// MOVE_RIGHT;
 	oldTouch = 0;
@@ -24,6 +19,7 @@ Entity::Entity() {
 
 	frameDelayCount = 0;
 
+	StopMoving();
 }
 
 // TODO: insert use of the sourceRect for initial frame of animation
@@ -90,7 +86,7 @@ void Entity::Spawn()
 	bool entity_placed = false;
 
 	// Check the top-left corner first
-	if (game->GetMap()->GetIndexValue(0,0) < 3) {
+	if (game->GetMap()->GetIndexValue(0,0) == SOLID_TILE) {
 
 		spritePos.x = 5;
 		spritePos.y = 5;
@@ -104,7 +100,7 @@ void Entity::Spawn()
 		// down from the top
 		for (i = radius, j = 0; j <= radius; j++) {
 
-			if (game->GetMap()->GetIndexValue(i, j) < 3) {
+			if (game->GetMap()->GetIndexValue(i, j) == SOLID_TILE) {
 				spritePos.x = (float)(i*tileSize + 5);
 				spritePos.y = (float)(j*tileSize + 5);
 				entity_placed = true;
@@ -116,7 +112,7 @@ void Entity::Spawn()
 		// in from the bottom of the last search
 		for (i = radius - 1, j = radius; i >= 0 && !entity_placed; i--) {
 
-			if (game->GetMap()->GetIndexValue(i, j) < 3) {
+			if (game->GetMap()->GetIndexValue(i, j) == SOLID_TILE) {
 
 				spritePos.x = (float)(i*tileSize + 5);
 				spritePos.y = (float)(j*tileSize + 5);
@@ -174,30 +170,38 @@ void Entity::Update() {
 
 	while (rotationAngle < 360.0f) {
 
-		if (forward*debugVector >= 0) {
+		if (forward.vector*debugVector >= 0) {
 
 			collisionX = spriteCenter.x + (int)(collisionRadius*debugVector.x) - game->GetMap()->GetCamera()->x;
 			collisionY = spriteCenter.y + (int)(collisionRadius*debugVector.y) - game->GetMap()->GetCamera()->y;
 			DrawPixel(game->GetBuffer(), collisionX, collisionY, 255, 0, 255);
 		}
-		rotationAngle++;
-		debugVector = rotationQuat_Z*debugVector;
+		debugVector = rotationQuat_Z*debugVector;	// rotate counter-clockwise
+		rotationAngle += ROTATION_INCREMENT;
 	}
 // FREEHILL END DEBUG COLLISION CIRCLE
 
-	// draw the waypoints
-	if (goals.IsEmpty())
-		return;
-
+	// draw all waypoints
 	node = 0;
 	debugWaypoint = goals.Back();
 	while(debugWaypoint != nullptr) {
+
+		destRect.x = (int)(debugWaypoint->x) - game->GetMap()->GetCamera()->x - waypointRange;
+		destRect.y = (int)(debugWaypoint->y) - game->GetMap()->GetCamera()->y - waypointRange;
+		SDL_BlitSurface(sprite, NULL, game->GetBuffer(), &destRect);
+		node++;
+		debugWaypoint = goals.FromBack(node);
+	}
+
+	node = 0;
+	debugWaypoint = trail.Front();
+	while (debugWaypoint != nullptr) {
 
 		destRect.x = (int)(debugWaypoint->x) - game->GetMap()->GetCamera()->x;
 		destRect.y = (int)(debugWaypoint->y) - game->GetMap()->GetCamera()->y;
 		SDL_BlitSurface(sprite, NULL, game->GetBuffer(), &destRect);
 		node++;
-		debugWaypoint = goals.FromBack(node);
+		debugWaypoint = trail.FromFront(node);
 	}
 
 }
@@ -218,10 +222,11 @@ void Entity::Move() {
 
 	UpdateMovement();
 	UpdatePosition();
-	
-	if ( !atWaypoint && moving && spriteCenter.Compare(*currentWaypoint, waypointRange) ) {	// use the waypointRange to snap?
 
-		SetPosition(*currentWaypoint);
+	// FIXME: is atWaypoint necessary?
+	if ( !atWaypoint && moving && spriteCenter.Compare(*currentWaypoint, waypointRange) ) {
+
+		//SetPosition(*currentWaypoint);	// causes too-odd of jumps 
 		StopMoving();
 		RemoveWaypoint();
 		SetNextWaypoint();
@@ -235,7 +240,7 @@ void Entity::Move() {
 	// FIXME: knownMap is also used for Fog of war information
 	// anywhere the sprite has stood is marked as visited
 	// this information is currently used to make a movement decision
-	knownMap[(int)(spriteCenter.x/game->GetMap()->GetTileSize())][(int)(spriteCenter.y / game->GetMap()->GetTileSize())] = VISITED_TILE;
+	SetKnownMapValue(spriteCenter, VISITED_TILE);
 
 	//////////////////////////////////////////
 	//END WAYPOINT VECTOR MOVEMENT ALGORITHM//
@@ -345,132 +350,167 @@ void Entity::Move() {
 //******************
 void Entity::UpdateMovement() {
 	eVec2 waypointVector;				// from the sprite to the next waypoint
-	eVec2 testVector;					// tested for optimal travel decision
-	eVec2 bestVector;					// optimal movement vector
-	float bestWeight;					// to rank bestVectors
-	//float distToWaypoint;				// **currently not fully utilized for checks, but a potentially useful metric**
+	decision_t test;					// vector tested for optimal travel decision
+	decision_t best;					// optimal movement
+//	float distToWaypoint;				// **currently not fully utilized for checks, but a potentially useful metric**
 	float rotationAngle;				// cumulative amount the testVector has rotated in its search
-	float weight_mod;					// net bias for a decision about a testVector
-	int validSteps;						// collision-free steps that could be taken along a testVector
-	int revisitSteps;					// number of valid steps that land on previously visited tiles
+	float maxRotation;					// to disallow vectors that backtrack if already moving
+	float weight;						// net bias for a decision about a test
+	float bestWeight;					// highest net result of all modifications to validSteps
+	size_t walls;						// determines the bias that will be given to each test
 
 	waypointVector = *currentWaypoint - spriteCenter;
-	// distToWaypoint = testPoint.LengthSquared;	// TODO: have the range to the waypoint affect movement speed
-													// and have raw weight (los) affect it too (ie dont RUN at walls)
+//	distToWaypoint = waypointVector.LengthSquared();
+//	speed = 10 * SDL_log(distToWaypoint);
 	waypointVector.Normalize();
 
-	// FIXME: testVector should start 90-ROTATION_INCREMENT degrees clockwise from forward, 
-	// to minimize sweep-time; further, it should only progress to 90-ROTATION_INCREMENT degrees 
-	// counter-clockwise from forward; AND it should skip over the forward angle;
-	// ALL OF THIS BECAUSE THOSE 3 VECTOR LOS would have already been checked
-	// and testVector should default to ORIGIN_VEC3 if forward ==  ZERO_VEC3
-	// SOLUTION: certainly save bestVector, bestWeight, and leastRevisit
-	// but in the event of a deadlock (==> ALL raw weight == #revisits, ratio-wise that is)
-	// TODO: further condition the weight_mod according to the left/right/forward check (function return?)
-	if (forward == ZERO_VEC2)
-		testVector = ORIGIN_VEC2;
-	else
-		testVector.Set( -forward.y, forward.x ); // forward vector rotated 90 degrees clockwise
+	walls = 0;
+	if (!moving) {
+		test.vector = ORIGIN_VEC2;
+		maxRotation = 360.0f;
+	} else {
+		CheckWalls(walls);		// defines left and right
+		test = right;			// counter-clockwise sweep of 180 degree arc from right to left in the forward direction
+		maxRotation = 180.0f;
 
-	//****START HERE*****
-	// TODO: CheckMovement ont the 3 primary vectors' first (forward, left, right) (IF moving == true?)
-	//testVector = rotationQuat_Z*testVector;  // rotate ROTATION_INCREMENT CCW from the first testVector
-												// because the 3 primary ones are already tested (&saved?)
-	bestVector = ZERO_VEC2;
-	rotationAngle = 0.0f;
-	bestWeight = 0.0f;
+		// if any of the open/hit conditions exist 
+		// THEN begin a sweep for a new movement, 
+		// and push the current position to the trail
+		if (!walls)
+			return;
+	}
+	
+	trail.PushFront(spriteCenter);
 
 	// TODO: use this information to navigate/snap to valid terrain
 	//CheckFloor();
 
-	while (1) {
+	bestWeight = 0;
+	rotationAngle = 0.0f;
+	while (rotationAngle < maxRotation) {
 
 		// check how clear the path is starting one step along it
-		CheckMovement(spriteCenter+(testVector*speed), testVector, validSteps, revisitSteps);
-		
-		weight_mod = testVector*waypointVector;		
-
-		if ( (validSteps+weight_mod) > bestWeight) {
-
-			bestWeight = validSteps + weight_mod;
-			bestVector = testVector;
+		// and head straight for the waypoint if the test.vector 
+		// path crosses extremely near it
+		if ( CheckMovement( spriteCenter+(test.vector*speed), test ) ) {
+//			forward = test;
+//			CheckWalls(walls);	// to update the validSteps that the sprite will be comparing on the next frame
+//			moving = true;
+//			return;
+		}
+	
+		// give the path a bias to help set priority
+		weight = test.validSteps;
+		weight += test.vector*waypointVector * WAYPOINT_BIAS;
+		if (moving) {	
+			weight += (test.vector*left.vector) * (walls&LEFT_WALL_OPENED > 0) * LEFT_BIAS;
+			weight += (test.vector*right.vector) * (walls&RIGHT_WALL_OPENED > 0) * RIGHT_BIAS;
+			weight += (test.vector*forward.vector) * !(walls&FORWARD_WALL_HIT > 0) * FORWARD_BIAS;
 		}
 
-		do {
-			rotationAngle += ROTATION_INCREMENT;
-
-			// FIXME: only do the full rotation if forward == ZERO_VEC2
-			// otherwise only do 180 degrees
-			if (rotationAngle >= 360) {
-
-				if (bestWeight <= 2) {
-
-					StopMoving();
-
-				} else {
-
-					forward = bestVector;
-					moving = true;
-
-				}
-				return;
+		// rank the best path to follow
+		if ( moveState == MOVE_TO_TRAIL || (test.newSteps > 0 && test.newSteps >= best.newSteps) ) {
+			if (weight > bestWeight) {
+				bestWeight = weight;
+				best = test;
 			}
+		}
 
-			testVector = rotationQuat_Z*testVector;
+		test.vector = rotationQuat_Z*test.vector; // rotate counter-clockwise
+		rotationAngle += ROTATION_INCREMENT;
+	}
 
-		} while (testVector*forward < 0);	// avoid testVectors that backtrack
+	if (moveState == MOVE_TO_GOAL && best.newSteps == 0) {	// deadlocked, begin deadend protocols (ie follow the trail now)
+		StopMoving();	// in order to do a full 360 degree sweep for the new waypoint
+		moveState = MOVE_TO_TRAIL;
+		SetNextWaypoint();
+	} else if (moveState == MOVE_TO_TRAIL && best.newSteps > 0) {
+		StopMoving();	// in order to do a full 360 degree sweep for the new waypoint
+		moveState = MOVE_TO_GOAL;
+		SetNextWaypoint();
+	} else {
+		forward = best;
+		CheckWalls(walls);	// to update the validSteps that the sprite will be comparing on the next frame
+		moving = true;		
 	}
 }
 
 //******************
-// CheckLineOfSight
+// CheckMovement
+// determines the state of the sprite's position for the next few frames
 //******************
-void Entity::CheckMovement(eVec2 from, const eVec2 & along, int & validSteps, int & revisitSteps) {
+bool Entity::CheckMovement(eVec2 from, decision_t & along) {
 	eVec2 testPoint;
 
-	validSteps = 0;
-	revisitSteps = 0;
-	while (1) {
-		
-		// TODO: check if the waypoint landed somewhere in a set, or between sets (along the swept area), 
-		// and immediatly set THAT as the movementVector. This avoids temporarily bypassing the waypoint for a "better" LOS
+	along.validSteps = 0;
+	along.newSteps = 0;
+	while (along.validSteps < MAX_STEPS) {
 
-		// forward test point (starts on circle circumscribed around sprite bounding box)
-		testPoint.x = from.x + (collisionRadius*along.x);
-		testPoint.y = from.y + (collisionRadius*along.y);
+		// forward test point (starts on circle circumscribing the sprite bounding box)
+		testPoint.x = from.x + (collisionRadius*along.vector.x);
+		testPoint.y = from.y + (collisionRadius*along.vector.y);
 
 		// check for collision
 		if (!(game->GetMap()->IsValid(testPoint)))
-			return;
-
-		// forward test point rotated counter-clockwise 90 degrees
-		testPoint.x = from.x + (collisionRadius*along.y);
-		testPoint.y = from.y - (collisionRadius*along.x);
-
-		// check for collision
-		if (!(game->GetMap()->IsValid(testPoint)))
-			return;
+			return false;
 
 		// forward test point rotated clockwise 90 degrees
-		testPoint.x = from.x - (collisionRadius*along.y);
-		testPoint.y = from.y + (collisionRadius*along.x);
+		testPoint.x = from.x + (collisionRadius*along.vector.y);
+		testPoint.y = from.y - (collisionRadius*along.vector.x);
 
 		// check for collision
 		if (!(game->GetMap()->IsValid(testPoint)))
-			return;
+			return false;
 
-		validSteps++;
+		// forward test point rotated counter-clockwise 90 degrees
+		testPoint.x = from.x - (collisionRadius*along.vector.y);
+		testPoint.y = from.y + (collisionRadius*along.vector.x);
 
-		// check for new tiles
-		if ( GetKnownMapValue(from) == VISITED_TILE )
-			revisitSteps++;
+		// check for collision
+		if (!(game->GetMap()->IsValid(testPoint)))
+			return false;
 
-		if (validSteps == MAX_LOS_STEPS)
-			return;
+		// all test points validated
+		along.validSteps++;
+
+		// check if the step falls on a new tile
+		if ( GetKnownMapValue(from) != VISITED_TILE )
+			along.newSteps++;
+
+		// FIXME: this sort of breaks the dead-end protocols
+		// check if the waypoint is near the center of the validated  test position
+//		if (from.Compare(*currentWaypoint, waypointRange))
+//			return true;
 
 		// move to check validity of next position
-		from += along*speed;
+		from += along.vector*speed;
 	}
+	return false;
+}
+
+//**************
+// CheckWalls
+// assigns the vectors perpendicular to the forward vector
+// and checks if the range along them has significantly changed
+//**************
+void Entity::CheckWalls(size_t & walls) {
+	int oldLeftSteps = left.validSteps;
+	int oldRightSteps = right.validSteps;
+
+	right.vector.Set(forward.vector.y, -forward.vector.x);	// forward rotated 90 degrees clockwise
+	left.vector.Set(-forward.vector.y, forward.vector.x);	// forward rotated 90 degrees counter-clockwise
+
+	CheckMovement(spriteCenter + (forward.vector*speed), forward);
+	CheckMovement(spriteCenter + (left.vector*speed), left);
+	CheckMovement(spriteCenter + (right.vector*speed), right);
+
+	walls = 0;
+	if (forward.validSteps == 0)
+		walls |= FORWARD_WALL_HIT;
+	if (left.validSteps >= oldLeftSteps + STEP_INCRESE_THRESHOLD)
+		walls |= LEFT_WALL_OPENED;
+	if (right.validSteps >= oldRightSteps + STEP_INCRESE_THRESHOLD)
+		walls |= RIGHT_WALL_OPENED;
 }
 
 //****************
@@ -595,6 +635,7 @@ void Entity::CheckTouch(bool self, bool horizontal, bool vertical) {
 	}
 }
 
+// FIXME: should this belong to the Map class?
 // Isolated check for overlap into non-traversable areas, and immediate sprite position correction
 void Entity::CollisionCheck(bool horizontal, bool vertical) {
 
@@ -603,8 +644,8 @@ void Entity::CollisionCheck(bool horizontal, bool vertical) {
 	int x2 = (int)((spritePos.x+size)/tileSize);
 	int y1 = (int)(spritePos.y/tileSize);
 	int y2 = (int)((spritePos.y+size)/tileSize);
-	int width = game->GetMap()->GetWidth()*tileSize;
-	int height = game->GetMap()->GetHeight()*tileSize;
+	int width = game->GetMap()->GetWidth();
+	int height = game->GetMap()->GetHeight();
 	int oldX = (int)spritePos.x;
 	int oldY = (int)spritePos.y;
 
@@ -734,14 +775,15 @@ int Entity::GetKnownMapValue(const eVec2 & point) const {
 		return INVALID_TILE;
 }
 
-void Entity::AddWaypoint(const eVec2 & waypoint, bool userDefined) {
+// FIXME: what if the row,col are out of range? return some success/failure bool?
+void Entity::SetKnownMapValue(const eVec2 & point, int value) {
+	int row;
+	int column;
 
-	if (userDefined)
-		goals.PushFront(waypoint);
-	else
-		trail.PushFront(waypoint);
+	game->GetMap()->GetIndex(point, row, column);
+	if (row >= 0 && row < knownMapRows  && column >= 0 && column < knownMapCols)
+		knownMap[row][column] = value;
 
-	SetNextWaypoint();
 }
 
 const eVec2 & Entity::GetCenter() const {
@@ -785,7 +827,13 @@ void Entity::SetNextWaypoint() {
 
 		case MOVE_TO_GOAL: {
 			currentWaypoint = goals.Back();
-			break;
+		//	trail.Clear();			// never backtrack along an old goal's trail
+
+			// FIXME: this memset may be a temporary fix becuase the sprite needs
+			// the FogOfWar information and potentially needs to remember all its
+			// travels more permanently
+		//	memset(knownMap, 0, MAX_MAP_SIZE*MAX_MAP_SIZE * sizeof(int)); // allow travel along previously visited tiles again
+			return;
 		}
 
 		case MOVE_TO_TRAIL: {
@@ -793,37 +841,42 @@ void Entity::SetNextWaypoint() {
 			if (trail.IsEmpty()) {
 				moveState = MOVE_TO_GOAL;
 				currentWaypoint = goals.Back();
-			}
-			break;
+			} else
+				currentWaypoint = trail.Front();
+			return;
 		}
 	}
 }
 
 void Entity::StopMoving() {
-	forward.Zero();
-	left.Zero();
-	right.Zero();
+	forward.vector.Zero();
+	left.vector.Zero();
+	right.vector.Zero();
 	moving = false;
+}
+
+void Entity::AddUserWaypoint(const eVec2 & waypoint) {
+	goals.PushFront(waypoint);
+	SetNextWaypoint();
 }
 
 void Entity::RemoveWaypoint() {
 	switch (moveState) {
-
 		case MOVE_TO_GOAL: {
 			goals.PopBack();
-			break;
+			return;
 		}
 
 		case MOVE_TO_TRAIL: {
 			trail.PopFront();
-			break;
+			return;
 		}
 	}
 }
 
 void Entity::UpdatePosition() {
-	spritePos.x += (int)(speed*forward.x);
-	spritePos.y += (int)(speed*forward.y);
+	spritePos.x += (int)(speed*forward.vector.x);
+	spritePos.y += (int)(speed*forward.vector.y);
 	UpdateCenter();
 }
 

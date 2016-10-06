@@ -11,6 +11,8 @@
 #include "Map.h"
 #include "Entity.h"
 
+#define BIT(a) (1<<a)
+
 class Map;
 class Entity;
 

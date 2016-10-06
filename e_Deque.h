@@ -202,7 +202,7 @@ inline type * EvilDeque<type>::FromBack(const size_t index) const {
 
 template< class type >
 inline void EvilDeque<type>::Clear() {
-	while (PopFront(front))
+	while (PopFront())
 		;
 }
 
