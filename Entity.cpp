@@ -386,6 +386,8 @@ void Entity::UpdateMovement() {
 		test = right;			// counter-clockwise sweep of 180 degree arc from right to left in the forward direction
 		maxRotation = 180.0f;
 
+		// FIXME: needs another condition where there's a straight-shot at the waypoint totally out in the open
+		// because it'll currently waith until 1/3 walls situation to divert.
 		// dont change directions unless one of the wall open/hit conditions exists 
 		if (!walls)
 			return;
