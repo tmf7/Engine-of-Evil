@@ -62,17 +62,14 @@ void Map::BuildTiles() {
 }
 
 Map::viewport* Map::GetCamera() {
-
 	return &camera;
 }
 
 int Map::GetRows() const {
-
 	return mapRows;
 }
 
 int Map::GetColumns() const {
-
 	return mapCols;
 }
 
@@ -85,7 +82,6 @@ int Map::GetHeight() const {
 }
 
 int Map::GetTileSize() const {
-
 	return tileSize;
 }
 
@@ -144,7 +140,7 @@ void Map::Update() {
 	int columns = (game->GetBuffer()->w / tileSize) + 2;
 
 	// verify any user-input changes to the camera
-	CheckInput();
+	MoveCamera();
 
 	startI = camera.x / tileSize;
 	startJ = camera.y / tileSize;
@@ -191,15 +187,34 @@ SDL_Surface* Map::GetTile( int tileNumber ) {
 
 }
 
-void Map::CheckInput() {
-
+// Adjust the user's view within map
+void Map::MoveCamera() {
 	const Uint8* keys = SDL_GetKeyboardState(NULL);
+	int maxX;
+	int maxY;
 
-	// Adjust the user's view within map
+	maxX = (mapRows*tileSize) - game->GetBuffer()->w;
+	maxY = (mapCols*tileSize) - game->GetBuffer()->h;
+
+	// centers the camera on the sprite
+	if (keys[SDL_SCANCODE_SPACE]) {
+		camera.x = (int)(game->GetEntities()->GetCenter().x) - game->GetBuffer()->w / 2;
+		camera.y = (int)(game->GetEntities()->GetCenter().y) - game->GetBuffer()->h / 2;
+	}
+
 	camera.y -= camera.speed * keys[SDL_SCANCODE_W] * (camera.y > 0);
-	camera.y += camera.speed * keys[SDL_SCANCODE_S] * (camera.y < (mapCols*tileSize) - game->GetBuffer()->h);
+	camera.y += camera.speed * keys[SDL_SCANCODE_S] * (camera.y < maxY);
 	camera.x -= camera.speed * keys[SDL_SCANCODE_A] * (camera.x > 0);
-	camera.x += camera.speed * keys[SDL_SCANCODE_D] * (camera.x < (mapRows*tileSize) - game->GetBuffer()->w);
+	camera.x += camera.speed * keys[SDL_SCANCODE_D] * (camera.x < maxX);
 
+	if (camera.x < 0)
+		camera.x = 0;
+	else if (camera.x > maxX)
+		camera.x = maxX;
+
+	if (camera.y < 0)
+		camera.y = 0;
+	else if (camera.y > maxY)
+		camera.y = maxY;
 }
 

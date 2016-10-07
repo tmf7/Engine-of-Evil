@@ -7,7 +7,9 @@ class Game;
 class Map;
 
 // movement decision values
+#define MAX_SPEED 10
 #define MAX_STEPS 5
+#define WAYPOINT_RANGE_THRESHOLD MAX_SPEED*MAX_SPEED*MAX_STEPS*MAX_STEPS
 #define STEP_INCRESE_THRESHOLD 2
 #define ROTATION_INCREMENT 1.0f
 #define RIGHT_WALL_OPENED BIT(1)
@@ -84,6 +86,7 @@ private:
 	decision_t		left;					// perpendicular to forward_v counter-clockwise
 	decision_t		right;					// perpendicular to forward_v clockwise
 	eQuat			rotationQuat_Z;			// to rotate any vector about z-axis
+	int *			currentTile;			// to track where the sprite has been more accurately
 
 	bool			atWaypoint;
 	bool			moving;
@@ -122,8 +125,9 @@ public:
 	void			Spawn();
 	void			Update();
 	void			Move();		// give this a broader functionality beyond pure AI movement (ie player input)
+	int *			GetKnownMapIndex(const eVec2 & point);
 	int				GetKnownMapValue(int row, int column) const;
-	int				GetKnownMapValue(const eVec2 & point) const;
+	int				GetKnownMapValue(const eVec2 & point);
 	void			AddUserWaypoint(const eVec2 & waypoint);
 	// TODO: add GetTrailTop() function for other entities to track this entity's path 
 	// or something similar (ie the enemy doesn't know where the entity is going, only where its been

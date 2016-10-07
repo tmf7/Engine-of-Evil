@@ -89,12 +89,11 @@ bool Game::Run() {
 
 	SDL_Delay(20);	// TODO: make this dynamic based on how long each frame took to produce (smooth the framerate)
 
-	while (SDL_PollEvent(&event))
-	{
-		switch (event.type)
-		{
-			case SDL_QUIT:
+	while (SDL_PollEvent(&event)) {
+		switch (event.type) {
+			case SDL_QUIT: {
 				return false;
+			}
 			case SDL_MOUSEBUTTONDOWN: {
 				if (event.button.button == 3)
 					map.BuildTiles();

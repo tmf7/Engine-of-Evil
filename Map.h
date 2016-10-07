@@ -23,7 +23,7 @@ class Map {
 
 private:
 
-	void			CheckInput();
+	void			MoveCamera();
 
 	Game *			game;
 	SDL_Surface *	tileSet;						// includes background
