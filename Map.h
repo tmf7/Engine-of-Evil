@@ -5,14 +5,10 @@
 
 #define MAX_MAP_SIZE 256
 
-// knownMap values
-#define VISIBLE_TILE 2
-#define VISITED_TILE 1
-#define NONVISIBLE_TILE 0
-
+// FIXME: make these private enums?
 // tileMap values
-#define SOLID_TILE 1
-#define NONSOLID_TILE 0
+#define TRAVERSABLE_TILE 1
+#define COLLISION_TILE 0
 
 #define INVALID_TILE -1
 

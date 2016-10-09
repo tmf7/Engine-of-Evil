@@ -6,11 +6,12 @@
 class Game;
 class Map;
 
+// FIXME: make these private enums?
 // movement decision values
 #define MAX_SPEED 10
 #define MAX_STEPS 5
-#define WAYPOINT_RANGE_THRESHOLD MAX_SPEED*MAX_SPEED*MAX_STEPS*MAX_STEPS
 #define STEP_INCRESE_THRESHOLD 2
+#define FORWARD_CHANGE_THRESHOLD 0.9f
 #define ROTATION_INCREMENT 1.0f
 #define RIGHT_WALL_OPENED BIT(1)
 #define LEFT_WALL_OPENED BIT(2)
@@ -20,6 +21,11 @@ class Map;
 #define FORWARD_BIAS 1.1f
 #define WAYPOINT_BIAS 2.0f
 
+// knownMap values
+#define VISITED_TILE 1
+#define UNKNOWN_TILE 0
+#define TRAILMAP_RANGE 
+
 class Entity {
 
 private:
@@ -27,19 +33,50 @@ private:
 	typedef struct decision_s {
 		eVec2 vector = ZERO_VEC2;
 		int validSteps = 0;			// collision-free steps that could be taken along the vector
-		int newSteps = 0;			// valid steps that land on previously unvisited tiles
+		float stepRatio = 0.0f;		// ratio of valid steps to those that land on previously unvisited tiles
 	} decision_t;
+
+	typedef struct visited_s {
+		int * tile = nullptr;		// knownMap[r][c] that the sprite stood on
+		eVec2 point = ZERO_VEC2;	// spriteCenter when tile was first stood on
+	} visited_t;
+
+	enum sensors {
+
+		TOP_LEFT		= 1,
+		TOP_RIGHT		= 2,
+		RIGHT_TOP		= 4,
+		RIGHT_BOTTOM	= 8,
+		BOTTOM_RIGHT	= 16,
+		BOTTOM_LEFT		= 32,
+		LEFT_BOTTOM		= 64,
+		LEFT_TOP		= 128
+
+	};
+
+	// move_state bits for direction and collision decisions
+	enum movement {
+
+		MOVE_LEFT		= 1,			// wall-follow
+		MOVE_RIGHT		= 2,			// wall-follow
+		MOVE_UP			= 4,			// wall-follow
+		MOVE_DOWN		= 8,			// wall-follow
+		MOVE_TO_GOAL	= 16,			// waypoint tracking
+		MOVE_TO_TRAIL	= 32			// waypoint tracking
+
+	};
 	
-	void			CollisionCheck(bool horizontal, bool vertical);	// FIXME: should this belong to the Map class?
-	void			CheckFogOfWar();
+	void			CheckCollision(bool horizontal, bool vertical);	// FIXME: should this belong to the Map class?
+	bool			CheckFogOfWar(const eVec2 & point) const;
 	void			UpdateMovement();
 	bool			CheckMovement(eVec2 from, decision_t & along);
 	void			CheckWalls(size_t & walls);
 	bool			CheckFloor();
-	void			SetNextWaypoint();
+	void			UpdateWaypoint(bool getNext = false);
 	void			StopMoving();
-	void			RemoveWaypoint();
-	void			SetKnownMapValue(const eVec2 & point, int value);
+	bool			CheckTrail();
+	void			UpdateKnownMap();
+	void			SetKnownMapValue(const eVec2 & point, int value); // deprecated by currentTile?
 
 	void			CheckTouch(bool self, bool horizontal, bool vertical);
 	void			PrintSensors();
@@ -72,49 +109,33 @@ private:
 	int				frameDelay;
 	int				frameDelayCount;
 
-	unsigned int	localTouch;		// on-sprite sensors
-	unsigned int	oldTouch;		// off-sprite sensors
-	unsigned int	touch;			// off-sprite sensors
-	unsigned int	watch_touch;	// marks forward-sensors to watch given the moveState
+	unsigned int	localTouch;				// on-sprite sensors
+	unsigned int	oldTouch;				// off-sprite sensors
+	unsigned int	touch;					// off-sprite sensors
+	unsigned int	watch_touch;			// marks forward-sensors to watch given the moveState
+
+	EvilDeque<visited_t> trailMap;			// all recently visited tiles (up to the deque capacity)
 
 	// these nodes function as the top of their stack for this entity
-	EvilDeque<eVec2> trail;		// AI-defined AI movement tracking ( points into Game.h's waypointNodes array )
-	EvilDeque<eVec2> goals;		// User-defined AI movement goals ( points into Game.h's waypointNodes array )
-	eVec2 * currentWaypoint;		// simplifies switching between the deque being tracked
+	EvilDeque<eVec2> trail;					// AI-defined waypoints for effective backtracking
+	EvilDeque<eVec2> goals;					// User-defined waypoints as terminal destinations
+	eVec2 * currentWaypoint;				// simplifies switching between the deque being tracked
 
 	decision_t		forward;				// currently used movement vector
 	decision_t		left;					// perpendicular to forward_v counter-clockwise
 	decision_t		right;					// perpendicular to forward_v clockwise
 	eQuat			rotationQuat_Z;			// to rotate any vector about z-axis
 	int *			currentTile;			// to track where the sprite has been more accurately
+	int *			lastTrailTile;			// tile on which the last trail waypoint was placed (prevents redundant placement)
 
 	bool			atWaypoint;
 	bool			moving;
+	
+	static const size_t	waypointSpeedRange	= MAX_SPEED * MAX_SPEED * MAX_STEPS * MAX_STEPS;	// modulate entity speed if at least this close to a waypoint
 
-	enum sensors {
-
-		TOP_LEFT		= 1,
-		TOP_RIGHT		= 2,
-		RIGHT_TOP		= 4,
-		RIGHT_BOTTOM	= 8,
-		BOTTOM_RIGHT	= 16,
-		BOTTOM_LEFT		= 32,
-		LEFT_BOTTOM		= 64,
-		LEFT_TOP		= 128
-
-	};
-
-	// move_state bits for direction and collision decisions
-	enum movement {
-
-		MOVE_LEFT		= 1,			// wall-follow
-		MOVE_RIGHT		= 2,			// wall-follow
-		MOVE_UP			= 4,			// wall-follow
-		MOVE_DOWN		= 8,			// wall-follow
-		MOVE_TO_GOAL	= 16,			// waypoint tracking
-		MOVE_TO_TRAIL	= 32			// waypoint tracking
-
-	};
+	// TODO: possibly dynamically adjust this based on distance between trail waypoints
+	// and/or room size (given a proper map)
+	static const size_t	trailMapRange		= 20 * 20 * MAX_SPEED * MAX_SPEED;					// how far beyond the entity knownMap starts being reset
 
 public:
 

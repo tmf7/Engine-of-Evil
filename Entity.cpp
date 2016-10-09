@@ -1,5 +1,6 @@
 #include "Game.h"
 
+// FIXME: these variable names are too verbose and not specific enough
 Entity::Entity() {
 
 	speed = MAX_SPEED;
@@ -57,7 +58,7 @@ bool Entity::Init(char fileName[], bool key, Game * const game) {
 
 	knownMapRows = game->GetMap()->GetRows();
 	knownMapCols = game->GetMap()->GetColumns();
-	memset(knownMap, 0, MAX_MAP_SIZE*MAX_MAP_SIZE * sizeof(int));	// ensure all initilized to 0
+	memset(knownMap, UNKNOWN_TILE, knownMapRows*knownMapCols * sizeof(int));	// ensure all initilized to 0
 
 	Spawn();
 
@@ -86,7 +87,7 @@ void Entity::Spawn()
 	bool entity_placed = false;
 
 	// Check the top-left corner first
-	if (game->GetMap()->GetIndexValue(0,0) == SOLID_TILE) {
+	if (game->GetMap()->GetIndexValue(0,0) == TRAVERSABLE_TILE) {
 
 		spritePos.x = 5;
 		spritePos.y = 5;
@@ -101,7 +102,7 @@ void Entity::Spawn()
 		// down from the top
 		for (i = radius, j = 0; j <= radius; j++) {
 
-			if (game->GetMap()->GetIndexValue(i, j) == SOLID_TILE) {
+			if (game->GetMap()->GetIndexValue(i, j) == TRAVERSABLE_TILE) {
 				spritePos.x = (float)(i*tileSize + 5);
 				spritePos.y = (float)(j*tileSize + 5);
 				entity_placed = true;
@@ -113,7 +114,7 @@ void Entity::Spawn()
 		// in from the bottom of the last search
 		for (i = radius - 1, j = radius; i >= 0 && !entity_placed; i--) {
 
-			if (game->GetMap()->GetIndexValue(i, j) == SOLID_TILE) {
+			if (game->GetMap()->GetIndexValue(i, j) == TRAVERSABLE_TILE) {
 
 				spritePos.x = (float)(i*tileSize + 5);
 				spritePos.y = (float)(j*tileSize + 5);
@@ -126,6 +127,7 @@ void Entity::Spawn()
 	}
 	UpdateCenter();
 	currentTile = GetKnownMapIndex(spriteCenter);
+	lastTrailTile = nullptr;
 }
 
 // TODO: add animation frame selection here
@@ -139,7 +141,6 @@ void Entity::Update() {
 	size_t node;
 	int pink[3] = { 255, 0, 255 };
 	int blue[3] = { 0,0,255 };
-	int red[3] = {255,0,0};
 	int * color;
 //	int columns = image->w / width;
 
@@ -198,9 +199,6 @@ void Entity::Update() {
 	else
 		color = blue;
 
-	if (!moving)
-		color = red;
-
 	rotationAngle = 0.0f;
 
 	while (rotationAngle < 360.0f) {
@@ -240,8 +238,7 @@ void Entity::Move() {
 
 		//SetPosition(*currentWaypoint);	// causes too-odd of jumps 
 		StopMoving();
-		RemoveWaypoint();
-		SetNextWaypoint();
+		UpdateWaypoint(true);
 		atWaypoint = true;
 
 	} else {
@@ -249,13 +246,13 @@ void Entity::Move() {
 		atWaypoint = false;
 	}
 
-	// FIXME: knownMap is also used for Fog of war information
+	// FIXME: knownMap is also used for FogOfWar() information
 	// anywhere the sprite has stood is marked as visited
 	// this information is currently used to make a movement decision
 	// mark the tile just exited as VISITED
 	checkTile = GetKnownMapIndex(spriteCenter);
 	if (checkTile != currentTile) {
-		*currentTile = VISITED_TILE;
+		UpdateKnownMap();
 		currentTile = checkTile;
 	}
 
@@ -274,7 +271,7 @@ void Entity::Move() {
 	x -= speed * ((moveState & MOVE_LEFT) > 0);
 	x += speed * ((moveState & MOVE_RIGHT) > 0);
 
-	CollisionCheck(true, false);
+	CheckCollision(true, false);
 
 	switch (moveState) {
 
@@ -319,7 +316,7 @@ void Entity::Move() {
 	y -= speed * ((moveState & MOVE_UP) > 0);
 	y += speed * ((moveState & MOVE_DOWN) > 0);
 
-	CollisionCheck(false, true);
+	CheckCollision(false, true);
 
 	switch (moveState) {
 
@@ -367,10 +364,11 @@ void Entity::Move() {
 // Determines the optimal movement vector to reach the current waypoint
 //******************
 void Entity::UpdateMovement() {
+	eVec2 oldForward;					// previously used forward.vector
 	eVec2 waypointVector;				// from the sprite to the next waypoint
 	decision_t test;					// vector tested for optimal travel decision
 	decision_t best;					// optimal movement
-	float distToWaypointSqr;			// **currently not fully utilized for checks, but a potentially useful metric**
+	float distToWaypointSqr;			// to modulate speed
 	float rotationAngle;				// cumulative amount the testVector has rotated in its search
 	float maxRotation;					// to disallow vectors that backtrack if already moving
 	float weight;						// net bias for a decision about a test
@@ -382,28 +380,31 @@ void Entity::UpdateMovement() {
 		test.vector = ORIGIN_VEC2;
 		maxRotation = 360.0f;
 	} else {
-		CheckWalls(walls);		// defines left and right
+		CheckWalls(walls);		// sets left and right values
 		test = right;			// counter-clockwise sweep of 180 degree arc from right to left in the forward direction
-		maxRotation = 180.0f;
 
-		// FIXME: needs another condition where there's a straight-shot at the waypoint totally out in the open
-		// because it'll currently waith until 1/3 walls situation to divert.
-		// dont change directions unless one of the wall open/hit conditions exists 
-		if (!walls)
-			return;
+		if (moveState == MOVE_TO_GOAL)
+			maxRotation = 180.0f;
+		else // moveState == MOVE_TO_TRAIL // always do a full sweep for paths onto UNKNOWN_TILEs
+			maxRotation = 360.0f;
+
+		// stuck in a corner (look for the quickest and most waypoint-oriented way out)
+		if ((forward.stepRatio == 0 && right.stepRatio == 0) || (forward.stepRatio == 0 && left.stepRatio == 0))
+			UpdateKnownMap();
 	}
 
 	waypointVector = *currentWaypoint - spriteCenter;
 	if (moveState == MOVE_TO_GOAL) {
 		distToWaypointSqr = waypointVector.LengthSquared();
 
-		if (distToWaypointSqr < WAYPOINT_RANGE_THRESHOLD)	// four multiplications potentially faster than taking a squareroot each frame
-			speed = (int)(SDL_sqrtf(distToWaypointSqr) / MAX_STEPS);		// to allow more accurate approach towards waypoint
+		// FIXME: make range_threshold a static const variable initialized the first time this func is called
+		// instead of constantly doing theses #define multiplications
+		if (distToWaypointSqr < waypointSpeedRange)	// four multiplications potentially faster than taking a squareroot each frame
+			speed = (int)(SDL_sqrtf(distToWaypointSqr) / MAX_STEPS);		// to allow more accurate approach towards goal waypoint
+		else
+			speed = MAX_SPEED;	// in the event of a near-miss
 		if (speed < 1)
 			speed = 1;
-		
-		// don't push trail waypoints while backtracking
-		trail.PushFront(spriteCenter);
 	}
 	waypointVector.Normalize();
 
@@ -412,64 +413,96 @@ void Entity::UpdateMovement() {
 
 	bestWeight = 0;
 	rotationAngle = 0.0f;
+	oldForward = forward.vector;
 	while (rotationAngle < maxRotation) {
 
 		// check how clear the path is starting one step along it
-		// and head straight for the waypoint if the test.vector 
-		// path crosses extremely near it
+		// and head straight for the waypoint if the test.vector path crosses extremely near it
 		if ( CheckMovement( spriteCenter+(test.vector*speed), test ) ) {
 			forward = test;
 			CheckWalls(walls);	// to update the validSteps that the sprite will be comparing on the next frame
 			moving = true;
+
+			/*
+			// FIXME(?): 99% of the time this code never executes because the sprite is in tractor-beam mode == not veering off
+			// PLUS this close to the goal its likely that trail.Clear() is about to be called anyway
+			// drop a trail waypoint
+			if ( moving && moveState == MOVE_TO_GOAL &&
+				 oldForward != ZERO_VEC2 &&
+				 oldForward*forward.vector < FORWARD_CHANGE_THRESHOLD &&
+				 lastTrailTile != currentTile ) {
+				trail.PushFront(spriteCenter);
+				lastTrailTile = currentTile;
+			}
+			*/
 			return;
 		}
 	
+		// FIXME/BUG: there is still the case of a sprite perma-looping into a dead end in the event that it keeps
+		// running out of trail waypoints just outside it (clears the knownMap) and the bestVector is INTO the dead end
+		// POTENTIAL CLUE: as long as at least one trail waypoint persists, the sprite won't start from scratch
+		// so... in what instances should the last trail waypoint persist?
+		// DONT trail.PopBack() (on any trail waypoint) until it is confirmed there is no new tiles to head towards...?
+
 		// give the path a bias to help set priority
 		weight = test.validSteps;
-		weight += test.vector*waypointVector * WAYPOINT_BIAS;
+		weight += test.vector*waypointVector * WAYPOINT_BIAS;	// TODO(?): check the stepRatio along the waypointVector?
 		if (moving) {	
-			weight += (test.vector*left.vector) * ((walls&LEFT_WALL_OPENED) > 0) * LEFT_BIAS;
-			weight += (test.vector*right.vector) * ((walls&RIGHT_WALL_OPENED) > 0) * RIGHT_BIAS;
-			weight += (test.vector*forward.vector) * !((walls&FORWARD_WALL_HIT) > 0) * FORWARD_BIAS;
+			weight += (test.vector*left.vector) * ((walls&LEFT_WALL_OPENED) > 0) * (LEFT_BIAS * left.stepRatio);
+			weight += (test.vector*right.vector) * ((walls&RIGHT_WALL_OPENED) > 0) * (RIGHT_BIAS * right.stepRatio);
+			weight += (test.vector*forward.vector) * !((walls&FORWARD_WALL_HIT) > 0) * (FORWARD_BIAS * forward.stepRatio);
 		}
 
-		// rank the best path to follow
-		if ( moveState == MOVE_TO_TRAIL || (test.newSteps > 0 && test.newSteps >= best.newSteps) ) {
-			if (test.validSteps > 0 && weight > bestWeight) {
-				bestWeight = weight;
-				best = test;
-			}
+		// more new tiles always beats better overall weight
+		if ( test.stepRatio > best.stepRatio ) {
+			bestWeight = weight;
+			best = test;
+		} else if ( test.stepRatio == best.stepRatio  && weight > bestWeight ) {
+			bestWeight = weight;
+			best = test;
 		}
 
 		test.vector = rotationQuat_Z*test.vector; // rotate counter-clockwise
 		rotationAngle += ROTATION_INCREMENT;
 	}
 
-	if (moveState == MOVE_TO_GOAL && best.newSteps == 0) {	// deadlocked, begin deadend protocols (ie follow the trail now)
+	if (moveState == MOVE_TO_GOAL && best.stepRatio == 0) {	// deadlocked, begin deadend protocols (ie follow the trail now)
 		StopMoving();
 		moveState = MOVE_TO_TRAIL;
-	} else if (moveState == MOVE_TO_TRAIL && best.newSteps > 0) {
+	} else if (moveState == MOVE_TO_TRAIL && best.stepRatio > 0) {
 		StopMoving();
 		moveState = MOVE_TO_GOAL;
-	} else if (moveState == MOVE_TO_TRAIL && best.validSteps == 0) {
+	} else if (moveState == MOVE_TO_TRAIL && best.validSteps == 0) {	
 		StopMoving();
 	} else {
 		forward = best;
 		CheckWalls(walls);	// to update the validSteps that the sprite will be comparing on the next frame
 		moving = true;		
 	}
-	SetNextWaypoint();
+	UpdateWaypoint();
+
+	// drop a trail waypoint
+	if ( moving && moveState == MOVE_TO_GOAL && 
+		 oldForward != ZERO_VEC2 && 
+		 oldForward*forward.vector < FORWARD_CHANGE_THRESHOLD && 
+		 lastTrailTile != currentTile ) {
+		trail.PushFront(spriteCenter);
+		lastTrailTile = currentTile;
+	}
 }
 
 //******************
 // CheckMovement
 // determines the state of the sprite's position for the next few frames
+// return true if a future position using along is near the waypoint
 //******************
 bool Entity::CheckMovement(eVec2 from, decision_t & along) {
 	eVec2 testPoint;
+	int newSteps;
 
 	along.validSteps = 0;
-	along.newSteps = 0;
+	along.stepRatio = 0.0f;
+	newSteps = 0;
 	while (along.validSteps < MAX_STEPS) {
 
 		// forward test point (starts on circle circumscribing the sprite bounding box)
@@ -478,7 +511,7 @@ bool Entity::CheckMovement(eVec2 from, decision_t & along) {
 
 		// check for collision
 		if (!(game->GetMap()->IsValid(testPoint)))
-			return false;
+			break;
 
 		// forward test point rotated clockwise 90 degrees
 		testPoint.x = from.x + (collisionRadius*along.vector.y);
@@ -486,7 +519,7 @@ bool Entity::CheckMovement(eVec2 from, decision_t & along) {
 
 		// check for collision
 		if (!(game->GetMap()->IsValid(testPoint)))
-			return false;
+			break;
 
 		// forward test point rotated counter-clockwise 90 degrees
 		testPoint.x = from.x - (collisionRadius*along.vector.y);
@@ -494,23 +527,30 @@ bool Entity::CheckMovement(eVec2 from, decision_t & along) {
 
 		// check for collision
 		if (!(game->GetMap()->IsValid(testPoint)))
-			return false;
+			break;
 
 		// all test points validated
 		along.validSteps++;
 
-		// check if the step falls on a new tile
-		if ( GetKnownMapValue(from) != VISITED_TILE )
-			along.newSteps++;
+		// check if the step falls on an unexplored tile
+		if (GetKnownMapValue(from) == UNKNOWN_TILE)
+			newSteps++;
 
-		// FIXME: this sort of breaks the dead-end protocols
-		// check if the waypoint is near the center of the validated  test position
-		if (from.Compare(*currentWaypoint, waypointRange))
+		// FIXME(?): will not also doing this for MOVE_TO_TRAIL cause the sprite to 
+		// veer off randomly **deep in VISITED_TILEs***???
+		// check if the goal waypoint is near the center of the validated  test position
+		if (moveState == MOVE_TO_GOAL && from.Compare(*currentWaypoint, waypointRange))
 			return true;
 
 		// move to check validity of next position
 		from += along.vector*speed;
 	}
+
+	if (along.validSteps == 0)
+		along.stepRatio = 0;
+	else
+		along.stepRatio = (float)newSteps / (float)along.validSteps;
+
 	return false;
 }
 
@@ -558,44 +598,15 @@ bool Entity::CheckFloor() {
 
 //******************
 // CheckFogOfWar
-// highlight the subset of tiles from the tileMap that are currently visible to the entity ( ie a '2' in the array)
-// and convert the *old* tiles no longer within sight range (that had a '2') to "known" (ie a '1' in the array)
-// the 2's will be used by the map to draw bright tiles, the 1's will be grey tiles, the 0's will be black/background
+// TODO: have the map object check if ANY of the team entities have visited a tile about to be drawn, if not draw black,
+// if so, then the map goes through all entities calling CheckFogOfWar, if ONE returns true then it'll stop sweep and draw bright,
+// if none return true by the end of the sweep, then draw dim ( reduce sweep time by using a locational Potential_Visible_Set )
 //******************
-void Entity::CheckFogOfWar() {
+bool Entity::CheckFogOfWar(const eVec2 & point) const {
+	eVec2 lineOfSight;
 
-	// set the fog of war properties
-	sight.x = (int)(spritePos.x) - (sightRange / 2);
-	sight.y = (int)(spritePos.y) - (sightRange / 2);
-
-	// FIXME: inefficient allocation of pre-existing data as well as repetitive function calls to (currently) constant data
-	int tileSize = game->GetMap()->GetTileSize();
-
-	// continue just beyond the sightRange to account for 2s to 1s visibility transitions
-	int rows = (sight.h / tileSize) + 2;
-	int columns = (sight.w / tileSize) + 2;
-	int i, j, startI, startJ;
-
-	startI = sight.x / tileSize;
-	startJ = sight.y / tileSize;
-
-	// FIXME: rough reset of knownMap; should set all 2s to 1s and keep the rest 0
-	//memset(knownMap, 0, MAX_MAP_SIZE*MAX_MAP_SIZE*sizeof(int));
-
-	for (i = startI; i < startI + columns; i++) {
-
-		for (j = startJ; j < startJ + rows; j++) {
-
-			if (i >= 0 && i < knownMapRows && j >= 0 && j < knownMapCols) {
-
-				if ( i > startI && i < (startI + columns - 1) &&
-					j > startJ && j < (startJ + rows - 1) ) 
-					knownMap[i][j] = VISIBLE_TILE;
-				else
-					knownMap[i][j] = VISITED_TILE;
-			}
-		}
-	}
+	lineOfSight = point - spriteCenter;
+	return lineOfSight.LengthSquared() <= sightRange;
 }
 
 // FIXME: use the new GetMapIndex(eVec2) function to return point-wise snesor checks with (fewer?) operations
@@ -617,21 +628,21 @@ void Entity::CheckTouch(bool self, bool horizontal, bool vertical) {
 
 		if (horizontal) {
 
-			localTouch |= (RIGHT_TOP		* ((game->GetMap()->GetIndexValue((spritePos.x + size) / tileSize, (spritePos.y + 1) / tileSize) == NONSOLID_TILE)		| ((spritePos.x + size + 1) > width)));
-			localTouch |= (RIGHT_BOTTOM		* ((game->GetMap()->GetIndexValue((spritePos.x + size) / tileSize, (spritePos.y + size - 1) / tileSize) == NONSOLID_TILE)	| ((spritePos.x + size + 1) > width)));
+			localTouch |= (RIGHT_TOP		* ((game->GetMap()->GetIndexValue((spritePos.x + size) / tileSize, (spritePos.y + 1) / tileSize) == COLLISION_TILE)		| ((spritePos.x + size + 1) > width)));
+			localTouch |= (RIGHT_BOTTOM		* ((game->GetMap()->GetIndexValue((spritePos.x + size) / tileSize, (spritePos.y + size - 1) / tileSize) == COLLISION_TILE)	| ((spritePos.x + size + 1) > width)));
 			
-			localTouch |= (LEFT_BOTTOM		* ((game->GetMap()->GetIndexValue(spritePos.x / tileSize, (spritePos.y + size - 1) / tileSize) == NONSOLID_TILE)			| (spritePos.x < 0)));
-			localTouch |= (LEFT_TOP			* ((game->GetMap()->GetIndexValue(spritePos.x / tileSize, (spritePos.y + 1) / tileSize) == NONSOLID_TILE)					| (spritePos.x < 0)));
+			localTouch |= (LEFT_BOTTOM		* ((game->GetMap()->GetIndexValue(spritePos.x / tileSize, (spritePos.y + size - 1) / tileSize) == COLLISION_TILE)			| (spritePos.x < 0)));
+			localTouch |= (LEFT_TOP			* ((game->GetMap()->GetIndexValue(spritePos.x / tileSize, (spritePos.y + 1) / tileSize) == COLLISION_TILE)					| (spritePos.x < 0)));
 
 		}
 
 		if (vertical) {
 
-			localTouch |= (TOP_LEFT		* ((game->GetMap()->GetIndexValue((spritePos.x + 1) / tileSize, spritePos.y / tileSize) == NONSOLID_TILE)					| (spritePos.y < 0)));
-			localTouch |= (TOP_RIGHT	* ((game->GetMap()->GetIndexValue((spritePos.x + size - 1) / tileSize, spritePos.y / tileSize) == NONSOLID_TILE)			| (spritePos.y < 0)));
+			localTouch |= (TOP_LEFT		* ((game->GetMap()->GetIndexValue((spritePos.x + 1) / tileSize, spritePos.y / tileSize) == COLLISION_TILE)					| (spritePos.y < 0)));
+			localTouch |= (TOP_RIGHT	* ((game->GetMap()->GetIndexValue((spritePos.x + size - 1) / tileSize, spritePos.y / tileSize) == COLLISION_TILE)			| (spritePos.y < 0)));
 
-			localTouch |= (BOTTOM_RIGHT	* ((game->GetMap()->GetIndexValue((spritePos.x + size - 1) / tileSize, (spritePos.y + size) / tileSize) == NONSOLID_TILE)	| ((spritePos.y + size + 1) > height)));
-			localTouch |= (BOTTOM_LEFT	* ((game->GetMap()->GetIndexValue((spritePos.x + 1) / tileSize, (spritePos.y + size) / tileSize) == NONSOLID_TILE)		| ((spritePos.y + size + 1) > height)));
+			localTouch |= (BOTTOM_RIGHT	* ((game->GetMap()->GetIndexValue((spritePos.x + size - 1) / tileSize, (spritePos.y + size) / tileSize) == COLLISION_TILE)	| ((spritePos.y + size + 1) > height)));
+			localTouch |= (BOTTOM_LEFT	* ((game->GetMap()->GetIndexValue((spritePos.x + 1) / tileSize, (spritePos.y + size) / tileSize) == COLLISION_TILE)		| ((spritePos.y + size + 1) > height)));
 
 		}
 
@@ -642,21 +653,21 @@ void Entity::CheckTouch(bool self, bool horizontal, bool vertical) {
 
 		if (horizontal) {
 			
-			touch |= (RIGHT_TOP		* ((game->GetMap()->GetIndexValue((spritePos.x + size + touchRange) / tileSize, spritePos.y / tileSize) == NONSOLID_TILE)				| ((spritePos.x + touchRange + size) > width)));
-			touch |= (RIGHT_BOTTOM	* ((game->GetMap()->GetIndexValue((spritePos.x + size + touchRange) / tileSize, (spritePos.y + size) / tileSize) == NONSOLID_TILE)	| ((spritePos.x + touchRange + size) > width)));
+			touch |= (RIGHT_TOP		* ((game->GetMap()->GetIndexValue((spritePos.x + size + touchRange) / tileSize, spritePos.y / tileSize) == COLLISION_TILE)				| ((spritePos.x + touchRange + size) > width)));
+			touch |= (RIGHT_BOTTOM	* ((game->GetMap()->GetIndexValue((spritePos.x + size + touchRange) / tileSize, (spritePos.y + size) / tileSize) == COLLISION_TILE)	| ((spritePos.x + touchRange + size) > width)));
 
-			touch |= (LEFT_TOP		* ((game->GetMap()->GetIndexValue((spritePos.x - touchRange) / tileSize, spritePos.y / tileSize) == NONSOLID_TILE)					| ((spritePos.x - touchRange) < 0)));
-			touch |= (LEFT_BOTTOM	* ((game->GetMap()->GetIndexValue((spritePos.x - touchRange) / tileSize, (spritePos.y + size) / tileSize) == NONSOLID_TILE)			| ((spritePos.x - touchRange) < 0)));
+			touch |= (LEFT_TOP		* ((game->GetMap()->GetIndexValue((spritePos.x - touchRange) / tileSize, spritePos.y / tileSize) == COLLISION_TILE)					| ((spritePos.x - touchRange) < 0)));
+			touch |= (LEFT_BOTTOM	* ((game->GetMap()->GetIndexValue((spritePos.x - touchRange) / tileSize, (spritePos.y + size) / tileSize) == COLLISION_TILE)			| ((spritePos.x - touchRange) < 0)));
 
 		}
 
 		if (vertical) {
 		
-			touch |= (TOP_RIGHT		* ((game->GetMap()->GetIndexValue((spritePos.x + size) / tileSize, (spritePos.y - touchRange) / tileSize) == NONSOLID_TILE)			| ((spritePos.y - touchRange) < 0)));
-			touch |= (TOP_LEFT		* ((game->GetMap()->GetIndexValue(spritePos.x / tileSize, (spritePos.y - touchRange) / tileSize) == NONSOLID_TILE)					| ((spritePos.y - touchRange) < 0)));
+			touch |= (TOP_RIGHT		* ((game->GetMap()->GetIndexValue((spritePos.x + size) / tileSize, (spritePos.y - touchRange) / tileSize) == COLLISION_TILE)			| ((spritePos.y - touchRange) < 0)));
+			touch |= (TOP_LEFT		* ((game->GetMap()->GetIndexValue(spritePos.x / tileSize, (spritePos.y - touchRange) / tileSize) == COLLISION_TILE)					| ((spritePos.y - touchRange) < 0)));
 			
-			touch |= (BOTTOM_RIGHT	* ((game->GetMap()->GetIndexValue((spritePos.x + size) / tileSize, (spritePos.y + size + touchRange) / tileSize) == NONSOLID_TILE)	| ((spritePos.y + touchRange + size) > height)));
-			touch |= (BOTTOM_LEFT	* ((game->GetMap()->GetIndexValue(spritePos.x / tileSize, (spritePos.y + size + touchRange) / tileSize) == NONSOLID_TILE)				| ((spritePos.y + touchRange + size) > height)));
+			touch |= (BOTTOM_RIGHT	* ((game->GetMap()->GetIndexValue((spritePos.x + size) / tileSize, (spritePos.y + size + touchRange) / tileSize) == COLLISION_TILE)	| ((spritePos.y + touchRange + size) > height)));
+			touch |= (BOTTOM_LEFT	* ((game->GetMap()->GetIndexValue(spritePos.x / tileSize, (spritePos.y + size + touchRange) / tileSize) == COLLISION_TILE)				| ((spritePos.y + touchRange + size) > height)));
 
 		}
 	}
@@ -664,7 +675,7 @@ void Entity::CheckTouch(bool self, bool horizontal, bool vertical) {
 
 // FIXME: should this belong to the Map class?
 // Isolated check for overlap into non-traversable areas, and immediate sprite position correction
-void Entity::CollisionCheck(bool horizontal, bool vertical) {
+void Entity::CheckCollision(bool horizontal, bool vertical) {
 
 	int tileSize = game->GetMap()->GetTileSize();
 	int x1 = (int)(spritePos.x/tileSize);
@@ -817,7 +828,6 @@ void Entity::SetKnownMapValue(const eVec2 & point, int value) {
 	game->GetMap()->GetIndex(point, row, column);
 	if (row >= 0 && row < knownMapRows  && column >= 0 && column < knownMapCols)
 		knownMap[row][column] = value;
-
 }
 
 const eVec2 & Entity::GetCenter() const {
@@ -850,25 +860,6 @@ void Entity::DrawPixel(SDL_Surface *surface, int x, int y, Uint8 r, Uint8 g, Uin
 		SDL_UnlockSurface(surface);
 }
 
-void Entity::SetNextWaypoint() {
-	switch (moveState) {
-		case MOVE_TO_GOAL: {
-			currentWaypoint = goals.Back();
-			return;
-		}
-		case MOVE_TO_TRAIL: {
-			
-			if (trail.IsEmpty()) {
-				moveState = MOVE_TO_GOAL;
-				currentWaypoint = goals.Back();
-			} else {
-				currentWaypoint = trail.Front();
-			}
-			return;
-		}
-	}
-}
-
 void Entity::StopMoving() {
 	forward.vector.Zero();
 	left.vector.Zero();
@@ -878,34 +869,63 @@ void Entity::StopMoving() {
 
 void Entity::AddUserWaypoint(const eVec2 & waypoint) {
 	goals.PushFront(waypoint);
-	SetNextWaypoint();
+	UpdateWaypoint();
 }
 
-void Entity::RemoveWaypoint() {
+void Entity::UpdateWaypoint( bool getNext ) {
 	switch (moveState) {
 		case MOVE_TO_GOAL: {
-			goals.PopBack();
-			trail.Clear();			// never backtrack along an old goal's trail
-			
-			// FIXME: this memset may be a temporary fix becuase the sprite needs
-			// the FogOfWar information and potentially needs to remember all its
-			// travels more permanently
-			// SOLUTION: have the Map object keep track of which entities have visited which tiles
-			// and give an entity the ability to clear its Map-visit entries
-			// ALSO have each entity keep track of its FogOfWar information individually? or give that to the Map object too?
-			memset(knownMap, 0, MAX_MAP_SIZE*MAX_MAP_SIZE * sizeof(int)); // allow travel along previously visited tiles again
-			break;;
+			if ( getNext ) {
+				goals.PopBack();
+				trail.Clear();
+				CheckTrail();
+				speed = MAX_SPEED; // speed reduced as the goal waypoint approached
+			} else
+				currentWaypoint = goals.Back();
+			return;
 		}
 		case MOVE_TO_TRAIL: {
-			trail.PopFront();
-
-			// FIXME: similar temporary fix as above regarding FogOfWar tracking
-			if(trail.IsEmpty())
-				memset(knownMap, 0, MAX_MAP_SIZE*MAX_MAP_SIZE * sizeof(int)); // allow travel along previously visited tiles again
-			break;
+			if ( getNext ) 
+				trail.PopFront();
+			if (!CheckTrail())
+				currentWaypoint = trail.Front();
+			return;
 		}
 	}
-	speed = MAX_SPEED;		// speed was reducing as the waypoint approached
+}
+
+// determine if the entity should fresh-start goal pathfinding
+bool Entity::CheckTrail() {
+	if (trail.IsEmpty()) {
+		memset(knownMap, UNKNOWN_TILE, MAX_MAP_SIZE*MAX_MAP_SIZE * sizeof(int));
+		lastTrailTile = nullptr;
+		moveState = MOVE_TO_GOAL;
+		currentWaypoint = goals.Back();
+		return true;
+	}
+	return false;
+}
+
+void Entity::UpdateKnownMap() {
+	visited_t data;
+	float range;
+
+	// update the newly visited tile and put it into the trailMap
+	*currentTile = VISITED_TILE;
+	data.point = spriteCenter;
+	data.tile = GetKnownMapIndex(spriteCenter);
+	trailMap.PushFront(data);
+
+	// reset and clear out any tiles out of acceptable range
+	while (1)  {
+		range = (trailMap.Back()->point - spriteCenter).LengthSquared();
+
+		if (range >= trailMapRange) {
+			*(trailMap.Back()->tile) = UNKNOWN_TILE;
+			trailMap.PopBack();
+		} else
+			return;
+	}
 }
 
 void Entity::UpdatePosition() {

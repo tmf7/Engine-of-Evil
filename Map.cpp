@@ -4,6 +4,7 @@ Map::Map() {
 
 }
 
+// FIXME: give maxRows and maxCols default values in case of invalid input
 bool Map::Init (char fileName[], Game * const game, int maxRows, int maxCols) {
 
 	if (!game)
@@ -54,9 +55,9 @@ void Map::BuildTiles() {
 		for (col = 0; col < mapCols; col++) {
 			solid = rand() % 4;
 			if(solid < 3)
-				tileMap[row][col] = SOLID_TILE;
+				tileMap[row][col] = TRAVERSABLE_TILE;
 			else 
-				tileMap[row][col] = NONSOLID_TILE;
+				tileMap[row][col] = COLLISION_TILE;
 		}
 	}
 }
@@ -114,7 +115,7 @@ bool Map::IsValid(const eVec2 & point) const {
 	int		mapWidth = mapRows*tileSize;
 	int		mapHeight = mapCols*tileSize;
 
-	if ( GetIndexValue(point) < SOLID_TILE ||
+	if ( GetIndexValue(point) < TRAVERSABLE_TILE ||
 		(point.x > mapWidth) || (point.x < 0) || (point.y > mapHeight) || (point.y < 0) )
 		validity = false;
 
@@ -151,30 +152,27 @@ void Map::Update() {
 
 			if (i >= 0 && i < mapRows && j >= 0 && j < mapCols ) {
 
-				// TODO: combine the 1s/2s of entity's knownMap to fade/brighten tiles (currently either const-draws 1s OR temp-draws 2s)
-				// fog-of-war cross-check for entity's area knowledge 
-				if (1/*game->GetEntities()->KnownMap(i,j) == 2*/) {			
-				
-					sourceRect.w = tileSize;
-					sourceRect.h = tileSize;
-					sourceRect.y = 0;
+				// TODO: modulate brightness of tile if any entities have visited
+				// and if an entity is within its sightRange to draw it bright/dim ( see Entity::CheckFogOfWar(...) ) 
+				sourceRect.w = tileSize;
+				sourceRect.h = tileSize;
+				sourceRect.y = 0;
 
-					destRect.y = j*tileSize - camera.y;
-					destRect.x = i*tileSize - camera.x;
+				destRect.y = j*tileSize - camera.y;
+				destRect.x = i*tileSize - camera.x;
 
 				
-					switch (tileMap[i][j]) {
-						case SOLID_TILE:
-							sourceRect.x = 0;
-							break;
-						case NONSOLID_TILE:
-							sourceRect.x = tileSize;
-							break;
-					}
-				
-					SDL_BlitSurface(tileSet, &sourceRect, game->GetBuffer(), &destRect);
-
+				switch (tileMap[i][j]) {
+					case TRAVERSABLE_TILE:
+						sourceRect.x = 0;
+						break;
+					case COLLISION_TILE:
+						sourceRect.x = tileSize;
+						break;
 				}
+				
+				SDL_BlitSurface(tileSet, &sourceRect, game->GetBuffer(), &destRect);
+
 			}
 		}
 	}
