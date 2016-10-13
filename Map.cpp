@@ -31,7 +31,7 @@ bool Map::Init (char fileName[], Game * const game, int maxRows, int maxCols) {
 	mapRows = maxRows;
 	mapCols = maxCols;
 
-	BuildTiles();
+	BuildTiles(RANDOM_TILE);
 
 	return true;
 }
@@ -46,20 +46,64 @@ void Map::Free() {
 
 // Procedure for initial map layout
 // Populates a matrix for future collision and redraw
-void Map::BuildTiles() {
-
-	int row, col;
+void Map::BuildTiles(const int type) {
 	int solid;
+	int * tile;
 
-	for (row = 0; row < mapRows; row++) {
-		for (col = 0; col < mapCols; col++) {
-			solid = rand() % 4;
-			if(solid < 3)
-				tileMap[row][col] = TRAVERSABLE_TILE;
-			else 
-				tileMap[row][col] = COLLISION_TILE;
+	// FIXME/BUG(?): odd, somehow changing this value larger than + (mapRows * MAX_MAP_SIZE + mapCols)
+	// resets camera.speed to some very slow value (processing speed remains constant)
+	static const int * tileMapEnd = (int *)(&tileMap[0][0]) + (mapRows * MAX_MAP_SIZE + mapCols);
+
+	switch (type) {
+		case RANDOM_TILE: {
+			for (tile = &tileMap[0][0]; tile <= tileMapEnd; tile++) {
+				solid = rand() % 4;
+				if (solid < 3)
+					*tile = TRAVERSABLE_TILE;
+				else
+					*tile = COLLISION_TILE;
+			}
+			break;
+		}
+		case TRAVERSABLE_TILE: {
+			for (tile = &tileMap[0][0]; tile <= tileMapEnd; tile++) {
+				*tile = TRAVERSABLE_TILE;
+			}
+			break;
+		}
+		case COLLISION_TILE: {
+			for (tile = &tileMap[0][0]; tile <= tileMapEnd; tile++) {
+				*tile = COLLISION_TILE;
+			}
+			break;
+		}
+		default: {	// RANDOM
+			for (tile = &tileMap[0][0]; tile <= tileMapEnd; tile++) {
+				solid = rand() % 4;
+				if (solid < 3)
+					*tile = TRAVERSABLE_TILE;
+				else
+					*tile = COLLISION_TILE;
+			}
+			break;
 		}
 	}
+}
+
+// toggles the tile type at tileMap[r][c] 
+// closest to the given point
+void Map::ToggleTile(const eVec2 & point) {
+	int * tile;
+	
+	tile = Index(point);
+	if (tile == nullptr)
+		return;
+	
+	if (*tile == TRAVERSABLE_TILE)
+		*tile = COLLISION_TILE;
+	else // *tile == COLLISION_TILE
+		*tile = TRAVERSABLE_TILE;
+
 }
 
 Map::viewport* Map::GetCamera() {
@@ -86,8 +130,35 @@ int Map::GetTileSize() const {
 	return tileSize;
 }
 
-// returns the tile type at the given index
-int Map::GetIndexValue(int row, int column) const {
+// sets the reference row and column to map-scaled
+// values using the given point on the tileMap
+// users must check for INVALID_INDEX return values
+void Map::Index(const eVec2 & point, int & row, int & column)  const {
+	row = (int)(point.x / tileSize);
+	column = (int)(point.y / tileSize);
+
+	if (row < 0 || row >= mapRows)
+		row = INVALID_INDEX;
+
+	if (column < 0 || column >= mapCols)
+		column = INVALID_INDEX;
+}
+
+// returns a pointer to tileMap[r][c] closest to the given point
+// users must check for nullptr return value
+int * Map::Index(const eVec2 & point) {
+	int row;
+	int column;
+
+	Index(point, row, column);
+	if (row == INVALID_INDEX || column == INVALID_INDEX)
+		return nullptr;
+	else
+		return &tileMap[row][column];
+}
+
+// return values: TRAVERSABLE_TILE, COLLISION_TILE, INVALID_TILE
+int Map::IndexValue(int row, int column) const {
 
 	if (row >= 0 && row < mapRows  && column >= 0 && column < mapCols)
 		return tileMap[row][column];
@@ -96,93 +167,79 @@ int Map::GetIndexValue(int row, int column) const {
 }
 
 // return the tile type at the given point
-int Map::GetIndexValue(const eVec2 & point) const {
-	int row;
-	int column;
-
-	row = (int)(point.x / tileSize);
-	column = (int)(point.y / tileSize);
-	if (row >= 0 && row < mapRows  && column >= 0 && column < mapCols)
-		return tileMap[row][column];
-	else
+// return values: TRAVERSABLE_TILE, COLLISION_TILE, INVALID_TILE
+int Map::IndexValue(const eVec2 & point) {
+	int * value;
+	
+	value = Index(point);
+	if (value == nullptr)
 		return INVALID_TILE;
+	else
+		return *value;
 }
 
 
 // returns true if a sprite can walk onto the given point, false otherwise
-bool Map::IsValid(const eVec2 & point) const {
+bool Map::IsValid(const eVec2 & point) {
 	bool	validity = true;
-	int		mapWidth = mapRows*tileSize;
-	int		mapHeight = mapCols*tileSize;
 
-	if ( GetIndexValue(point) < TRAVERSABLE_TILE ||
-		(point.x > mapWidth) || (point.x < 0) || (point.y > mapHeight) || (point.y < 0) )
+	if ( IndexValue(point) != TRAVERSABLE_TILE ||
+		(point.x > GetWidth()) || (point.x < 0) || (point.y > GetHeight()) || (point.y < 0) )
 		validity = false;
 
 	return validity;
 }
 
-// sets the reference row and column to scaled, but not ranged, 
-// values given a point on the tileMap
-void Map::GetIndex(const eVec2 & point, int & row, int & column)  const {
-	row = (int)(point.x / tileSize);
-	column = (int)(point.y / tileSize);
-}
-
 // TODO: determine which tiles to use from the tileSet image
 void Map::Update() {
-
 	SDL_Rect destRect;
 	SDL_Rect sourceRect;
 	int i, j, startI, startJ;
 
 	// maximum number of tiles to draw on the current window (max 1 boarder tile beyond)
-	int rows = (game->GetBuffer()->h / tileSize) + 2;
-	int columns = (game->GetBuffer()->w / tileSize) + 2;
+	static const int rows = (game->GetBuffer()->h / tileSize) + 2;
+	static const int columns = (game->GetBuffer()->w / tileSize) + 2;
+
+	sourceRect.w = tileSize;
+	sourceRect.h = tileSize;
+	sourceRect.y = 0;
 
 	// verify any user-input changes to the camera
 	MoveCamera();
 
+	// FIXME/NOTE: camera is never allowed to go beyond the tileMap dimensions
 	startI = camera.x / tileSize;
 	startJ = camera.y / tileSize;
 
 	for (i = startI; i < startI + columns; i++) {
-
 		for (j = startJ; j < startJ + rows; j++) {
+			if (i >= 0 && i < mapRows && j >= 0 && j < mapCols) {
 
-			if (i >= 0 && i < mapRows && j >= 0 && j < mapCols ) {
-
-				// TODO: modulate brightness of tile if any entities have visited
+				// TODO: modulate brightness of tile if ANY entities have visited
 				// and if an entity is within its sightRange to draw it bright/dim ( see Entity::CheckFogOfWar(...) ) 
-				sourceRect.w = tileSize;
-				sourceRect.h = tileSize;
-				sourceRect.y = 0;
-
-				destRect.y = j*tileSize - camera.y;
-				destRect.x = i*tileSize - camera.x;
-
-				
-				switch (tileMap[i][j]) {
-					case TRAVERSABLE_TILE:
-						sourceRect.x = 0;
-						break;
-					case COLLISION_TILE:
-						sourceRect.x = tileSize;
-						break;
+				destRect.y = (j*tileSize) - camera.y;
+				destRect.x = (i*tileSize) - camera.x;
+				if (game->GetEntities()->KnownMapValue(i,j) == VISITED_TILE) {
+					sourceRect.x = tileSize * 2;	// draw it black	// NOTE: this is ONE FRAME BEHIND what the entity has
+				} else {
+					switch (tileMap[i][j]) {
+						case TRAVERSABLE_TILE:
+							sourceRect.x = 0;
+							break;
+						case COLLISION_TILE:
+							sourceRect.x = tileSize;
+							break;
+					}
 				}
-				
 				SDL_BlitSurface(tileSet, &sourceRect, game->GetBuffer(), &destRect);
-
 			}
 		}
 	}
 }
 
-// FIXME: input is which frame/tile number from the map's tileset to get, returns an SDL_Surface* of that
-SDL_Surface* Map::GetTile( int tileNumber ) {
-
+// TODO: input is which frame/tile number from the map's tileset to get, returns an SDL_Surface* of that
+SDL_Surface * Map::GetTile( int tileNumber ) {
 	return tileSet;
-
 }
 
 // Adjust the user's view within map
@@ -196,8 +253,8 @@ void Map::MoveCamera() {
 
 	// centers the camera on the sprite
 	if (keys[SDL_SCANCODE_SPACE]) {
-		camera.x = (int)(game->GetEntities()->GetCenter().x) - game->GetBuffer()->w / 2;
-		camera.y = (int)(game->GetEntities()->GetCenter().y) - game->GetBuffer()->h / 2;
+		camera.x = (int)(game->GetEntities()->Center().x) - game->GetBuffer()->w / 2;
+		camera.y = (int)(game->GetEntities()->Center().y) - game->GetBuffer()->h / 2;
 	}
 
 	camera.y -= camera.speed * keys[SDL_SCANCODE_W] * (camera.y > 0);
@@ -215,4 +272,5 @@ void Map::MoveCamera() {
 	else if (camera.y > maxY)
 		camera.y = maxY;
 }
+
 

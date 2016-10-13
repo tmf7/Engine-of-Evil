@@ -5,11 +5,13 @@
 
 #define MAX_MAP_SIZE 256
 
-// FIXME: make these private enums?
+// FIXME: make these private static enums?
 // tileMap values
-#define TRAVERSABLE_TILE 1
-#define COLLISION_TILE 0
+#define RANDOM_TILE 3
+#define TRAVERSABLE_TILE 2
+#define COLLISION_TILE 1
 
+#define INVALID_INDEX -1
 #define INVALID_TILE -1
 
 class Game;
@@ -45,14 +47,16 @@ public:
 	int				GetColumns() const;
 	int				GetWidth() const;
 	int				GetHeight() const;
-	SDL_Surface *	GetTile(int tileNumber);
-	int				GetIndexValue(int row, int column) const;
-	int				GetIndexValue(const eVec2 & point) const;
-	void			GetIndex(const eVec2 & point, int & row, int & column) const;
-	bool			IsValid(const eVec2 & point) const;
+	SDL_Surface * 	GetTile(int tileNumber);
+	int				IndexValue(int row, int column) const;
+	int				IndexValue(const eVec2 & point);
+	void			Index(const eVec2 & point, int & row, int & column) const;
+	int *			Index(const eVec2 & point);
+	bool			IsValid(const eVec2 & point);
 	void			Free();
 	void			Update();
-	void			BuildTiles();
+	void			BuildTiles(const int type);
+	void			ToggleTile(const eVec2 & point);
 };
 
 #endif

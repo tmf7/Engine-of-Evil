@@ -11,23 +11,24 @@
 
 // uses pre-allocated stack memory to manage pointers
 // pushing past the capacity will overwrite the back of the deque
+// user code must check if deque is empty before accessing data
 template <class type>
 class EvilDeque
 {
 private:
 
-	struct Node {
-			Node *	prev;
-			Node *	next;
-			type	data;
-			Node() : prev(this), next(this), data() {}
-	};
+	typedef struct Node_s {
+		Node_s *	prev = this;
+		Node_s *	next = this;
+		type		data;
+//			Node_s() : prev(this), next(this), data() {}
+	} Node_t;
 
-	size_t numElements;
-	size_t activeSlot;
-	Node * front;
-	Node * back;
-	Node nodePool[DEFAULT_DEQUE_SIZE];
+	int					numElements;
+	int					activeSlot;
+	Node_t *			front;
+	Node_t *			back;
+	Node_t				nodePool[DEFAULT_DEQUE_SIZE];
 
 public:
 
@@ -37,20 +38,19 @@ public:
 	bool				PopFront();
 	bool				PopBack();
 
-	type *				Back() const;
-	type *				Front() const;
-	type *				FromFront(const size_t index) const;
-	type *				FromBack(const size_t index) const;
+	const type &		Back() const;
+	const type &		Front() const;
+	const type &		FromFront(int index) const;
+	const type &		FromBack(int index) const;
 
-	void				Clear();				// empty the stack of all nodes
-	size_t				GetSize() const;		// return then number of elements in the stack
-	size_t				GetCapacity() const;	// return the maximum number of element the stack can contain at any time
+	void				Clear();				// empty the deque of all nodes
+	int					Size() const;			// return then number of elements in the deque
+	int					Capacity() const;		// return the maximum number of element the deque can contain at any time
 	bool				IsEmpty() const;
 };
 
 template< class type >
 inline EvilDeque<type>::EvilDeque() {
-
 	numElements = 0;
 	activeSlot = 0;
 	front = nullptr;
@@ -59,27 +59,27 @@ inline EvilDeque<type>::EvilDeque() {
 
 template< class type >
 inline void EvilDeque<type>::PushFront(const type & data) {
-	Node * newFront;
+	Node_t * newFront;
 
-	if (activeSlot == DEFAULT_DEQUE_SIZE)
+	newFront = &nodePool[activeSlot++];
+	if (activeSlot >= DEFAULT_DEQUE_SIZE)
 		activeSlot = 0;
 
-	newFront = &nodePool[activeSlot];
-
+	// overwrite the oldest node in the pre-allocated memory array
 	if (newFront == back)
-		PopBack();			// overwrite the oldest node in the pre-allocated memory array
-
+		PopBack();
+	
 	newFront->data = data;
-
+	
 	if (front == nullptr) {
-		front = back = newFront;
+		front = newFront;
+		back = newFront;
 	} else {
 		newFront->prev = front;
 		front->next = newFront;
 		front = newFront;
 	}
 	numElements++;
-	activeSlot++;
 }
 
 // template< class type >
@@ -88,120 +88,106 @@ inline void EvilDeque<type>::PushFront(const type & data) {
 
 template< class type >
 inline bool EvilDeque<type>::PopFront() {
-	Node * newFront;
+	Node_t * newFront;
 	
-	if (front == nullptr) {				// empty deque
-
+	if (front == nullptr) {								// empty deque
 		return false;
-		
-	} else if (front->prev == front) {	// last node in the deque
-
-		// front->data = NULL;			// don't waste time clearing the data
-		front = back = nullptr;
-		return true;
-
-	} else {							// more than one node in the deque
-
+	} else if (front->prev == front) {					// last node in the deque
+//		memset(&(front->data), 0, sizeof(front->data));	// ensure no carry-over if data is overwritten
+		front = nullptr;
+		back = nullptr;
+	} else {											// more than one node in the deque
 		newFront = front->prev;
-		front->next = front;			// redundant?
+		front->prev->next = newFront;
+//		front->next = front;
 		front->prev = front;
-		// front->data = NULL;			// don't waste time clearing the data
+//		memset(&(front->data), 0, sizeof(front->data));	// ensure no carry-over if data is overwritten
 		front = newFront;
-		return true;
-
 	}
 	numElements--;
+
 	activeSlot--;
+	if (activeSlot < 0)
+		activeSlot = 0;
+
+	return true;
 }
 
 template< class type >
 inline bool EvilDeque<type>::PopBack() {
-	Node * newBack;
+	Node_t * newBack;
 
-	if (back == nullptr) {				// empty deque
-
+	if (back == nullptr) {								// empty deque
 		return false;
-
-	}
-	else if (back->next == back) {		// last node in the deque
-
-		// back->data = NULL;			// don't waste time clearing the data
-		front = back = nullptr;
-		return true;
-
-	}
-	else {								// more than one node in the deque
-
+	} else if (back->next == back) {					// last node in the deque
+//		memset(&(back->data), 0, sizeof(back->data));	// ensure no carry-over if data is overwritten
+		front = nullptr;
+		back = nullptr;
+	} else {											// more than one node in the deque
 		newBack = back->next;
+		back->next->prev = newBack;
 		back->next = back;
-		back->prev = back;				// redundant?
-		// back->data = NULL;			// don't waste time clearing the data
+//		back->prev = back;
+//		memset(&(back->data), 0, sizeof(back->data));	// ensure no carry-over if data is overwritten
 		back = newBack;
-		return true;
-
 	}
 	numElements--;
 	// dont decrease the activeSlot
+	return true;
 }
 
 template< class type >
-inline type * EvilDeque<type>::Front() const {
-	if (front == nullptr)
-		return nullptr;
-	return &(front->data);
+inline const type & EvilDeque<type>::Front() const {
+	return front->data;
 }
 
 template< class type >
-inline type * EvilDeque<type>::Back() const {
-	if (back == nullptr)
-		return nullptr;
-	return &(back->data);
+inline const type & EvilDeque<type>::Back() const {
+	return back->data;
 }
 
 // returns the data at the node "index" nodes behind the front
 template< class type >
-inline type * EvilDeque<type>::FromFront(const size_t index) const {
-	Node * node;
-	size_t i;
+inline const type & EvilDeque<type>::FromFront(int index) const {
+	Node_t * node;
+	int i;
 
 	if (index >= numElements)
-		return nullptr;
+		index = numElements - 1;
+	else if (index < 0)
+		index = 0;
 
 	node = front;
-	if (node == nullptr)
-		return nullptr;
-
 	if (index == numElements-1)
-		return &(back->data);
+		return back->data;
 
 	i = 0;
 	while (i++ < index)
 		node = node->prev;
 
-	return &(node->data);
+	return node->data;
 }
 
 // returns the data at the node "index" nodes ahead of the back
 template< class type >
-inline type * EvilDeque<type>::FromBack(const size_t index) const {
-	Node * node;
-	size_t i;
+inline const type & EvilDeque<type>::FromBack(int index) const {
+	Node_t * node;
+	int i;
 
 	if (index >= numElements)
-		return nullptr;
+		index = numElements - 1;
+	else if (index < 0)
+		index = 0;
 
 	node = back;
-	if (node == nullptr)
-		return nullptr;
-
 	if (index == numElements-1)
-		return &(front->data);
+		return front->data;
 
 	i = 0;
 	while (i++ < index)
 		node = node->next;
 
-	return &(node->data);
+	return node->data;
 }
 
 template< class type >
@@ -211,20 +197,20 @@ inline void EvilDeque<type>::Clear() {
 }
 
 template< class type >
-inline size_t EvilDeque<type>::GetSize() const {
+inline int EvilDeque<type>::Size() const {
 	return numElements;
 }
 
 // TODO: after implementing the dynamic memory version of deque
 // change this to return the "capacity" variable set at construction
 template< class type >
-inline size_t EvilDeque<type>::GetCapacity() const {
+inline int EvilDeque<type>::Capacity() const {
 	return DEFAULT_DEQUE_SIZE;
 }
 
 template< class type >
 inline bool EvilDeque<type>::IsEmpty() const {
-	return front == nullptr;
+	return numElements == 0;
 }
 
 #endif /* E_DEQUE_H */
