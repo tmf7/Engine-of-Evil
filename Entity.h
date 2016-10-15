@@ -85,7 +85,7 @@ private:
 	Game *			game;
 	SDL_Surface *	sprite;
 	SDL_Rect		sight;				// TODO: make sight and touch part of organized structs?
-	int				knownMap[MAX_MAP_SIZE][MAX_MAP_SIZE];	// matches 1:1 the size of the tileMap in Map.h and the 
+	int				knownMap[MAX_MAP_ROWS][MAX_MAP_COLUMNS];// matches 1:1 the size of the tileMap in Map.h and the 
 	int				knownMapRows;							// matches 1:1 the mapRows in Map.h
 	int				knownMapCols;							// matches 1:1 the mapCols in Map.h
 	eVec2			spritePos;

@@ -54,9 +54,11 @@ bool Entity::Init(char fileName[], bool key, Game * const game) {
 	collisionRadius = SDL_sqrtf(collisionRadius);
 	collisionRadius /= 2.0f;
 
+	// FIXME(?): this relies on the map being initialized already
+	// knownMap dimensions
 	knownMapRows = game->GetMap()->GetRows();
 	knownMapCols = game->GetMap()->GetColumns();
-	memset(knownMap, UNKNOWN_TILE, MAX_MAP_SIZE * MAX_MAP_SIZE * sizeof(knownMap[0][0]));	// ensure all used tiles initilized to 0
+	memset(&knownMap[0][0], UNKNOWN_TILE, MAX_MAP_ROWS * MAX_MAP_COLUMNS * sizeof(knownMap[0][0]));	// ensure all used tiles initilized to 0
 
 	Spawn();
 
@@ -145,7 +147,7 @@ void Entity::Update() {
 // BEGIN FREEHILL DEBUG knownMap memset test
 	const Uint8* keys = SDL_GetKeyboardState(NULL);
 	if (keys[SDL_SCANCODE_R])
-		memset(knownMap, UNKNOWN_TILE, MAX_MAP_SIZE * MAX_MAP_SIZE * sizeof(knownMap[0][0]));
+		memset(&knownMap[0][0], UNKNOWN_TILE, MAX_MAP_ROWS * MAX_MAP_COLUMNS * sizeof(knownMap[0][0]));
 // END FREEHIL DEBUG knownMap memset test
 
 	Move();
@@ -174,8 +176,8 @@ void Entity::Update() {
 	while(node < goals.Size()) {
 		debugWaypoint = goals.FromBack(node);
 
-		destRect.x = (int)(debugWaypoint.x) - game->GetMap()->GetCamera()->x;
-		destRect.y = (int)(debugWaypoint.y) - game->GetMap()->GetCamera()->y;
+		destRect.x = (int)(debugWaypoint.x) - game->GetMap()->GetCamera().x;
+		destRect.y = (int)(debugWaypoint.y) - game->GetMap()->GetCamera().y;
 		SDL_BlitSurface(sprite, NULL, game->GetBuffer(), &destRect);
 		node++;
 		
@@ -185,16 +187,16 @@ void Entity::Update() {
 	while (node < trail.Size()) {
 		debugWaypoint = trail.FromFront(node);
 
-		destRect.x = (int)(debugWaypoint.x) - game->GetMap()->GetCamera()->x;
-		destRect.y = (int)(debugWaypoint.y) - game->GetMap()->GetCamera()->y;
+		destRect.x = (int)(debugWaypoint.x) - game->GetMap()->GetCamera().x;
+		destRect.y = (int)(debugWaypoint.y) - game->GetMap()->GetCamera().y;
 		SDL_BlitSurface(sprite, NULL, game->GetBuffer(), &destRect);
 		node++;
 	}
 
 	// draw sprite 
 	// FIXME: draws regardless if it's visible
-	destRect.x = (int)(spritePos.x) - game->GetMap()->GetCamera()->x;
-	destRect.y = (int)(spritePos.y) - game->GetMap()->GetCamera()->y;
+	destRect.x = (int)(spritePos.x) - game->GetMap()->GetCamera().x;
+	destRect.y = (int)(spritePos.y) - game->GetMap()->GetCamera().y;
 	SDL_BlitSurface(sprite, NULL, game->GetBuffer(), &destRect);
 
 	// FREEHILL BEGIN DEBUG COLLISION CIRCLE
@@ -211,8 +213,8 @@ void Entity::Update() {
 
 		if (forward.vector*debugVector >= 0) {
 
-			collisionX = spriteCenter.x + (int)(collisionRadius*debugVector.x) - game->GetMap()->GetCamera()->x;
-			collisionY = spriteCenter.y + (int)(collisionRadius*debugVector.y) - game->GetMap()->GetCamera()->y;
+			collisionX = spriteCenter.x + (int)(collisionRadius*debugVector.x) - game->GetMap()->GetCamera().x;
+			collisionY = spriteCenter.y + (int)(collisionRadius*debugVector.y) - game->GetMap()->GetCamera().y;
 			DrawPixel(game->GetBuffer(), collisionX, collisionY, color[0], color[1], color[2]);
 		}
 		debugVector = rotationQuat_Z*debugVector;	// rotate counter-clockwise
@@ -369,6 +371,7 @@ void Entity::UpdateMovement() {
 	float weight;						// net bias for a decision about a test
 	float bestWeight;					// highest net result of all modifications to validSteps
 	int walls;							// determines the bias that will be given to each test
+	int * resetTile;					// used for overwritten trail waypoints
 
 	// modulate entity speed if at least this close to a waypoint
 	static const int goalRangeSqr = MAX_SPEED * MAX_SPEED * MAX_STEPS * MAX_STEPS;
@@ -464,11 +467,8 @@ void Entity::UpdateMovement() {
 	}
 	UpdateWaypoint();
 
-	// drop a trail waypoint
-	if ( moving && moveState == MOVE_TO_GOAL && 
-		 oldForward != ZERO_VEC2 && 
-		/* oldForward*forward.vector < FORWARD_CHANGE_THRESHOLD && */
-		 lastTrailTile != currentTile ) {
+	// drop a trail waypoint and reset to UNKNOWN_TILE any overwritten trail waypoints
+	if ( moving && moveState == MOVE_TO_GOAL &&  oldForward != ZERO_VEC2 &&  lastTrailTile != currentTile ) {
 		trail.PushFront(spriteCenter);
 		lastTrailTile = currentTile;
 	}
@@ -827,9 +827,13 @@ void Entity::StopMoving() {
 	moving = false;
 }
 
+// FIXME: ensure user-waypoints cannot be PushFront() if outside the map
+// or on unreachable terrain
 void Entity::AddUserWaypoint(const eVec2 & waypoint) {
-	goals.PushFront(waypoint);
-	UpdateWaypoint();
+	if (game->GetMap()->IsValid(waypoint)) {
+		goals.PushFront(waypoint);
+		UpdateWaypoint();
+	}
 }
 
 // returns false if there's no waypoints available
@@ -868,35 +872,80 @@ bool Entity::UpdateWaypoint( bool getNext ) {
 // determine if the entity should fresh-start goal pathfinding
 bool Entity::CheckTrail() {
 	if (trail.IsEmpty()) {
-		memset(knownMap, UNKNOWN_TILE, MAX_MAP_SIZE * MAX_MAP_SIZE * sizeof(knownMap[0][0]));
+		memset(&knownMap[0][0], UNKNOWN_TILE, MAX_MAP_ROWS * MAX_MAP_COLUMNS * sizeof(knownMap[0][0]));
 		lastTrailTile = nullptr;
 		return true;
 	}
 	return false;
 }
 
-// TODO: FIRST keep a running average of distance between trail waypoints
-// SECOND use the current set of trail waypoints to resize the trailMapRangeSqr
+// marks the currentTile as VISITED_Tile, clears out un-needed trail waypoints,
+// and resets tiles around the current goal waypoint to UNKNOWN_TILE
 void Entity::UpdateKnownMap() {
-	int * resetTile;
-	int i, j;
-	int offset;
-
-	static int * const knownMapEnd = (int *)(&knownMap[0][0]) + (knownMapRows * MAX_MAP_SIZE + knownMapCols);
-
-	// TODO: possibly dynamically adjust this range based on distance between trail waypoints
-	// EG: if waypoints are tightly clustered then the entitiy is likely in a complex area (which may be large)
-	// so increase the trailMapRangeSqr, but if there's lots of space between waypoints then
-	// the entity is likely on a straight-ish path elsewhere so decrease trailMapRangeSqr
-
-	// how far beyond the entity knownMap starts being reset
-	static const int tileResetRange = 10;
+	int * goalTile;
+	int row, column;
+	int startRow, startCol;
+	int endRow, endCol;
+	int tileResetRange = 0;		// size of the box around the goal to set tiles to UNKNOWN_TILE
+	static const float tileSize = (float)game->GetMap()->GetTileSize();
 
 	// update the newly visited tile and put it into the trailMap
 	if (currentTile != nullptr) 
 		*currentTile = VISITED_TILE;
 
-	// box of tiles at the tileSetRange centered on the currentTile to to reset the knownMap:
+	// fill-box of tiles at the tileResetRange centered on **the current goal waypoint** to to reset the knownMap:
+	if ( !goals.IsEmpty() ) {
+		tileResetRange = (int)( (goals.Back() - spriteCenter).Length() / (tileSize * 2) );
+
+		goalTile = KnownMapIndex(goals.Back());
+		if (goalTile == nullptr)
+			return;
+
+		// knownMap indexes of goalTile, that is goalTile == &knownMap[row][column]
+		row			= (goalTile - (int *)&knownMap[0][0]) / MAX_MAP_COLUMNS;
+		column		= (goalTile - (int *)&knownMap[0][0]) % MAX_MAP_COLUMNS;
+
+		// set initial bounding box top-left and bottom-right indexes within knownMap
+		startRow	= row - (tileResetRange / 2);
+		startCol	= column - (tileResetRange / 2);
+		endRow		= row + (tileResetRange / 2);
+		endCol		= column + (tileResetRange / 2);
+
+		// range-correct the bounding box
+		// snap bounding box rows & columns within range of the tileMap area
+		if (startRow < 0)
+			startRow = 0;
+//		else if (startRow >= knownMapRows || startCol >= knownMapCols)	// starts below or to the right of tileMap area
+//			return;														// never occurs because goalTile is always on the tileMap
+		if (startCol < 0)
+			startCol = 0;
+
+		if (endRow >= knownMapRows)
+			endRow = knownMapRows - 1;
+//		else if (endRow < 0 || endCol < 0)								// ends above or to the left of tileMap area
+//			return;														// never occurs because goalTile is always on the tileMap
+		if (endCol >= knownMapCols)
+			endCol = knownMapCols - 1;
+
+		// reset tiles within the bounding box
+		row = startRow;
+		column = startCol;
+		while ( 1 ) {
+			knownMap[row][column] = UNKNOWN_TILE;
+
+			column++;
+			if (column > endCol) {
+				column = startCol; 
+				row++; 
+			} 
+			if (row > endRow)
+				break;
+		}
+	}
+
+/*
+// FREEHILL begin currentTile knownMap reset box test
+	// perimiter-box of tiles at the tileResetRange centered on **the currentTile** to to reset the knownMap:
 	// column of tiles to the left
 	for (i = -tileResetRange, j = -tileResetRange; j <= tileResetRange; j++) {
 		offset = i * MAX_MAP_SIZE + j;
@@ -932,21 +981,19 @@ void Entity::UpdateKnownMap() {
 		if (resetTile >= &knownMap[0][0] && resetTile <= knownMapEnd)
 			*resetTile = UNKNOWN_TILE;
 	}
-
+// FREEHILL begin currentTile knownMap reset box test
+*/
 	// pop all trail waypoints that no longer fall on VISITED_TILEs
 	while (!trail.IsEmpty()) {
-
 		if (KnownMapValue(trail.Back()) == UNKNOWN_TILE)
 			trail.PopBack();
 		else
 			break;
 	}
-
 }
 
 void Entity::UpdatePosition() {
-	spritePos.x += speed*forward.vector.x;
-	spritePos.y += speed*forward.vector.y;
+	spritePos += forward.vector*speed;
 	UpdateCenter();
 }
 

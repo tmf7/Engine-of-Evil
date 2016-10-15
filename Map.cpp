@@ -1,4 +1,5 @@
 #include "Game.h"
+//#include <iostream>
 
 Map::Map() {
 
@@ -28,8 +29,16 @@ bool Map::Init (char fileName[], Game * const game, int maxRows, int maxCols) {
 
 	// map dimensions
 	tileSize = 32;
-	mapRows = maxRows;
-	mapCols = maxCols;
+	if (maxRows < 0 || maxRows > MAX_MAP_ROWS)
+		mapRows = MAX_MAP_ROWS;
+	else
+		mapRows = maxRows;
+
+	if (maxCols < 0 || maxCols > MAX_MAP_COLUMNS)
+		mapCols = MAX_MAP_COLUMNS;
+	else
+		mapCols = maxCols;
+
 
 	BuildTiles(RANDOM_TILE);
 
@@ -49,14 +58,11 @@ void Map::Free() {
 void Map::BuildTiles(const int type) {
 	int solid;
 	int * tile;
-
-	// FIXME/BUG(?): odd, somehow changing this value larger than + (mapRows * MAX_MAP_SIZE + mapCols)
-	// resets camera.speed to some very slow value (processing speed remains constant)
-	static const int * tileMapEnd = (int *)(&tileMap[0][0]) + (mapRows * MAX_MAP_SIZE + mapCols);
+	static const int * tileMapEnd = &tileMap[mapRows - 1][mapCols];
 
 	switch (type) {
 		case RANDOM_TILE: {
-			for (tile = &tileMap[0][0]; tile <= tileMapEnd; tile++) {
+			for (tile = &tileMap[0][0]; tile < tileMapEnd; tile++) {
 				solid = rand() % 4;
 				if (solid < 3)
 					*tile = TRAVERSABLE_TILE;
@@ -66,19 +72,19 @@ void Map::BuildTiles(const int type) {
 			break;
 		}
 		case TRAVERSABLE_TILE: {
-			for (tile = &tileMap[0][0]; tile <= tileMapEnd; tile++) {
+			for (tile = &tileMap[0][0]; tile < tileMapEnd; tile++) {
 				*tile = TRAVERSABLE_TILE;
 			}
 			break;
 		}
 		case COLLISION_TILE: {
-			for (tile = &tileMap[0][0]; tile <= tileMapEnd; tile++) {
+			for (tile = &tileMap[0][0]; tile < tileMapEnd; tile++) {
 				*tile = COLLISION_TILE;
 			}
 			break;
 		}
 		default: {	// RANDOM
-			for (tile = &tileMap[0][0]; tile <= tileMapEnd; tile++) {
+			for (tile = &tileMap[0][0]; tile < tileMapEnd; tile++) {
 				solid = rand() % 4;
 				if (solid < 3)
 					*tile = TRAVERSABLE_TILE;
@@ -106,8 +112,8 @@ void Map::ToggleTile(const eVec2 & point) {
 
 }
 
-Map::viewport* Map::GetCamera() {
-	return &camera;
+const Map::viewport & Map::GetCamera() const {
+	return camera;
 }
 
 int Map::GetRows() const {
@@ -119,11 +125,11 @@ int Map::GetColumns() const {
 }
 
 int Map::GetWidth() const {
-	return mapRows*tileSize;
+	return mapRows * tileSize;
 }
 
 int Map::GetHeight() const {
-	return mapCols*tileSize;
+	return mapCols * tileSize;
 }
 
 int Map::GetTileSize() const {
@@ -190,29 +196,31 @@ bool Map::IsValid(const eVec2 & point) {
 	return validity;
 }
 
-// TODO: determine which tiles to use from the tileSet image
+// TODO: make this a const Draw() function
+// draws the current frame
 void Map::Update() {
 	SDL_Rect destRect;
 	SDL_Rect sourceRect;
 	int i, j, startI, startJ;
 
 	// maximum number of tiles to draw on the current window (max 1 boarder tile beyond)
-	static const int rows = (game->GetBuffer()->h / tileSize) + 2;
-	static const int columns = (game->GetBuffer()->w / tileSize) + 2;
+	static const int screenRows = (game->GetBuffer()->h / tileSize) + 2;
+	static const int screenColumns = (game->GetBuffer()->w / tileSize) + 2;
 
 	sourceRect.w = tileSize;
 	sourceRect.h = tileSize;
 	sourceRect.y = 0;
 
 	// verify any user-input changes to the camera
+	// TODO: move this functionality to an input handler class
 	MoveCamera();
 
 	// FIXME/NOTE: camera is never allowed to go beyond the tileMap dimensions
 	startI = camera.x / tileSize;
 	startJ = camera.y / tileSize;
 
-	for (i = startI; i < startI + columns; i++) {
-		for (j = startJ; j < startJ + rows; j++) {
+	for (i = startI; i < startI + screenColumns; i++) {
+		for (j = startJ; j < startJ + screenRows; j++) {
 			if (i >= 0 && i < mapRows && j >= 0 && j < mapCols) {
 
 				// TODO: modulate brightness of tile if ANY entities have visited
@@ -242,14 +250,14 @@ SDL_Surface * Map::GetTile( int tileNumber ) {
 	return tileSet;
 }
 
+// TODO: make this part of a camera class instead of a member struct of Map
 // Adjust the user's view within map
 void Map::MoveCamera() {
-	const Uint8* keys = SDL_GetKeyboardState(NULL);
-	int maxX;
-	int maxY;
-
-	maxX = (mapRows*tileSize) - game->GetBuffer()->w;
-	maxY = (mapCols*tileSize) - game->GetBuffer()->h;
+	const Uint8 * keys = SDL_GetKeyboardState(NULL);
+	static const int maxX = ((mapRows*tileSize) - game->GetBuffer()->w) >= 0 ? 
+							 (mapRows*tileSize) - game->GetBuffer()->w : 0;
+	static const int maxY = ((mapCols*tileSize) - game->GetBuffer()->h) >= 0 ?
+							 (mapCols*tileSize) - game->GetBuffer()->h : 0;
 
 	// centers the camera on the sprite
 	if (keys[SDL_SCANCODE_SPACE]) {

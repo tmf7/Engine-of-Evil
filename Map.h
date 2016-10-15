@@ -3,7 +3,8 @@
 
 #include "Game.h"
 
-#define MAX_MAP_SIZE 256
+#define MAX_MAP_ROWS 256
+#define MAX_MAP_COLUMNS 256
 
 // FIXME: make these private static enums?
 // tileMap values
@@ -28,7 +29,7 @@ private:
 	int				tileSize;
 	int				mapRows;						// number of tiles vertically
 	int				mapCols;						// number of tiles horizontally
-	int				tileMap[MAX_MAP_SIZE][MAX_MAP_SIZE];
+	int				tileMap[MAX_MAP_ROWS][MAX_MAP_COLUMNS];
 
 	struct viewport {
 		int x;
@@ -41,7 +42,7 @@ public:
 	Map();
 
 	bool			Init(char fileName[], Game * const game, int maxRows, int maxCols);
-	viewport *		GetCamera();
+	const viewport &		GetCamera() const;
 	int				GetTileSize() const;
 	int				GetRows() const;
 	int				GetColumns() const;

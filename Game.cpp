@@ -87,7 +87,7 @@ bool Game::Run() {
 	entities.Update();
 	SDL_UpdateWindowSurface(window);
 
-//	SDL_Delay(20);	// TODO: make this dynamic based on how long each frame took to produce (smooth the framerate)
+	SDL_Delay(20);	// TODO: make this dynamic based on how long each frame took to produce (smooth the framerate)
 
 	while (SDL_PollEvent(&event)) {
 		switch (event.type) {
@@ -96,11 +96,11 @@ bool Game::Run() {
 			}
 			case SDL_MOUSEBUTTONDOWN: {
 				if (event.button.button == 3)
-					map.ToggleTile(eVec2((float)(event.button.x + map.GetCamera()->x),
-										 (float)(event.button.y + map.GetCamera()->y)));
+					map.ToggleTile(eVec2((float)(event.button.x + map.GetCamera().x),
+										 (float)(event.button.y + map.GetCamera().y)));
 				if (event.button.button == 1)
-					entities.AddUserWaypoint(eVec2((float)(event.button.x + map.GetCamera()->x), 
-												   (float)(event.button.y + map.GetCamera()->y)));
+					entities.AddUserWaypoint(eVec2((float)(event.button.x + map.GetCamera().x), 
+												   (float)(event.button.y + map.GetCamera().y)));
 				break;
 			}
 			case SDL_KEYDOWN: {
