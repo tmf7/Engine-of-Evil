@@ -1,5 +1,5 @@
-#ifndef E_MATH_H
-#define E_MATH_H
+#ifndef EVIL_MATH_H
+#define EVIL_MATH_H
 
 #include "SDL.h"			// for SDL_fabs
 
@@ -14,9 +14,7 @@
 //******************
 // eVec2
 //******************
-class eVec2
-{
-
+class eVec2 {
 public:
 
 	float x;
@@ -27,80 +25,120 @@ public:
 
 	void		Set(const float x, const float y);
 	void		Zero();
-	float		Normalize();												// returns length (should be 1 or 0)
+	float		Normalize();
 	float		Length() const;
 	float		LengthSquared() const;											
 
 	eVec2		operator-() const;
-	float		operator*(const eVec2 &a) const;							// dot product
-	eVec2		operator*(const float a) const;								// rvalue scale
+	float		operator*(const eVec2 &a) const;
+	eVec2		operator*(const float a) const;
 	eVec2		operator/(const float a) const;
 	eVec2		operator+(const eVec2 &a) const;
 	eVec2		operator-(const eVec2 &a) const;
 	eVec2 &		operator+=(const eVec2 &a);
 	eVec2 &		operator-=(const eVec2 &a);
-	eVec2 &		operator/=(const float a);									// lvalue scale
-	eVec2 &		operator*=(const float a);									// lvalue scale
+	eVec2 &		operator/=(const float a);
+	eVec2 &		operator*=(const float a);
 
-	bool		Compare(const eVec2 &a) const;								// exact compare, no epsilon
-	bool		Compare(const eVec2 &a, const float epsilon) const;			// compare with epsilon
-	bool		operator==(const eVec2 &a) const;							// exact compare, no epsilon
-	bool		operator!=(const eVec2 &a) const;							// exact compare, no epsilon
+	bool		Compare(const eVec2 &a) const;
+	bool		Compare(const eVec2 &a, const float epsilon) const;
+	bool		operator==(const eVec2 &a) const;
+	bool		operator!=(const eVec2 &a) const;
 
 
 };
 
+//******************
+// eVec2
+//******************
 inline eVec2::eVec2() {
 }
 
+//******************
+// eVec2
+//******************
 inline eVec2::eVec2(const float x, const float y) {
 	this->x = x;
 	this->y = y;
 }
 
+//******************
+// Set
+// modifies the current x and y values
+//******************
 inline void eVec2::Set(const float x, const float y) {
 	this->x = x;
 	this->y = y;
 }
 
+//******************
+// Zero
+// sets x and y to zero
+//******************
 inline void eVec2::Zero() {
 	x = 0.0f;
 	y = 0.0f;
 }
 
+//******************
+// Compare
+// returns true for exact x,y match
+//******************
 inline bool eVec2::Compare(const eVec2 &a) const {
 	return ((x == a.x) && (y == a.y));
 }
 
+//******************
+// Compare
+// returns true for x,y match within range of epsilon
+//******************
 inline bool eVec2::Compare(const eVec2 &a, const float epsilon) const {
-	if ( SDL_fabs(x - a.x) > epsilon) {
+	if ( SDL_fabs(x - a.x) > epsilon)
 		return false;
-	}
 
-	if (SDL_fabs(y - a.y) > epsilon) {
+	if (SDL_fabs(y - a.y) > epsilon)
 		return false;
-	}
 
 	return true;
 }
 
+//******************
+// operator==
+// returns the result of Compare without epsilon
+//******************
 inline bool eVec2::operator==(const eVec2 &a) const {
 	return Compare(a);
 }
 
+//******************
+// operator!=
+// returns the negated result of Compare without epsilon
+//******************
 inline bool eVec2::operator!=(const eVec2 &a) const {
 	return !Compare(a);
 }
 
-
+//******************
+// Length
+// returns vector length
+//******************
 inline float eVec2::Length() const {
 	return SDL_sqrtf(x * x + y * y);
 }
 
+//******************
+// LengthSquared
+// returns vector length squared
+//******************
 inline float eVec2::LengthSquared() const {
 	return (x * x + y * y);
 }
 
+//******************
+// Normalize
+// scales internal x,y to unit length vector
+// returns normalized length of 0 or 1
+//******************
 inline float eVec2::Normalize() {
 	float sqrLength, invLength;
 
@@ -117,32 +155,60 @@ inline float eVec2::Normalize() {
 	return invLength * sqrLength;
 }
 
+//******************
+// operator-
+// returns eVec2 with negated x and y
+//******************
 inline eVec2 eVec2::operator-() const {
 	return eVec2(-x, -y);
 }
 
+//******************
+// operator-
+// returns an eVec2 using the difference between two vectors' x and y
+//******************
 inline eVec2 eVec2::operator-(const eVec2 &a) const {
 	return eVec2(x - a.x, y - a.y);
 }
 
+//******************
+// operator*
+// returns the dot product of two eVec2s
+//******************
 inline float eVec2::operator*(const eVec2 &a) const {
 	return x * a.x + y * a.y;
 }
 
+//******************
+// operator*
+// returns an eVec2 with x and y scaled by a
+//******************
 inline eVec2 eVec2::operator*(const float a) const {
 	return eVec2(x * a, y * a);
 }
 
+//******************
+// operator/
+// returns an eVec2 with de-scaled x and y by a
+// allows divide by zero errors to occur
+//******************
 inline eVec2 eVec2::operator/(const float a) const {
 	float inva = 1.0f / a;
 	return eVec2(x * inva, y * inva);
 }
 
-
+//******************
+// operator+
+// returns an eVec2 using the sum of two eVec2's x and y
+//******************
 inline eVec2 eVec2::operator+(const eVec2 &a) const {
 	return eVec2(x + a.x, y + a.y);
 }
 
+//******************
+// operator+=
+// returns this with x and y added to an eVec2's x and y
+//******************
 inline eVec2 & eVec2::operator+=(const eVec2 &a) {
 	x += a.x;
 	y += a.y;
@@ -150,6 +216,11 @@ inline eVec2 & eVec2::operator+=(const eVec2 &a) {
 	return *this;
 }
 
+//******************
+// operator/=
+// returns this with x and y de-scaled by a
+// allows divide by zero error to occur
+//******************
 inline eVec2 & eVec2::operator/=(const float a) {
 	float inva = 1.0f / a;
 	x *= inva;
@@ -158,6 +229,10 @@ inline eVec2 & eVec2::operator/=(const float a) {
 	return *this;
 }
 
+//******************
+// operator-=
+// returns this with x and y subtracted by another eVec2's x and y
+//******************
 inline eVec2 & eVec2::operator-=(const eVec2 &a) {
 	x -= a.x;
 	y -= a.y;
@@ -165,6 +240,10 @@ inline eVec2 & eVec2::operator-=(const eVec2 &a) {
 	return *this;
 }
 
+//******************
+// operator*=
+// returns this with x and y scaled by a
+//******************
 inline eVec2 & eVec2::operator*=(const float a) {
 	x *= a;
 	y *= a;
@@ -175,8 +254,7 @@ inline eVec2 & eVec2::operator*=(const float a) {
 //******************
 // eVec3
 //******************
-class eVec3
-{
+class eVec3 {
 public:
 
 	float x;
@@ -188,88 +266,127 @@ public:
 
 	void		Set(const float x, const float y, const float z);
 	void		Zero();
-	float		Normalize();												// returns length (should be 1 or 0)
+	float		Normalize();
 	float		Length() const;
 	float		LengthSquared() const;
 
 	eVec3		operator-() const;
-	float		operator*(const eVec3 &a) const;							// dot product
-	eVec3		operator*(const float a) const;								// rvalue scale
+	float		operator*(const eVec3 &a) const;
+	eVec3		operator*(const float a) const;
 	eVec3		operator/(const float a) const;
 	eVec3		operator+(const eVec3 &a) const;
 	eVec3		operator-(const eVec3 &a) const;
 	eVec3 &		operator+=(const eVec3 &a);
 	eVec3 &		operator-=(const eVec3 &a);
-	eVec3 &		operator/=(const float a);									// lvalue scale
-	eVec3 &		operator*=(const float a);									// lvalue scale
+	eVec3 &		operator/=(const float a);
+	eVec3 &		operator*=(const float a);	
 
-	bool		Compare(const eVec3 &a) const;								// exact compare, no epsilon
-	bool		Compare(const eVec3 &a, const float epsilon) const;			// compare with epsilon
-	bool		operator==(const eVec3 &a) const;							// exact compare, no epsilon
-	bool		operator!=(const eVec3 &a) const;							// exact compare, no epsilon
+	bool		Compare(const eVec3 &a) const;
+	bool		Compare(const eVec3 &a, const float epsilon) const;
+	bool		operator==(const eVec3 &a) const;
+	bool		operator!=(const eVec3 &a) const;
 
 	eVec3		Cross(const eVec3 &a) const;
 	eVec3 &		Cross(const eVec3 &a, const eVec3 &b);
 };
 
+//******************
+// eVec3
+//******************
 inline eVec3::eVec3() {
 }
 
+//******************
+// eVec3
+//******************
 inline eVec3::eVec3(const float x, const float y, const float z) {
 	this->x = x;
 	this->y = y;
 	this->z = z;
 }
 
+//******************
+// Set
+// modifies the current x, y, and z values
+//******************
 inline void eVec3::Set(const float x, const float y, const float z) {
 	this->x = x;
 	this->y = y;
 	this->z = z;
 }
 
+//******************
+// Zero
+// sets x, y, and z to zero
+//******************
 inline void eVec3::Zero() {
 	x = 0.0f;
 	y = 0.0f;
 	z = 0.0f;
 }
 
+//******************
+// Compare
+// returns true for exact x,y,z match
+//******************
 inline bool eVec3::Compare(const eVec3 &a) const {
 	return ((x == a.x) && (y == a.y) && (z == a.z));
 }
 
+//******************
+// Compare
+// returns true for x,y,z match within range of epsilon
+//******************
 inline bool eVec3::Compare(const eVec3 &a, const float epsilon) const {
-	if (SDL_fabs(x - a.x) > epsilon) {
+	if (SDL_fabs(x - a.x) > epsilon)
 		return false;
-	}
 
-	if (SDL_fabs(y - a.y) > epsilon) {
+	if (SDL_fabs(y - a.y) > epsilon)
 		return false;
-	}
 
-	if (SDL_fabs(z - a.z) > epsilon) {
+	if (SDL_fabs(z - a.z) > epsilon)
 		return false;
-	}
 
 	return true;
 }
 
+//******************
+// operator==
+// returns the result of Compare without epsilon
+//******************
 inline bool eVec3::operator==(const eVec3 &a) const {
 	return Compare(a);
 }
 
+//******************
+// operator!=
+// returns the negated result of Compare without epsilon
+//******************
 inline bool eVec3::operator!=(const eVec3 &a) const {
 	return !Compare(a);
 }
 
-
+//******************
+// Length
+// returns vector length
+//******************
 inline float eVec3::Length() const {
 	return SDL_sqrtf(x * x + y * y + z * z);
 }
 
+//******************
+// LengthSquared
+// returns vector length squared
+//******************
 inline float eVec3::LengthSquared() const {
 	return (x * x + y * y + z * z);
 }
 
+//******************
+// Normalize
+// scales internal x,y, and z to unit length vector
+// returns normalized length of 0 or 1
+//******************
 inline float eVec3::Normalize() {
 	float sqrLength, invLength;
 
@@ -287,32 +404,60 @@ inline float eVec3::Normalize() {
 	return invLength * sqrLength;
 }
 
+//******************
+// operator-
+// returns eVec3 with negated x, y, and z
+//******************
 inline eVec3 eVec3::operator-() const {
 	return eVec3(-x, -y, -z);
 }
 
+//******************
+// operator-
+// returns an eVec3 using the difference between two vectors' x, y, and z
+//******************
 inline eVec3 eVec3::operator-(const eVec3 &a) const {
 	return eVec3(x - a.x, y - a.y, z - a.z);
 }
 
+//******************
+// operator*
+// returns the dot product of two eVec3s
+//******************
 inline float eVec3::operator*(const eVec3 &a) const {
 	return x * a.x + y * a.y + z * a.z;
 }
 
+//******************
+// operator*
+// returns an eVec3 with x, y, and z scaled by a
+//******************
 inline eVec3 eVec3::operator*(const float a) const {
 	return eVec3(x * a, y * a, z * a);
 }
 
+//******************
+// operator/
+// returns an eVec3 with de-scaled x, y, and z by a
+// allows divide by zero errors to occur
+//******************
 inline eVec3 eVec3::operator/(const float a) const {
 	float inva = 1.0f / a;
 	return eVec3(x * inva, y * inva, z * inva);
 }
 
-
+//******************
+// operator+
+// returns an eVec3 using the sum of two eVec3's x, y, and z
+//******************
 inline eVec3 eVec3::operator+(const eVec3 &a) const {
 	return eVec3(x + a.x, y + a.y, z + a.z);
 }
 
+//******************
+// operator+=
+// returns this with x, y, and z added to an eVec3's x, y, and z
+//******************
 inline eVec3 & eVec3::operator+=(const eVec3 &a) {
 	x += a.x;
 	y += a.y;
@@ -321,6 +466,11 @@ inline eVec3 & eVec3::operator+=(const eVec3 &a) {
 	return *this;
 }
 
+//******************
+// operator/=
+// returns this with x, y, and z de-scaled by a
+// allows divide by zero error to occur
+//******************
 inline eVec3 & eVec3::operator/=(const float a) {
 	float inva = 1.0f / a;
 	x *= inva;
@@ -330,6 +480,10 @@ inline eVec3 & eVec3::operator/=(const float a) {
 	return *this;
 }
 
+//******************
+// operator-=
+// returns this with x, y, and z subtracted by another eVec3's x, y, and z
+//******************
 inline eVec3 & eVec3::operator-=(const eVec3 &a) {
 	x -= a.x;
 	y -= a.y;
@@ -338,6 +492,10 @@ inline eVec3 & eVec3::operator-=(const eVec3 &a) {
 	return *this;
 }
 
+//******************
+// operator*=
+// returns this with x, y, and z scaled by a
+//******************
 inline eVec3 & eVec3::operator*=(const float a) {
 	x *= a;
 	y *= a;
@@ -346,15 +504,23 @@ inline eVec3 & eVec3::operator*=(const float a) {
 	return *this;
 }
 
+//******************
+// Cross
+// returns the an eVec3 that is the cross product of *this with another eVec3
+//******************
 inline eVec3 eVec3::Cross(const eVec3 &a) const {
 	return eVec3( y * a.z - z * a.y, z * a.x - x * a.z, x * a.y - y * a.x);
 }
 
+//******************
+// Cross
+// sets *this to the cross product of two eVec3s
+//******************
 inline eVec3 & eVec3::Cross(const eVec3 &a, const eVec3 &b) {
-
 	x = a.y * b.z - a.z * b.y;
 	y = a.z * b.x - a.x * b.z;
 	z = a.x * b.y - a.y * b.x;
+
 	return *this;
 }
 
@@ -362,9 +528,7 @@ inline eVec3 & eVec3::Cross(const eVec3 &a, const eVec3 &b) {
 // eQuat
 // --only deals with unit length quaternions--
 //******************
-class eQuat
-{
-
+class eQuat {
 public:
 
 	float x;
@@ -385,9 +549,15 @@ public:
 	eQuat &			operator*=(const eQuat &a);
 };
 
+//******************
+// eQuat
+//******************
 inline eQuat::eQuat() {
 }
 
+//******************
+// eQuat
+//******************
 inline eQuat::eQuat(const float x, const float y, const float z, const float w) {
 	this->x = x;
 	this->y = y;
@@ -395,6 +565,9 @@ inline eQuat::eQuat(const float x, const float y, const float z, const float w) 
 	this->w = w;
 }
 
+//******************
+// eQuat
+//******************
 inline eQuat::eQuat(const eVec3 vector, const float scalar) {
 	x = vector.x;
 	y = vector.y;
@@ -402,8 +575,11 @@ inline eQuat::eQuat(const eVec3 vector, const float scalar) {
 	w = scalar;
 }
 
-// Grassman product
+//******************
+// operator*
+// returns an eQuat set to the Grassman product of *this with another eQuat
 // this*a = q*p = [ (qs*pv + ps*qv + qv X pv) (qs*ps - qv.pv) ]
+//******************
 inline eQuat eQuat::operator*(const eQuat &a) const {
 	return eQuat(w*a.x + x*a.w + y*a.z - z*a.y,
 				 w*a.y + y*a.w + z*a.x - x*a.z,
@@ -411,15 +587,25 @@ inline eQuat eQuat::operator*(const eQuat &a) const {
 				 w*a.w - x*a.x - y*a.y - z*a.z);
 }
 
+//******************
+// operator*=
+// returns *this set to the Grassman product of *this with another eQuat
+// this*a = q*p = [ (qs*pv + ps*qv + qv X pv) (qs*ps - qv.pv) ]
+//******************
 inline eQuat & eQuat::operator*=(const eQuat &a) {
 	*this = *this * a;
 	return *this;
 }
 
+//******************
+// operator*
 // expanded and factored version of:
 // (*this) * eQuat( a.x, a.y, a.z, 0.0f ) * (*this)^-1
-// implies a counter-clockwise vector rotation for a right-handed coordinate system
-// as stated at the top: this class only deals with unit length quaternions
+// returns an eVec3 by rotating the given eVec3 
+// counter-clockwise using *this eQuat.
+// assumes a right-handed coordinate system
+// --only deals with unit length quaternions--
+//******************
 inline eVec3 eQuat::operator*(const eVec3 &a) const {
 	float xxzz = x*x - z*z;
 	float wwyy = w*w - y*y;
@@ -438,10 +624,15 @@ inline eVec3 eQuat::operator*(const eVec3 &a) const {
 	);
 }
 
+//******************
+// operator*
 // expanded and factored version of:
 // (*this) * eQuat( a.x, a.y, 0.0f, 0.0f ) * (*this)^-1
-// implies a counter-clockwise vector rotation for a right-handed coordinate system
-// as stated at the top: this class only deals with unit length quaternions
+// returns an eVec2 by rotating the given eVec2 
+// counter-clockwise using *this eQuat.
+// assumes a right-handed coordinate system
+// --only deals with unit length quaternions--
+//******************
 inline eVec2 eQuat::operator*(const eVec2 &a) const {
 	float xxzz = x*x - z*z;
 	float wwyy = w*w - y*y;
@@ -455,11 +646,19 @@ inline eVec2 eQuat::operator*(const eVec2 &a) const {
 	);
 }
 
-// unit length quaternion => inverse == conjugate
+//******************
+// Inverse
+// returns an eQuat that is the inverse of *this
+// unit length quaternion have inverse == conjugate
+//******************
 inline eQuat eQuat::Inverse() const {
 	return eQuat(-x, -y, -z, w);
 }
 
+//******************
+// Set
+// sets this x,y,z, and w to the given values
+//******************
 inline void eQuat::Set(const float x, const float y, const float z, const float w) {
 	this->x = x;
 	this->y = y;
@@ -467,5 +666,5 @@ inline void eQuat::Set(const float x, const float y, const float z, const float 
 	this->w = w;
 }
 
-#endif /* E_MATH_H */
+#endif /* EVIL_MATH_H */
 

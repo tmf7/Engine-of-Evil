@@ -6,8 +6,8 @@
 #include <Windows.h>
 #include <stdio.h>
 
-#include "e_Math.h"
-#include "e_Deque.h"
+#include "Math.h"
+#include "Deque.h"
 #include "Map.h"
 #include "Entity.h"
 

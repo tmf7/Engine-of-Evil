@@ -2,23 +2,12 @@
 
 // FIXME: these variable names are too verbose and not specific enough
 Entity::Entity() {
-
 	speed = MAX_SPEED;
 	size = 15;
 	sightRange = 128;
-	sight.w = sightRange;
-	sight.h = sightRange;
-	touchRange = 1;
-	waypointRange = speed;
-
+	goalRange = speed;
 	rotationQuat_Z.Set(0.0f, 0.0f, SDL_sinf(DEG2RAD(ROTATION_INCREMENT) / 2.0f), SDL_cosf(DEG2RAD(ROTATION_INCREMENT) / 2.0f));
-	moveState = MOVE_TO_GOAL;	// MOVE_RIGHT;
-	oldTouch = 0;
-	touch = 0;
-
-	frameDelayCount = 0;
-
-	StopMoving();
+	touch.reach = 1;
 }
 
 // TODO: insert use of the sourceRect for initial frame of animation
@@ -142,7 +131,6 @@ void Entity::Update() {
 	int pink[3] = { 255, 0, 255 };
 	int blue[3] = { 0,0,255 };
 	int * color;
-//	int columns = image->w / width;
 
 // BEGIN FREEHILL DEBUG knownMap memset test
 	const Uint8* keys = SDL_GetKeyboardState(NULL);
@@ -150,26 +138,25 @@ void Entity::Update() {
 		memset(&knownMap[0][0], UNKNOWN_TILE, MAX_MAP_ROWS * MAX_MAP_COLUMNS * sizeof(knownMap[0][0]));
 // END FREEHIL DEBUG knownMap memset test
 
-	Move();
+	// change/initialize the movement type under specific conditions
+	// TODO: give this a broader functionality beyond pure AI movement (ie player input)
+	// Ultimate Goal: select a pathfinding type (eg: waypoint+obstacle avoid, A* optimal path, wall follow, Area awareness, raw compass?, etc)
+	static bool movementInitialized = false;
 
-/*
-	if (frameDelayCount > frameDelay){
-
-		frameDelayCount = 0;
-		currentFrame++;
+	if (!movementInitialized) {
+		moveState = MOVE_TO_GOAL;
+		StopMoving();
+		Move = &Entity::WaypointFollow;
+		movementInitialized = true;
+	} else if (!movementInitialized) {
+		moveState = MOVE_RIGHT;
+		touch.Clear();
+		Move = &Entity::WallFollow;
+		movementInitialized = true;
 	}
 
-	if (currentFrame > lastFrame)
-		currentFrame = firstFrame;
+	((*this).*Move)();
 
-	SDL_Rect sourceRect;
-	sourceRect.y = 0;			// (frame / columns)*height;
-	sourceRect.x = (frame%columns)*width;
-	sourceRect.w = width;
-	sourceRect.h = height;
-
-	SDL_BlitSurface(sprite, &sourceRect, game->GetBuffer, &destRect);
-*/
 	// draw all waypoints
 	// FIXME: draws regardless if they're visible
 	node = 0;
@@ -221,27 +208,21 @@ void Entity::Update() {
 		rotationAngle += ROTATION_INCREMENT;
 	}
 	// FREEHILL END DEBUG COLLISION CIRCLE
+
+	PrintSensors();
 }
 
-// Ultimate Goal: select a pathfinding type (eg: compass, endpoint+obstacle adjust, waypoints+minipaths, wall follow, Area awareness, etc)
-// Gather sensor information and decide how to move
-void Entity::Move() {
+void Entity::WaypointFollow() {
 	int * checkTile;
-
-	//CheckFogOfWar();	// also uncomment the Update() code in Map.cpp
-
-	////////////////////////////////////////////
-	//BEGIN WAYPOINT VECTOR MOVEMENT ALGORITHM//
-	////////////////////////////////////////////
 
 	// don't move without a waypoint
 	if (!UpdateWaypoint())
 		return;
 
-	UpdateMovement();
+	UpdateVector();
 	UpdatePosition();
 
-	if ( spriteCenter.Compare(currentWaypoint, waypointRange) ) {
+	if ( spriteCenter.Compare(currentWaypoint, goalRange) ) {
 		StopMoving();
 		UpdateWaypoint(true);
 	}
@@ -253,37 +234,31 @@ void Entity::Move() {
 		currentTile = checkTile;
 	}
 
+}
 
-	//////////////////////////////////////////
-	//END WAYPOINT VECTOR MOVEMENT ALGORITHM//
-	//////////////////////////////////////////
-
-	/* 
-	////////////////////////////////////////
-	//BEGIN WALL FOLLOW MOVEMENT ALGORITHM//
-	////////////////////////////////////////
+void Entity::WallFollow() {
 
 	oldMoveState = moveState;
 
-	x -= speed * ((moveState & MOVE_LEFT) > 0);
-	x += speed * ((moveState & MOVE_RIGHT) > 0);
+	spritePos.x -= speed * (moveState == MOVE_LEFT);
+	spritePos.x += speed * (moveState == MOVE_RIGHT);
 
-	CheckCollision(true, false);
+	CheckCollision();
+	UpdateCenter();
 
 	switch (moveState) {
 
 		case MOVE_RIGHT: {
 
-			// set additional enemy awareness
-			watch_touch = (RIGHT_TOP | RIGHT_BOTTOM);
-
 			// if it has lost its wall move in that direction
 			// if it hasn't lost its wall move opposite that wall
 			// if it never had a wall, move down
-			if ((oldTouch & ~touch & BOTTOM_LEFT) || ((touch & watch_touch) && (~touch & BOTTOM_LEFT)))
+			if ((touch.oldRanged.BOTTOM_LEFT && !touch.ranged.BOTTOM_LEFT) || 
+				((touch.ranged.RIGHT_TOP || touch.ranged.RIGHT_BOTTOM) && !touch.ranged.BOTTOM_LEFT))
 				moveState = MOVE_DOWN;
 
-			else if ((oldTouch & ~touch & TOP_LEFT) || ((touch & watch_touch) && (~touch & TOP_LEFT)))
+			else if ((touch.oldRanged.TOP_LEFT && !touch.ranged.TOP_LEFT) || 
+				((touch.ranged.RIGHT_TOP || touch.ranged.RIGHT_BOTTOM) && !touch.ranged.TOP_LEFT))
 				moveState = MOVE_UP;
 
 			if (moveState != oldMoveState)
@@ -295,12 +270,12 @@ void Entity::Move() {
 		// rinse, repeat
 		case MOVE_LEFT: {
 
-			watch_touch = (LEFT_TOP | LEFT_BOTTOM);
-
-			if ((oldTouch & ~touch & BOTTOM_RIGHT) || ((touch & watch_touch) && (~touch & BOTTOM_RIGHT)))
+			if ((touch.oldRanged.BOTTOM_RIGHT && !touch.ranged.BOTTOM_RIGHT) || 
+				((touch.ranged.LEFT_TOP || touch.ranged.LEFT_BOTTOM) && !touch.ranged.BOTTOM_RIGHT))
 				moveState = MOVE_DOWN;
 
-			else if ((oldTouch & ~touch & TOP_RIGHT) || ((touch & watch_touch) && (~touch & TOP_RIGHT)))
+			else if ((touch.oldRanged.TOP_RIGHT && !touch.ranged.TOP_RIGHT) || 
+				((touch.ranged.LEFT_TOP || touch.ranged.LEFT_BOTTOM) && !touch.ranged.TOP_RIGHT))
 				moveState = MOVE_UP;
 
 			if (moveState != oldMoveState)
@@ -310,21 +285,22 @@ void Entity::Move() {
 		}
 	}
 
-	y -= speed * ((moveState & MOVE_UP) > 0);
-	y += speed * ((moveState & MOVE_DOWN) > 0);
+	spritePos.y -= speed * (moveState == MOVE_UP);
+	spritePos.y += speed * (moveState == MOVE_DOWN);
 
-	CheckCollision(false, true);
+	CheckCollision();
+	UpdateCenter();
 
 	switch (moveState) {
 
 		case MOVE_UP: {
 
-			watch_touch = (TOP_LEFT | TOP_RIGHT);
-
-			if ((oldTouch & ~touch & RIGHT_BOTTOM) || ((touch & watch_touch) && (~touch & RIGHT_BOTTOM)))
+			if ((touch.oldRanged.RIGHT_BOTTOM && !touch.ranged.RIGHT_BOTTOM) || 
+				((touch.ranged.TOP_LEFT || touch.ranged.TOP_RIGHT) && !touch.ranged.RIGHT_BOTTOM))
 				moveState = MOVE_RIGHT;
 
-			else if ((oldTouch & ~touch & LEFT_BOTTOM) || ((touch & watch_touch) && (~touch & LEFT_BOTTOM)))
+			else if ((touch.oldRanged.LEFT_BOTTOM && !touch.ranged.LEFT_BOTTOM) || 
+				((touch.ranged.TOP_LEFT || touch.ranged.TOP_RIGHT) && !touch.ranged.LEFT_BOTTOM))
 				moveState = MOVE_LEFT;
 
 			if (moveState != oldMoveState)
@@ -335,12 +311,12 @@ void Entity::Move() {
 
 		case MOVE_DOWN: {
 
-			watch_touch = (BOTTOM_LEFT | BOTTOM_RIGHT);
-
-			if ((oldTouch & ~touch & RIGHT_TOP) || ((touch & watch_touch) && (~touch & RIGHT_TOP)))
+			if ((touch.oldRanged.RIGHT_TOP && !touch.ranged.RIGHT_TOP) || 
+				((touch.ranged.BOTTOM_LEFT || touch.ranged.BOTTOM_RIGHT) && !touch.ranged.RIGHT_TOP))
 				moveState = MOVE_RIGHT;
 
-			else if ((oldTouch & ~touch & LEFT_TOP) || ((touch & watch_touch) && (~touch & LEFT_TOP)))
+			else if ((touch.oldRanged.LEFT_TOP && !touch.ranged.LEFT_TOP) || 
+				((touch.ranged.BOTTOM_LEFT || touch.ranged.BOTTOM_RIGHT) && !touch.ranged.LEFT_TOP))
 				moveState = MOVE_LEFT;
 
 			if (moveState != oldMoveState)
@@ -348,19 +324,14 @@ void Entity::Move() {
 
 			break;
 		}
-	}
-
-	//////////////////////////////////////
-	//END WALL FOLLOW MOVEMENT ALGORITHM//
-	//////////////////////////////////////
-	*/
+	}	
 }
 
 //******************
-// UpdateMovement
+// UpdateVector
 // Determines the optimal movement vector to reach the current waypoint
 //******************
-void Entity::UpdateMovement() {
+void Entity::UpdateVector() {
 	eVec2 oldForward;					// previously used forward.vector
 	decision_t waypoint;				// from the sprite to the next waypoint
 	decision_t test;					// vector tested for optimal travel decision
@@ -371,7 +342,6 @@ void Entity::UpdateMovement() {
 	float weight;						// net bias for a decision about a test
 	float bestWeight;					// highest net result of all modifications to validSteps
 	int walls;							// determines the bias that will be given to each test
-	int * resetTile;					// used for overwritten trail waypoints
 
 	// modulate entity speed if at least this close to a waypoint
 	static const int goalRangeSqr = MAX_SPEED * MAX_SPEED * MAX_STEPS * MAX_STEPS;
@@ -395,8 +365,8 @@ void Entity::UpdateMovement() {
 	}
 
 	waypoint.vector = currentWaypoint - spriteCenter;
-	if (moveState == MOVE_TO_GOAL) {
-		distToWaypointSqr = waypoint.vector.LengthSquared();
+	if (moveState == MOVE_TO_GOAL) {							// FIXME/BUG(?): stays slow if it was slow and switched to MOVE_TO_TRAIL
+		distToWaypointSqr = waypoint.vector.LengthSquared();	// TODO: potentially use this value in UpdateKnownMap();
 
 		if (distToWaypointSqr < goalRangeSqr)
 			speed = (int)(SDL_sqrtf(distToWaypointSqr) / MAX_STEPS);	// allows more accurate approach towards goal waypoint
@@ -414,8 +384,8 @@ void Entity::UpdateMovement() {
 
 		// check how clear the path is starting one step along it
 		// and head straight for the waypoint if the test.vector path crosses extremely near it
-		if ( CheckMovement( spriteCenter+(test.vector*speed), test ) ) {
-			if ( CheckMovement( spriteCenter+(waypoint.vector*speed), waypoint) )
+		if ( CheckVectorPath( spriteCenter+(test.vector*speed), test ) ) {
+			if (CheckVectorPath( spriteCenter+(waypoint.vector*speed), waypoint) )
 				forward = waypoint;
 			else
 				forward = test;
@@ -475,11 +445,11 @@ void Entity::UpdateMovement() {
 }
 
 //******************
-// CheckMovement
+// CheckVectorPath
 // determines the state of the sprite's position for the next few frames
 // return true if a future position using along is near the waypoint
 //******************
-bool Entity::CheckMovement(eVec2 from, decision_t & along) {
+bool Entity::CheckVectorPath(eVec2 from, decision_t & along) {
 	eVec2 testPoint;
 	int newSteps;
 
@@ -520,7 +490,7 @@ bool Entity::CheckMovement(eVec2 from, decision_t & along) {
 			newSteps++;
 
 		// check if the goal waypoint is near the center of the validated test position
-		if (moveState == MOVE_TO_GOAL && from.Compare(currentWaypoint, waypointRange))
+		if (moveState == MOVE_TO_GOAL && from.Compare(currentWaypoint, goalRange))
 			return true;
 
 		// move to check validity of next position
@@ -547,9 +517,9 @@ void Entity::CheckWalls(int & walls) {
 	right.vector.Set(forward.vector.y, -forward.vector.x);	// forward rotated 90 degrees clockwise
 	left.vector.Set(-forward.vector.y, forward.vector.x);	// forward rotated 90 degrees counter-clockwise
 
-	CheckMovement(spriteCenter + (forward.vector*speed), forward);
-	CheckMovement(spriteCenter + (left.vector*speed), left);
-	CheckMovement(spriteCenter + (right.vector*speed), right);
+	CheckVectorPath(spriteCenter + (forward.vector*speed), forward);
+	CheckVectorPath(spriteCenter + (left.vector*speed), left);
+	CheckVectorPath(spriteCenter + (right.vector*speed), right);
 
 	walls = 0;
 	if (forward.validSteps == 0)
@@ -574,74 +544,57 @@ bool Entity::CheckFogOfWar(const eVec2 & point) const {
 	return lineOfSight.LengthSquared() <= sightRange;
 }
 
-// FIXME: use the new GetMapIndex(eVec2) function to return point-wise snesor checks with (fewer?) operations
-// Sets a sensor bit for every point within the entity's range in a non-traversible area ( 3 => no-walk tile, 0,1,2 => walk tile )
-// self = true puts the sensors on the sprite's bounding box, 
-// self = false puts them at touchRange off the bounding box
-// horizontal updates the horizontally oriented sensors
-// vertical updates the vertically oriented sensors
-void Entity::CheckTouch(bool self, bool horizontal, bool vertical) {
+// Sets a sensor bit for every point within the entity's range in a non-traversable area
+// self == true puts the sensors on the sprite's bounding box, 
+// self == false puts them at touchRange off the bounding box
+// --the entity effectively has 16 touch sensors--
+void Entity::CheckTouch(bool self) {
+	
+	if (self) {	// on-sprite checks
 
-	int tileSize = game->GetMap()->GetTileSize();
-	int width = game->GetMap()->GetWidth();
-	int height = game->GetMap()->GetHeight();
+		touch.local.Clear();
 
-	// on-sprite checks
-	if (self) {
+		// horizontally oriented sensors
+		touch.local.RIGHT_TOP		= !game->GetMap()->IsValid( eVec2(spritePos.x + size, spritePos.y + 1) );
+		touch.local.RIGHT_BOTTOM	= !game->GetMap()->IsValid( eVec2(spritePos.x + size, spritePos.y + size - 1) );
+		touch.local.LEFT_BOTTOM		= !game->GetMap()->IsValid( eVec2(spritePos.x, spritePos.y + size - 1) );
+		touch.local.LEFT_TOP		= !game->GetMap()->IsValid( eVec2(spritePos.x, spritePos.y + 1) );
 
-		localTouch = 0;
+		// vertically oriented sensors
+		touch.local.TOP_LEFT		= !game->GetMap()->IsValid( eVec2(spritePos.x + 1, spritePos.y) );
+		touch.local.TOP_RIGHT		= !game->GetMap()->IsValid( eVec2(spritePos.x + size - 1, spritePos.y) );
+		touch.local.BOTTOM_RIGHT	= !game->GetMap()->IsValid( eVec2(spritePos.x + size - 1, spritePos.y + size) );
+		touch.local.BOTTOM_LEFT		= !game->GetMap()->IsValid( eVec2(spritePos.x + 1, spritePos.y + size) );
 
-		if (horizontal) {
+	} else { // ranged off-sprite checks
 
-			localTouch |= (RIGHT_TOP		* ((game->GetMap()->IndexValue((spritePos.x + size) / tileSize, (spritePos.y + 1) / tileSize) == COLLISION_TILE)		| ((spritePos.x + size + 1) > width)));
-			localTouch |= (RIGHT_BOTTOM		* ((game->GetMap()->IndexValue((spritePos.x + size) / tileSize, (spritePos.y + size - 1) / tileSize) == COLLISION_TILE)	| ((spritePos.x + size + 1) > width)));
-			
-			localTouch |= (LEFT_BOTTOM		* ((game->GetMap()->IndexValue(spritePos.x / tileSize, (spritePos.y + size - 1) / tileSize) == COLLISION_TILE)			| (spritePos.x < 0)));
-			localTouch |= (LEFT_TOP			* ((game->GetMap()->IndexValue(spritePos.x / tileSize, (spritePos.y + 1) / tileSize) == COLLISION_TILE)					| (spritePos.x < 0)));
+		touch.oldRanged = touch.ranged;
+		touch.ranged.Clear();
 
-		}
+		// horizontally oriented sensors
+		touch.ranged.RIGHT_TOP		= !game->GetMap()->IsValid( eVec2(spritePos.x + size + touch.reach, spritePos.y) );
+		touch.ranged.RIGHT_BOTTOM	= !game->GetMap()->IsValid( eVec2(spritePos.x + size + touch.reach, spritePos.y + size) );
+		touch.ranged.LEFT_TOP		= !game->GetMap()->IsValid( eVec2(spritePos.x - touch.reach, spritePos.y) );
+		touch.ranged.LEFT_BOTTOM	= !game->GetMap()->IsValid( eVec2(spritePos.x - touch.reach, spritePos.y + size) );
 
-		if (vertical) {
-
-			localTouch |= (TOP_LEFT		* ((game->GetMap()->IndexValue((spritePos.x + 1) / tileSize, spritePos.y / tileSize) == COLLISION_TILE)					| (spritePos.y < 0)));
-			localTouch |= (TOP_RIGHT	* ((game->GetMap()->IndexValue((spritePos.x + size - 1) / tileSize, spritePos.y / tileSize) == COLLISION_TILE)			| (spritePos.y < 0)));
-
-			localTouch |= (BOTTOM_RIGHT	* ((game->GetMap()->IndexValue((spritePos.x + size - 1) / tileSize, (spritePos.y + size) / tileSize) == COLLISION_TILE)	| ((spritePos.y + size + 1) > height)));
-			localTouch |= (BOTTOM_LEFT	* ((game->GetMap()->IndexValue((spritePos.x + 1) / tileSize, (spritePos.y + size) / tileSize) == COLLISION_TILE)		| ((spritePos.y + size + 1) > height)));
-
-		}
-
-	} else { // functionally-ranged off-sprite checks
-
-		oldTouch = touch;
-		touch = 0;
-
-		if (horizontal) {
-			
-			touch |= (RIGHT_TOP		* ((game->GetMap()->IndexValue((spritePos.x + size + touchRange) / tileSize, spritePos.y / tileSize) == COLLISION_TILE)				| ((spritePos.x + touchRange + size) > width)));
-			touch |= (RIGHT_BOTTOM	* ((game->GetMap()->IndexValue((spritePos.x + size + touchRange) / tileSize, (spritePos.y + size) / tileSize) == COLLISION_TILE)	| ((spritePos.x + touchRange + size) > width)));
-
-			touch |= (LEFT_TOP		* ((game->GetMap()->IndexValue((spritePos.x - touchRange) / tileSize, spritePos.y / tileSize) == COLLISION_TILE)					| ((spritePos.x - touchRange) < 0)));
-			touch |= (LEFT_BOTTOM	* ((game->GetMap()->IndexValue((spritePos.x - touchRange) / tileSize, (spritePos.y + size) / tileSize) == COLLISION_TILE)			| ((spritePos.x - touchRange) < 0)));
-
-		}
-
-		if (vertical) {
-		
-			touch |= (TOP_RIGHT		* ((game->GetMap()->IndexValue((spritePos.x + size) / tileSize, (spritePos.y - touchRange) / tileSize) == COLLISION_TILE)			| ((spritePos.y - touchRange) < 0)));
-			touch |= (TOP_LEFT		* ((game->GetMap()->IndexValue(spritePos.x / tileSize, (spritePos.y - touchRange) / tileSize) == COLLISION_TILE)					| ((spritePos.y - touchRange) < 0)));
-			
-			touch |= (BOTTOM_RIGHT	* ((game->GetMap()->IndexValue((spritePos.x + size) / tileSize, (spritePos.y + size + touchRange) / tileSize) == COLLISION_TILE)	| ((spritePos.y + touchRange + size) > height)));
-			touch |= (BOTTOM_LEFT	* ((game->GetMap()->IndexValue(spritePos.x / tileSize, (spritePos.y + size + touchRange) / tileSize) == COLLISION_TILE)				| ((spritePos.y + touchRange + size) > height)));
-
-		}
+		// vertically oriented sensors
+		touch.ranged.TOP_RIGHT		= !game->GetMap()->IsValid( eVec2(spritePos.x + size, spritePos.y - touch.reach) );
+		touch.ranged.TOP_LEFT		= !game->GetMap()->IsValid( eVec2(spritePos.x, spritePos.y - touch.reach) );
+		touch.ranged.BOTTOM_RIGHT	= !game->GetMap()->IsValid( eVec2(spritePos.x + size, spritePos.y + size + touch.reach) );
+		touch.ranged.BOTTOM_LEFT	= !game->GetMap()->IsValid( eVec2(spritePos.x, spritePos.y + size + touch.reach) );
 	}
 }
 
+// TODO(?): have CheckTouch return a bool if any of the requested sensors are triggered
+// TODO: give Entity a Rectangle object to act as its bounding box
 // FIXME: should this belong to the Map class?
 // Isolated check for overlap into non-traversable areas, and immediate sprite position correction
-void Entity::CheckCollision(bool horizontal, bool vertical) {
+void Entity::CheckCollision() {
 
+	// FIXME: the goal of this function is to snap to the most appropriate tile edge 
+	// should an overlap occur (or in the case of wall-follower lack of overlap on an outside turn)
+	// NOTE: regardless of how the entity has moved, always collide each coordinate individually
+	// ie: first x-correct, then y-correct
 	int tileSize = game->GetMap()->GetTileSize();
 	int x1 = (int)(spritePos.x/tileSize);
 	int x2 = (int)((spritePos.x+size)/tileSize);
@@ -649,77 +602,79 @@ void Entity::CheckCollision(bool horizontal, bool vertical) {
 	int y2 = (int)((spritePos.y+size)/tileSize);
 	int width = game->GetMap()->GetWidth();
 	int height = game->GetMap()->GetHeight();
-	int oldX = (int)spritePos.x;
-	int oldY = (int)spritePos.y;
+	eVec2 oldSpritePos = spritePos;
 
 	// default map-edge collision
-	if (horizontal) {
+	if (spritePos.x < 0)
+		spritePos.x = 0;
+	else if (spritePos.x > (width - size))
+		spritePos.x = (float)(width - 15);
 
-		if (spritePos.x < 0)
-			spritePos.x = 0;
-		else if (spritePos.x > (width - size))
-			spritePos.x = (float)(width - 15);
-	
-	}
-
-	if (vertical) {
-
-		if (spritePos.y < 0)
-			spritePos.y = 0;
-		else if (spritePos.y > (height - size))
-			spritePos.y = (float)(height - size);
-
-	}
-	
-	if (spritePos.x != oldX || spritePos.y != oldY )
-		return;
+	if (spritePos.y < 0)
+		spritePos.y = 0;
+	else if (spritePos.y > (height - size))
+		spritePos.y = (float)(height - size);
 
 	// check the immediate boarder of the sprite
-	CheckTouch(true, horizontal, vertical);
+	CheckTouch(true);
 
 	// straight-on wall collision
-	if (horizontal) {
-
-		if (localTouch & (RIGHT_TOP | RIGHT_BOTTOM) && moveState & MOVE_RIGHT)
-			spritePos.x = (float)(x2*tileSize - (size+1));
-		else if (localTouch & (LEFT_TOP | LEFT_BOTTOM) && moveState & MOVE_LEFT)
-			spritePos.x = (float)(x1*tileSize + tileSize);
-
+	switch(moveState) {
+		case MOVE_RIGHT: {
+			if (touch.local.RIGHT_TOP || touch.local.RIGHT_BOTTOM)
+				spritePos.x = (float)(x2*tileSize - (size + 1));
+			break;
+		}
+		case MOVE_LEFT: {
+			if (touch.local.LEFT_TOP || touch.local.LEFT_BOTTOM)
+				spritePos.x = (float)(x1*tileSize + tileSize);
+			break;
+		}
+		case MOVE_UP: {
+			if (touch.local.TOP_RIGHT || touch.local.TOP_LEFT)
+				spritePos.y = (float)(y1*tileSize + tileSize);
+			break;
+		}
+		case MOVE_DOWN: {
+			if (touch.local.BOTTOM_RIGHT || touch.local.BOTTOM_LEFT)
+				spritePos.y = (float)(y2*tileSize - (size + 1));
+			break;
+		}
 	}
 
-	if (vertical) {
-
-		if (localTouch & (TOP_RIGHT | TOP_LEFT) && moveState & MOVE_UP)
-			spritePos.y = (float)(y1*tileSize + tileSize);
-		else if (localTouch & (BOTTOM_RIGHT | BOTTOM_LEFT) && moveState & MOVE_DOWN)
-			spritePos.y = (float)(y2*tileSize - (size+1));
-
-	}
-
-	if (spritePos.x != oldX || spritePos.y != oldY)
+	if (spritePos != oldSpritePos)
 		return;
 
-	// wall-follower AI outside turn wall alignment
-	CheckTouch(false, true, true);
+	// check just off the sprite
+	CheckTouch(false);
 
-	if (horizontal) {
-
-		if (oldTouch & ~touch & (BOTTOM_LEFT | TOP_LEFT) && moveState & MOVE_RIGHT)
-			spritePos.x = (float)(x1*tileSize);
-		else if (oldTouch & ~touch & (BOTTOM_RIGHT | TOP_RIGHT) && moveState & MOVE_LEFT)
-			spritePos.x = (float)(x2*tileSize + tileSize - (size+1));
-
+	// wall-follower AI outside turn wall alignment (essentially backwards collision)
+	switch (moveState) {
+		case MOVE_RIGHT: {
+			if ((touch.oldRanged.BOTTOM_LEFT && !touch.ranged.BOTTOM_LEFT) || 
+				(touch.oldRanged.TOP_LEFT && !touch.ranged.TOP_LEFT))
+				spritePos.x = (float)(x1*tileSize);
+			break;
+		}
+		case MOVE_LEFT: {
+			if ((touch.oldRanged.BOTTOM_RIGHT && !touch.ranged.BOTTOM_RIGHT) ||
+				(touch.oldRanged.TOP_RIGHT && !touch.ranged.TOP_RIGHT))
+				spritePos.x = (float)(x2*tileSize + tileSize - (size + 1));
+			break;
+		}
+		case MOVE_UP: {
+			if ((touch.oldRanged.LEFT_BOTTOM && !touch.ranged.LEFT_BOTTOM) || 
+				(touch.oldRanged.RIGHT_BOTTOM && !touch.ranged.RIGHT_BOTTOM))
+				spritePos.y = (float)(y2*tileSize + tileSize - (size + 1));
+			break;
+		}
+		case MOVE_DOWN: {
+			if ((touch.oldRanged.LEFT_TOP && !touch.ranged.LEFT_TOP) ||
+				(touch.oldRanged.RIGHT_TOP && !touch.ranged.RIGHT_TOP))
+				spritePos.y = (float)(y1*tileSize);
+			break;
+		}
 	}
-
-	if (vertical) {
-
-		if (oldTouch & ~touch & (LEFT_BOTTOM | RIGHT_BOTTOM) && moveState & MOVE_UP)
-			spritePos.y = (float)(y2*tileSize + tileSize - (size+1));
-		else if (oldTouch & ~touch & (LEFT_TOP | RIGHT_TOP) && moveState & MOVE_DOWN)
-			spritePos.y = (float)(y1*tileSize);
-
-	}
-
 }
 
 // DEBUGGING
@@ -728,20 +683,20 @@ void Entity::PrintSensors() {
 	char buffer[64];
 
 	// touch sensors
-	sprintf_s(buffer, "%s|%s", touch & TOP_LEFT ? "TL" : " ",
-		touch & TOP_RIGHT ? "TR" : " ");
+	sprintf_s(buffer, "%s|%s", touch.ranged.TOP_LEFT ? "TL" : " ",
+		touch.ranged.TOP_RIGHT ? "TR" : " ");
 	game->DrawOutlineText(buffer, 100, 150, 255, 0, 0);
 
-	sprintf_s(buffer, "%s|%s", touch & RIGHT_TOP ? "RT" : " ",
-		touch & RIGHT_BOTTOM ? "RB" : " ");
+	sprintf_s(buffer, "%s|%s", touch.ranged.RIGHT_TOP ? "RT" : " ",
+		touch.ranged.RIGHT_BOTTOM ? "RB" : " ");
 	game->DrawOutlineText(buffer, 200, 200, 0, 255, 0);
 
-	sprintf_s(buffer, "%s|%s", touch & BOTTOM_RIGHT ? "BR" : " ",
-		touch & BOTTOM_LEFT ? "BL" : " ");
+	sprintf_s(buffer, "%s|%s", touch.ranged.BOTTOM_RIGHT ? "BR" : " ",
+		touch.ranged.BOTTOM_LEFT ? "BL" : " ");
 	game->DrawOutlineText(buffer, 150, 250, 0, 0, 255);
 
-	sprintf_s(buffer, "%s|%s", touch & LEFT_BOTTOM ? "LB" : " ",
-		touch & LEFT_TOP ? "LT" : " ");
+	sprintf_s(buffer, "%s|%s", touch.ranged.LEFT_BOTTOM ? "LB" : " ",
+		touch.ranged.LEFT_TOP ? "LT" : " ");
 	game->DrawOutlineText(buffer, 50, 200, 255, 255, 0);
 
 	// FIXME: account for diagonal motion on printout

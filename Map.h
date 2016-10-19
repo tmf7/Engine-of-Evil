@@ -3,8 +3,8 @@
 
 #include "Game.h"
 
-#define MAX_MAP_ROWS 256
-#define MAX_MAP_COLUMNS 256
+#define MAX_MAP_ROWS 20//256
+#define MAX_MAP_COLUMNS 15//256
 
 // FIXME: make these private static enums?
 // tileMap values

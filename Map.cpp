@@ -190,7 +190,7 @@ bool Map::IsValid(const eVec2 & point) {
 	bool	validity = true;
 
 	if ( IndexValue(point) != TRAVERSABLE_TILE ||
-		(point.x > GetWidth()) || (point.x < 0) || (point.y > GetHeight()) || (point.y < 0) )
+		(point.x > GetWidth() - 1) || (point.x < 0) || (point.y > GetHeight() -1 ) || (point.y < 0) )
 		validity = false;
 
 	return validity;
