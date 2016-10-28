@@ -3,8 +3,9 @@
 
 #include "Game.h"
 
-#define MAX_MAP_ROWS 20//256
-#define MAX_MAP_COLUMNS 15//256
+#define MAX_MAP_ROWS 256
+#define MAX_MAP_COLUMNS 256
+
 
 // FIXME: make these private static enums?
 // tileMap values
@@ -14,6 +15,8 @@
 
 #define INVALID_INDEX -1
 #define INVALID_TILE -1
+
+// typedef SpatialIndexGrid<byte_t, MAX_MAP_ROWS, MAX_MAP_COLUMNS> game_map_t;
 
 class Game;
 class Entity;
@@ -49,10 +52,12 @@ public:
 	int				GetWidth() const;
 	int				GetHeight() const;
 	SDL_Surface * 	GetTile(int tileNumber);
+
 	int				IndexValue(int row, int column) const;
 	int				IndexValue(const eVec2 & point);
-	void			Index(const eVec2 & point, int & row, int & column) const;
 	int *			Index(const eVec2 & point);
+	void			Index(const eVec2 & point, int & row, int & column) const;
+
 	bool			IsValid(const eVec2 & point);
 	void			Free();
 	void			Update();

@@ -23,8 +23,6 @@ Player should be capable of:
 - etc (later)
 */
 
-class Game;
-class Map;
 
 // FIXME: make these private static const ints
 // movement decision values
@@ -46,6 +44,11 @@ class Map;
 // knownMap values
 #define VISITED_TILE 1
 #define UNKNOWN_TILE 0
+
+
+class Game;
+class Map;
+
 //******************
 // Entity
 //******************
@@ -54,24 +57,32 @@ private:
 
 	// used to decide on a new movement direction
 	typedef struct decision_s {
-		eVec2	vector		= ZERO_VEC2;
-		int		validSteps	= 0;			// collision-free steps that could be taken along the vector
-		float	stepRatio	= 0.0f;			// ratio of valid steps to those that land on previously unvisited tiles
+		eVec2			vector		= ZERO_VEC2;
+		float			stepRatio	= 0.0f;		// ratio of valid steps to those that land on previously unvisited tiles
+		int				validSteps	= 0;		// collision-free steps that could be taken along the vector
 	} decision_t;
 
 	typedef struct sensors_s {
 
-		bool		TOP_LEFT		: 1;
-		bool		TOP_RIGHT		: 1;
-		bool		RIGHT_TOP		: 1;
-		bool		RIGHT_BOTTOM	: 1;
-		bool		BOTTOM_RIGHT	: 1;
-		bool		BOTTOM_LEFT		: 1;
-		bool		LEFT_BOTTOM		: 1;
-		bool		LEFT_TOP		: 1;
-		void		Clear() { memset(this, 0, sizeof(*this)); }
+		bool			TOP_LEFT		: 1;
+		bool			TOP_RIGHT		: 1;
+		bool			RIGHT_TOP		: 1;
+		bool			RIGHT_BOTTOM	: 1;
+		bool			BOTTOM_RIGHT	: 1;
+		bool			BOTTOM_LEFT		: 1;
+		bool			LEFT_BOTTOM		: 1;
+		bool			LEFT_TOP		: 1;
+		void			Clear() { memset(this, 0, sizeof(*this)); }
 
 	} sensors_t;
+
+	struct {
+		sensors_t		ranged;					// off-sprite sensors
+		sensors_t		oldRanged;				// off-sprite sensors
+		sensors_t		local;					// on-sprite sensors
+		int				reach;					// distance beyond bounding box to trigger sensors
+		void			Clear() { ranged.Clear(); oldRanged.Clear(); local.Clear(); }
+	} touch;
 
 	enum movement {
 		MOVE_LEFT,			// wall-follow
@@ -84,37 +95,32 @@ private:
 
 	Game *				game;
 	SDL_Surface *		sprite;
-	int					knownMap[MAX_MAP_ROWS][MAX_MAP_COLUMNS];// matches 1:1 the size of the tileMap in Map.h and the 
-	int					knownMapRows;							// matches 1:1 the mapRows in Map.h
-	int					knownMapCols;							// matches 1:1 the mapCols in Map.h
 	eVec2				spritePos;
 	eVec2				spriteCenter;
+	int					size;					// FIXME: currently assumes uniform sprite width and height
+
+	byte_t				knownMap[MAX_MAP_ROWS][MAX_MAP_COLUMNS];// matches 1:1 the size of the tileMap in Map.h and the 
+	int					knownMapRows;							// matches 1:1 the mapRows in Map.h
+	int					knownMapCols;							// matches 1:1 the mapCols in Map.h
+
 	int					moveState;
 	int					oldMoveState;
 	int					speed;
-	int					size;
-	float				collisionRadius;			// circular collision radius for prediction when using line of sight
-	float				goalRange;					// acceptable range to snap sprite position to user-defined waypoint
-	int					sightRange;					// range of drawable visibility (fog of war)
+	float				collisionRadius;		// circular collision radius for prediction when using line of sight
+	float				goalRange;				// acceptable range to snap sprite position to user-defined waypoint
 
-	struct {
-		sensors_t		ranged;					// off-sprite sensors
-		sensors_t		oldRanged;				// off-sprite sensors
-		sensors_t		local;					// on-sprite sensors
-		int				reach;					// distance beyond bounding box to trigger sensors
-		void			Clear() { ranged.Clear(); oldRanged.Clear(); local.Clear(); }
-	} touch;
+	int					sightRange;				// range of drawable visibility (fog of war)
 
-	Deque<eVec2>		trail;					// AI-defined waypoints for effective backtracking
-	Deque<eVec2>		goals;					// User-defined waypoints as terminal destinations
+	Deque<eVec2, 50>	trail;					// AI-defined waypoints for effective backtracking
+	Deque<eVec2, 50>	goals;					// User-defined waypoints as terminal destinations
 	eVec2				currentWaypoint;		// simplifies switching between the deque being tracked
 
 	decision_t			forward;				// currently used movement vector
 	decision_t			left;					// perpendicular to forward_v counter-clockwise
 	decision_t			right;					// perpendicular to forward_v clockwise
 	eQuat				rotationQuat_Z;			// to rotate any vector about z-axis
-	int *				currentTile;			// to track where the sprite has been more accurately
-	int *				lastTrailTile;			// tile on which the last trail waypoint was placed (prevents redundant placement)
+	byte_t *			currentTile;			// to track where the sprite has been more accurately
+	byte_t *			lastTrailTile;			// tile on which the last trail waypoint was placed (prevents redundant placement)
 
 	bool				moving;
 
@@ -156,10 +162,10 @@ public:
 	// TODO: make a general Map class that holds a 2d array and performs various get/set functions
 	// then have entity use a KnownMap (instead of repeating this indexing code here)
 	// AND have the game class...something...
-	int *		 		KnownMapIndex(const eVec2 & point);
-	int					KnownMapValue(int row, int column) const;
-	int					KnownMapValue(const eVec2 & point);
-
+	byte_t				KnownMapValue(int row, int column) const;
+	byte_t				KnownMapValue(const eVec2 & point);
+	byte_t *			KnownMapIndex(const eVec2 & point);
+	
 	void				AddUserWaypoint(const eVec2 & waypoint); // TODO: move this to an AI : Entity class
 	void				SetPosition(const eVec2 & point);
 	const eVec2 &		Center() const;

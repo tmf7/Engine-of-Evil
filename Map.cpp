@@ -1,5 +1,4 @@
 #include "Game.h"
-//#include <iostream>
 
 Map::Map() {
 
@@ -135,7 +134,7 @@ int Map::GetHeight() const {
 int Map::GetTileSize() const {
 	return tileSize;
 }
-
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // sets the reference row and column to map-scaled
 // values using the given point on the tileMap
 // users must check for INVALID_INDEX return values
@@ -183,7 +182,7 @@ int Map::IndexValue(const eVec2 & point) {
 	else
 		return *value;
 }
-
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // returns true if a sprite can walk onto the given point, false otherwise
 bool Map::IsValid(const eVec2 & point) {

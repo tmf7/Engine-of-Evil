@@ -213,7 +213,7 @@ void Entity::Update() {
 }
 
 void Entity::WaypointFollow() {
-	int * checkTile;
+	byte_t * checkTile;
 
 	// don't move without a waypoint
 	if (!UpdateWaypoint())
@@ -551,7 +551,6 @@ bool Entity::CheckFogOfWar(const eVec2 & point) const {
 void Entity::CheckTouch(bool self) {
 	
 	if (self) {	// on-sprite checks
-
 		touch.local.Clear();
 
 		// horizontally oriented sensors
@@ -567,7 +566,6 @@ void Entity::CheckTouch(bool self) {
 		touch.local.BOTTOM_LEFT		= !game->GetMap()->IsValid( eVec2(spritePos.x + 1, spritePos.y + size) );
 
 	} else { // ranged off-sprite checks
-
 		touch.oldRanged = touch.ranged;
 		touch.ranged.Clear();
 
@@ -587,7 +585,7 @@ void Entity::CheckTouch(bool self) {
 
 // TODO(?): have CheckTouch return a bool if any of the requested sensors are triggered
 // TODO: give Entity a Rectangle object to act as its bounding box
-// FIXME: should this belong to the Map class?
+// FIXME: should this belong to the Map class? or a Collision class? or stay here?
 // Isolated check for overlap into non-traversable areas, and immediate sprite position correction
 void Entity::CheckCollision() {
 
@@ -709,11 +707,15 @@ void Entity::PrintSensors() {
 	game->DrawOutlineText(buffer, 150, 350, 255, 255, 255);
 
 }
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// FIXME: The point of tileMap and knownMap functions are to convert a map area to a 2D array via 
+// its uniform element size, hence points can be used to check array elements on a sliding scale
+// instead of direct [r][c]
 
 // returns a pointer to knownMap[r][c] closest
 // to the given point on the knownMap (1:1 with tileMap)
 // users must check for nullptr return value
-int * Entity::KnownMapIndex(const eVec2 & point) {
+byte_t * Entity::KnownMapIndex(const eVec2 & point) {
 	int row;
 	int column;
 
@@ -725,7 +727,7 @@ int * Entity::KnownMapIndex(const eVec2 & point) {
 }
 
 // return values: VISITED_TILE, UNKNOWN_TILE, INVALID_TILE
-int Entity::KnownMapValue(int row, int column) const {
+byte_t Entity::KnownMapValue(int row, int column) const {
 
 	if (row >= 0 && row < knownMapRows  && column >= 0 && column < knownMapCols)
 		return knownMap[row][column];
@@ -736,8 +738,8 @@ int Entity::KnownMapValue(int row, int column) const {
 // returns the value in the element of the knownMap array
 // nearest to the given point
 // return values: VISITED_TILE, UNKNOWN_TILE, INVALID_TILE
-int Entity::KnownMapValue(const eVec2 & point) {
-	int * value;
+byte_t Entity::KnownMapValue(const eVec2 & point) {
+	unsigned char * value;
 
 	value = KnownMapIndex(point);
 	if (value == nullptr)
@@ -745,7 +747,7 @@ int Entity::KnownMapValue(const eVec2 & point) {
 	else
 		return *value;
 }
-
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////
 const eVec2 & Entity::Center() const {
 	return spriteCenter;
 }
@@ -754,6 +756,7 @@ void Entity::UpdateCenter() {
 	spriteCenter.Set(spritePos.x + (sprite->w / 2), spritePos.y + (sprite->h / 2));
 }
 
+// FIXME: make this a member funciton of a Graphics class
 void Entity::DrawPixel(SDL_Surface *surface, int x, int y, Uint8 r, Uint8 g, Uint8 b) {
 	if (SDL_MUSTLOCK(surface)) {
 		if (SDL_LockSurface(surface) < 0)
@@ -782,8 +785,6 @@ void Entity::StopMoving() {
 	moving = false;
 }
 
-// FIXME: ensure user-waypoints cannot be PushFront() if outside the map
-// or on unreachable terrain
 void Entity::AddUserWaypoint(const eVec2 & waypoint) {
 	if (game->GetMap()->IsValid(waypoint)) {
 		goals.PushFront(waypoint);
@@ -834,10 +835,10 @@ bool Entity::CheckTrail() {
 	return false;
 }
 
-// marks the currentTile as VISITED_Tile, clears out un-needed trail waypoints,
+// marks the currentTile as VISITED_TILE, clears out un-needed trail waypoints,
 // and resets tiles around the current goal waypoint to UNKNOWN_TILE
 void Entity::UpdateKnownMap() {
-	int * goalTile;
+	byte_t * goalTile;
 	int row, column;
 	int startRow, startCol;
 	int endRow, endCol;
@@ -848,7 +849,7 @@ void Entity::UpdateKnownMap() {
 	if (currentTile != nullptr) 
 		*currentTile = VISITED_TILE;
 
-	// fill-box of tiles at the tileResetRange centered on **the current goal waypoint** to to reset the knownMap:
+	// solid-box of tiles at the tileResetRange centered on **the current goal waypoint** to to reset the knownMap:
 	if ( !goals.IsEmpty() ) {
 		tileResetRange = (int)( (goals.Back() - spriteCenter).Length() / (tileSize * 2) );
 
@@ -857,8 +858,8 @@ void Entity::UpdateKnownMap() {
 			return;
 
 		// knownMap indexes of goalTile, that is goalTile == &knownMap[row][column]
-		row			= (goalTile - (int *)&knownMap[0][0]) / MAX_MAP_COLUMNS;
-		column		= (goalTile - (int *)&knownMap[0][0]) % MAX_MAP_COLUMNS;
+		row			= (goalTile - (byte_t *)&knownMap[0][0]) / MAX_MAP_COLUMNS;
+		column		= (goalTile - (byte_t *)&knownMap[0][0]) % MAX_MAP_COLUMNS;
 
 		// set initial bounding box top-left and bottom-right indexes within knownMap
 		startRow	= row - (tileResetRange / 2);
@@ -885,7 +886,7 @@ void Entity::UpdateKnownMap() {
 		// reset tiles within the bounding box
 		row = startRow;
 		column = startCol;
-		while ( 1 ) {
+		while ( row <= endRow ) {
 			knownMap[row][column] = UNKNOWN_TILE;
 
 			column++;
@@ -893,8 +894,6 @@ void Entity::UpdateKnownMap() {
 				column = startCol; 
 				row++; 
 			} 
-			if (row > endRow)
-				break;
 		}
 	}
 

@@ -6,12 +6,14 @@
 #include <Windows.h>
 #include <stdio.h>
 
+#define BIT(a) (1<<a)
+typedef unsigned char byte_t;
+
 #include "Math.h"
 #include "Deque.h"
+#include "SpatialIndexGrid.h"
 #include "Map.h"
 #include "Entity.h"
-
-#define BIT(a) (1<<a)
 
 class Map;
 class Entity;
