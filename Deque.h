@@ -6,6 +6,9 @@
 // and std::unique_ptr<Node> nodePool; nodePool = new Node[capacity]; (to allocate a contiguous block of memory?)
 // and delete[] nodePool;
 
+// TODO: Node_s should only have type * data (not: type data)
+// or use a rvalue referece move operation
+// to increase speed/performance (instead of wasting time copying)
 
 //*************************************************
 //
@@ -13,6 +16,7 @@
 //
 //*************************************************
 // uses pre-allocated stack memory to manage pointers
+// and copies source data into its memory block
 // pushing past the capacity will overwrite the back of the deque
 // user code must check if deque is empty before accessing data
 template <class type, size_t capacity>

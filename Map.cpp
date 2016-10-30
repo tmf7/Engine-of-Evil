@@ -1,8 +1,6 @@
+#include "Map.h"
+#include "Math.h"
 #include "Game.h"
-
-Map::Map() {
-
-}
 
 // FIXME: give maxRows and maxCols default values in case of invalid input
 bool Map::Init (char fileName[], Game * const game, int maxRows, int maxCols) {
@@ -22,22 +20,15 @@ bool Map::Init (char fileName[], Game * const game, int maxRows, int maxCols) {
 		return false;
 
 	// starting view of map
-	camera.x = 0;
-	camera.y = 0;
-	camera.speed = 10;
+	camera.position = ZERO_VEC2;
+	camera.speed = 10.0f;
 
 	// map dimensions
-	tileSize = 32;
-	if (maxRows < 0 || maxRows > MAX_MAP_ROWS)
-		mapRows = MAX_MAP_ROWS;
-	else
-		mapRows = maxRows;
-
-	if (maxCols < 0 || maxCols > MAX_MAP_COLUMNS)
-		mapCols = MAX_MAP_COLUMNS;
-	else
-		mapCols = maxCols;
-
+	tileMap.SetInvalidCell((byte_t)-1);			// largest possible unsigned char == 255
+	tileMap.SetCellWidth(32);
+	tileMap.SetCellHeight(32);
+	tileMap.SetRowLimit(maxRows);
+	tileMap.SetColumnLimit(maxCols);
 
 	BuildTiles(RANDOM_TILE);
 
@@ -56,12 +47,12 @@ void Map::Free() {
 // Populates a matrix for future collision and redraw
 void Map::BuildTiles(const int type) {
 	int solid;
-	int * tile;
-	static const int * tileMapEnd = &tileMap[mapRows - 1][mapCols];
+	byte_t * tile;
+	static const byte_t * tileMapEnd = tileMap.Index(tileMap.RowLimit() - 1, tileMap.ColumnLimit() - 1);
 
 	switch (type) {
 		case RANDOM_TILE: {
-			for (tile = &tileMap[0][0]; tile < tileMapEnd; tile++) {
+			for (tile = tileMap.Index(0, 0); tile <= tileMapEnd; tile++) {
 				solid = rand() % 4;
 				if (solid < 3)
 					*tile = TRAVERSABLE_TILE;
@@ -71,19 +62,19 @@ void Map::BuildTiles(const int type) {
 			break;
 		}
 		case TRAVERSABLE_TILE: {
-			for (tile = &tileMap[0][0]; tile < tileMapEnd; tile++) {
+			for (tile = tileMap.Index(0, 0); tile <= tileMapEnd; tile++) {
 				*tile = TRAVERSABLE_TILE;
 			}
 			break;
 		}
 		case COLLISION_TILE: {
-			for (tile = &tileMap[0][0]; tile < tileMapEnd; tile++) {
+			for (tile = tileMap.Index(0, 0); tile <= tileMapEnd; tile++) {
 				*tile = COLLISION_TILE;
 			}
 			break;
 		}
 		default: {	// RANDOM
-			for (tile = &tileMap[0][0]; tile < tileMapEnd; tile++) {
+			for (tile = tileMap.Index(0, 0); tile <= tileMapEnd; tile++) {
 				solid = rand() % 4;
 				if (solid < 3)
 					*tile = TRAVERSABLE_TILE;
@@ -98,9 +89,9 @@ void Map::BuildTiles(const int type) {
 // toggles the tile type at tileMap[r][c] 
 // closest to the given point
 void Map::ToggleTile(const eVec2 & point) {
-	int * tile;
+	byte_t * tile;
 	
-	tile = Index(point);
+	tile = tileMap.Index(point);
 	if (tile == nullptr)
 		return;
 	
@@ -111,88 +102,18 @@ void Map::ToggleTile(const eVec2 & point) {
 
 }
 
-const Map::viewport & Map::GetCamera() const {
-	return camera;
-}
-
-int Map::GetRows() const {
-	return mapRows;
-}
-
-int Map::GetColumns() const {
-	return mapCols;
-}
-
-int Map::GetWidth() const {
-	return mapRows * tileSize;
-}
-
-int Map::GetHeight() const {
-	return mapCols * tileSize;
-}
-
-int Map::GetTileSize() const {
-	return tileSize;
-}
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// sets the reference row and column to map-scaled
-// values using the given point on the tileMap
-// users must check for INVALID_INDEX return values
-void Map::Index(const eVec2 & point, int & row, int & column)  const {
-	row = (int)(point.x / tileSize);
-	column = (int)(point.y / tileSize);
-
-	if (row < 0 || row >= mapRows)
-		row = INVALID_INDEX;
-
-	if (column < 0 || column >= mapCols)
-		column = INVALID_INDEX;
-}
-
-// returns a pointer to tileMap[r][c] closest to the given point
-// users must check for nullptr return value
-int * Map::Index(const eVec2 & point) {
-	int row;
-	int column;
-
-	Index(point, row, column);
-	if (row == INVALID_INDEX || column == INVALID_INDEX)
-		return nullptr;
-	else
-		return &tileMap[row][column];
-}
-
-// return values: TRAVERSABLE_TILE, COLLISION_TILE, INVALID_TILE
-int Map::IndexValue(int row, int column) const {
-
-	if (row >= 0 && row < mapRows  && column >= 0 && column < mapCols)
-		return tileMap[row][column];
-	else
-		return INVALID_TILE;
-}
-
-// return the tile type at the given point
-// return values: TRAVERSABLE_TILE, COLLISION_TILE, INVALID_TILE
-int Map::IndexValue(const eVec2 & point) {
-	int * value;
-	
-	value = Index(point);
-	if (value == nullptr)
-		return INVALID_TILE;
-	else
-		return *value;
-}
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 // returns true if a sprite can walk onto the given point, false otherwise
 bool Map::IsValid(const eVec2 & point) {
-	bool	validity = true;
+	byte_t tileType;
+	
+	tileType = tileMap.Cell(point);
+	if (tileType == COLLISION_TILE || tileType == tileMap.InvalidCell())
+		return false;
 
-	if ( IndexValue(point) != TRAVERSABLE_TILE ||
-		(point.x > GetWidth() - 1) || (point.x < 0) || (point.y > GetHeight() -1 ) || (point.y < 0) )
-		validity = false;
+	else if	( (point.x > tileMap.Width() - 1) || (point.x < 0) || (point.y > tileMap.Height() - 1 ) || (point.y < 0) )
+		return false;
 
-	return validity;
+	return true;
 }
 
 // TODO: make this a const Draw() function
@@ -203,38 +124,45 @@ void Map::Update() {
 	int i, j, startI, startJ;
 
 	// maximum number of tiles to draw on the current window (max 1 boarder tile beyond)
-	static const int screenRows = (game->GetBuffer()->h / tileSize) + 2;
-	static const int screenColumns = (game->GetBuffer()->w / tileSize) + 2;
+	static const int screenRows = (game->GetBuffer()->h / tileMap.CellWidth()) + 2;
+	static const int screenColumns = (game->GetBuffer()->w / tileMap.CellHeight()) + 2;
 
-	sourceRect.w = tileSize;
-	sourceRect.h = tileSize;
+	// FIXME: currently the spatial cell width & height == tile image width & height
+	// but that shouldn't be the case in the final game
+	sourceRect.w = tileMap.CellWidth();
+	sourceRect.h = tileMap.CellHeight();
 	sourceRect.y = 0;
 
 	// verify any user-input changes to the camera
 	// TODO: move this functionality to an input handler class
 	MoveCamera();
 
-	// FIXME/NOTE: camera is never allowed to go beyond the tileMap dimensions
-	startI = camera.x / tileSize;
-	startJ = camera.y / tileSize;
+	// NOTE: camera is never allowed to go beyond the tileMap dimensions
+	tileMap.Index(camera.position, startI, startJ);
+	if (startI == tileMap.InvalidIndex())
+		startI = 0;
+	if (startJ == tileMap.InvalidIndex())
+		startJ = 0;
 
+	// TODO: modify this "render" function to allow for blocks (or portions) of tile images within SpatialIndexGrid cells
+	// to be blitted (eventually, maybe)
 	for (i = startI; i < startI + screenColumns; i++) {
 		for (j = startJ; j < startJ + screenRows; j++) {
-			if (i >= 0 && i < mapRows && j >= 0 && j < mapCols) {
+			if (i >= 0 && i < tileMap.RowLimit() && j >= 0 && j < tileMap.ColumnLimit()) {
 
 				// TODO: modulate brightness of tile if ANY entities have visited
 				// and if an entity is within its sightRange to draw it bright/dim ( see Entity::CheckFogOfWar(...) ) 
-				destRect.y = (j*tileSize) - camera.y;
-				destRect.x = (i*tileSize) - camera.x;
-				if (game->GetEntities()->KnownMapValue(i,j) == VISITED_TILE) {
-					sourceRect.x = tileSize * 2;	// draw it black	// NOTE: this is ONE FRAME BEHIND what the entity has
+				destRect.y = (j * tileMap.CellHeight()) - camera.position.y;
+				destRect.x = (i * tileMap.CellWidth()) - camera.position.x;
+				if (game->GetEntities()->KnownMap().Cell(i,j) == VISITED_TILE) {
+					sourceRect.x = tileMap.CellWidth() * 2;	// draw it black	// NOTE: this is ONE FRAME BEHIND what the entity has
 				} else {
-					switch (tileMap[i][j]) {
+					switch (tileMap.Cell(i, j)) {
 						case TRAVERSABLE_TILE:
 							sourceRect.x = 0;
 							break;
 						case COLLISION_TILE:
-							sourceRect.x = tileSize;
+							sourceRect.x = tileMap.CellWidth();
 							break;
 					}
 				}
@@ -244,40 +172,36 @@ void Map::Update() {
 	}
 }
 
-// TODO: input is which frame/tile number from the map's tileset to get, returns an SDL_Surface* of that
-SDL_Surface * Map::GetTile( int tileNumber ) {
-	return tileSet;
-}
-
 // TODO: make this part of a camera class instead of a member struct of Map
 // Adjust the user's view within map
 void Map::MoveCamera() {
 	const Uint8 * keys = SDL_GetKeyboardState(NULL);
-	static const int maxX = ((mapRows*tileSize) - game->GetBuffer()->w) >= 0 ? 
-							 (mapRows*tileSize) - game->GetBuffer()->w : 0;
-	static const int maxY = ((mapCols*tileSize) - game->GetBuffer()->h) >= 0 ?
-							 (mapCols*tileSize) - game->GetBuffer()->h : 0;
+	static const int maxX = (tileMap.Width() - game->GetBuffer()->w) >= 0 ? 
+							 tileMap.Width() - game->GetBuffer()->w : 0;
+	static const int maxY = (tileMap.Height() - game->GetBuffer()->h) >= 0 ?
+							 tileMap.Height() - game->GetBuffer()->h : 0;
 
 	// centers the camera on the sprite
 	if (keys[SDL_SCANCODE_SPACE]) {
-		camera.x = (int)(game->GetEntities()->Center().x) - game->GetBuffer()->w / 2;
-		camera.y = (int)(game->GetEntities()->Center().y) - game->GetBuffer()->h / 2;
+		camera.position.x = (int)(game->GetEntities()->Center().x) - game->GetBuffer()->w / 2;
+		camera.position.y = (int)(game->GetEntities()->Center().y) - game->GetBuffer()->h / 2;
 	}
 
-	camera.y -= camera.speed * keys[SDL_SCANCODE_W] * (camera.y > 0);
-	camera.y += camera.speed * keys[SDL_SCANCODE_S] * (camera.y < maxY);
-	camera.x -= camera.speed * keys[SDL_SCANCODE_A] * (camera.x > 0);
-	camera.x += camera.speed * keys[SDL_SCANCODE_D] * (camera.x < maxX);
+	// FIXME(?): change this logic to be more vector oriented???
+	camera.position.y -= camera.speed * keys[SDL_SCANCODE_W] * (camera.position.y > 0);
+	camera.position.y += camera.speed * keys[SDL_SCANCODE_S] * (camera.position.y < maxY);
+	camera.position.x -= camera.speed * keys[SDL_SCANCODE_A] * (camera.position.x > 0);
+	camera.position.x += camera.speed * keys[SDL_SCANCODE_D] * (camera.position.x < maxX);
 
-	if (camera.x < 0)
-		camera.x = 0;
-	else if (camera.x > maxX)
-		camera.x = maxX;
+	if (camera.position.x < 0)
+		camera.position.x = 0;
+	else if (camera.position.x > maxX)
+		camera.position.x = maxX;
 
-	if (camera.y < 0)
-		camera.y = 0;
-	else if (camera.y > maxY)
-		camera.y = maxY;
+	if (camera.position.y < 0)
+		camera.position.y = 0;
+	else if (camera.position.y > maxY)
+		camera.position.y = maxY;
 }
 
 

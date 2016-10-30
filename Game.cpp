@@ -1,9 +1,5 @@
 #include "Game.h"
 
-Game::Game() {
-
-}
-
 // FIXME: this initialization error handling needs adjustment
 bool Game::Init() {
 
@@ -96,20 +92,20 @@ bool Game::Run() {
 			}
 			case SDL_MOUSEBUTTONDOWN: {
 				if (event.button.button == 3)
-					map.ToggleTile(eVec2((float)(event.button.x + map.GetCamera().x),
-										 (float)(event.button.y + map.GetCamera().y)));
+					map.ToggleTile(eVec2((float)(event.button.x + map.camera.position.x),
+										 (float)(event.button.y + map.camera.position.y)));
 				if (event.button.button == 1)
-					entities.AddUserWaypoint(eVec2((float)(event.button.x + map.GetCamera().x), 
-												   (float)(event.button.y + map.GetCamera().y)));
+					entities.AddUserWaypoint(eVec2((float)(event.button.x + map.camera.position.x), 
+												   (float)(event.button.y + map.camera.position.y)));
 				break;
 			}
 			case SDL_KEYDOWN: {
 				if (event.key.keysym.scancode == SDL_SCANCODE_0)
-					map.BuildTiles(TRAVERSABLE_TILE);					// set entire map to brick
+					map.BuildTiles(Map::TRAVERSABLE_TILE);					// set entire map to brick
 				else if (event.key.keysym.scancode == SDL_SCANCODE_1)
-					map.BuildTiles(COLLISION_TILE);						// set entire map to water
+					map.BuildTiles(Map::COLLISION_TILE);					// set entire map to water
 				else if (event.key.keysym.scancode == SDL_SCANCODE_2)
-					map.BuildTiles(RANDOM_TILE);						// set entire map random (the old way)
+					map.BuildTiles(Map::RANDOM_TILE);						// set entire map random (the old way)
 				break;
 			}
 		}
@@ -135,19 +131,4 @@ void Game::DrawOutlineText(char* string, int x, int y, Uint8 r, Uint8 g, Uint8 b
 
 	SDL_BlitSurface(renderedText, NULL, backbuffer, &pos);
 	SDL_FreeSurface(renderedText);
-}
-
-SDL_Surface* Game::GetBuffer() {
-
-	return backbuffer;
-}
-
-Map* Game::GetMap() {
-	
-	return &map;
-}
-
-Entity* Game::GetEntities() {
-
-	return &entities;
 }

@@ -1,10 +1,11 @@
+#include "Entity.h"
 #include "Game.h"
 
 // FIXME: these variable names are too verbose and not specific enough
 Entity::Entity() {
 	speed = MAX_SPEED;
 	size = 15;
-	sightRange = 128;
+	sightRange = 128.0f;
 	goalRange = speed;
 	rotationQuat_Z.Set(0.0f, 0.0f, SDL_sinf(DEG2RAD(ROTATION_INCREMENT) / 2.0f), SDL_cosf(DEG2RAD(ROTATION_INCREMENT) / 2.0f));
 	touch.reach = 1;
@@ -45,9 +46,12 @@ bool Entity::Init(char fileName[], bool key, Game * const game) {
 
 	// FIXME(?): this relies on the map being initialized already
 	// knownMap dimensions
-	knownMapRows = game->GetMap()->GetRows();
-	knownMapCols = game->GetMap()->GetColumns();
-	memset(&knownMap[0][0], UNKNOWN_TILE, MAX_MAP_ROWS * MAX_MAP_COLUMNS * sizeof(knownMap[0][0]));	// ensure all used tiles initilized to 0
+	knownMap.SetInvalidCell((byte_t)-1);		// largest possible unsigned char == 255
+	knownMap.SetCellWidth(game->GetMap()->TileMap().CellWidth());	// FIXME(?): GetMap() or game might be null, use reference
+	knownMap.SetCellHeight(game->GetMap()->TileMap().CellHeight());
+	knownMap.SetRowLimit(game->GetMap()->TileMap().RowLimit());
+	knownMap.SetColumnLimit(game->GetMap()->TileMap().ColumnLimit());
+	knownMap.ClearAllCells();
 
 	Spawn();
 
@@ -67,20 +71,19 @@ void Entity::Free() {
 // TODO: determine a failure to spawn condition (ie when to return false)
 // TODO: create different enums for AI placement, including specific positions
 // Place the entity on the top-leftmost walkable tile (in an expanding block "radius")
-void Entity::Spawn()
-{
+void Entity::Spawn() {
+	eVec2 testPoint;
 	int i, j;
 	int radius = 1;
-	int tileSize = game->GetMap()->GetTileSize();
 	bool entity_placed = false;
 
 	// Check the top-left corner first
-	if (game->GetMap()->IndexValue(0,0) == TRAVERSABLE_TILE) {
+	testPoint.Set(5.0f, 5.0f);
+	if (game->GetMap()->IsValid( testPoint ) ) {
 
-		spritePos.x = 5;
-		spritePos.y = 5;
+		spritePos = testPoint;
 		UpdateCenter();
-		currentTile = &knownMap[0][0];
+		currentTile = knownMap.Index(0, 0);
 		lastTrailTile = nullptr;
 		return;
 	}
@@ -91,9 +94,9 @@ void Entity::Spawn()
 		// down from the top
 		for (i = radius, j = 0; j <= radius; j++) {
 
-			if (game->GetMap()->IndexValue(i, j) == TRAVERSABLE_TILE) {
-				spritePos.x = (float)(i*tileSize + 5);
-				spritePos.y = (float)(j*tileSize + 5);
+			testPoint.Set((float)(i * knownMap.CellWidth() + 5), (float)(j * knownMap.CellHeight() + 5));
+			if (game->GetMap()->IsValid( testPoint ) ) {
+				spritePos = testPoint;
 				entity_placed = true;
 				break;
 			}
@@ -103,10 +106,9 @@ void Entity::Spawn()
 		// in from the bottom of the last search
 		for (i = radius - 1, j = radius; i >= 0 && !entity_placed; i--) {
 
-			if (game->GetMap()->IndexValue(i, j) == TRAVERSABLE_TILE) {
-
-				spritePos.x = (float)(i*tileSize + 5);
-				spritePos.y = (float)(j*tileSize + 5);
+			testPoint.Set((float)(i * knownMap.CellWidth() + 5), (float)(j * knownMap.CellHeight() + 5));
+			if (game->GetMap()->IsValid( testPoint ) ) {
+				spritePos = testPoint;
 				entity_placed = true;
 				break;
 			}
@@ -115,7 +117,7 @@ void Entity::Spawn()
 		radius++;
 	}
 	UpdateCenter();
-	currentTile = &knownMap[i][j];
+	currentTile = knownMap.Index(i, j);
 	lastTrailTile = nullptr;
 }
 
@@ -135,7 +137,7 @@ void Entity::Update() {
 // BEGIN FREEHILL DEBUG knownMap memset test
 	const Uint8* keys = SDL_GetKeyboardState(NULL);
 	if (keys[SDL_SCANCODE_R])
-		memset(&knownMap[0][0], UNKNOWN_TILE, MAX_MAP_ROWS * MAX_MAP_COLUMNS * sizeof(knownMap[0][0]));
+		knownMap.ClearAllCells();
 // END FREEHIL DEBUG knownMap memset test
 
 	// change/initialize the movement type under specific conditions
@@ -163,8 +165,8 @@ void Entity::Update() {
 	while(node < goals.Size()) {
 		debugWaypoint = goals.FromBack(node);
 
-		destRect.x = (int)(debugWaypoint.x) - game->GetMap()->GetCamera().x;
-		destRect.y = (int)(debugWaypoint.y) - game->GetMap()->GetCamera().y;
+		destRect.x = (int)(debugWaypoint.x - game->GetMap()->camera.position.x);
+		destRect.y = (int)(debugWaypoint.y - game->GetMap()->camera.position.y);
 		SDL_BlitSurface(sprite, NULL, game->GetBuffer(), &destRect);
 		node++;
 		
@@ -174,16 +176,16 @@ void Entity::Update() {
 	while (node < trail.Size()) {
 		debugWaypoint = trail.FromFront(node);
 
-		destRect.x = (int)(debugWaypoint.x) - game->GetMap()->GetCamera().x;
-		destRect.y = (int)(debugWaypoint.y) - game->GetMap()->GetCamera().y;
+		destRect.x = (int)(debugWaypoint.x - game->GetMap()->camera.position.x);
+		destRect.y = (int)(debugWaypoint.y - game->GetMap()->camera.position.y);
 		SDL_BlitSurface(sprite, NULL, game->GetBuffer(), &destRect);
 		node++;
 	}
 
 	// draw sprite 
 	// FIXME: draws regardless if it's visible
-	destRect.x = (int)(spritePos.x) - game->GetMap()->GetCamera().x;
-	destRect.y = (int)(spritePos.y) - game->GetMap()->GetCamera().y;
+	destRect.x = (int)(spritePos.x - game->GetMap()->camera.position.x);
+	destRect.y = (int)(spritePos.y - game->GetMap()->camera.position.y);
 	SDL_BlitSurface(sprite, NULL, game->GetBuffer(), &destRect);
 
 	// FREEHILL BEGIN DEBUG COLLISION CIRCLE
@@ -200,8 +202,8 @@ void Entity::Update() {
 
 		if (forward.vector*debugVector >= 0) {
 
-			collisionX = spriteCenter.x + (int)(collisionRadius*debugVector.x) - game->GetMap()->GetCamera().x;
-			collisionY = spriteCenter.y + (int)(collisionRadius*debugVector.y) - game->GetMap()->GetCamera().y;
+			collisionX = (int)(spriteCenter.x + (collisionRadius*debugVector.x) - game->GetMap()->camera.position.x);
+			collisionY = (int)(spriteCenter.y + (collisionRadius*debugVector.y) - game->GetMap()->camera.position.y);
 			DrawPixel(game->GetBuffer(), collisionX, collisionY, color[0], color[1], color[2]);
 		}
 		debugVector = rotationQuat_Z*debugVector;	// rotate counter-clockwise
@@ -228,7 +230,7 @@ void Entity::WaypointFollow() {
 	}
 
 	// mark the tile to help future movement decision
-	checkTile = KnownMapIndex(spriteCenter);
+	checkTile = knownMap.Index(spriteCenter);
 	if ( checkTile != nullptr && checkTile != currentTile ) {
 		UpdateKnownMap();
 		currentTile = checkTile;
@@ -344,7 +346,7 @@ void Entity::UpdateVector() {
 	int walls;							// determines the bias that will be given to each test
 
 	// modulate entity speed if at least this close to a waypoint
-	static const int goalRangeSqr = MAX_SPEED * MAX_SPEED * MAX_STEPS * MAX_STEPS;
+	static const float goalRangeSqr = MAX_SPEED * MAX_SPEED * MAX_STEPS * MAX_STEPS;
 
 	walls = 0;
 	if (!moving) {
@@ -486,7 +488,7 @@ bool Entity::CheckVectorPath(eVec2 from, decision_t & along) {
 		along.validSteps++;
 
 		// check if the step falls on an unexplored tile
-		if (KnownMapValue(from) == UNKNOWN_TILE)
+		if (knownMap.Cell(from) == UNKNOWN_TILE)
 			newSteps++;
 
 		// check if the goal waypoint is near the center of the validated test position
@@ -593,25 +595,22 @@ void Entity::CheckCollision() {
 	// should an overlap occur (or in the case of wall-follower lack of overlap on an outside turn)
 	// NOTE: regardless of how the entity has moved, always collide each coordinate individually
 	// ie: first x-correct, then y-correct
-	int tileSize = game->GetMap()->GetTileSize();
-	int x1 = (int)(spritePos.x/tileSize);
-	int x2 = (int)((spritePos.x+size)/tileSize);
-	int y1 = (int)(spritePos.y/tileSize);
-	int y2 = (int)((spritePos.y+size)/tileSize);
-	int width = game->GetMap()->GetWidth();
-	int height = game->GetMap()->GetHeight();
-	eVec2 oldSpritePos = spritePos;
+	int x1			= (int)(spritePos.x)		/ knownMap.CellWidth();
+	int x2			= (int)(spritePos.x+size)	/ knownMap.CellWidth();
+	int y1			= (int)(spritePos.y)		/ knownMap.CellHeight();
+	int y2			= (int)(spritePos.y+size)	/ knownMap.CellHeight();
+	eVec2 oldSpritePos	= spritePos;
 
 	// default map-edge collision
 	if (spritePos.x < 0)
 		spritePos.x = 0;
-	else if (spritePos.x > (width - size))
-		spritePos.x = (float)(width - 15);
+	else if (spritePos.x > (knownMap.Width() - size)) // FIXME(?): if width < size, then spritePos.x becomes extremly large
+		spritePos.x = (float)(knownMap.Width() - size);
 
 	if (spritePos.y < 0)
 		spritePos.y = 0;
-	else if (spritePos.y > (height - size))
-		spritePos.y = (float)(height - size);
+	else if (spritePos.y > (knownMap.Height() - size))
+		spritePos.y = (float)(knownMap.Height() - size);
 
 	// check the immediate boarder of the sprite
 	CheckTouch(true);
@@ -620,22 +619,22 @@ void Entity::CheckCollision() {
 	switch(moveState) {
 		case MOVE_RIGHT: {
 			if (touch.local.RIGHT_TOP || touch.local.RIGHT_BOTTOM)
-				spritePos.x = (float)(x2*tileSize - (size + 1));
+				spritePos.x = (float)(x2 * knownMap.CellWidth() - (size + 1));
 			break;
 		}
 		case MOVE_LEFT: {
 			if (touch.local.LEFT_TOP || touch.local.LEFT_BOTTOM)
-				spritePos.x = (float)(x1*tileSize + tileSize);
+				spritePos.x = (float)(x1 * knownMap.CellWidth() + knownMap.CellWidth());
 			break;
 		}
 		case MOVE_UP: {
 			if (touch.local.TOP_RIGHT || touch.local.TOP_LEFT)
-				spritePos.y = (float)(y1*tileSize + tileSize);
+				spritePos.y = (float)(y1 * knownMap.CellHeight() + knownMap.CellHeight());
 			break;
 		}
 		case MOVE_DOWN: {
 			if (touch.local.BOTTOM_RIGHT || touch.local.BOTTOM_LEFT)
-				spritePos.y = (float)(y2*tileSize - (size + 1));
+				spritePos.y = (float)(y2 * knownMap.CellHeight() - (size + 1));
 			break;
 		}
 	}
@@ -651,25 +650,25 @@ void Entity::CheckCollision() {
 		case MOVE_RIGHT: {
 			if ((touch.oldRanged.BOTTOM_LEFT && !touch.ranged.BOTTOM_LEFT) || 
 				(touch.oldRanged.TOP_LEFT && !touch.ranged.TOP_LEFT))
-				spritePos.x = (float)(x1*tileSize);
+				spritePos.x = (float)(x1 * knownMap.CellWidth());
 			break;
 		}
 		case MOVE_LEFT: {
 			if ((touch.oldRanged.BOTTOM_RIGHT && !touch.ranged.BOTTOM_RIGHT) ||
 				(touch.oldRanged.TOP_RIGHT && !touch.ranged.TOP_RIGHT))
-				spritePos.x = (float)(x2*tileSize + tileSize - (size + 1));
+				spritePos.x = (float)(x2 * knownMap.CellWidth() + knownMap.CellWidth() - (size + 1));
 			break;
 		}
 		case MOVE_UP: {
 			if ((touch.oldRanged.LEFT_BOTTOM && !touch.ranged.LEFT_BOTTOM) || 
 				(touch.oldRanged.RIGHT_BOTTOM && !touch.ranged.RIGHT_BOTTOM))
-				spritePos.y = (float)(y2*tileSize + tileSize - (size + 1));
+				spritePos.y = (float)(y2 * knownMap.CellHeight() + knownMap.CellHeight() - (size + 1));
 			break;
 		}
 		case MOVE_DOWN: {
 			if ((touch.oldRanged.LEFT_TOP && !touch.ranged.LEFT_TOP) ||
 				(touch.oldRanged.RIGHT_TOP && !touch.ranged.RIGHT_TOP))
-				spritePos.y = (float)(y1*tileSize);
+				spritePos.y = (float)(y1 * knownMap.CellHeight());
 			break;
 		}
 	}
@@ -706,54 +705,6 @@ void Entity::PrintSensors() {
 	sprintf_s(buffer, "%i, %i", (int)spritePos.x, (int)spritePos.y);
 	game->DrawOutlineText(buffer, 150, 350, 255, 255, 255);
 
-}
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// FIXME: The point of tileMap and knownMap functions are to convert a map area to a 2D array via 
-// its uniform element size, hence points can be used to check array elements on a sliding scale
-// instead of direct [r][c]
-
-// returns a pointer to knownMap[r][c] closest
-// to the given point on the knownMap (1:1 with tileMap)
-// users must check for nullptr return value
-byte_t * Entity::KnownMapIndex(const eVec2 & point) {
-	int row;
-	int column;
-
-	game->GetMap()->Index(point, row, column);
-	if (row == INVALID_INDEX || column == INVALID_INDEX)
-		return nullptr;
-	else
-		return &knownMap[row][column];
-}
-
-// return values: VISITED_TILE, UNKNOWN_TILE, INVALID_TILE
-byte_t Entity::KnownMapValue(int row, int column) const {
-
-	if (row >= 0 && row < knownMapRows  && column >= 0 && column < knownMapCols)
-		return knownMap[row][column];
-	else
-		return INVALID_TILE;
-}
-
-// returns the value in the element of the knownMap array
-// nearest to the given point
-// return values: VISITED_TILE, UNKNOWN_TILE, INVALID_TILE
-byte_t Entity::KnownMapValue(const eVec2 & point) {
-	unsigned char * value;
-
-	value = KnownMapIndex(point);
-	if (value == nullptr)
-		return INVALID_TILE;
-	else
-		return *value;
-}
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////
-const eVec2 & Entity::Center() const {
-	return spriteCenter;
-}
-
-void Entity::UpdateCenter() {
-	spriteCenter.Set(spritePos.x + (sprite->w / 2), spritePos.y + (sprite->h / 2));
 }
 
 // FIXME: make this a member funciton of a Graphics class
@@ -828,7 +779,7 @@ bool Entity::UpdateWaypoint( bool getNext ) {
 // determine if the entity should fresh-start goal pathfinding
 bool Entity::CheckTrail() {
 	if (trail.IsEmpty()) {
-		memset(&knownMap[0][0], UNKNOWN_TILE, MAX_MAP_ROWS * MAX_MAP_COLUMNS * sizeof(knownMap[0][0]));
+		knownMap.ClearAllCells();
 		lastTrailTile = nullptr;
 		return true;
 	}
@@ -843,7 +794,6 @@ void Entity::UpdateKnownMap() {
 	int startRow, startCol;
 	int endRow, endCol;
 	int tileResetRange = 0;		// size of the box around the goal to set tiles to UNKNOWN_TILE
-	static const float tileSize = (float)game->GetMap()->GetTileSize();
 
 	// update the newly visited tile and put it into the trailMap
 	if (currentTile != nullptr) 
@@ -851,15 +801,15 @@ void Entity::UpdateKnownMap() {
 
 	// solid-box of tiles at the tileResetRange centered on **the current goal waypoint** to to reset the knownMap:
 	if ( !goals.IsEmpty() ) {
-		tileResetRange = (int)( (goals.Back() - spriteCenter).Length() / (tileSize * 2) );
+		tileResetRange = (int)( (goals.Back() - spriteCenter).Length() / (knownMap.CellWidth() * 2) );
 
-		goalTile = KnownMapIndex(goals.Back());
+		goalTile = knownMap.Index(goals.Back());
 		if (goalTile == nullptr)
 			return;
 
 		// knownMap indexes of goalTile, that is goalTile == &knownMap[row][column]
-		row			= (goalTile - (byte_t *)&knownMap[0][0]) / MAX_MAP_COLUMNS;
-		column		= (goalTile - (byte_t *)&knownMap[0][0]) % MAX_MAP_COLUMNS;
+		row			= (goalTile - knownMap.Index(0, 0)) / MAX_MAP_COLUMNS;
+		column		= (goalTile - knownMap.Index(0, 0)) % MAX_MAP_COLUMNS;
 
 		// set initial bounding box top-left and bottom-right indexes within knownMap
 		startRow	= row - (tileResetRange / 2);
@@ -876,18 +826,18 @@ void Entity::UpdateKnownMap() {
 		if (startCol < 0)
 			startCol = 0;
 
-		if (endRow >= knownMapRows)
-			endRow = knownMapRows - 1;
+		if (endRow >= knownMap.RowLimit())
+			endRow = knownMap.RowLimit() - 1;
 //		else if (endRow < 0 || endCol < 0)								// ends above or to the left of tileMap area
 //			return;														// never occurs because goalTile is always on the tileMap
-		if (endCol >= knownMapCols)
-			endCol = knownMapCols - 1;
+		if (endCol >= knownMap.ColumnLimit())
+			endCol = knownMap.ColumnLimit() - 1;
 
 		// reset tiles within the bounding box
 		row = startRow;
 		column = startCol;
 		while ( row <= endRow ) {
-			knownMap[row][column] = UNKNOWN_TILE;
+			*knownMap.Index(row, column) = UNKNOWN_TILE;
 
 			column++;
 			if (column > endCol) {
@@ -939,7 +889,7 @@ void Entity::UpdateKnownMap() {
 */
 	// pop all trail waypoints that no longer fall on VISITED_TILEs
 	while (!trail.IsEmpty()) {
-		if (KnownMapValue(trail.Back()) == UNKNOWN_TILE)
+		if (knownMap.Cell(trail.Back()) == UNKNOWN_TILE)
 			trail.PopBack();
 		else
 			break;

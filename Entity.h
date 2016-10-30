@@ -1,7 +1,10 @@
 #ifndef ENTITY_H
 #define ENTITY_H
 
-#include "Game.h"
+#include "Definitions.h"
+#include "Deque.h"
+#include "Math.h"
+#include "SpatialIndexGrid.h"
 
 /*
 An entity will be any object in game, be it an AI, a Player, an inanimate object, 
@@ -26,7 +29,7 @@ Player should be capable of:
 
 // FIXME: make these private static const ints
 // movement decision values
-#define MAX_SPEED 10
+#define MAX_SPEED 10.0f
 #define MAX_STEPS 5
 #define STEP_INCRESE_THRESHOLD 2
 #define FORWARD_CHANGE_THRESHOLD 0.9f
@@ -39,15 +42,13 @@ Player should be capable of:
 #define FORWARD_BIAS 1.1f
 #define WAYPOINT_BIAS 2.0f
 
-// FIXME: make these private enums
+// FIXME: make these public enums
 // and add public bool Entity::HasVisited(row,column) {...} or the like
 // knownMap values
-#define VISITED_TILE 1
-#define UNKNOWN_TILE 0
-
+#define VISITED_TILE 1		// FIXME: should be Entity::VISITED_TILE
+#define UNKNOWN_TILE 0		// FIXME: should be Entity::UNKOWN_TILE
 
 class Game;
-class Map;
 
 //******************
 // Entity
@@ -63,7 +64,6 @@ private:
 	} decision_t;
 
 	typedef struct sensors_s {
-
 		bool			TOP_LEFT		: 1;
 		bool			TOP_RIGHT		: 1;
 		bool			RIGHT_TOP		: 1;
@@ -73,7 +73,6 @@ private:
 		bool			LEFT_BOTTOM		: 1;
 		bool			LEFT_TOP		: 1;
 		void			Clear() { memset(this, 0, sizeof(*this)); }
-
 	} sensors_t;
 
 	struct {
@@ -97,19 +96,17 @@ private:
 	SDL_Surface *		sprite;
 	eVec2				spritePos;
 	eVec2				spriteCenter;
-	int					size;					// FIXME: currently assumes uniform sprite width and height
+	size_t				size;					// FIXME: currently assumes uniform sprite width and height
 
-	byte_t				knownMap[MAX_MAP_ROWS][MAX_MAP_COLUMNS];// matches 1:1 the size of the tileMap in Map.h and the 
-	int					knownMapRows;							// matches 1:1 the mapRows in Map.h
-	int					knownMapCols;							// matches 1:1 the mapCols in Map.h
+	ai_map_t			knownMap;				// tracks visited tiles from the game_map_t tileMap; in Map class
 
 	int					moveState;
 	int					oldMoveState;
-	int					speed;
+	float				speed;
 	float				collisionRadius;		// circular collision radius for prediction when using line of sight
 	float				goalRange;				// acceptable range to snap sprite position to user-defined waypoint
 
-	int					sightRange;				// range of drawable visibility (fog of war)
+	float				sightRange;				// range of drawable visibility (fog of war)
 
 	Deque<eVec2, 50>	trail;					// AI-defined waypoints for effective backtracking
 	Deque<eVec2, 50>	goals;					// User-defined waypoints as terminal destinations
@@ -159,16 +156,23 @@ public:
 	void				Update();
 	void				(Entity::*Move)(void);					// TODO: move this to an AI : Entity class and/or make virtual
 
-	// TODO: make a general Map class that holds a 2d array and performs various get/set functions
-	// then have entity use a KnownMap (instead of repeating this indexing code here)
-	// AND have the game class...something...
-	byte_t				KnownMapValue(int row, int column) const;
-	byte_t				KnownMapValue(const eVec2 & point);
-	byte_t *			KnownMapIndex(const eVec2 & point);
-	
 	void				AddUserWaypoint(const eVec2 & waypoint); // TODO: move this to an AI : Entity class
 	void				SetPosition(const eVec2 & point);
 	const eVec2 &		Center() const;
+
+	const ai_map_t &	KnownMap() const;
 };
+
+inline const eVec2 & Entity::Center() const {
+	return spriteCenter;
+}
+
+inline void Entity::UpdateCenter() {
+	spriteCenter.Set(spritePos.x + (sprite->w / 2), spritePos.y + (sprite->h / 2));
+}
+
+inline const ai_map_t & Entity::KnownMap() const {
+	return knownMap;
+}
 
 #endif /* ENTITY_H */

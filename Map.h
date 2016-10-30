@@ -1,68 +1,57 @@
-#ifndef MAP_H
-#define MAP_H
+#ifndef EVIL_MAP_H
+#define EVIL_MAP_H
 
-#include "Game.h"
-
-#define MAX_MAP_ROWS 256
-#define MAX_MAP_COLUMNS 256
-
-
-// FIXME: make these private static enums?
-// tileMap values
-#define RANDOM_TILE 3
-#define TRAVERSABLE_TILE 2
-#define COLLISION_TILE 1
-
-#define INVALID_INDEX -1
-#define INVALID_TILE -1
-
-// typedef SpatialIndexGrid<byte_t, MAX_MAP_ROWS, MAX_MAP_COLUMNS> game_map_t;
+#include "Definitions.h"
+#include "Math.h"
+#include "SpatialIndexGrid.h"
 
 class Game;
-class Entity;
 
 class Map {
-
 private:
 
-	void			MoveCamera();
-
 	Game *			game;
-	SDL_Surface *	tileSet;						// includes background
-	int				tileSize;
-	int				mapRows;						// number of tiles vertically
-	int				mapCols;						// number of tiles horizontally
-	int				tileMap[MAX_MAP_ROWS][MAX_MAP_COLUMNS];
+	SDL_Surface *	tileSet;						// FIXME(?): includes background?
+	game_map_t		tileMap;
 
-	struct viewport {
-		int x;
-		int y;
-		int speed;
-	} camera;
-
+	void			MoveCamera();
+	
 public:
 
-	Map();
+	enum tileType {
+		COLLISION_TILE,
+		TRAVERSABLE_TILE,
+		RANDOM_TILE
+	};
 
-	bool			Init(char fileName[], Game * const game, int maxRows, int maxCols);
-	const viewport &		GetCamera() const;
-	int				GetTileSize() const;
-	int				GetRows() const;
-	int				GetColumns() const;
-	int				GetWidth() const;
-	int				GetHeight() const;
-	SDL_Surface * 	GetTile(int tileNumber);
+	struct {
+		eVec2 position;
+		float speed;
+	} camera;
 
-	int				IndexValue(int row, int column) const;
-	int				IndexValue(const eVec2 & point);
-	int *			Index(const eVec2 & point);
-	void			Index(const eVec2 & point, int & row, int & column) const;
+						Map();
 
-	bool			IsValid(const eVec2 & point);
-	void			Free();
-	void			Update();
-	void			BuildTiles(const int type);
-	void			ToggleTile(const eVec2 & point);
+	bool				Init(char fileName[], Game * const game, int maxRows, int maxCols);
+	bool				IsValid(const eVec2 & point);
+	void				Free();
+	void				Update();
+	void				BuildTiles(const int type);
+	void				ToggleTile(const eVec2 & point);
+
+	SDL_Surface * 		GetTile(int tileNumber);
+	const game_map_t &	TileMap() const;
 };
 
-#endif
+inline Map::Map() {
+}
+
+// TODO: input is which frame/tile number from the map's tileset to get, returns an SDL_Surface* of that
+inline SDL_Surface * Map::GetTile(int tileNumber) {
+	return tileSet;
+}
+
+inline const game_map_t & Map::TileMap() const {
+	return tileMap;
+}
+
+#endif /* EVIL_MAP_H */

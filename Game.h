@@ -1,25 +1,15 @@
 #ifndef GAME_H
 #define GAME_H
 
-#include "SDL.h"
-#include "SDL_ttf.h"
-#include <Windows.h>
-#include <stdio.h>
-
-#define BIT(a) (1<<a)
-typedef unsigned char byte_t;
-
 #include "Math.h"
-#include "Deque.h"
-#include "SpatialIndexGrid.h"
 #include "Map.h"
 #include "Entity.h"
 
-class Map;
-class Entity;
+//class Map;
+//class Entity;
+//class eVec2;
 
 class Game {
-
 private:
 
 	void				FreeAssets();
@@ -40,9 +30,24 @@ public:
 	void				Shutdown(int error);
 	bool				Run();
 	void				DrawOutlineText(char* string, int x, int y, Uint8 r, Uint8 g, Uint8 b);
-	SDL_Surface*		GetBuffer();
-	Map*				GetMap();
-	Entity*				GetEntities();
+	SDL_Surface *		GetBuffer();
+	Map *				GetMap();
+	Entity *			GetEntities();
 };
+
+inline Game::Game() {
+}
+
+inline SDL_Surface* Game::GetBuffer() {
+	return backbuffer;
+}
+
+inline Map * Game::GetMap() {
+	return &map;
+}
+
+inline Entity * Game::GetEntities() {
+	return &entities;
+}
 
 #endif /* GAME_H */
