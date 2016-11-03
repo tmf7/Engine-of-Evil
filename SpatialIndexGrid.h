@@ -33,24 +33,15 @@ private:
 	int						rowLimit;							// allows for 0 <= row < rowLimit <= rows
 	int						columnLimit;						// allows for 0 <= column < columnLimit <= columns
 
-	const int				invalidIndex = -1;					// -1
-	type					invalidCell;						// default constructor, changed via SetInvalidCell()
-
 public:
 
 							SpatialIndexGrid();
-							SpatialIndexGrid(const int cellWidth, const int cellHeight);
-							SpatialIndexGrid(const int cellWidth, const int cellHeight, const int maxRows, const int maxColumns, const type & invalidCell);
 
 	void					Index(const eVec2 & point, int & row, int & column) const;
-	type *					Index(const eVec2 & point);
-	type *					Index(const int row, const int column);
-	const type &			Cell(const int row, const int column) const;
-	const type &			Cell(const eVec2 & point) const;
-
-	const int				InvalidIndex() const;
-	const type &			InvalidCell() const;
-	void					SetInvalidCell(const type & invalidCell);
+	type &					Index(const eVec2 & point);
+	type					Index(const eVec2 & point) const;
+	type &					Index(const int row, const int column);
+	type					Index(const int row, const int column) const;
 
 	int						CellWidth() const;
 	int						CellHeight() const;
@@ -73,139 +64,81 @@ public:
 // SpatialIndexGrid
 //******************
 template< class type, int rows, int columns>
-inline SpatialIndexGrid<type, rows, columns>::SpatialIndexGrid() : cellWidth(NULL), cellHeight(NULL),
+inline SpatialIndexGrid<type, rows, columns>::SpatialIndexGrid() : cellWidth(1), cellHeight(1),
 																	rowLimit(rows), columnLimit(columns) {
-}
-
-//******************
-// SpatialIndexGrid
-//******************
-template< class type, int rows, int columns>
-inline SpatialIndexGrid<type, rows, columns>::SpatialIndexGrid(const int cellWidth, const int cellHeight) : cellWidth(cellWidth), cellHeight(cellHeight),
-																													rowLimit(rows), columnLimit(columns) {
-}
-
-//******************
-// SpatialIndexGrid
-//******************
-template< class type, int rows, int columns>
-inline SpatialIndexGrid<type, rows, columns>::SpatialIndexGrid(const int cellWidth, const int cellHeight,
-																const int maxRows, const int maxColumns,
-																const type & invalidCell) : cellWidth(cellWidth), cellHeight(cellHeight),
-																							rowLimit(maxRows), columnLimit(maxColumns), INVALID_CELL(invalidCell) {
 }
 
 //******************
 // Index
 // sets the reference row and column to
 // grid-area-scaled values using the given point
-// users must check for invalid return values
+// snaps out of bounds points to the closest cell
 //******************
 template< class type, int rows, int columns>
 inline void SpatialIndexGrid<type, rows, columns>::Index(const eVec2 & point, int & row, int & column)  const {
 
-	if (cellWidth == 0 || cellHeight == 0) {
-		row = invalidIndex;
-		column = invalidIndex;
-		return;
-	}
-
 	row = (int)(point.x / cellWidth);
 	column = (int)(point.y / cellHeight);
+	
+	if (row < 0)
+		row = 0;
+	else if (row >= rowLimit)
+		row = rowLimit - 1;
 
-	if (row < 0 || row >= rowLimit)
-		row = invalidIndex;
-
-	if (column < 0 || column >= columnLimit)
-		column = invalidIndex;
+	if (column < 0)
+		column = 0;
+	else if (column >= columnLimit)
+		column = columnLimit - 1;
 }
 
 //******************
 // Index
-// returns a pointer to cells[r][c] closest to the given point
+// returns cells[row][column] closest to the given point
 // to allow modification of the cell value
-// users must check for nullptr return value
+// users must ensure inputs are within bounds
 //******************
 template< class type, int rows, int columns>
-inline type * SpatialIndexGrid<type, rows, columns>::Index(const eVec2 & point) {
+inline type & SpatialIndexGrid<type, rows, columns>::Index(const eVec2 & point) {
 	int row;
 	int column;
 
 	Index(point, row, column);
-	if (row == invalidIndex || column == invalidIndex)
-		return nullptr;
-
-	return &cells[row][column];
+	return cells[row][column];
 }
 
 //******************
 // Index
-// returns a pointer to cells[row][column]
-// to allow modification of the cell value
-// users must check for nullptr return value
+// returns cells[row][column] closest to the given point
+// users must ensure inputs are within bounds
 //******************
 template< class type, int rows, int columns>
-inline type * SpatialIndexGrid<type, rows, columns>::Index(const int row, const int column) {
-
-	if (row < 0 || row >= rowLimit || column < 0 || column >= columnLimit)
-		return nullptr;
-
-	return &cells[row][column];
-}
-
-//******************
-// Cell
-// returns cells[row][column] or INVALID_CELL if out of bounds
-// users must check for SpatialIndexGrid<type, rows, columns>::INVALID_CELL return value
-//******************
-template< class type, int rows, int columns>
-inline const type & SpatialIndexGrid<type, rows, columns>::Cell(const int row, const int column) const {
-
-	if (row < 0 || row >= rowLimit || column < 0 || column >= columnLimit)
-		return invalidCell;
-
-	return cells[row][column];
-}
-
-//******************
-// Cell
-// returns cells[r][c] closest to the given point or INVALID_CELL if out of bounds
-// users must check for SpatialIndexGrid<type, rows, columns>::INVALID_CELL return values
-//******************
-template< class type, int rows, int columns>
-inline const type & SpatialIndexGrid<type, rows, columns>::Cell(const eVec2 & point) const {
+inline type SpatialIndexGrid<type, rows, columns>::Index(const eVec2 & point) const {
 	int row;
 	int column;
 
 	Index(point, row, column);
-	if (row == invalidIndex || column == invalidIndex)
-		return invalidCell;
-
 	return cells[row][column];
 }
 
 //******************
-// InvalidIndex
+// Index
+// returns cells[row][column]
+// to allow modification of the cell value
+// users must ensure inputs are within bounds
 //******************
 template< class type, int rows, int columns>
-inline const int SpatialIndexGrid<type, rows, columns>::InvalidIndex() const {
-	return invalidIndex;
+inline type & SpatialIndexGrid<type, rows, columns>::Index(const int row, const int column) {
+	return cells[row][column];
 }
 
 //******************
-// InvalidCell
+// Index
+// returns cells[row][column]
+// users must ensure inputs are within bounds
 //******************
 template< class type, int rows, int columns>
-inline const type & SpatialIndexGrid<type, rows, columns>::InvalidCell() const {
-	return invalidCell;
-}
-
-//******************
-// SetInvalidCell
-//******************
-template< class type, int rows, int columns>
-inline void SpatialIndexGrid<type, rows, columns>::SetInvalidCell(const type & invalidCell) {
-	this->invalidCell = invalidCell;
+inline type SpatialIndexGrid<type, rows, columns>::Index(const int row, const int column) const {
+	return cells[row][column];
 }
 
 //******************
@@ -226,18 +159,20 @@ inline int SpatialIndexGrid<type, rows, columns>::CellHeight() const {
 
 //******************
 // SetCellWidth
+// minimum width is 1
 //******************
 template< class type, int rows, int columns>
 inline void SpatialIndexGrid<type, rows, columns>::SetCellWidth(const int cellWidth) {
-	this->cellWidth = cellWidth;
+	this->cellWidth = cellWidth > 0 ? cellWidth : 1;
 }
 
 //******************
 // SetCellHeight
+// minimum height is 1
 //******************
 template< class type, int rows, int columns>
 inline void SpatialIndexGrid<type, rows, columns>::SetCellHeight(const int cellHeight) {
-	this->cellHeight = cellHeight;
+	this->cellHeight = cellHeight > 0 ? cellHeight : 1;
 }
 
 //******************
@@ -258,18 +193,20 @@ inline int SpatialIndexGrid<type, rows, columns>::ColumnLimit() const {
 
 //******************
 // SetRowLimit
+// minimum limit is 1
 //******************
 template< class type, int rows, int columns>
 inline void SpatialIndexGrid<type, rows, columns>::SetRowLimit(const int maxRows) {
-	rowLimit = maxRows;
+	rowLimit = maxRows > 0 ? maxRows : 1;
 }
 
 //******************
 // SetColumnLimit
+// minimum limit is 1
 //******************
 template< class type, int rows, int columns>
 inline void SpatialIndexGrid<type, rows, columns>::SetColumnLimit(const int maxColumns) {
-	columnLimit = maxColumns;
+	columnLimit = maxColumns > 0 ? maxColumns : 1;
 }
 
 //******************

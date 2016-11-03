@@ -12,6 +12,7 @@ typedef unsigned char byte_t;
 // FIXME: reduce the scope of these somehow?
 #define MAX_MAP_ROWS 256
 #define MAX_MAP_COLUMNS 256
+#define MAX_ENTITIES 4096
 
 template<class type, int rows, int columns>
 class SpatialIndexGrid;

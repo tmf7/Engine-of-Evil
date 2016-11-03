@@ -1,28 +1,33 @@
 #include "Entity.h"
 #include "Game.h"
 
-// FIXME: these variable names are too verbose and not specific enough
+//***************
+// Entity::Entity
+//***************
 Entity::Entity() {
 	speed = MAX_SPEED;
-	size = 15;
+	modelBounds.ExpandSelf(8);	// 16 x 16 square with (0, 0) at its center
 	sightRange = 128.0f;
 	goalRange = speed;
 	rotationQuat_Z.Set(0.0f, 0.0f, SDL_sinf(DEG2RAD(ROTATION_INCREMENT) / 2.0f), SDL_cosf(DEG2RAD(ROTATION_INCREMENT) / 2.0f));
 	touch.reach = 1;
 }
 
-// TODO: insert use of the sourceRect for initial frame of animation
+//***************
+// Entity::Init
+// TODO: set the initial frame of animation
+//***************
 bool Entity::Init(char fileName[], bool key, Game * const game) {
-
-	SDL_Surface* surface = NULL;
-
-	if (!game || !game->GetMap())
-		return false;
+	SDL_Surface * surface = NULL;
 
 	this->game = game;
 
 	if (!fileName[0])
 		return false;
+
+//////////////////////////////
+	// FIXME: make this part of the ImageManager class which is a hashtable dictionary of unique image data
+	// and just do sprite.SetSource(imageManager->Image("hero")); here
 
 	surface = SDL_LoadBMP(fileName);
 
@@ -36,21 +41,18 @@ bool Entity::Init(char fileName[], bool key, Game * const game) {
 
 	if (sprite && key) {
 
-		Uint32 colorKey = SDL_MapRGB(sprite->format, 255, 0, 255);
+		Uint32 colorKey = SDL_MapRGB(sprite->format, 255, 0, 255);	// FIXME: sprite originally a SDL_Surface *
 		SDL_SetColorKey(sprite, SDL_TRUE, colorKey);
 	}
+///////////////////////////////
 
-	collisionRadius = (float)((sprite->w * sprite->w) + (sprite->h * sprite->h));
-	collisionRadius = SDL_sqrtf(collisionRadius);
-	collisionRadius /= 2.0f;
+	collisionRadius = modelBounds.Radius();
 
-	// FIXME(?): this relies on the map being initialized already
-	// knownMap dimensions
-	knownMap.SetInvalidCell((byte_t)-1);		// largest possible unsigned char == 255
-	knownMap.SetCellWidth(game->GetMap()->TileMap().CellWidth());	// FIXME(?): GetMap() or game might be null, use reference
-	knownMap.SetCellHeight(game->GetMap()->TileMap().CellHeight());
-	knownMap.SetRowLimit(game->GetMap()->TileMap().RowLimit());
-	knownMap.SetColumnLimit(game->GetMap()->TileMap().ColumnLimit());
+	// knownMap dimensions, based in initialized tileMap dimensions
+	knownMap.SetCellWidth(game->Map().TileMap().CellWidth());
+	knownMap.SetCellHeight(game->Map().TileMap().CellHeight());
+	knownMap.SetRowLimit(game->Map().TileMap().RowLimit());
+	knownMap.SetColumnLimit(game->Map().TileMap().ColumnLimit());
 	knownMap.ClearAllCells();
 
 	Spawn();
@@ -58,77 +60,77 @@ bool Entity::Init(char fileName[], bool key, Game * const game) {
 	return true;
 }
 
-void Entity::Free() {
-
-	if (sprite) {
-		SDL_FreeSurface(sprite);
-		sprite = NULL;
-	}
-}
-
-// FIXME(?): GetMapIndex(row,column) can return -1 if the row or column is out of bounds
-// FIXME: if radius exceeds the map's size in either direction, generate a new map (or local area)
+//***************
+// Entity::Spawn
+// Places the entity on the top-leftmost walkable tile (in an expanding block "radius")
+// FIXME: 5 is a "magic number" here that should be eliminated (goal was to position entity near center of checked tile)
+// FIXME: the testPoint is now set to the center of the sprite, which means that the top-left may overlap an untested tile
+// TODO: if search radius exceeds the map's size in either direction, generate a new map
 // TODO: determine a failure to spawn condition (ie when to return false)
-// TODO: create different enums for AI placement, including specific positions
-// Place the entity on the top-leftmost walkable tile (in an expanding block "radius")
+// TODO: call a GetSpawnPoint() to use a list of (semi-)pre-defined spawn points
+//***************
 void Entity::Spawn() {
 	eVec2 testPoint;
 	int i, j;
-	int radius = 1;
-	bool entity_placed = false;
+	int radius;
+	bool success;
 
-	// Check the top-left corner first
+	// Check the top-left corner tile first
 	testPoint.Set(5.0f, 5.0f);
-	if (game->GetMap()->IsValid( testPoint ) ) {
+	if (game->Map().IsValid(testPoint) ) {
 
-		spritePos = testPoint;
-		UpdateCenter();
-		currentTile = knownMap.Index(0, 0);
+		SetPosition(testPoint);
+		currentTile = &knownMap.Index(0, 0);
 		lastTrailTile = nullptr;
 		return;
 	}
 
+	radius = 1;
+	success = false;
 	// Expand the search
-	while (!entity_placed) {
+	while (!success) {
 
 		// down from the top
 		for (i = radius, j = 0; j <= radius; j++) {
 
 			testPoint.Set((float)(i * knownMap.CellWidth() + 5), (float)(j * knownMap.CellHeight() + 5));
-			if (game->GetMap()->IsValid( testPoint ) ) {
-				spritePos = testPoint;
-				entity_placed = true;
+			if (game->Map().IsValid(testPoint) ) {
+				SetPosition(testPoint);
+				success = true;
 				break;
 			}
 		}
 
-		// TODO: test to ensure this loop isnt entered if (entity_placed)
 		// in from the bottom of the last search
-		for (i = radius - 1, j = radius; i >= 0 && !entity_placed; i--) {
+		for (i = radius - 1, j = radius; i >= 0 && !success; i--) {
 
 			testPoint.Set((float)(i * knownMap.CellWidth() + 5), (float)(j * knownMap.CellHeight() + 5));
-			if (game->GetMap()->IsValid( testPoint ) ) {
-				spritePos = testPoint;
-				entity_placed = true;
+			if (game->Map().IsValid(testPoint) ) {
+				SetPosition(testPoint);
+				success = true;
 				break;
 			}
 		}
 
 		radius++;
 	}
-	UpdateCenter();
-	currentTile = knownMap.Index(i, j);
+	currentTile = &knownMap.Index(i, j);
 	lastTrailTile = nullptr;
 }
 
-// TODO: add animation frame selection here
+//***************
+// Entity::Update
+// selects and updates a pathfinding type (eg: waypoint+obstacle avoid, A* optimal path, wall follow, Area awareness, raw compass?, etc)
+// then draws the entity (and debug info)
+// TODO: change/initialize the movement type under specific conditions (EVENTS?)
+// TODO: give this a broader functionality beyond pure AI movement (ie player input)
+// TODO: animate the entity sprite appropriately
+//***************
 void Entity::Update() {
-
 	SDL_Rect destRect;
 	eVec2 debugVector = ORIGIN_VEC2;
-	eVec2 debugWaypoint;
+	eVec2 debugPoint;
 	float rotationAngle;
-	int collisionX, collisionY;
 	int node;
 	int pink[3] = { 255, 0, 255 };
 	int blue[3] = { 0,0,255 };
@@ -140,11 +142,7 @@ void Entity::Update() {
 		knownMap.ClearAllCells();
 // END FREEHIL DEBUG knownMap memset test
 
-	// change/initialize the movement type under specific conditions
-	// TODO: give this a broader functionality beyond pure AI movement (ie player input)
-	// Ultimate Goal: select a pathfinding type (eg: waypoint+obstacle avoid, A* optimal path, wall follow, Area awareness, raw compass?, etc)
 	static bool movementInitialized = false;
-
 	if (!movementInitialized) {
 		moveState = MOVE_TO_GOAL;
 		StopMoving();
@@ -159,36 +157,28 @@ void Entity::Update() {
 
 	((*this).*Move)();
 
+////////////////////////////////////////////////////////////////////////////////////
+
 	// draw all waypoints
-	// FIXME: draws regardless if they're visible
 	node = 0;
 	while(node < goals.Size()) {
-		debugWaypoint = goals.FromBack(node);
-
-		destRect.x = (int)(debugWaypoint.x - game->GetMap()->camera.position.x);
-		destRect.y = (int)(debugWaypoint.y - game->GetMap()->camera.position.y);
-		SDL_BlitSurface(sprite, NULL, game->GetBuffer(), &destRect);
+		debugPoint = goals.FromBack(node) - game->Map().camera.origin;							// absOrigin of a bounds
+		game->Renderer().DrawImage(sprite.GetImage(), (eBounds(debugPoint).ExpandSelf(8))[0]);	// top-left corner
 		node++;
 		
 	}
 
 	node = 0;
 	while (node < trail.Size()) {
-		debugWaypoint = trail.FromFront(node);
-
-		destRect.x = (int)(debugWaypoint.x - game->GetMap()->camera.position.x);
-		destRect.y = (int)(debugWaypoint.y - game->GetMap()->camera.position.y);
-		SDL_BlitSurface(sprite, NULL, game->GetBuffer(), &destRect);
+		debugPoint = trail.FromFront(node) - game->Map().camera.origin;							// absOrigin of a bounds
+		game->Renderer().DrawImage(sprite.GetImage(), (eBounds(debugPoint).ExpandSelf(8))[0]);	// top-left corner
 		node++;
 	}
 
-	// draw sprite 
-	// FIXME: draws regardless if it's visible
-	destRect.x = (int)(spritePos.x - game->GetMap()->camera.position.x);
-	destRect.y = (int)(spritePos.y - game->GetMap()->camera.position.y);
-	SDL_BlitSurface(sprite, NULL, game->GetBuffer(), &destRect);
+	// draw sprite
+	game->Renderer().DrawSprite(&sprite, absBounds[0]);
 
-	// FREEHILL BEGIN DEBUG COLLISION CIRCLE
+// FREEHILL BEGIN DEBUG COLLISION CIRCLE
 
 	// draws one pink pixel for each unique x,y point on the current collision circle 
 	// FIXME: draws regardless if they're visible
@@ -201,19 +191,21 @@ void Entity::Update() {
 	while (rotationAngle < 360.0f) {
 
 		if (forward.vector*debugVector >= 0) {
-
-			collisionX = (int)(spriteCenter.x + (collisionRadius*debugVector.x) - game->GetMap()->camera.position.x);
-			collisionY = (int)(spriteCenter.y + (collisionRadius*debugVector.y) - game->GetMap()->camera.position.y);
-			DrawPixel(game->GetBuffer(), collisionX, collisionY, color[0], color[1], color[2]);
+			debugPoint = origin + (debugVector * collisionRadius) - game->Map().camera.origin;
+			game->Renderer().DrawPixel(debugPoint, color[0], color[1], color[2]);
 		}
 		debugVector = rotationQuat_Z*debugVector;	// rotate counter-clockwise
 		rotationAngle += ROTATION_INCREMENT;
 	}
-	// FREEHILL END DEBUG COLLISION CIRCLE
-
+// FREEHILL END DEBUG COLLISION CIRCLE
+////////////////////////////////////////////////////////////////////////////
 	PrintSensors();
+
 }
 
+//***************
+// Entity::WaypointFollow
+//***************
 void Entity::WaypointFollow() {
 	byte_t * checkTile;
 
@@ -224,29 +216,28 @@ void Entity::WaypointFollow() {
 	UpdateVector();
 	UpdatePosition();
 
-	if ( spriteCenter.Compare(currentWaypoint, goalRange) ) {
+	if ( origin.Compare(currentWaypoint, goalRange) ) {
 		StopMoving();
 		UpdateWaypoint(true);
 	}
 
 	// mark the tile to help future movement decision
-	checkTile = knownMap.Index(spriteCenter);
-	if ( checkTile != nullptr && checkTile != currentTile ) {
+	checkTile = &knownMap.Index(origin);
+	if ( checkTile != currentTile ) {
 		UpdateKnownMap();
 		currentTile = checkTile;
 	}
-
 }
 
+//***************
+// Entity::WallFollow
+//***************
 void Entity::WallFollow() {
 
 	oldMoveState = moveState;
-
-	spritePos.x -= speed * (moveState == MOVE_LEFT);
-	spritePos.x += speed * (moveState == MOVE_RIGHT);
-
+	forward.vector = eVec2(speed * ((moveState == MOVE_RIGHT) - (moveState == MOVE_LEFT)), 0.0f);
+	UpdatePosition();
 	CheckCollision();
-	UpdateCenter();
 
 	switch (moveState) {
 
@@ -287,11 +278,9 @@ void Entity::WallFollow() {
 		}
 	}
 
-	spritePos.y -= speed * (moveState == MOVE_UP);
-	spritePos.y += speed * (moveState == MOVE_DOWN);
-
+	forward.vector = eVec2(0.0f, speed * ((moveState == MOVE_DOWN) - (moveState == MOVE_UP)));
+	UpdatePosition();
 	CheckCollision();
-	UpdateCenter();
 
 	switch (moveState) {
 
@@ -330,7 +319,7 @@ void Entity::WallFollow() {
 }
 
 //******************
-// UpdateVector
+// Entity::UpdateVector
 // Determines the optimal movement vector to reach the current waypoint
 //******************
 void Entity::UpdateVector() {
@@ -366,7 +355,7 @@ void Entity::UpdateVector() {
 			UpdateKnownMap();
 	}
 
-	waypoint.vector = currentWaypoint - spriteCenter;
+	waypoint.vector = currentWaypoint - origin;
 	if (moveState == MOVE_TO_GOAL) {							// FIXME/BUG(?): stays slow if it was slow and switched to MOVE_TO_TRAIL
 		distToWaypointSqr = waypoint.vector.LengthSquared();	// TODO: potentially use this value in UpdateKnownMap();
 
@@ -386,8 +375,8 @@ void Entity::UpdateVector() {
 
 		// check how clear the path is starting one step along it
 		// and head straight for the waypoint if the test.vector path crosses extremely near it
-		if ( CheckVectorPath( spriteCenter+(test.vector*speed), test ) ) {
-			if (CheckVectorPath( spriteCenter+(waypoint.vector*speed), waypoint) )
+		if ( CheckVectorPath( origin+(test.vector*speed), test ) ) {
+			if (CheckVectorPath( origin+(waypoint.vector*speed), waypoint) )
 				forward = waypoint;
 			else
 				forward = test;
@@ -441,13 +430,13 @@ void Entity::UpdateVector() {
 
 	// drop a trail waypoint and reset to UNKNOWN_TILE any overwritten trail waypoints
 	if ( moving && moveState == MOVE_TO_GOAL &&  oldForward != ZERO_VEC2 &&  lastTrailTile != currentTile ) {
-		trail.PushFront(spriteCenter);
+		trail.PushFront(origin);
 		lastTrailTile = currentTile;
 	}
 }
 
 //******************
-// CheckVectorPath
+// Entity::CheckVectorPath
 // determines the state of the sprite's position for the next few frames
 // return true if a future position using along is near the waypoint
 //******************
@@ -465,7 +454,7 @@ bool Entity::CheckVectorPath(eVec2 from, decision_t & along) {
 		testPoint.y = from.y + (collisionRadius*along.vector.y);
 
 		// check for collision
-		if (!(game->GetMap()->IsValid(testPoint)))
+		if (!(game->Map().IsValid(testPoint)))
 			break;
 
 		// forward test point rotated clockwise 90 degrees
@@ -473,7 +462,7 @@ bool Entity::CheckVectorPath(eVec2 from, decision_t & along) {
 		testPoint.y = from.y - (collisionRadius*along.vector.x);
 
 		// check for collision
-		if (!(game->GetMap()->IsValid(testPoint)))
+		if (!(game->Map().IsValid(testPoint)))
 			break;
 
 		// forward test point rotated counter-clockwise 90 degrees
@@ -481,14 +470,14 @@ bool Entity::CheckVectorPath(eVec2 from, decision_t & along) {
 		testPoint.y = from.y + (collisionRadius*along.vector.x);
 
 		// check for collision
-		if (!(game->GetMap()->IsValid(testPoint)))
+		if (!(game->Map().IsValid(testPoint)))
 			break;
 
 		// all test points validated
 		along.validSteps++;
 
 		// check if the step falls on an unexplored tile
-		if (knownMap.Cell(from) == UNKNOWN_TILE)
+		if (knownMap.Index(from) == UNKNOWN_TILE)
 			newSteps++;
 
 		// check if the goal waypoint is near the center of the validated test position
@@ -508,7 +497,7 @@ bool Entity::CheckVectorPath(eVec2 from, decision_t & along) {
 }
 
 //**************
-// CheckWalls
+// Entity::CheckWalls
 // assigns the vectors perpendicular to the forward vector
 // and checks if the range along them has significantly changed
 //**************
@@ -519,9 +508,9 @@ void Entity::CheckWalls(int & walls) {
 	right.vector.Set(forward.vector.y, -forward.vector.x);	// forward rotated 90 degrees clockwise
 	left.vector.Set(-forward.vector.y, forward.vector.x);	// forward rotated 90 degrees counter-clockwise
 
-	CheckVectorPath(spriteCenter + (forward.vector*speed), forward);
-	CheckVectorPath(spriteCenter + (left.vector*speed), left);
-	CheckVectorPath(spriteCenter + (right.vector*speed), right);
+	CheckVectorPath(origin + (forward.vector*speed), forward);
+	CheckVectorPath(origin + (left.vector*speed), left);
+	CheckVectorPath(origin + (right.vector*speed), right);
 
 	walls = 0;
 	if (forward.validSteps == 0)
@@ -534,7 +523,7 @@ void Entity::CheckWalls(int & walls) {
 
 
 //******************
-// CheckFogOfWar
+// Entity::CheckFogOfWar
 // TODO: have the map object check if ANY of the team entities have visited a tile about to be drawn, if not draw black,
 // if so, then the map goes through all entities calling CheckFogOfWar, if ONE returns true then it'll stop sweep and draw bright,
 // if none return true by the end of the sweep, then draw dim ( reduce sweep time by using a locational Potential_Visible_Set )
@@ -542,53 +531,65 @@ void Entity::CheckWalls(int & walls) {
 bool Entity::CheckFogOfWar(const eVec2 & point) const {
 	eVec2 lineOfSight;
 
-	lineOfSight = point - spriteCenter;
+	lineOfSight = point - origin;
 	return lineOfSight.LengthSquared() <= sightRange;
 }
 
+//******************
+// Entity::CheckTouch
 // Sets a sensor bit for every point within the entity's range in a non-traversable area
 // self == true puts the sensors on the sprite's bounding box, 
 // self == false puts them at touchRange off the bounding box
 // --the entity effectively has 16 touch sensors--
+//******************
 void Entity::CheckTouch(bool self) {
 	
 	if (self) {	// on-sprite checks
 		touch.local.Clear();
 
 		// horizontally oriented sensors
-		touch.local.RIGHT_TOP		= !game->GetMap()->IsValid( eVec2(spritePos.x + size, spritePos.y + 1) );
-		touch.local.RIGHT_BOTTOM	= !game->GetMap()->IsValid( eVec2(spritePos.x + size, spritePos.y + size - 1) );
-		touch.local.LEFT_BOTTOM		= !game->GetMap()->IsValid( eVec2(spritePos.x, spritePos.y + size - 1) );
-		touch.local.LEFT_TOP		= !game->GetMap()->IsValid( eVec2(spritePos.x, spritePos.y + 1) );
+
+		// **********************************START HERE****************************
+		// TEST MODIFIED CODE using the bounds instead of the old top-left "spritePos" (size was 15):
+
+//		touch.local.RIGHT_TOP = !game->Map().IsValid(eVec2(absBounds[1].x - 1, absBounds[0].y + 1));
+		touch.local.RIGHT_TOP		= !game->Map().IsValid( eVec2(spritePos.x + size, spritePos.y + 1) );
+
+		touch.local.RIGHT_BOTTOM	= !game->Map().IsValid( eVec2(spritePos.x + size, spritePos.y + size - 1) );
+		touch.local.LEFT_BOTTOM		= !game->Map().IsValid( eVec2(spritePos.x, spritePos.y + size - 1) );
+		touch.local.LEFT_TOP		= !game->Map().IsValid( eVec2(spritePos.x, spritePos.y + 1) );
 
 		// vertically oriented sensors
-		touch.local.TOP_LEFT		= !game->GetMap()->IsValid( eVec2(spritePos.x + 1, spritePos.y) );
-		touch.local.TOP_RIGHT		= !game->GetMap()->IsValid( eVec2(spritePos.x + size - 1, spritePos.y) );
-		touch.local.BOTTOM_RIGHT	= !game->GetMap()->IsValid( eVec2(spritePos.x + size - 1, spritePos.y + size) );
-		touch.local.BOTTOM_LEFT		= !game->GetMap()->IsValid( eVec2(spritePos.x + 1, spritePos.y + size) );
+		touch.local.TOP_LEFT		= !game->Map().IsValid( eVec2(spritePos.x + 1, spritePos.y) );
+		touch.local.TOP_RIGHT		= !game->Map().IsValid( eVec2(spritePos.x + size - 1, spritePos.y) );
+		touch.local.BOTTOM_RIGHT	= !game->Map().IsValid( eVec2(spritePos.x + size - 1, spritePos.y + size) );
+		touch.local.BOTTOM_LEFT		= !game->Map().IsValid( eVec2(spritePos.x + 1, spritePos.y + size) );
 
 	} else { // ranged off-sprite checks
 		touch.oldRanged = touch.ranged;
 		touch.ranged.Clear();
 
 		// horizontally oriented sensors
-		touch.ranged.RIGHT_TOP		= !game->GetMap()->IsValid( eVec2(spritePos.x + size + touch.reach, spritePos.y) );
-		touch.ranged.RIGHT_BOTTOM	= !game->GetMap()->IsValid( eVec2(spritePos.x + size + touch.reach, spritePos.y + size) );
-		touch.ranged.LEFT_TOP		= !game->GetMap()->IsValid( eVec2(spritePos.x - touch.reach, spritePos.y) );
-		touch.ranged.LEFT_BOTTOM	= !game->GetMap()->IsValid( eVec2(spritePos.x - touch.reach, spritePos.y + size) );
+		touch.ranged.RIGHT_TOP		= !game->Map().IsValid( eVec2(spritePos.x + size + touch.reach, spritePos.y) );
+		touch.ranged.RIGHT_BOTTOM	= !game->Map().IsValid( eVec2(spritePos.x + size + touch.reach, spritePos.y + size) );
+		touch.ranged.LEFT_TOP		= !game->Map().IsValid( eVec2(spritePos.x - touch.reach, spritePos.y) );
+		touch.ranged.LEFT_BOTTOM	= !game->Map().IsValid( eVec2(spritePos.x - touch.reach, spritePos.y + size) );
 
 		// vertically oriented sensors
-		touch.ranged.TOP_RIGHT		= !game->GetMap()->IsValid( eVec2(spritePos.x + size, spritePos.y - touch.reach) );
-		touch.ranged.TOP_LEFT		= !game->GetMap()->IsValid( eVec2(spritePos.x, spritePos.y - touch.reach) );
-		touch.ranged.BOTTOM_RIGHT	= !game->GetMap()->IsValid( eVec2(spritePos.x + size, spritePos.y + size + touch.reach) );
-		touch.ranged.BOTTOM_LEFT	= !game->GetMap()->IsValid( eVec2(spritePos.x, spritePos.y + size + touch.reach) );
+		touch.ranged.TOP_RIGHT		= !game->Map().IsValid( eVec2(spritePos.x + size, spritePos.y - touch.reach) );
+		touch.ranged.TOP_LEFT		= !game->Map().IsValid( eVec2(spritePos.x, spritePos.y - touch.reach) );
+		touch.ranged.BOTTOM_RIGHT	= !game->Map().IsValid( eVec2(spritePos.x + size, spritePos.y + size + touch.reach) );
+		touch.ranged.BOTTOM_LEFT	= !game->Map().IsValid( eVec2(spritePos.x, spritePos.y + size + touch.reach) );
 	}
 }
 
+//******************
+// Entity::CheckCollision
 // TODO(?): have CheckTouch return a bool if any of the requested sensors are triggered
 // TODO: give Entity a Rectangle object to act as its bounding box
 // FIXME: should this belong to the Map class? or a Collision class? or stay here?
 // Isolated check for overlap into non-traversable areas, and immediate sprite position correction
+//******************
 void Entity::CheckCollision() {
 
 	// FIXME: the goal of this function is to snap to the most appropriate tile edge 
@@ -674,7 +675,11 @@ void Entity::CheckCollision() {
 	}
 }
 
-// DEBUGGING
+//******************
+// Entity::PrintSensors
+// debug screen printout of 8 ranged entity touch sensors' statuses
+// TODO(?): make a toggleable console, then print text to that
+//******************
 void Entity::PrintSensors() {
 
 	char buffer[64];
@@ -682,53 +687,34 @@ void Entity::PrintSensors() {
 	// touch sensors
 	sprintf_s(buffer, "%s|%s", touch.ranged.TOP_LEFT ? "TL" : " ",
 		touch.ranged.TOP_RIGHT ? "TR" : " ");
-	game->DrawOutlineText(buffer, 100, 150, 255, 0, 0);
+	game->Renderer().DrawOutlineText(buffer, eVec2(100.0f, 150.0f), 255, 0, 0);
 
 	sprintf_s(buffer, "%s|%s", touch.ranged.RIGHT_TOP ? "RT" : " ",
 		touch.ranged.RIGHT_BOTTOM ? "RB" : " ");
-	game->DrawOutlineText(buffer, 200, 200, 0, 255, 0);
+	game->Renderer().DrawOutlineText(buffer, eVec2(200.0f, 200.0f), 0, 255, 0);
 
 	sprintf_s(buffer, "%s|%s", touch.ranged.BOTTOM_RIGHT ? "BR" : " ",
 		touch.ranged.BOTTOM_LEFT ? "BL" : " ");
-	game->DrawOutlineText(buffer, 150, 250, 0, 0, 255);
+	game->Renderer().DrawOutlineText(buffer, eVec2(150.0f, 250.0f), 0, 0, 255);
 
 	sprintf_s(buffer, "%s|%s", touch.ranged.LEFT_BOTTOM ? "LB" : " ",
 		touch.ranged.LEFT_TOP ? "LT" : " ");
-	game->DrawOutlineText(buffer, 50, 200, 255, 255, 0);
+	game->Renderer().DrawOutlineText(buffer, eVec2(50.0f, 200.0f), 255, 255, 0);
 
 	// FIXME: account for diagonal motion on printout
 	// movement direction
 	sprintf_s(buffer, "%s", moveState == MOVE_UP ? "UP" : moveState == MOVE_DOWN ? "DOWN" : moveState == MOVE_RIGHT ? "RIGHT" : moveState == MOVE_LEFT ? "LEFT" : " ");
-	game->DrawOutlineText(buffer, 150, 300, 255, 255, 0);
+	game->Renderer().DrawOutlineText(buffer, eVec2(150.0f, 300.0f), 255, 255, 0);
 
 	// sprite position (top-left corner of bounding box)
-	sprintf_s(buffer, "%i, %i", (int)spritePos.x, (int)spritePos.y);
-	game->DrawOutlineText(buffer, 150, 350, 255, 255, 255);
+	sprintf_s(buffer, "%i, %i", (int)origin.x, (int)origin.y);
+	game->Renderer().DrawOutlineText(buffer, eVec2(150.0f, 350.0f), 255, 255, 255);
 
 }
 
-// FIXME: make this a member funciton of a Graphics class
-void Entity::DrawPixel(SDL_Surface *surface, int x, int y, Uint8 r, Uint8 g, Uint8 b) {
-	if (SDL_MUSTLOCK(surface)) {
-		if (SDL_LockSurface(surface) < 0)
-			return;
-	}
-
-	if (x >= surface->w || x < 0 || y >= surface->h || y < 0)
-		return;
-
-	Uint32 *buffer;
-	Uint32 color;
-
-	color = SDL_MapRGB(surface->format, r, g, b);
-
-	buffer = (Uint32*)surface->pixels + y*surface->pitch / 4 + x;
-	(*buffer) = color;
-
-	if (SDL_MUSTLOCK(surface))
-		SDL_UnlockSurface(surface);
-}
-
+//******************
+// Entity::StopMoving
+//******************
 void Entity::StopMoving() {
 	forward.vector.Zero();
 	left.vector.Zero();
@@ -736,14 +722,22 @@ void Entity::StopMoving() {
 	moving = false;
 }
 
+//******************
+// Entity::AddUserWaypoint
+//******************
 void Entity::AddUserWaypoint(const eVec2 & waypoint) {
-	if (game->GetMap()->IsValid(waypoint)) {
+
+	if (game->Map().IsValid(waypoint)) {
 		goals.PushFront(waypoint);
 		UpdateWaypoint();
 	}
 }
 
+//******************
+// Entity::StopMoving
 // returns false if there's no waypoints available
+// TODO: make currentWaypoint a pointer, then set it to nullptr if there's no waypoints, then make this void return-type
+//******************
 bool Entity::UpdateWaypoint( bool getNext ) {
 	switch (moveState) {
 		case MOVE_TO_GOAL: {
@@ -776,7 +770,10 @@ bool Entity::UpdateWaypoint( bool getNext ) {
 	}
 }
 
+//******************
+// Entity::CheckTrail
 // determine if the entity should fresh-start goal pathfinding
+//******************
 bool Entity::CheckTrail() {
 	if (trail.IsEmpty()) {
 		knownMap.ClearAllCells();
@@ -786,10 +783,12 @@ bool Entity::CheckTrail() {
 	return false;
 }
 
+//******************
+// Entity::UpdateKnownMap
 // marks the currentTile as VISITED_TILE, clears out un-needed trail waypoints,
 // and resets tiles around the current goal waypoint to UNKNOWN_TILE
+//******************
 void Entity::UpdateKnownMap() {
-	byte_t * goalTile;
 	int row, column;
 	int startRow, startCol;
 	int endRow, endCol;
@@ -801,15 +800,10 @@ void Entity::UpdateKnownMap() {
 
 	// solid-box of tiles at the tileResetRange centered on **the current goal waypoint** to to reset the knownMap:
 	if ( !goals.IsEmpty() ) {
-		tileResetRange = (int)( (goals.Back() - spriteCenter).Length() / (knownMap.CellWidth() * 2) );
+		tileResetRange = (int)( (goals.Back() - origin).Length() / (knownMap.CellWidth() * 2) );
 
-		goalTile = knownMap.Index(goals.Back());
-		if (goalTile == nullptr)
-			return;
-
-		// knownMap indexes of goalTile, that is goalTile == &knownMap[row][column]
-		row			= (goalTile - knownMap.Index(0, 0)) / MAX_MAP_COLUMNS;
-		column		= (goalTile - knownMap.Index(0, 0)) % MAX_MAP_COLUMNS;
+		// find the knownMap row and column of the current goal waypoint
+		knownMap.Index(goals.Back(), row, column);
 
 		// set initial bounding box top-left and bottom-right indexes within knownMap
 		startRow	= row - (tileResetRange / 2);
@@ -817,19 +811,14 @@ void Entity::UpdateKnownMap() {
 		endRow		= row + (tileResetRange / 2);
 		endCol		= column + (tileResetRange / 2);
 
-		// range-correct the bounding box
 		// snap bounding box rows & columns within range of the tileMap area
 		if (startRow < 0)
 			startRow = 0;
-//		else if (startRow >= knownMapRows || startCol >= knownMapCols)	// starts below or to the right of tileMap area
-//			return;														// never occurs because goalTile is always on the tileMap
 		if (startCol < 0)
 			startCol = 0;
 
 		if (endRow >= knownMap.RowLimit())
 			endRow = knownMap.RowLimit() - 1;
-//		else if (endRow < 0 || endCol < 0)								// ends above or to the left of tileMap area
-//			return;														// never occurs because goalTile is always on the tileMap
 		if (endCol >= knownMap.ColumnLimit())
 			endCol = knownMap.ColumnLimit() - 1;
 
@@ -837,7 +826,7 @@ void Entity::UpdateKnownMap() {
 		row = startRow;
 		column = startCol;
 		while ( row <= endRow ) {
-			*knownMap.Index(row, column) = UNKNOWN_TILE;
+			knownMap.Index(row, column) = UNKNOWN_TILE;
 
 			column++;
 			if (column > endCol) {
@@ -847,61 +836,12 @@ void Entity::UpdateKnownMap() {
 		}
 	}
 
-/*
-// FREEHILL begin currentTile knownMap reset box test
-	// perimiter-box of tiles at the tileResetRange centered on **the currentTile** to to reset the knownMap:
-	// column of tiles to the left
-	for (i = -tileResetRange, j = -tileResetRange; j <= tileResetRange; j++) {
-		offset = i * MAX_MAP_SIZE + j;
-
-		resetTile = currentTile + offset;
-		if (resetTile >= &knownMap[0][0] && resetTile <= knownMapEnd)
-			 *resetTile = UNKNOWN_TILE;
-	}
-
-	// column of tiles to the right
-	for (i = tileResetRange, j = -tileResetRange; j <= tileResetRange; j++) {
-		offset = i * MAX_MAP_SIZE + j;
-
-		resetTile = currentTile + offset;
-		if (resetTile >= &knownMap[0][0] && resetTile <= knownMapEnd)
-			*resetTile = UNKNOWN_TILE;
-	}
-
-	// row of tiles above
-	for (i = -tileResetRange, j = -tileResetRange; i <= tileResetRange; i++) {
-		offset = i * MAX_MAP_SIZE + j;
-
-		resetTile = currentTile + offset;
-		if (resetTile >= &knownMap[0][0] && resetTile <= knownMapEnd)
-			*resetTile = UNKNOWN_TILE;
-	}
-
-	// row of tiles below
-	for (i = -tileResetRange, j = tileResetRange; i <= tileResetRange; i++) {
-		offset = i * MAX_MAP_SIZE + j;
-
-		resetTile = currentTile + offset;
-		if (resetTile >= &knownMap[0][0] && resetTile <= knownMapEnd)
-			*resetTile = UNKNOWN_TILE;
-	}
-// FREEHILL begin currentTile knownMap reset box test
-*/
 	// pop all trail waypoints that no longer fall on VISITED_TILEs
 	while (!trail.IsEmpty()) {
-		if (knownMap.Cell(trail.Back()) == UNKNOWN_TILE)
+		if (knownMap.Index(trail.Back()) == UNKNOWN_TILE)
 			trail.PopBack();
 		else
 			break;
 	}
 }
 
-void Entity::UpdatePosition() {
-	spritePos += forward.vector*speed;
-	UpdateCenter();
-}
-
-void Entity::SetPosition(const eVec2 & point) {
-	spritePos.Set(point.x, point.y);
-	UpdateCenter();
-}

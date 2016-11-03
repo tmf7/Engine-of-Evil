@@ -5,6 +5,8 @@
 #include "Deque.h"
 #include "Math.h"
 #include "SpatialIndexGrid.h"
+#include "Sprite.h"
+#include "Bounds.h"
 
 /*
 An entity will be any object in game, be it an AI, a Player, an inanimate object, 
@@ -54,6 +56,20 @@ class Game;
 // Entity
 //******************
 class Entity {
+public:
+
+	Entity();
+
+	bool				Init(char fileName[], bool key, Game * const game);
+	void				Spawn();
+	void				Update();
+	void				(Entity::*Move)(void);					// TODO: move this to an AI : Entity class and/or make virtual
+
+	void				AddUserWaypoint(const eVec2 & waypoint); // TODO: move this to an AI : Entity class
+	void				SetPosition(const eVec2 & point);
+
+	const ai_map_t &	KnownMap() const;
+
 private:
 
 	// used to decide on a new movement direction
@@ -93,17 +109,21 @@ private:
 	};
 
 	Game *				game;
-	SDL_Surface *		sprite;
-	eVec2				spritePos;
-	eVec2				spriteCenter;
-	size_t				size;					// FIXME: currently assumes uniform sprite width and height
+	Sprite				sprite;	
+	eBounds				modelBounds;			// using model coordinates
+	eBounds				absBounds;				// using map coordinates
+	eVec2				origin;
+	eVec2				velocity;
+	float				speed;
 
 	ai_map_t			knownMap;				// tracks visited tiles from the game_map_t tileMap; in Map class
 
 	int					moveState;
 	int					oldMoveState;
-	float				speed;
+
 	float				collisionRadius;		// circular collision radius for prediction when using line of sight
+												// TODO(?): use modelBounds.Radius() instead? (implies sqrt each frame though...)
+
 	float				goalRange;				// acceptable range to snap sprite position to user-defined waypoint
 
 	float				sightRange;				// range of drawable visibility (fog of war)
@@ -113,8 +133,8 @@ private:
 	eVec2				currentWaypoint;		// simplifies switching between the deque being tracked
 
 	decision_t			forward;				// currently used movement vector
-	decision_t			left;					// perpendicular to forward_v counter-clockwise
-	decision_t			right;					// perpendicular to forward_v clockwise
+	decision_t			left;					// perpendicular to forward.vector counter-clockwise
+	decision_t			right;					// perpendicular to forward.vector clockwise
 	eQuat				rotationQuat_Z;			// to rotate any vector about z-axis
 	byte_t *			currentTile;			// to track where the sprite has been more accurately
 	byte_t *			lastTrailTile;			// tile on which the last trail waypoint was placed (prevents redundant placement)
@@ -142,35 +162,28 @@ private:
 	void				UpdateKnownMap();
 
 	void				UpdatePosition();
-	void				UpdateCenter();
-
-	void				DrawPixel(SDL_Surface *surface, int x, int y, Uint8 r, Uint8 g, Uint8 b); // DEBUG: collision circle testing
-	
-public:
-
-						Entity();
-
-	bool				Init(char fileName[], bool key, Game * const game);
-	void				Free();
-	void				Spawn();
-	void				Update();
-	void				(Entity::*Move)(void);					// TODO: move this to an AI : Entity class and/or make virtual
-
-	void				AddUserWaypoint(const eVec2 & waypoint); // TODO: move this to an AI : Entity class
-	void				SetPosition(const eVec2 & point);
-	const eVec2 &		Center() const;
-
-	const ai_map_t &	KnownMap() const;
 };
 
-inline const eVec2 & Entity::Center() const {
-	return spriteCenter;
+//*************
+// Entity::UpdatePosition
+//*************
+inline void Entity::UpdatePosition() {
+	velocity = forward.vector * speed;
+	origin += velocity;
+	absBounds = modelBounds + origin;
 }
 
-inline void Entity::UpdateCenter() {
-	spriteCenter.Set(spritePos.x + (sprite->w / 2), spritePos.y + (sprite->h / 2));
+//*************
+// Entity::SetPosition
+//*************
+inline void Entity::SetPosition(const eVec2 & point) {
+	origin = point;
+	absBounds = modelBounds + origin;
 }
 
+//*************
+// Entity::KnownMap
+//*************
 inline const ai_map_t & Entity::KnownMap() const {
 	return knownMap;
 }

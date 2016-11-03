@@ -1,53 +1,57 @@
 #ifndef GAME_H
 #define GAME_H
 
+#include "Definitions.h"
+#include "Renderer.h"
 #include "Math.h"
 #include "Map.h"
 #include "Entity.h"
 
-//class Map;
-//class Entity;
-//class eVec2;
-
 class Game {
 private:
 
+	Entity				entities[MAX_ENTITIES];
+	Map					map;
+	Renderer			renderer;
+	int					numEntities;
+
 	void				FreeAssets();
-
-	SDL_Surface*		backbuffer;
-	SDL_Surface*		clear;
-	SDL_Window*			window;
-	TTF_Font*			font;
-
-	Map map;
-	Entity entities;	// TODO: make this a fixed size array
 
 public:
 
+	enum ErrorCode {
+		SDL_ERROR,
+		RENDERER_ERROR,
+		MAP_ERROR,
+		ENTITY_ERROR,
+		INIT_SUCCESS = -1
+	};
+
 						Game();
 
-	bool				Init();
-	void				Shutdown(int error);
+	ErrorCode			Init();
+	void				Shutdown(ErrorCode error);
 	bool				Run();
-	void				DrawOutlineText(char* string, int x, int y, Uint8 r, Uint8 g, Uint8 b);
-	SDL_Surface *		GetBuffer();
-	Map *				GetMap();
-	Entity *			GetEntities();
+
+	Renderer &			Renderer();
+	Map &				Map();
+	Entity *			Entity(int entityID);
 };
 
-inline Game::Game() {
+inline Game::Game() : numEntities(NULL) {
 }
 
-inline SDL_Surface* Game::GetBuffer() {
-	return backbuffer;
+inline Renderer & Game::Renderer() {
+	return renderer;
 }
 
-inline Map * Game::GetMap() {
-	return &map;
+inline Map & Game::Map() {
+	return map;
 }
 
-inline Entity * Game::GetEntities() {
-	return &entities;
+// user must check for nullptr return value
+inline Entity * Game::Entity(int entityID) {
+	return (entityID >= 0 && entityID <= numEntities ? &entities[entityID] : nullptr);
 }
 
 #endif /* GAME_H */

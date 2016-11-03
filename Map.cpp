@@ -2,7 +2,6 @@
 #include "Math.h"
 #include "Game.h"
 
-// FIXME: give maxRows and maxCols default values in case of invalid input
 bool Map::Init (char fileName[], Game * const game, int maxRows, int maxCols) {
 
 	if (!game)
@@ -24,7 +23,6 @@ bool Map::Init (char fileName[], Game * const game, int maxRows, int maxCols) {
 	camera.speed = 10.0f;
 
 	// map dimensions
-	tileMap.SetInvalidCell((byte_t)-1);			// largest possible unsigned char == 255
 	tileMap.SetCellWidth(32);
 	tileMap.SetCellHeight(32);
 	tileMap.SetRowLimit(maxRows);
@@ -48,11 +46,11 @@ void Map::Free() {
 void Map::BuildTiles(const int type) {
 	int solid;
 	byte_t * tile;
-	static const byte_t * tileMapEnd = tileMap.Index(tileMap.RowLimit() - 1, tileMap.ColumnLimit() - 1);
+	static const byte_t * tileMapEnd = &tileMap.Index(tileMap.RowLimit() - 1, tileMap.ColumnLimit() - 1);
 
 	switch (type) {
 		case RANDOM_TILE: {
-			for (tile = tileMap.Index(0, 0); tile <= tileMapEnd; tile++) {
+			for (tile = &tileMap.Index(0, 0); tile <= tileMapEnd; tile++) {
 				solid = rand() % 4;
 				if (solid < 3)
 					*tile = TRAVERSABLE_TILE;
@@ -62,19 +60,19 @@ void Map::BuildTiles(const int type) {
 			break;
 		}
 		case TRAVERSABLE_TILE: {
-			for (tile = tileMap.Index(0, 0); tile <= tileMapEnd; tile++) {
+			for (tile = &tileMap.Index(0, 0); tile <= tileMapEnd; tile++) {
 				*tile = TRAVERSABLE_TILE;
 			}
 			break;
 		}
 		case COLLISION_TILE: {
-			for (tile = tileMap.Index(0, 0); tile <= tileMapEnd; tile++) {
+			for (tile = &tileMap.Index(0, 0); tile <= tileMapEnd; tile++) {
 				*tile = COLLISION_TILE;
 			}
 			break;
 		}
 		default: {	// RANDOM
-			for (tile = tileMap.Index(0, 0); tile <= tileMapEnd; tile++) {
+			for (tile = &tileMap.Index(0, 0); tile <= tileMapEnd; tile++) {
 				solid = rand() % 4;
 				if (solid < 3)
 					*tile = TRAVERSABLE_TILE;
@@ -91,10 +89,10 @@ void Map::BuildTiles(const int type) {
 void Map::ToggleTile(const eVec2 & point) {
 	byte_t * tile;
 	
-	tile = tileMap.Index(point);
-	if (tile == nullptr)
+	if (!IsValid(point, true))
 		return;
-	
+
+	tile = &tileMap.Index(point);
 	if (*tile == TRAVERSABLE_TILE)
 		*tile = COLLISION_TILE;
 	else // *tile == COLLISION_TILE
@@ -102,15 +100,14 @@ void Map::ToggleTile(const eVec2 & point) {
 
 }
 
-// returns true if a sprite can walk onto the given point, false otherwise
-bool Map::IsValid(const eVec2 & point) {
-	byte_t tileType;
+// returns true if point lies within map area
+// 
+bool Map::IsValid(const eVec2 & point, bool ignoreCollision) {
 	
-	tileType = tileMap.Cell(point);
-	if (tileType == COLLISION_TILE || tileType == tileMap.InvalidCell())
+	if	( (point.x > tileMap.Width() - 1) || (point.x < 0) || (point.y > tileMap.Height() - 1 ) || (point.y < 0) )
 		return false;
 
-	else if	( (point.x > tileMap.Width() - 1) || (point.x < 0) || (point.y > tileMap.Height() - 1 ) || (point.y < 0) )
+	if (!ignoreCollision && tileMap.Index(point) == COLLISION_TILE)
 		return false;
 
 	return true;
@@ -138,14 +135,14 @@ void Map::Update() {
 	MoveCamera();
 
 	// NOTE: camera is never allowed to go beyond the tileMap dimensions
-	tileMap.Index(camera.position, startI, startJ);
-	if (startI == tileMap.InvalidIndex())
+	tileMap.Index(camera.absBounds[0], startI, startJ);	// DEBUG: was camera.position (ie top-left corner, still is)
+	if (startI < 0)
 		startI = 0;
-	if (startJ == tileMap.InvalidIndex())
+	if (startJ < 0)
 		startJ = 0;
 
 	// TODO: modify this "render" function to allow for blocks (or portions) of tile images within SpatialIndexGrid cells
-	// to be blitted (eventually, maybe)
+	// to be blitted (eventually, maybe) given that the camera can change size (zoom out/in w/in limits)
 	for (i = startI; i < startI + screenColumns; i++) {
 		for (j = startJ; j < startJ + screenRows; j++) {
 			if (i >= 0 && i < tileMap.RowLimit() && j >= 0 && j < tileMap.ColumnLimit()) {
@@ -154,10 +151,10 @@ void Map::Update() {
 				// and if an entity is within its sightRange to draw it bright/dim ( see Entity::CheckFogOfWar(...) ) 
 				destRect.y = (j * tileMap.CellHeight()) - camera.position.y;
 				destRect.x = (i * tileMap.CellWidth()) - camera.position.x;
-				if (game->GetEntities()->KnownMap().Cell(i,j) == VISITED_TILE) {
+				if (game->Entity(0)->KnownMap().Index(i,j) == VISITED_TILE) {
 					sourceRect.x = tileMap.CellWidth() * 2;	// draw it black	// NOTE: this is ONE FRAME BEHIND what the entity has
 				} else {
-					switch (tileMap.Cell(i, j)) {
+					switch (tileMap.Index(i, j)) {
 						case TRAVERSABLE_TILE:
 							sourceRect.x = 0;
 							break;
@@ -181,17 +178,23 @@ void Map::MoveCamera() {
 	static const int maxY = (tileMap.Height() - game->GetBuffer()->h) >= 0 ?
 							 tileMap.Height() - game->GetBuffer()->h : 0;
 
+	// TODO: if position of the camera (with/as a bounding box) is moved via its center
+	// then camera.origin = game->Entity(0)->Origin();
+	// EXCEPT that (currently the list of tiles to draw originates from the camera top-left)
+	// which if mins < maxs that puts the top left at mins == bounds[0] for a symmetrical model-coordinates AABB
+	// ...instead use a pre-blitted image and use the camera as a rectangle
 	// centers the camera on the sprite
 	if (keys[SDL_SCANCODE_SPACE]) {
-		camera.position.x = (int)(game->GetEntities()->Center().x) - game->GetBuffer()->w / 2;
-		camera.position.y = (int)(game->GetEntities()->Center().y) - game->GetBuffer()->h / 2;
+		camera.origin = game->Entity(0)->
+//		camera.position.x = game->Entity(0)->Center().x - game->GetBuffer()->w / 2;
+//		camera.position.y = game->Entity(0)->Center().y - game->GetBuffer()->h / 2;
 	}
 
 	// FIXME(?): change this logic to be more vector oriented???
-	camera.position.y -= camera.speed * keys[SDL_SCANCODE_W] * (camera.position.y > 0);
-	camera.position.y += camera.speed * keys[SDL_SCANCODE_S] * (camera.position.y < maxY);
-	camera.position.x -= camera.speed * keys[SDL_SCANCODE_A] * (camera.position.x > 0);
-	camera.position.x += camera.speed * keys[SDL_SCANCODE_D] * (camera.position.x < maxX);
+	// camera.velocity.Set( -keys[SDL_SCANCODE_W] + keys[SDL_SCANCODE_S], -keys[SDL_SCANCODE_A] + keys[SDL_SCANCODE_D] );
+	// camera.position += camera.velocity;
+	camera.position.y += camera.speed * ( -keys[SDL_SCANCODE_W] + keys[SDL_SCANCODE_S] );
+	camera.position.x += camera.speed * ( -keys[SDL_SCANCODE_A] + keys[SDL_SCANCODE_D] );
 
 	if (camera.position.x < 0)
 		camera.position.x = 0;
