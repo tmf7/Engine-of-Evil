@@ -1,12 +1,17 @@
 #include "Game.h"
 
-Game::ErrorCode Game::Init() {
+//****************
+// eGame::Init
+//****************
+eGame::ErrorCode eGame::Init() {
 
 	if (SDL_Init(SDL_INIT_EVERYTHING) < 0)
 		return SDL_ERROR;
 
 	if (!renderer.Init())
 		return RENDERER_ERROR;
+
+	imageManager.SetRenderer(renderer);
 
 	if (!map.Init("graphics/tiles.bmp", this, 160, 120))
 		return MAP_ERROR;
@@ -18,23 +23,25 @@ Game::ErrorCode Game::Init() {
 	return INIT_SUCCESS;
 }
 
-void Game::Shutdown(Game::ErrorCode error) {
-
-	char message[8];
+//****************
+// eGame::Shutdown
+//****************
+void eGame::Shutdown(eGame::ErrorCode error) {
+	char message[64];
 
 	if (error != INIT_SUCCESS) {
 		switch (error) {
 			case SDL_ERROR:
-				strcpy(message, "SDL INIT FAILURE");
+				SDL_strlcpy(message, "SDL INIT FAILURE", 64);
 				break;
 			case RENDERER_ERROR:
-				strcpy(message, "RENDERER INIT FAILURE");
+				SDL_strlcpy(message, "RENDERER INIT FAILURE", 64);
 				break;
 			case MAP_ERROR:
-				strcpy(message, "MAP INIT FAILURE");
+				SDL_strlcpy(message, "MAP INIT FAILURE", 64);
 				break;
 			case ENTITY_ERROR:
-				strcpy(message, "ENTITY (entityID_or_name_here) INIT FAILURE");
+				SDL_strlcpy(message, "ENTITY (entityID_or_name_here) INIT FAILURE", 64);
 				break;
 		}
 		SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_INFORMATION, "Error", message, NULL);
@@ -44,18 +51,24 @@ void Game::Shutdown(Game::ErrorCode error) {
 	SDL_Quit();
 }
 
-void Game::FreeAssets() {
-	entities[0].Free();		// TODO: make this a pointer loop
-	map.Free();
+//****************
+// eGame::FreeAssets
+//****************
+void eGame::FreeAssets() {
+	imageManager.Free();
 	renderer.Free();
 }
 
-// Precondition: map and entities are non-null data
+//****************
+// eGame::Run
+// map and entities must already be initialized
 // TODO: check victory condition here or in the entities for alternate quit
-bool Game::Run() {
+//****************
+bool eGame::Run() {
 	static SDL_Event	event;
-	Uint32 start, frameDuration, delay;
-	static const int fps = 60;
+	Uint32				start, frameDuration;
+	int					delay;
+	static const int	fps = 60;
 	
 	start = SDL_GetTicks();
 	renderer.Clear();
@@ -67,20 +80,20 @@ bool Game::Run() {
 			}
 			case SDL_MOUSEBUTTONDOWN: {
 				if (event.button.button == 3)
-					map.ToggleTile(eVec2((float)(event.button.x + map.camera.position.x),
-										 (float)(event.button.y + map.camera.position.y)));
+					map.ToggleTile(eVec2((float)(event.button.x + map.camera.absBounds[0].x),
+										 (float)(event.button.y + map.camera.absBounds[0].y)));
 				if (event.button.button == 1)
-					entities[0].AddUserWaypoint(eVec2((float)(event.button.x + map.camera.position.x), 
-												   (float)(event.button.y + map.camera.position.y)));
+					entities[0].AddUserWaypoint(eVec2((float)(event.button.x + map.camera.absBounds[0].x),
+												   (float)(event.button.y + map.camera.absBounds[0].y)));
 				break;
 			}
 			case SDL_KEYDOWN: {
 				if (event.key.keysym.scancode == SDL_SCANCODE_0)
-					map.BuildTiles(Map::TRAVERSABLE_TILE);					// set entire map to brick
+					map.BuildTiles(eMap::TRAVERSABLE_TILE);					// set entire map to brick
 				else if (event.key.keysym.scancode == SDL_SCANCODE_1)
-					map.BuildTiles(Map::COLLISION_TILE);					// set entire map to water
+					map.BuildTiles(eMap::COLLISION_TILE);					// set entire map to water
 				else if (event.key.keysym.scancode == SDL_SCANCODE_2)
-					map.BuildTiles(Map::RANDOM_TILE);						// set entire map random (the old way)
+					map.BuildTiles(eMap::RANDOM_TILE);						// set entire map random (the old way)
 				break;
 			}
 		}

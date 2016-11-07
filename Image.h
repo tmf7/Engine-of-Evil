@@ -10,40 +10,45 @@
 // (however image rotation is implemented, the collision BBOX must also be rotated)
 
 //***************************************
-//				Image
+//				eImage
 // Provides access to pixel data as well (source)
 // as a subset of that pixel data (frame)
 // users must ensure frame dimensions and position
 // does not exceed that of the source dimensions
 //***************************************
-class Image {
-private:
-
-	SDL_Surface *		source;		// pointer to the surface in the ImageManager dictionary/hashtable
-	SDL_Rect			frame;
-
+class eImage {
 public:
-						Image();
-						Image(SDL_Surface * source);
-						Image(SDL_Surface * source, const int frameWidth, const int frameHeight, const int frameNumber);
-	
+
+						eImage();
+
+	void				Init(SDL_Surface * source, const char * filename);
 	bool				IsValid() const;
 	void				SetSource(SDL_Surface * source);	
 	SDL_Surface *		Source() const;
 	void				SetFrame(const int frameNumber);
-	SDL_Rect *			Frame();						
+	SDL_Rect *			Frame();
+	const char *		Name() const;
+
+private:
+
+	SDL_Surface *		source;		// pointer to the surface in the ImageManager dictionary/hashtable
+	SDL_Rect			frame;
+	char				filename[MAX_FILE_PATH];
 };
 
 //**************
-// Image::Image
+// eImage::eImage
 //**************
-inline Image::Image() : source(NULL) {
+inline eImage::eImage() : source(NULL) {
+	memset(filename, '\0', sizeof(char) * MAX_FILE_PATH);
 }
 
 //**************
-// Image::Image
+// eImage::Init
 //**************
-inline Image::Image(SDL_Surface * source) : source(source) {
+inline void eImage::Init(SDL_Surface * source, const char * filename) {
+	this->source = source;
+	SDL_strlcpy(this->filename, filename, MAX_FILE_PATH);		// FIXME/BUG: potential overflow
 	frame.w = source->w;
 	frame.h = source->h;
 	frame.x = 0;
@@ -51,20 +56,14 @@ inline Image::Image(SDL_Surface * source) : source(source) {
 }
 
 //**************
-// Image::Image
-//**************
-inline Image::Image(SDL_Surface * source, const int frameWidth, const int frameHeight, const int frameNumber) : source(source) {
-	frame.w = frameWidth;
-	frame.h = frameHeight;
-	SetFrame(frameNumber);
-}
-
-//**************
-// Image::SetSource
+// eImage::SetSource
 // resets the frame size to the source's size
 //**************
-inline void Image::SetSource(SDL_Surface * source) {
+inline void eImage::SetSource(SDL_Surface * source) {
 	this->source = source;
+
+	if (source == NULL)
+		return;
 	frame.w = source->w;
 	frame.h = source->h;
 	frame.x = 0;
@@ -72,40 +71,48 @@ inline void Image::SetSource(SDL_Surface * source) {
 }
 
 //**************
-// Image::Source
+// eImage::Source
 //**************
-inline SDL_Surface * Image::Source() const {
+inline SDL_Surface * eImage::Source() const {
 	return source;
 }
 
 //**************
-// Image::Frame
+// eImage::Frame
 // direct access to frame data members x, y, width, and height
 //**************
-inline SDL_Rect * Image::Frame() {
+inline SDL_Rect * eImage::Frame() {
 	return &frame;
 }
 
 //**************
-// Image::SetFrame
+// eImage::SetFrame
 // select a source-size-dependent area of source
 // user must ensure source data is not NULL via Image::IsValid()
 //**************
-inline void Image::SetFrame(const int frameNumber) {
+inline void eImage::SetFrame(const int frameNumber) {
 	int sourceColumns;
 
 	// treat the source surface as a 2D array of images
 	sourceColumns = source->w / frame.w;
-	frame.y = (frameNumber / sourceColumns) * frame.h;	// div gives row
 	frame.x = (frameNumber % sourceColumns) * frame.w;	// mod give col
+	frame.y = (frameNumber / sourceColumns) * frame.h;	// div gives row
 }
 
 //**************
-// Image::IsValid
+// eImage::IsValid
 // returns true if source != NULL
 //**************
-inline bool Image::IsValid() const {
+inline bool eImage::IsValid() const {
 	return source != NULL;
 }
+
+//**************
+// eImage::Name
+//**************
+inline const char * eImage::Name() const {
+	return filename;
+}
+
 #endif /* EVIL_IMAGE_H */
 

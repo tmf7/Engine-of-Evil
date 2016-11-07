@@ -25,10 +25,6 @@ absBounds[1] = bounds[1] + origin;
 // 2D Axis-Aligned bounding box
 //**********************************
 class eBounds {
-private:
-
-	eVec2			bounds[2];			// mins == bounds[0] and maxs == bounds[1]
-
 public:
 					eBounds();
 	explicit		eBounds(const eVec2 & mins, const eVec2 & maxs);
@@ -57,6 +53,10 @@ public:
 	// intersection point is start + dir * scale
 	bool			RayIntersection(const eVec2 & start, const eVec2 & dir, float & scale) const;
 */
+
+private:
+
+	eVec2			bounds[2];			// mins == bounds[0] and maxs == bounds[1]
 };
 
 //*************
@@ -138,7 +138,7 @@ inline eVec2 eBounds::Center() const {
 // eBounds::Radius
 // returns the radius relative to the bounds origin (0,0)
 //*************
-float eBounds::Radius() const {
+inline float eBounds::Radius() const {
 	int		i;
 	float	total, b0, b1;
 

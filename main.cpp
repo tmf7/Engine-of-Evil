@@ -9,20 +9,20 @@
 //**********************************************
 
 #include "Game.h"
-//__stdcall
-int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR lpCmdLine, INT nCmdShow) {
-	Game evil;
-	Game::ErrorCode initCode;
+
+ int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR lpCmdLine, INT nCmdShow) {
+	eGame evil;
+	eGame::ErrorCode initCode;
 	
 	initCode = evil.Init();
-	if (initCode != Game::INIT_SUCCESS) {
+	if (initCode != eGame::INIT_SUCCESS) {
 		evil.Shutdown(initCode);
 		return 0;
 	}
 
 	while (evil.Run());
 
-	evil.Shutdown(Game::INIT_SUCCESS);
+	evil.Shutdown(eGame::INIT_SUCCESS);
 
 	return 0;
 }

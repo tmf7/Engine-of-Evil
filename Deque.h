@@ -11,16 +11,15 @@
 // to increase speed/performance (instead of wasting time copying)
 
 //*************************************************
-//
-//				Deque
-//
-//*************************************************
+//				eDeque
 // uses pre-allocated stack memory to manage pointers
 // and copies source data into its memory block
 // pushing past the capacity will overwrite the back of the deque
 // user code must check if deque is empty before accessing data
+//*************************************************
+
 template <class type, size_t capacity>
-class Deque {
+class eDeque {
 private:
 
 	typedef struct Node_s {
@@ -37,7 +36,8 @@ private:
 
 public:
 
-						Deque();
+						eDeque();
+
 	void				PushFront(const type & data);
 //	void				PushBack(const type & data);		// not currently utilized, requres further checks
 	bool				PopFront();
@@ -55,19 +55,19 @@ public:
 };
 
 //******************
-// Deque
+// eDeque::eDeque
 //******************
 template <class type, size_t capacity>
-inline Deque<type, capacity>::Deque() : numElements(0), activeSlot(0),
+inline eDeque<type, capacity>::eDeque() : numElements(0), activeSlot(0),
 										front(nullptr), back(nullptr) {
 }
 
 //******************
-// PushFront
+// eDeque::PushFront
 // links the data to the front node
 //******************
 template <class type, size_t capacity>
-inline void Deque<type, capacity>::PushFront(const type & data) {
+inline void eDeque<type, capacity>::PushFront(const type & data) {
 	Node_t * newFront;
 
 	newFront = &nodePool[activeSlot++];
@@ -92,20 +92,20 @@ inline void Deque<type, capacity>::PushFront(const type & data) {
 }
 
 //******************
-// PushBack
+// eDeque::PushBack
 // links the data to the back node
 //******************
 // template <class type, size_t capacity>
-// inline void Deque<type, capacity>::PushBack(const type & data) {
+// inline void eDeque<type, capacity>::PushBack(const type & data) {
 // }
 
 //******************
-// PopFront
+// eDeque::PopFront
 // un-links the front node
 // returns false when no nodes exist
 //******************
 template <class type, size_t capacity>
-inline bool Deque<type, capacity>::PopFront() {
+inline bool eDeque<type, capacity>::PopFront() {
 	Node_t * newFront;
 	
 	if (front == nullptr) {								// empty deque
@@ -129,12 +129,12 @@ inline bool Deque<type, capacity>::PopFront() {
 }
 
 //******************
-// PopBack
+// eDeque::PopBack
 // un-links the back node
 // returns false when no nodes exist
 //******************
 template <class type, size_t capacity>
-inline bool Deque<type, capacity>::PopBack() {
+inline bool eDeque<type, capacity>::PopBack() {
 	Node_t * newBack;
 
 	if (back == nullptr) {								// empty deque
@@ -154,27 +154,27 @@ inline bool Deque<type, capacity>::PopBack() {
 }
 
 //******************
-// Front
+// eDeque::Front
 //******************
 template <class type, size_t capacity>
-inline const type & Deque<type, capacity>::Front() const {
+inline const type & eDeque<type, capacity>::Front() const {
 	return front->data;
 }
 
 //******************
-// Back
+// eDeque::Back
 //******************
 template <class type, size_t capacity>
-inline const type & Deque<type, capacity>::Back() const {
+inline const type & eDeque<type, capacity>::Back() const {
 	return back->data;
 }
 
 //******************
-// FromFront
+// eDeque::FromFront
 // returns the data at the node "index" nodes behind the front
 //******************
 template <class type, size_t capacity>
-inline const type & Deque<type, capacity>::FromFront(int index) const {
+inline const type & eDeque<type, capacity>::FromFront(int index) const {
 	Node_t * node;
 	int i;
 
@@ -195,11 +195,11 @@ inline const type & Deque<type, capacity>::FromFront(int index) const {
 }
 
 //******************
-// FromBack
+// eDeque::FromBack
 // returns the data at the node "index" nodes ahead of the back
 //******************
 template <class type, size_t capacity>
-inline const type & Deque<type, capacity>::FromBack(int index) const {
+inline const type & eDeque<type, capacity>::FromBack(int index) const {
 	Node_t * node;
 	int i;
 
@@ -220,40 +220,40 @@ inline const type & Deque<type, capacity>::FromBack(int index) const {
 }
 
 //******************
-// Clear
+// eDeque::Clear
 // empties the deque of all nodes
 // starting at the front
 //******************
 template <class type, size_t capacity>
-inline void Deque<type, capacity>::Clear() {
+inline void eDeque<type, capacity>::Clear() {
 	while (PopFront())
 		;
 }
 
 //******************
-// Size
+// eDeque::Size
 // current number of nodes
 //******************
 template <class type, size_t capacity>
-inline int Deque<type, capacity>::Size() const {
+inline int eDeque<type, capacity>::Size() const {
 	return numElements;
 }
 
 //******************
-// Capacity
+// eDeque::Capacity
 // maximum number of nodes allowed
 //******************
 template <class type, size_t capacity>
-inline int Deque<type, capacity>::Capacity() const {
+inline int eDeque<type, capacity>::Capacity() const {
 	return capacity;
 }
 
 //******************
-// IsEmpty
+// eDeque::IsEmpty
 // returns true at zero nodes
 //******************
 template <class type, size_t capacity>
-inline bool Deque<type, capacity>::IsEmpty() const {
+inline bool eDeque<type, capacity>::IsEmpty() const {
 	return numElements == 0;
 }
 

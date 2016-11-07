@@ -50,25 +50,26 @@ Player should be capable of:
 #define VISITED_TILE 1		// FIXME: should be Entity::VISITED_TILE
 #define UNKNOWN_TILE 0		// FIXME: should be Entity::UNKOWN_TILE
 
-class Game;
+class eGame;
 
 //******************
-// Entity
+// eEntity
 //******************
-class Entity {
+class eEntity {
 public:
 
-	Entity();
+						eEntity();
 
-	bool				Init(char fileName[], bool key, Game * const game);
+	bool				Init(char filename[], bool key, eGame * const game);
 	void				Spawn();
 	void				Update();
-	void				(Entity::*Move)(void);					// TODO: move this to an AI : Entity class and/or make virtual
+	void				(eEntity::*Move)(void);					// TODO: move this to an AI : Entity class and/or make virtual
 
 	void				AddUserWaypoint(const eVec2 & waypoint); // TODO: move this to an AI : Entity class
-	void				SetPosition(const eVec2 & point);
+	void				SetOrigin(const eVec2 & point);
 
 	const ai_map_t &	KnownMap() const;
+	const eVec2 &		Origin() const;
 
 private:
 
@@ -108,11 +109,12 @@ private:
 		MOVE_TO_TRAIL		// waypoint tracking
 	};
 
-	Game *				game;
-	Sprite				sprite;	
+	eGame *				game;
+	eSprite				sprite;	
 	eBounds				modelBounds;			// using model coordinates
 	eBounds				absBounds;				// using map coordinates
 	eVec2				origin;
+	eVec2				oldOrigin;				// for use with collision response
 	eVec2				velocity;
 	float				speed;
 
@@ -122,14 +124,11 @@ private:
 	int					oldMoveState;
 
 	float				collisionRadius;		// circular collision radius for prediction when using line of sight
-												// TODO(?): use modelBounds.Radius() instead? (implies sqrt each frame though...)
-
 	float				goalRange;				// acceptable range to snap sprite position to user-defined waypoint
-
 	float				sightRange;				// range of drawable visibility (fog of war)
 
-	Deque<eVec2, 50>	trail;					// AI-defined waypoints for effective backtracking
-	Deque<eVec2, 50>	goals;					// User-defined waypoints as terminal destinations
+	eDeque<eVec2, 50>	trail;					// AI-defined waypoints for effective backtracking
+	eDeque<eVec2, 50>	goals;					// User-defined waypoints as terminal destinations
 	eVec2				currentWaypoint;		// simplifies switching between the deque being tracked
 
 	decision_t			forward;				// currently used movement vector
@@ -161,30 +160,51 @@ private:
 	bool				CheckTrail();
 	void				UpdateKnownMap();
 
-	void				UpdatePosition();
+	void				UpdateOrigin();
 };
 
+//***************
+// eEntity::eEntity
+//***************
+inline eEntity::eEntity() {
+	speed = MAX_SPEED;
+	modelBounds.ExpandSelf(8);	// 16 x 16 square with (0, 0) at its center
+	sightRange = 128.0f;
+	goalRange = speed;
+	rotationQuat_Z.Set(0.0f, 0.0f, SDL_sinf(DEG2RAD(ROTATION_INCREMENT) / 2.0f), SDL_cosf(DEG2RAD(ROTATION_INCREMENT) / 2.0f));
+	touch.reach = 1;
+}
+
 //*************
-// Entity::UpdatePosition
+// eEntity::UpdateOrigin
 //*************
-inline void Entity::UpdatePosition() {
+inline void eEntity::UpdateOrigin() {
+	oldOrigin = origin;
 	velocity = forward.vector * speed;
 	origin += velocity;
 	absBounds = modelBounds + origin;
 }
 
 //*************
-// Entity::SetPosition
+// eEntity::SetOrigin
 //*************
-inline void Entity::SetPosition(const eVec2 & point) {
+inline void eEntity::SetOrigin(const eVec2 & point) {
+	oldOrigin = point;
 	origin = point;
 	absBounds = modelBounds + origin;
 }
 
 //*************
-// Entity::KnownMap
+// eEntity::Origin
 //*************
-inline const ai_map_t & Entity::KnownMap() const {
+inline const eVec2 & eEntity::Origin() const {
+	return origin;
+}
+
+//*************
+// eEntity::KnownMap
+//*************
+inline const ai_map_t & eEntity::KnownMap() const {
 	return knownMap;
 }
 

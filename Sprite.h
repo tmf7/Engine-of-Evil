@@ -7,15 +7,16 @@
 // that use alpha values instead of color keys
 
 //*************************
-//			Sprite
+//			eSprite
 // Handles animation of image data
 //*************************
-class Sprite {
+class eSprite {
 public:
-					Sprite();
 
-	Image *			GetImage() const;
-	void			SetImage(Image * image);
+					eSprite();
+
+	eImage *		Image() const;
+	void			SetImage(eImage * image);
 	void			NextFrame();
 	void			SetAnimation(const int first, const int last, const int frameDelay);
 	void			Pause(bool on = true);
@@ -24,7 +25,7 @@ public:
 
 private:
 
-	Image *			image;
+	eImage *		image;
 	int				firstFrame;
 	int				lastFrame;
 	int				frameDelay;
@@ -34,33 +35,33 @@ private:
 };
 
 //************
-// Sprite::Sprite
+// eSprite::eSprite
 //************
-inline Sprite::Sprite() : firstFrame(NULL), lastFrame(NULL), frameDelay(NULL),
+inline eSprite::eSprite() : firstFrame(NULL), lastFrame(NULL), frameDelay(NULL),
 							currentFrame(NULL), delayCounter(NULL), image(NULL), paused(true) {
 }
 
 //************
-// Sprite::GetImage
+// eSprite::Image
 // direct access to sprite's image pixel data
 //************
-inline Image * Sprite::GetImage() const {
+inline eImage * eSprite::Image() const {
 	return image;
 }
 
 //************
-// Sprite::SetImage
+// eSprite::SetImage
 //************
-inline void Sprite::SetImage(Image * image) {
+inline void eSprite::SetImage(eImage * image) {
 	this->image = image;
 }
 
 //************
-// Sprite::NextFrame
+// eSprite::NextFrame
 // continues the current state of animation
 // must be unpaused to fully animate
 //************
-inline void Sprite::NextFrame() {
+inline void eSprite::NextFrame() {
 	
 	if (paused)
 		return;
@@ -76,10 +77,10 @@ inline void Sprite::NextFrame() {
 }
 
 //************
-// Sprite::SetAnimation
+// eSprite::SetAnimation
 // sets the sprite-specific animation identifiers
 //************
-inline void Sprite::SetAnimation(const int first, const int last, const int frameDelay) {
+inline void eSprite::SetAnimation(const int first, const int last, const int frameDelay) {
 	firstFrame = first;
 	lastFrame = last;
 	this->frameDelay = frameDelay;
@@ -87,26 +88,26 @@ inline void Sprite::SetAnimation(const int first, const int last, const int fram
 }
 
 //************
-// Sprite::Pause
+// eSprite::Pause
 // stops sprite animation on the currentFrame
 //************
-inline void Sprite::Pause(bool on) {
+inline void eSprite::Pause(bool on) {
 	paused = on;
 }
 
 //************
-// Sprite::Width
+// eSprite::Width
 // wrapper function for sprite's current frame width
 //************
-inline const int Sprite::Width() const {
+inline const int eSprite::Width() const {
 	return image->IsValid() ? image->Frame()->w : -1;
 }
 
 //************
-// Sprite::Height
+// eSprite::Height
 // wrapper function for sprite's current frame height
 //************
-inline const int Sprite::Height() const {
+inline const int eSprite::Height() const {
 	return image->IsValid() ? image->Frame()->h : -1;
 }
 

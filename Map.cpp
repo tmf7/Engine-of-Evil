@@ -1,25 +1,24 @@
 #include "Map.h"
-#include "Math.h"
 #include "Game.h"
 
-bool Map::Init (char fileName[], Game * const game, int maxRows, int maxCols) {
-
-	if (!game)
-		return false;
+//**************
+// eMap::Init
+// TODO: allow the localBounds to be resized as the window resizes or goes fullscreen
+//**************
+bool eMap::Init (char filename[], eGame * const game, int maxRows, int maxCols) {
+	eVec2 screenCorner;
 
 	this->game = game;
 
-	if (!fileName[0])
-		return false;
-
 	//load the tile file
-	tileSet = SDL_LoadBMP(fileName);
-
-	if (!tileSet)
+	tileSet = game->ImageManager().GetImage(filename);
+	if (tileSet == nullptr)
 		return false;
 
 	// starting view of map
-	camera.position = ZERO_VEC2;
+	screenCorner = eVec2((float)game->Renderer().Width(), (float)game->Renderer().Height());
+	camera.localBounds = eBounds(-screenCorner / 2.0f, screenCorner / 2.0f);	// variable rectangle with (0, 0) at its center)
+	SetCameraOrigin(screenCorner / 2.0f);
 	camera.speed = 10.0f;
 
 	// map dimensions
@@ -28,22 +27,22 @@ bool Map::Init (char fileName[], Game * const game, int maxRows, int maxCols) {
 	tileMap.SetRowLimit(maxRows);
 	tileMap.SetColumnLimit(maxCols);
 
+	// FIXME: SpatialIndexGrid cell width & height should not have to be the same
+	// as the tileSet frame width & height
+	tileSet->Frame()->w = tileMap.CellWidth();
+	tileSet->Frame()->h = tileMap.CellHeight();
+
 	BuildTiles(RANDOM_TILE);
 
 	return true;
 }
 
-void Map::Free() {
-
-	if (tileSet) {
-		SDL_FreeSurface(tileSet);
-		tileSet = NULL;
-	}
-}
-
+//**************
+// eMap::BuildTiles
 // Procedure for initial map layout
 // Populates a matrix for future collision and redraw
-void Map::BuildTiles(const int type) {
+//**************
+void eMap::BuildTiles(const int type) {
 	int solid;
 	byte_t * tile;
 	static const byte_t * tileMapEnd = &tileMap.Index(tileMap.RowLimit() - 1, tileMap.ColumnLimit() - 1);
@@ -83,10 +82,12 @@ void Map::BuildTiles(const int type) {
 		}
 	}
 }
-
+//**************
+// eMap::ToggleTile
 // toggles the tile type at tileMap[r][c] 
 // closest to the given point
-void Map::ToggleTile(const eVec2 & point) {
+//**************
+void eMap::ToggleTile(const eVec2 & point) {
 	byte_t * tile;
 	
 	if (!IsValid(point, true))
@@ -100,111 +101,101 @@ void Map::ToggleTile(const eVec2 & point) {
 
 }
 
+//**************
+// eMap::IsValid
 // returns true if point lies within map area
-// 
-bool Map::IsValid(const eVec2 & point, bool ignoreCollision) {
+// TODO: move the ignoreCollision functionality to a different collision detection function
+//**************
+bool eMap::IsValid(const eVec2 & point, bool ignoreCollision) {
 	
-	if	( (point.x > tileMap.Width() - 1) || (point.x < 0) || (point.y > tileMap.Height() - 1 ) || (point.y < 0) )
+	if	( !tileMap.IsValid(point) )
 		return false;
 
-	if (!ignoreCollision && tileMap.Index(point) == COLLISION_TILE)
+	if ( !ignoreCollision && tileMap.Index(point) == COLLISION_TILE )
 		return false;
 
 	return true;
 }
 
+//***************
+// eMap::Update
+// TODO: modulate brightness of tile if ANY entities have visited
+// and if an entity is within its sightRange to draw it bright/dim ( see Entity::CheckFogOfWar(...) )
+// TODO: modify this "render" function to allow for blocks (or portions) of tile images within SpatialIndexGrid cells
+// to be blitted (eventually, maybe) given that the camera can change size (zoom out/in w/in limits)
 // TODO: make this a const Draw() function
 // draws the current frame
-void Map::Update() {
-	SDL_Rect destRect;
-	SDL_Rect sourceRect;
+//***************
+void eMap::Update() {
+	eVec2 destination;
 	int i, j, startI, startJ;
 
 	// maximum number of tiles to draw on the current window (max 1 boarder tile beyond)
-	static const int screenRows = (game->GetBuffer()->h / tileMap.CellWidth()) + 2;
-	static const int screenColumns = (game->GetBuffer()->w / tileMap.CellHeight()) + 2;
-
-	// FIXME: currently the spatial cell width & height == tile image width & height
-	// but that shouldn't be the case in the final game
-	sourceRect.w = tileMap.CellWidth();
-	sourceRect.h = tileMap.CellHeight();
-	sourceRect.y = 0;
+	static const int screenRows = (int)(camera.absBounds.Width() / tileMap.CellWidth()) + 2;
+	static const int screenColumns = (int)(camera.absBounds.Height() / tileMap.CellHeight()) + 2;
 
 	// verify any user-input changes to the camera
 	// TODO: move this functionality to an input handler class
-	MoveCamera();
+	CameraInput();
+	
+	// initialize where to querying the tileMap for draw information 
+	tileMap.Index(camera.absBounds[0], startI, startJ);
 
-	// NOTE: camera is never allowed to go beyond the tileMap dimensions
-	tileMap.Index(camera.absBounds[0], startI, startJ);	// DEBUG: was camera.position (ie top-left corner, still is)
-	if (startI < 0)
-		startI = 0;
-	if (startJ < 0)
-		startJ = 0;
-
-	// TODO: modify this "render" function to allow for blocks (or portions) of tile images within SpatialIndexGrid cells
-	// to be blitted (eventually, maybe) given that the camera can change size (zoom out/in w/in limits)
-	for (i = startI; i < startI + screenColumns; i++) {
-		for (j = startJ; j < startJ + screenRows; j++) {
+	for (i = startI; i < startI + screenRows; i++) {
+		for (j = startJ; j < startJ + screenColumns; j++) {
 			if (i >= 0 && i < tileMap.RowLimit() && j >= 0 && j < tileMap.ColumnLimit()) {
+ 
+				destination.y = (float)(j * tileMap.CellHeight()) - camera.absBounds[0].y;
+				destination.x = (float)(i * tileMap.CellWidth()) - camera.absBounds[0].x;
 
-				// TODO: modulate brightness of tile if ANY entities have visited
-				// and if an entity is within its sightRange to draw it bright/dim ( see Entity::CheckFogOfWar(...) ) 
-				destRect.y = (j * tileMap.CellHeight()) - camera.position.y;
-				destRect.x = (i * tileMap.CellWidth()) - camera.position.x;
-				if (game->Entity(0)->KnownMap().Index(i,j) == VISITED_TILE) {
-					sourceRect.x = tileMap.CellWidth() * 2;	// draw it black	// NOTE: this is ONE FRAME BEHIND what the entity has
-				} else {
-					switch (tileMap.Index(i, j)) {
-						case TRAVERSABLE_TILE:
-							sourceRect.x = 0;
-							break;
-						case COLLISION_TILE:
-							sourceRect.x = tileMap.CellWidth();
-							break;
-					}
-				}
-				SDL_BlitSurface(tileSet, &sourceRect, game->GetBuffer(), &destRect);
+				// NOTE: this is ONE FRAME BEHIND what the entity has
+				if (game->Entity(0)->KnownMap().Index(i, j) == VISITED_TILE)
+					tileSet->SetFrame(RANDOM_TILE);			// draw it black
+				else
+					tileSet->SetFrame(tileMap.Index(i, j));	// draw it normal
+
+				game->Renderer().DrawImage(tileSet, destination);
 			}
 		}
 	}
 }
 
+//**************
+// eMap::MoveCamera
 // TODO: make this part of a camera class instead of a member struct of Map
 // Adjust the user's view within map
-void Map::MoveCamera() {
+//**************
+void eMap::CameraInput() {
+	eVec2 correction;
 	const Uint8 * keys = SDL_GetKeyboardState(NULL);
-	static const int maxX = (tileMap.Width() - game->GetBuffer()->w) >= 0 ? 
-							 tileMap.Width() - game->GetBuffer()->w : 0;
-	static const int maxY = (tileMap.Height() - game->GetBuffer()->h) >= 0 ?
-							 tileMap.Height() - game->GetBuffer()->h : 0;
+	static const int maxX = (tileMap.Width() - game->Renderer().Width()) >= 0 ? 
+							 tileMap.Width() - game->Renderer().Width() : 0;
+	static const int maxY = (tileMap.Height() - game->Renderer().Height()) >= 0 ?
+							 tileMap.Height() - game->Renderer().Height() : 0;
 
-	// TODO: if position of the camera (with/as a bounding box) is moved via its center
-	// then camera.origin = game->Entity(0)->Origin();
-	// EXCEPT that (currently the list of tiles to draw originates from the camera top-left)
-	// which if mins < maxs that puts the top left at mins == bounds[0] for a symmetrical model-coordinates AABB
-	// ...instead use a pre-blitted image and use the camera as a rectangle
-	// centers the camera on the sprite
 	if (keys[SDL_SCANCODE_SPACE]) {
-		camera.origin = game->Entity(0)->
-//		camera.position.x = game->Entity(0)->Center().x - game->GetBuffer()->w / 2;
-//		camera.position.y = game->Entity(0)->Center().y - game->GetBuffer()->h / 2;
+		SetCameraOrigin(game->Entity(0)->Origin());
+	} else {
+		camera.velocity.Set((float)(keys[SDL_SCANCODE_D] - keys[SDL_SCANCODE_A]), (float)(keys[SDL_SCANCODE_S] - keys[SDL_SCANCODE_W]));
+		UpdateCameraOrigin();
 	}
 
-	// FIXME(?): change this logic to be more vector oriented???
-	// camera.velocity.Set( -keys[SDL_SCANCODE_W] + keys[SDL_SCANCODE_S], -keys[SDL_SCANCODE_A] + keys[SDL_SCANCODE_D] );
-	// camera.position += camera.velocity;
-	camera.position.y += camera.speed * ( -keys[SDL_SCANCODE_W] + keys[SDL_SCANCODE_S] );
-	camera.position.x += camera.speed * ( -keys[SDL_SCANCODE_A] + keys[SDL_SCANCODE_D] );
+	// collision response with map edge
+	// TODO(?): move this to a collision detection/handling class
+	// FIXME/BUG: far bottom and far right edge of map are currently unapproachable
+	correction = ZERO_VEC2;
+	if (camera.absBounds[0].x < 0)
+		correction.x = -camera.absBounds[0].x;
+	else if (camera.absBounds[1].x > maxX)
+		correction.x = maxX - camera.absBounds[1].x  ;
 
-	if (camera.position.x < 0)
-		camera.position.x = 0;
-	else if (camera.position.x > maxX)
-		camera.position.x = maxX;
+	if (camera.absBounds[0].y < 0)
+		correction.y = -camera.absBounds[0].y;
+	else if (camera.absBounds[1].y > maxY)
+		correction.y = maxY - camera.absBounds[1].y;
 
-	if (camera.position.y < 0)
-		camera.position.y = 0;
-	else if (camera.position.y > maxY)
-		camera.position.y = maxY;
+	if (correction != ZERO_VEC2)
+		SetCameraOrigin(camera.origin + correction);
 }
 
 

@@ -5,31 +5,32 @@
 #include "Math.h"
 #include "SpatialIndexGrid.h"
 #include "Bounds.h"
+#include "Image.h"
 
-class Game;
+class eGame;
 
-class Map {
+class eMap {
 public:
 
 	// TODO: make camera a separate (entity?) class
 	struct {
-		eBounds modelBounds;	// size/shape using model-coordinages
-		eBounds absBounds;		// dimensions using map-coordinates
+		eBounds localBounds;	// using local coordinates
+		eBounds absBounds;		// using map coordinates
 		eVec2 origin;			// center of bounds
 		eVec2 velocity;
+		float speed;
 	} camera;
 
 	enum tileType {
-		COLLISION_TILE,
 		TRAVERSABLE_TILE,
+		COLLISION_TILE,
 		RANDOM_TILE
 	};
 
-							Map();
+							eMap();
 
-	bool					Init(char fileName[], Game * const game, int maxRows, int maxCols);
+	bool					Init(char filename[], eGame * const game, int maxRows, int maxCols);
 	bool					IsValid(const eVec2 & point, bool ignoreCollision = false);
-	void					Free();
 	void					Update();
 	void					BuildTiles(const int type);
 	void					ToggleTile(const eVec2 & point);
@@ -37,24 +38,46 @@ public:
 
 private:
 
-	Game *					game;
-	SDL_Surface *			tileSet;
+	eGame *					game;
+	eImage *				tileSet;
 	game_map_t				tileMap;
 
-	void					MoveCamera();
+	void					CameraInput();
+	void					UpdateCameraOrigin();
+	void					SetCameraOrigin(const eVec2 & point);
 };
 
 //**************
-// Map::Map
+// eMap::eMap
 //**************
-inline Map::Map() {
+inline eMap::eMap() {
 }
 
 //**************
-// Map::TileMap
+// eMap::TileMap
 //**************
-inline const game_map_t & Map::TileMap() const {
+inline const game_map_t & eMap::TileMap() const {
 	return tileMap;
+}
+
+//**************
+// eMap::UpdateCameraOrigin
+// TODO: make this part of a camera class instead of a member struct of Map
+// Adjust the user's view within map
+//**************
+inline void eMap::UpdateCameraOrigin() {
+	camera.origin += camera.velocity * camera.speed;
+	camera.absBounds = camera.localBounds + camera.origin;
+}
+
+//**************
+// eMap::SetCameraOrigin
+// TODO: make this part of a camera class instead of a member struct of Map
+// Adjust the user's view within map
+//**************
+inline void eMap::SetCameraOrigin(const eVec2 & point) {
+	camera.origin = point;
+	camera.absBounds = camera.localBounds + camera.origin;
 }
 
 #endif /* EVIL_MAP_H */

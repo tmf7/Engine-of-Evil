@@ -1,7 +1,8 @@
 #ifndef EVIL_TILE_H
 #define EVIL_TILE_H
 
-#include "Game.h"
+#include "Definitions.h"
+#include "Math.h"
 
 // Flyweight tile design
 

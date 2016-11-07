@@ -2,30 +2,34 @@
 #define EVIL_RENDERER_H
 
 #include "Definitions.h"
+#include "Math.h"
 
-class eVec2;
-class Image;
-class Sprite;
-class Entity;
+class eImage;
+class eSprite;
+class eEntity;
 
 //**************************************************
-//				Renderer
+//				eRenderer
 // Base class for all window/fullscreen drawing. 
 // Contains the backbuffer and window handles.
 //****************************************************
-class Renderer {
+class eRenderer {
 public:
 
-						Renderer();
+						eRenderer();
+
 	bool				Init();
 	void				Free();
 	void				Clear();
 	void				Show();
+	int					Width() const;
+	int					Height() const;
 	bool				OnScreen(const eVec2 & point) const;
 	void				DrawOutlineText(char * string, const eVec2 & point, Uint8 r, Uint8 g, Uint8 b);
 	void				DrawPixel(const eVec2 & point, Uint8 r, Uint8 g, Uint8 b);
-	void				DrawImage(Image * image, const eVec2 & point);
-	void				DrawSprite(Sprite * sprite, const eVec2 & point);
+	void				DrawImage(eImage * image, const eVec2 & point);
+	void				DrawSprite(eSprite * sprite, const eVec2 & point);
+	bool				FormatSurface(SDL_Surface ** surface, bool colorKey) const;
 
 private:
 
@@ -36,38 +40,52 @@ private:
 };
 
 //***************
-// Renderer::Renderer
+// eRenderer::eRenderer
 //***************
-inline Renderer::Renderer() {
+inline eRenderer::eRenderer() {
 }
 
 //***************
-// Renderer::Clear
+// eRenderer::Clear
 // resets the backbuffer to the clear image
 // FIXME: should just be color, to allow for resizable window/backbuffer and fullscreen
 //***************
-inline void Renderer::Clear() {
+inline void eRenderer::Clear() {
 	SDL_BlitSurface(clear, NULL, backbuffer, NULL);
 }
 
 //***************
-// Renderer::Show
+// eRenderer::Show
 //***************
-inline void Renderer::Show() {
+inline void eRenderer::Show() {
 	SDL_UpdateWindowSurface(window);
 }
 
 //***************
-// Renderer::OnScreen
+// eRenderer::OnScreen
 // tests if a given x,y point is in the window area (backbuffer)
 //***************
-inline bool Renderer::OnScreen(const eVec2 & point) const {
+inline bool eRenderer::OnScreen(const eVec2 & point) const {
 
 	if (point.x >= backbuffer->w || point.x < 0 ||
 		point.y >= backbuffer->h || point.y < 0)
 		return false;
 
 	return true;
+}
+
+//***************
+// eRenderer::Width
+//***************
+inline int eRenderer::Width() const {
+	return backbuffer->w;
+}
+
+//***************
+// eRenderer::Height
+//***************
+inline int eRenderer::Height() const {
+	return backbuffer->h;
 }
 
 #endif /* EVIL_RENDERER_H */
