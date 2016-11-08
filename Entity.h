@@ -63,7 +63,6 @@ public:
 	bool				Init(char filename[], bool key, eGame * const game);
 	void				Spawn();
 	void				Update();
-	void				(eEntity::*Move)(void);					// TODO: move this to an AI : Entity class and/or make virtual
 
 	void				AddUserWaypoint(const eVec2 & waypoint); // TODO: move this to an AI : Entity class
 	void				SetOrigin(const eVec2 & point);
@@ -90,14 +89,17 @@ private:
 		bool			LEFT_BOTTOM		: 1;
 		bool			LEFT_TOP		: 1;
 		void			Clear() { memset(this, 0, sizeof(*this)); }
+		bool			operator==(const sensors_s & that);
+		bool			operator!=(const sensors_s & that);
 	} sensors_t;
 
 	struct {
 		sensors_t		ranged;					// off-sprite sensors
-		sensors_t		oldRanged;				// off-sprite sensors
+		sensors_t		oldRanged;				// off-sprite sensors from the previous frame
 		sensors_t		local;					// on-sprite sensors
+		sensors_t		oldLocal;				// on-sprite sensors from the previous frame
 		int				reach;					// distance beyond bounding box to trigger sensors
-		void			Clear() { ranged.Clear(); oldRanged.Clear(); local.Clear(); }
+		void			Clear() { ranged.Clear(); oldRanged.Clear(); local.Clear(); oldLocal.Clear(); }
 	} touch;
 
 	enum movement {
@@ -121,10 +123,9 @@ private:
 	ai_map_t			knownMap;				// tracks visited tiles from the game_map_t tileMap; in Map class
 
 	int					moveState;
-	int					oldMoveState;
 
 	float				collisionRadius;		// circular collision radius for prediction when using line of sight
-	float				goalRange;				// acceptable range to snap sprite position to user-defined waypoint
+	float				goalRange;				// acceptable range to consider the goal waypoint reached
 	float				sightRange;				// range of drawable visibility (fog of war)
 
 	eDeque<eVec2, 50>	trail;					// AI-defined waypoints for effective backtracking
@@ -135,24 +136,25 @@ private:
 	decision_t			left;					// perpendicular to forward.vector counter-clockwise
 	decision_t			right;					// perpendicular to forward.vector clockwise
 	eQuat				rotationQuat_Z;			// to rotate any vector about z-axis
-	byte_t *			currentTile;			// to track where the sprite has been more accurately
+	byte_t *			previousTile;			// most recently exited valid tile
+	byte_t *			currentTile;			// tile at the entity's origin
 	byte_t *			lastTrailTile;			// tile on which the last trail waypoint was placed (prevents redundant placement)
 
 	bool				moving;
 
 private:
 
-	bool				CheckFogOfWar(const eVec2 & point) const;		// FIXME: should this be public
+	bool				CheckFogOfWar(const eVec2 & point) const;		// FIXME: should this be public?
 
 	// functions related to wall following protocols			// TODO: move them to an AI : Entity class
 	void				WallFollow();
-	void				CheckTouch(bool self);
-	void				CheckCollision();	// FIXME: should this belong to the Map class?
+	void				CheckTouch();
+	void				CheckCollision();						// FIXME: should this belong to the Map class?
 	void				PrintSensors();
 
 	// functions related to waypoint protocols					// TODO: move them to an AI : Entity class
-	void				WaypointFollow();
-	void				UpdateVector();
+	void				Move(bool compass);						// FIXME: this shouldn't have parameters, and should be based on the AI's movement type (not moveState)
+	void				CompassFollow();
 	bool				CheckVectorPath(eVec2 from, decision_t & along);
 	void				CheckWalls(int & walls);
 	bool				UpdateWaypoint(bool getNext = false);
@@ -164,6 +166,27 @@ private:
 };
 
 //***************
+// eEntity::sensors_s::operator==
+//***************
+inline bool eEntity::sensors_s::operator==(const sensors_s & that) {
+	return (	TOP_LEFT		== that.TOP_LEFT		&&
+				TOP_RIGHT		== that.TOP_RIGHT		&&
+				RIGHT_TOP		== that.RIGHT_TOP		&&
+				RIGHT_BOTTOM	== that.RIGHT_BOTTOM	&&
+				BOTTOM_RIGHT	== that.BOTTOM_RIGHT	&&
+				BOTTOM_LEFT		== that.BOTTOM_LEFT		&&
+				LEFT_BOTTOM		== that.LEFT_BOTTOM		&&
+				LEFT_TOP		== that.LEFT_TOP			);
+}
+
+//***************
+// eEntity::sensors_s::operator!=
+//***************
+inline bool eEntity::sensors_s::operator!=(const sensors_s & that) {
+	return !(*this == that);
+}
+
+//***************
 // eEntity::eEntity
 //***************
 inline eEntity::eEntity() {
@@ -173,6 +196,8 @@ inline eEntity::eEntity() {
 	goalRange = speed;
 	rotationQuat_Z.Set(0.0f, 0.0f, SDL_sinf(DEG2RAD(ROTATION_INCREMENT) / 2.0f), SDL_cosf(DEG2RAD(ROTATION_INCREMENT) / 2.0f));
 	touch.reach = 1;
+	StopMoving();
+	touch.Clear();
 }
 
 //*************

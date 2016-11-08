@@ -37,12 +37,13 @@ bool eEntity::Init(char filename[], bool key, eGame * const game) {
 // TODO: if search radius exceeds the map's size in either direction, generate a new map
 // TODO: determine a failure to spawn condition (ie when to return false)
 // TODO: call a GetSpawnPoint() to use a list of (semi-)pre-defined spawn points
+// TODO: return a bool in the event of total failure to spawn
 //***************
 void eEntity::Spawn() {
 	eVec2 testPoint;
 	int i, j;
 	int radius;
-	bool success;
+	bool spawned;
 
 	// Check the top-left corner tile first
 	testPoint.Set(8.0f, 8.0f);
@@ -50,14 +51,15 @@ void eEntity::Spawn() {
 
 		SetOrigin(testPoint);
 		currentTile = &knownMap.Index(0, 0);
+		previousTile = currentTile;
 		lastTrailTile = nullptr;
 		return;
 	}
 
 	radius = 1;
-	success = false;
+	spawned = false;
 	// Expand the search
-	while (!success) {
+	while (!spawned) {
 
 		// down from the top
 		for (i = radius, j = 0; j <= radius; j++) {
@@ -65,18 +67,18 @@ void eEntity::Spawn() {
 			testPoint.Set((float)(i * knownMap.CellWidth() + 8), (float)(j * knownMap.CellHeight() + 8));
 			if (game->Map().IsValid(testPoint) ) {
 				SetOrigin(testPoint);
-				success = true;
+				spawned = true;
 				break;
 			}
 		}
 
 		// in from the bottom of the last search
-		for (i = radius - 1, j = radius; i >= 0 && !success; i--) {
+		for (i = radius - 1, j = radius; i >= 0 && !spawned; i--) {
 
 			testPoint.Set((float)(i * knownMap.CellWidth() + 8), (float)(j * knownMap.CellHeight() + 8));
 			if (game->Map().IsValid(testPoint) ) {
 				SetOrigin(testPoint);
-				success = true;
+				spawned = true;
 				break;
 			}
 		}
@@ -84,6 +86,7 @@ void eEntity::Spawn() {
 		radius++;
 	}
 	currentTile = &knownMap.Index(i, j);
+	previousTile = currentTile;
 	lastTrailTile = nullptr;
 }
 
@@ -96,13 +99,15 @@ void eEntity::Spawn() {
 // TODO: animate the entity sprite appropriately
 //***************
 void eEntity::Update() {
-	eVec2 debugVector = ORIGIN_VEC2;
+	eVec2 oldForward;
+	eVec2 debugVector;
 	eVec2 debugPoint;
 	float rotationAngle;
 	int node;
 	int pink[3] = { 255, 0, 255 };
 	int blue[3] = { 0,0,255 };
 	int * color;
+	byte_t * checkTile;
 
 // BEGIN FREEHILL DEBUG knownMap memset test
 	const Uint8* keys = SDL_GetKeyboardState(NULL);
@@ -110,23 +115,53 @@ void eEntity::Update() {
 		knownMap.ClearAllCells();
 // END FREEHIL DEBUG knownMap memset test
 
-	static bool movementInitialized = false;
-	if (!movementInitialized) {
+// BEGIN FREEHILL AI move type testing
+	static bool compass = false;
+	static bool compassfollow = compass;
+	static bool wallfollow = !compass;
+	if (!compassfollow) {
 		moveState = MOVE_TO_GOAL;
-		StopMoving();
-		Move = &eEntity::WaypointFollow;
-		movementInitialized = true;
-	} else if (!movementInitialized) {
+		compassfollow = true;
+	} else if (!wallfollow) {
 		moveState = MOVE_RIGHT;
-		touch.Clear();
-		Move = &eEntity::WallFollow;
-		movementInitialized = true;
+		wallfollow = true;
+	}
+// END FREEHILL AI move type testing
+
+	// only move with a waypoint
+	if (UpdateWaypoint()) {
+
+		oldForward = forward.vector;
+		Move(!compass);
+
+		// drop a trail waypoint
+		if (moving && moveState != MOVE_TO_TRAIL /*&& oldForward != ZERO_VEC2*/ && lastTrailTile != currentTile) {
+			trail.PushFront(origin);
+			lastTrailTile = currentTile;
+		}
+
+		// check if goal is close enough to stop
+		if (origin.Compare(currentWaypoint, goalRange)) {	// FIXME: wall follow starts w/o a waypoint (default)
+			StopMoving();									// FIXME: this breaks wall follow...or does nothing for it
+			UpdateWaypoint(true);
+		}
+
+		// mark the tile to help future movement decisions
+		checkTile = &knownMap.Index(origin);
+		if (checkTile != currentTile) {
+			previousTile = currentTile;
+			UpdateKnownMap();
+			currentTile = checkTile;
+		}
+
+		if (wallfollow) {
+			CheckCollision();	// collision detection **AND** response here
+			WallFollow();
+		}
 	}
 
-	((*this).*Move)();
-
-////////////////////////////////////////////////////////////////////////////////////
-
+///////////////////////////////TODO: MOVE THESE TO DEBUG DRAW FUNCITONS/////////////////////////////////////////////////////
+///*
 	// draw all waypoints
 	node = 0;
 	while(node < goals.Size()) {
@@ -142,10 +177,10 @@ void eEntity::Update() {
 		game->Renderer().DrawImage(sprite.Image(), (eBounds(debugPoint).ExpandSelf(8))[0]);	// top-left corner
 		node++;
 	}
-
+//*/
 	// draw sprite
 	game->Renderer().DrawSprite(&sprite, absBounds[0] - game->Map().camera.absBounds[0]);
-/*
+
 // FREEHILL BEGIN DEBUG COLLISION CIRCLE
 
 	// draws one pink pixel for each unique x,y point on the current collision circle 
@@ -155,61 +190,53 @@ void eEntity::Update() {
 	else
 		color = blue;
 
+	debugVector = ORIGIN_VEC2;
 	rotationAngle = 0.0f;
 	while (rotationAngle < 360.0f) {
 
 		if (forward.vector*debugVector >= 0) {
-			debugPoint = origin + (debugVector * collisionRadius) - game->Map().camera.origin;
+			debugPoint = origin + (debugVector * collisionRadius) - game->Map().camera.absBounds[0];
 			game->Renderer().DrawPixel(debugPoint, color[0], color[1], color[2]);
 		}
 		debugVector = rotationQuat_Z*debugVector;	// rotate counter-clockwise
 		rotationAngle += ROTATION_INCREMENT;
 	}
 // FREEHILL END DEBUG COLLISION CIRCLE
-*/
+
 ////////////////////////////////////////////////////////////////////////////
 	PrintSensors();
 
 }
 
 //***************
-// eEntity::WaypointFollow
+// eEntity::Move
 //***************
-void eEntity::WaypointFollow() {
-	byte_t * checkTile;
+void eEntity::Move(bool compass) {
 
-	// don't move without a waypoint
-	if (!UpdateWaypoint())
-		return;
+	if (compass)
+		CompassFollow();		// sets the forward.vector based on a waypoint (goal or trail), or stops moving
+	else
+		forward.vector = eVec2((float)((moveState == MOVE_RIGHT) - (moveState == MOVE_LEFT)), (float)((moveState == MOVE_DOWN) - (moveState == MOVE_UP)));
+		// FIXME: this assumes the moveState is only ONE of the four states (for an AI)
+		// and pairs as-such with eEntity::CheckCollision() for collision detection AND response
 
-	UpdateVector();
-	UpdateOrigin();
-
-	if ( origin.Compare(currentWaypoint, goalRange) ) {
-		StopMoving();
-		UpdateWaypoint(true);
-	}
-
-	// mark the tile to help future movement decision
-	checkTile = &knownMap.Index(origin);
-	if ( checkTile != currentTile ) {
-		UpdateKnownMap();
-		currentTile = checkTile;
+	if (forward.vector != ZERO_VEC2) {
+		moving = true;
+		UpdateOrigin();
+		if (!compass)
+			CheckTouch();
 	}
 }
 
 //***************
 // eEntity::WallFollow
+// checks if the moveState should change
+// given the current state of all ranged touch sensors
+// and the current moveState
 //***************
 void eEntity::WallFollow() {
 
-	oldMoveState = moveState;
-	forward.vector = eVec2((float)((moveState == MOVE_RIGHT) - (moveState == MOVE_LEFT)), 0.0f);
-	UpdateOrigin();
-	CheckCollision();
-
 	switch (moveState) {
-
 		case MOVE_RIGHT: {
 
 			// if it has lost its wall move in that direction
@@ -223,13 +250,8 @@ void eEntity::WallFollow() {
 				((touch.ranged.RIGHT_TOP || touch.ranged.RIGHT_BOTTOM) && !touch.ranged.TOP_LEFT))
 				moveState = MOVE_UP;
 
-			if (moveState != oldMoveState)
-				return;
-
 			break;
 		}
-
-		// rinse, repeat
 		case MOVE_LEFT: {
 
 			if ((touch.oldRanged.BOTTOM_RIGHT && !touch.ranged.BOTTOM_RIGHT) || 
@@ -240,19 +262,8 @@ void eEntity::WallFollow() {
 				((touch.ranged.LEFT_TOP || touch.ranged.LEFT_BOTTOM) && !touch.ranged.TOP_RIGHT))
 				moveState = MOVE_UP;
 
-			if (moveState != oldMoveState)
-				return;
-
 			break;
 		}
-	}
-
-	forward.vector = eVec2(0.0f, (float)((moveState == MOVE_DOWN) - (moveState == MOVE_UP)));
-	UpdateOrigin();
-	CheckCollision();
-
-	switch (moveState) {
-
 		case MOVE_UP: {
 
 			if ((touch.oldRanged.RIGHT_BOTTOM && !touch.ranged.RIGHT_BOTTOM) || 
@@ -263,12 +274,8 @@ void eEntity::WallFollow() {
 				((touch.ranged.TOP_LEFT || touch.ranged.TOP_RIGHT) && !touch.ranged.LEFT_BOTTOM))
 				moveState = MOVE_LEFT;
 
-			if (moveState != oldMoveState)
-				return;
-
 			break;
 		}
-
 		case MOVE_DOWN: {
 
 			if ((touch.oldRanged.RIGHT_TOP && !touch.ranged.RIGHT_TOP) || 
@@ -279,20 +286,16 @@ void eEntity::WallFollow() {
 				((touch.ranged.BOTTOM_LEFT || touch.ranged.BOTTOM_RIGHT) && !touch.ranged.LEFT_TOP))
 				moveState = MOVE_LEFT;
 
-			if (moveState != oldMoveState)
-				return;
-
 			break;
 		}
 	}	
 }
 
 //******************
-// eEntity::UpdateVector
+// eEntity::CompassFollow
 // Determines the optimal movement vector to reach the current waypoint
 //******************
-void eEntity::UpdateVector() {
-	eVec2 oldForward;					// previously used forward.vector
+void eEntity::CompassFollow() {
 	decision_t waypoint;				// from the sprite to the next waypoint
 	decision_t test;					// vector tested for optimal travel decision
 	decision_t best;					// optimal movement
@@ -321,7 +324,7 @@ void eEntity::UpdateVector() {
 
 		// stuck in a corner (look for the quickest and most waypoint-oriented way out)
 		if ((forward.stepRatio == 0 && right.stepRatio == 0) || (forward.stepRatio == 0 && left.stepRatio == 0))
-			UpdateKnownMap();
+			*currentTile = VISITED_TILE;
 	}
 
 	waypoint.vector = currentWaypoint - origin;
@@ -339,7 +342,6 @@ void eEntity::UpdateVector() {
 
 	bestWeight = 0;
 	rotationAngle = 0.0f;
-	oldForward = forward.vector;
 	while (rotationAngle < maxRotation) {
 
 		// check how clear the path is starting one step along it
@@ -351,7 +353,6 @@ void eEntity::UpdateVector() {
 				forward = test;
 
 			CheckWalls(walls);	// to update the validSteps that the sprite will be comparing on the next frame
-			moving = true;
 			return;
 		}
 
@@ -392,16 +393,11 @@ void eEntity::UpdateVector() {
 		StopMoving();
 	} else {
 		forward = best;
-		CheckWalls(walls);	// to update the validSteps that the sprite will be comparing on the next frame
-		moving = true;		
+		CheckWalls(walls);	// to update the validSteps that the sprite will be comparing on the next frame		
 	}
-	UpdateWaypoint();
 
-	// drop a trail waypoint and reset to UNKNOWN_TILE any overwritten trail waypoints
-	if ( moving && moveState == MOVE_TO_GOAL &&  oldForward != ZERO_VEC2 &&  lastTrailTile != currentTile ) {
-		trail.PushFront(origin);
-		lastTrailTile = currentTile;
-	}
+	// moveState may have changed, track the correct waypoint
+	UpdateWaypoint();
 }
 
 //******************
@@ -511,25 +507,24 @@ bool eEntity::CheckFogOfWar(const eVec2 & point) const {
 // self == false puts them at touchRange off the bounding box
 // --the entity effectively has 16 touch sensors--
 //******************
-void eEntity::CheckTouch(bool self) {
+void eEntity::CheckTouch() {
 	
-	if (self) {	// on-sprite checks
-		touch.local.Clear();
+	// on-sprite checks
+	touch.oldLocal = touch.local;
+	touch.local.Clear();
 
-		
+	// FIXME: (size was 15) bounds is 16 wide and high
+	// horizontally oriented sensors
+	touch.local.RIGHT_TOP = !game->Map().IsValid(eVec2(absBounds[1].x - 1, absBounds[0].y + 1));
+	touch.local.RIGHT_BOTTOM = !game->Map().IsValid(eVec2(absBounds[1].x - 1 , absBounds[1].y - 2));
+	touch.local.LEFT_BOTTOM = !game->Map().IsValid(eVec2(absBounds[0].x, absBounds[1].y - 2));
+	touch.local.LEFT_TOP = !game->Map().IsValid(eVec2(absBounds[0].x, absBounds[0].y + 1));
 
-		// FIXME: (size was 15) bounds is 16 wide and high
-		// horizontally oriented sensors
-		touch.local.RIGHT_TOP = !game->Map().IsValid(eVec2(absBounds[1].x , absBounds[0].y + 1));
-		touch.local.RIGHT_BOTTOM = !game->Map().IsValid(eVec2(absBounds[1].x, absBounds[1].y - 1));
-		touch.local.LEFT_BOTTOM = !game->Map().IsValid(eVec2(absBounds[0].x, absBounds[1].y - 1));
-		touch.local.LEFT_TOP = !game->Map().IsValid(eVec2(absBounds[0].x, absBounds[0].y + 1));
-
-		// vertically oriented sensors
-		touch.local.TOP_LEFT = !game->Map().IsValid(eVec2(absBounds[0].x + 1, absBounds[0].y));
-		touch.local.TOP_RIGHT = !game->Map().IsValid(eVec2(absBounds[1].x - 1, absBounds[0].y));
-		touch.local.BOTTOM_RIGHT = !game->Map().IsValid(eVec2(absBounds[1].x - 1, absBounds[1].y));
-		touch.local.BOTTOM_LEFT = !game->Map().IsValid(eVec2(absBounds[0].x + 1, absBounds[1].y));
+	// vertically oriented sensors
+	touch.local.TOP_LEFT = !game->Map().IsValid(eVec2(absBounds[0].x + 1, absBounds[0].y));
+	touch.local.TOP_RIGHT = !game->Map().IsValid(eVec2(absBounds[1].x - 2, absBounds[0].y));
+	touch.local.BOTTOM_RIGHT = !game->Map().IsValid(eVec2(absBounds[1].x - 2, absBounds[1].y - 1));
+	touch.local.BOTTOM_LEFT = !game->Map().IsValid(eVec2(absBounds[0].x + 1, absBounds[1].y - 1));
 /*
 		// horizontally oriented sensors
 		touch.local.RIGHT_TOP		= !game->Map().IsValid( eVec2(spritePos.x + size, spritePos.y + 1) );
@@ -543,21 +538,21 @@ void eEntity::CheckTouch(bool self) {
 		touch.local.BOTTOM_RIGHT	= !game->Map().IsValid( eVec2(spritePos.x + size - 1, spritePos.y + size) );
 		touch.local.BOTTOM_LEFT		= !game->Map().IsValid( eVec2(spritePos.x + 1, spritePos.y + size) );
 */
-	} else { // ranged off-sprite checks
-		touch.oldRanged = touch.ranged;
-		touch.ranged.Clear();
+	// ranged off-sprite checks
+	touch.oldRanged = touch.ranged;
+	touch.ranged.Clear();
 
-		// horizontally oriented sensors
-		touch.ranged.RIGHT_TOP = !game->Map().IsValid(eVec2(absBounds[1].x + touch.reach, absBounds[0].y));
-		touch.ranged.RIGHT_BOTTOM = !game->Map().IsValid(eVec2(absBounds[1].x + touch.reach, absBounds[1].y));
-		touch.ranged.LEFT_TOP = !game->Map().IsValid(eVec2(absBounds[0].x - touch.reach, absBounds[0].y));
-		touch.ranged.LEFT_BOTTOM = !game->Map().IsValid(eVec2(absBounds[0].x - touch.reach, absBounds[1].y));
+	// horizontally oriented sensors
+	touch.ranged.RIGHT_TOP = !game->Map().IsValid(eVec2(absBounds[1].x + touch.reach - 1, absBounds[0].y));
+	touch.ranged.RIGHT_BOTTOM = !game->Map().IsValid(eVec2(absBounds[1].x + touch.reach - 1, absBounds[1].y - 1));
+	touch.ranged.LEFT_TOP = !game->Map().IsValid(eVec2(absBounds[0].x - touch.reach, absBounds[0].y));
+	touch.ranged.LEFT_BOTTOM = !game->Map().IsValid(eVec2(absBounds[0].x - touch.reach, absBounds[1].y - 1));
 
-		// vertically oriented sensors
-		touch.ranged.TOP_RIGHT = !game->Map().IsValid(eVec2(absBounds[1].x, absBounds[0].y - touch.reach));
-		touch.ranged.TOP_LEFT = !game->Map().IsValid(eVec2(absBounds[0].x, absBounds[0].y - touch.reach));
-		touch.ranged.BOTTOM_RIGHT = !game->Map().IsValid(eVec2(absBounds[1].x, absBounds[1].y + touch.reach));
-		touch.ranged.BOTTOM_LEFT = !game->Map().IsValid(eVec2(absBounds[0].x, absBounds[1].y + touch.reach));
+	// vertically oriented sensors
+	touch.ranged.TOP_RIGHT = !game->Map().IsValid(eVec2(absBounds[1].x - 1, absBounds[0].y - touch.reach));
+	touch.ranged.TOP_LEFT = !game->Map().IsValid(eVec2(absBounds[0].x, absBounds[0].y - touch.reach));
+	touch.ranged.BOTTOM_RIGHT = !game->Map().IsValid(eVec2(absBounds[1].x - 1, absBounds[1].y + touch.reach - 1));
+	touch.ranged.BOTTOM_LEFT = !game->Map().IsValid(eVec2(absBounds[0].x, absBounds[1].y + touch.reach - 1));
 
 /*
 		// horizontally oriented sensors
@@ -572,112 +567,92 @@ void eEntity::CheckTouch(bool self) {
 		touch.ranged.BOTTOM_RIGHT	= !game->Map().IsValid( eVec2(spritePos.x + size, spritePos.y + size + touch.reach) );
 		touch.ranged.BOTTOM_LEFT	= !game->Map().IsValid( eVec2(spritePos.x, spritePos.y + size + touch.reach) );
 */
-	}
 }
 
 //******************
 // eEntity::CheckCollision
-// FIXME: should this belong to the Map class? or a Collision class? or stay here?
+// FIXME: this should belong to a Collision class that checks for overlapping bounds via graph nodes
+// then performs the collision response accordingly
 // Isolated check for overlap into non-traversable areas, and immediate sprite position correction
 //******************
 void eEntity::CheckCollision() {
-	eBounds tileAbsBounds;			// last valid tile the entity was on
-	eVec2 correction		= ZERO_VEC2;	// FIXME: move these assignements into the function body
-	eVec2 testOrigin		= origin;
+	eBounds tileAbsBounds;	// tile the entity should be on the edge of in the event of collision
+	eVec2 correction;
 	int row, column;
-/////////////////////////////////////////////////////////////////
-/*
-	// FIXME(?): immediate border sensors will trigger if !Map().IsValid(point); at the map edge
-	// AAAAANNND given the current correction math itd jump the entity back too far, hence this initial
-	// map edge correction....it doesn't return after this correction because ...WHY? (there was an odd bug in the bottom-right
-	// corner of the map that caused the sprite to reverse wall-follow direction)
-	// SOLUTION: now that SpatialIndexGrid snaps to the closest valid r,c this part should be unnecessary
-	// default map-edge collision
-	if (absBounds[0].x < 0)
-		correction.x = -absBounds[0].x;
-	else if (absBounds[1].x > knownMap.Width())
-		correction.x =  knownMap.Width() - absBounds[1].x;
 
-	if (origin.y < 0)
-		correction.y = -absBounds[0].y;
-	else if (absBounds[1].y > knownMap.Height())
-		correction.y = knownMap.Height() - absBounds[1].y;
-
-	SetOrigin(origin + correction);
-*/
-/////////////////////////////////////////////////////////////////
-
-	// check the immediate boarder of the sprite
-	CheckTouch(true);
-
-	// tile data for the entity on its previous move
-	// FIXME: ensure the absBounds math here is correct (in terms of parenthesis needed/lackthereof)
-	knownMap.Index(oldOrigin, row, column);
-	tileAbsBounds = eBounds(eVec2((float)(row * knownMap.CellWidth()), (float)(column * knownMap.CellHeight())), 
-									eVec2((float)(row * knownMap.CellWidth() + knownMap.CellWidth()), (float)(column * knownMap.CellHeight() + knownMap.CellHeight())));
+	static const byte_t * knownMapStart = &knownMap.Index(0, 0);
 
 	// straight-on wall collision
 	// correction adjusts the leading edge of collision box
-	switch(moveState) {		
-		case MOVE_RIGHT: {	
-			if (touch.local.RIGHT_TOP || touch.local.RIGHT_BOTTOM)
-				correction.x = tileAbsBounds[1].x - absBounds[1].x;			// right edge of last valid tile
-			break;
+	if (touch.local != touch.oldLocal) {
+		correction = ZERO_VEC2;
+		knownMap.Index(oldOrigin, row, column);
+		tileAbsBounds = eBounds(eVec2((float)(row * knownMap.CellWidth()), (float)(column * knownMap.CellHeight())), 
+								eVec2((float)(row * knownMap.CellWidth() + knownMap.CellWidth()), (float)(column * knownMap.CellHeight() + knownMap.CellHeight())));
+
+		switch(moveState) {		
+			case MOVE_RIGHT: {	
+				if (touch.local.RIGHT_TOP || touch.local.RIGHT_BOTTOM)
+					correction.x = tileAbsBounds[1].x - absBounds[1].x;			// right edge of currentTile
+				break;
+			}
+			case MOVE_LEFT: {
+				if (touch.local.LEFT_TOP || touch.local.LEFT_BOTTOM)
+					correction.x = tileAbsBounds[0].x - absBounds[0].x;			// left edge of currentTile
+				break;
+			}
+			case MOVE_UP: {
+				if (touch.local.TOP_RIGHT || touch.local.TOP_LEFT)
+					correction.y = tileAbsBounds[0].y - absBounds[0].y;			// top edge of currentTile
+				break;
+			}
+			case MOVE_DOWN: {
+				if (touch.local.BOTTOM_RIGHT || touch.local.BOTTOM_LEFT)
+					correction.y = tileAbsBounds[1].y - absBounds[1].y;			// bottom edge of currentTile
+				break;
+			}
 		}
-		case MOVE_LEFT: {
-			if (touch.local.LEFT_TOP || touch.local.LEFT_BOTTOM)
-				correction.x = tileAbsBounds[0].x - absBounds[0].x;			// left edge of last valid tile
-			break;
-		}
-		case MOVE_UP: {
-			if (touch.local.TOP_RIGHT || touch.local.TOP_LEFT)
-				correction.y = tileAbsBounds[0].y - absBounds[0].y;			// top edge of last valid tile
-			break;
-		}
-		case MOVE_DOWN: {
-			if (touch.local.BOTTOM_RIGHT || touch.local.BOTTOM_LEFT)
-				correction.y = tileAbsBounds[1].y - absBounds[1].y;			// bottom edge of last valid tile
-			break;
-		}
+		SetOrigin(origin + correction);
+		// used to return here if a correction occured
 	}
-
-	SetOrigin(origin + correction);
-
-	if (origin != testOrigin)
-		return;
-
-	// check just off the sprite
-	CheckTouch(false);
 
 	// wall-follower AI outside turn wall alignment
 	// correction adjusts the trailing edge of collision box
-	switch (moveState) {
-		case MOVE_RIGHT: {
-			if ((touch.oldRanged.BOTTOM_LEFT && !touch.ranged.BOTTOM_LEFT) ||
-				(touch.oldRanged.TOP_LEFT && !touch.ranged.TOP_LEFT))
-				correction.x = tileAbsBounds[0].x - absBounds[0].x;			// left edge of current valid tile
-			break;
+	if (touch.ranged != touch.oldRanged) {
+		correction		= ZERO_VEC2;
+		row				= (previousTile - knownMapStart) / MAX_MAP_COLUMNS;
+		column			= (previousTile - knownMapStart) % MAX_MAP_COLUMNS;
+		tileAbsBounds	= eBounds(eVec2((float)(row * knownMap.CellWidth()), (float)(column * knownMap.CellHeight())),
+									eVec2((float)(row * knownMap.CellWidth() + knownMap.CellWidth()), (float)(column * knownMap.CellHeight() + knownMap.CellHeight())));
+
+		switch (moveState) {
+			case MOVE_RIGHT: {
+				if ((touch.oldRanged.BOTTOM_LEFT && !touch.ranged.BOTTOM_LEFT) ||
+					(touch.oldRanged.TOP_LEFT && !touch.ranged.TOP_LEFT))
+					correction.x = tileAbsBounds[1].x - absBounds[0].x;			// right edge of previousTile
+				break;
+			}
+			case MOVE_LEFT: {
+				if ((touch.oldRanged.BOTTOM_RIGHT && !touch.ranged.BOTTOM_RIGHT) ||
+					(touch.oldRanged.TOP_RIGHT && !touch.ranged.TOP_RIGHT))
+					correction.x = tileAbsBounds[0].x - absBounds[1].x;			// left edge of previousTile
+				break;
+			}
+			case MOVE_UP: {
+				if ((touch.oldRanged.LEFT_BOTTOM && !touch.ranged.LEFT_BOTTOM) || 
+					(touch.oldRanged.RIGHT_BOTTOM && !touch.ranged.RIGHT_BOTTOM))
+					correction.y = tileAbsBounds[0].y - absBounds[1].y;			// top edge of previousTile
+				break;
+			}
+			case MOVE_DOWN: {
+				if ((touch.oldRanged.LEFT_TOP && !touch.ranged.LEFT_TOP) ||
+					(touch.oldRanged.RIGHT_TOP && !touch.ranged.RIGHT_TOP))
+					correction.y = tileAbsBounds[1].y - absBounds[0].y;			// bottom edge of previousTile			
+				break;
+			}
 		}
-		case MOVE_LEFT: {
-			if ((touch.oldRanged.BOTTOM_RIGHT && !touch.ranged.BOTTOM_RIGHT) ||
-				(touch.oldRanged.TOP_RIGHT && !touch.ranged.TOP_RIGHT))
-				correction.x = tileAbsBounds[1].x - absBounds[1].x;			// right edge of current valid tile
-			break;
-		}
-		case MOVE_UP: {
-			if ((touch.oldRanged.LEFT_BOTTOM && !touch.ranged.LEFT_BOTTOM) || 
-				(touch.oldRanged.RIGHT_BOTTOM && !touch.ranged.RIGHT_BOTTOM))
-				correction.y = tileAbsBounds[1].y - absBounds[1].y;			// bottom edge of current valid tile
-			break;
-		}
-		case MOVE_DOWN: {
-			if ((touch.oldRanged.LEFT_TOP && !touch.ranged.LEFT_TOP) ||
-				(touch.oldRanged.RIGHT_TOP && !touch.ranged.RIGHT_TOP))
-				correction.y = tileAbsBounds[0].y - absBounds[0].y;			// top edge of current valid tile			
-			break;
-		}
+		SetOrigin(origin + correction);
 	}
-	SetOrigin(origin + correction);
 }
 
 //******************
@@ -729,6 +704,8 @@ void eEntity::StopMoving() {
 
 //******************
 // eEntity::AddUserWaypoint
+// TODO: use SpatialIndexGrid::Validate(point) to snap a waypoint onto the nearest
+// in-bounds map point (like Age of Empires flags)
 //******************
 void eEntity::AddUserWaypoint(const eVec2 & waypoint) {
 
@@ -739,7 +716,7 @@ void eEntity::AddUserWaypoint(const eVec2 & waypoint) {
 }
 
 //******************
-// eEntity::StopMoving
+// eEntity::UpdateWaypoint
 // returns false if there's no waypoints available
 // TODO: make currentWaypoint a pointer, then set it to nullptr if there's no waypoints, then make this void return-type
 //******************
@@ -771,7 +748,7 @@ bool eEntity::UpdateWaypoint( bool getNext ) {
 			return false;
 		}
 		default: 
-			return false;
+			return true;			// changed to true from false, for the DEBUG of wall-follow w/waypoints
 	}
 }
 
@@ -799,9 +776,8 @@ void eEntity::UpdateKnownMap() {
 	int endRow, endCol;
 	int tileResetRange = 0;		// size of the box around the goal to set tiles to UNKNOWN_TILE
 
-	// update the newly visited tile and put it into the trailMap
-	if (currentTile != nullptr) 
-		*currentTile = VISITED_TILE;
+	// update the newly exited tile
+	*previousTile = VISITED_TILE;
 
 	// solid-box of tiles at the tileResetRange centered on **the current goal waypoint** to to reset the knownMap:
 	if ( !goals.IsEmpty() ) {

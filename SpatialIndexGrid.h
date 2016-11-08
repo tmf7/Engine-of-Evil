@@ -236,20 +236,30 @@ inline int eSpatialIndexGrid<type, rows, columns>::ColumnLimit() const {
 
 //******************
 // eSpatialIndexGrid::SetRowLimit
-// minimum limit is 1
+// minimum limit is 1, max is rows
 //******************
 template< class type, int rows, int columns>
 inline void eSpatialIndexGrid<type, rows, columns>::SetRowLimit(const int maxRows) {
-	rowLimit = maxRows > 0 ? maxRows : 1;
+	if (maxRows > rows)
+		rowLimit = rows;
+	else if (maxRows <= 0)
+		rowLimit = 1;
+	else
+		rowLimit = maxRows;
 }
 
 //******************
 // eSpatialIndexGrid::SetColumnLimit
-// minimum limit is 1
+// minimum limit is 1, max is columns
 //******************
 template< class type, int rows, int columns>
 inline void eSpatialIndexGrid<type, rows, columns>::SetColumnLimit(const int maxColumns) {
-	columnLimit = maxColumns > 0 ? maxColumns : 1;
+	if (maxColumns > columns)
+		columnLimit = columns;
+	else if (maxColumns <= 0)
+		columnLimit = 1;
+	else
+		columnLimit = maxColumns;
 }
 
 //******************

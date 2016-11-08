@@ -10,8 +10,8 @@
 typedef unsigned char byte_t;
 
 #define MAX_FILE_PATH 128
-#define MAX_MAP_ROWS 256
-#define MAX_MAP_COLUMNS 256
+#define MAX_MAP_ROWS 5//256
+#define MAX_MAP_COLUMNS 10//256
 #define MAX_ENTITIES 2		//	4096
 #define MAX_IMAGES 32		//	1024
 

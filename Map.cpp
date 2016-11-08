@@ -168,10 +168,8 @@ void eMap::Update() {
 void eMap::CameraInput() {
 	eVec2 correction;
 	const Uint8 * keys = SDL_GetKeyboardState(NULL);
-	static const int maxX = (tileMap.Width() - game->Renderer().Width()) >= 0 ? 
-							 tileMap.Width() - game->Renderer().Width() : 0;
-	static const int maxY = (tileMap.Height() - game->Renderer().Height()) >= 0 ?
-							 tileMap.Height() - game->Renderer().Height() : 0;
+	static const int maxX = tileMap.Width() > (int)camera.localBounds.Width() ? tileMap.Width() : (int)camera.localBounds.Width();
+	static const int maxY = tileMap.Height() > (int)camera.localBounds.Height() ? tileMap.Height() : (int)camera.localBounds.Height();
 
 	if (keys[SDL_SCANCODE_SPACE]) {
 		SetCameraOrigin(game->Entity(0)->Origin());
@@ -182,12 +180,11 @@ void eMap::CameraInput() {
 
 	// collision response with map edge
 	// TODO(?): move this to a collision detection/handling class
-	// FIXME/BUG: far bottom and far right edge of map are currently unapproachable
 	correction = ZERO_VEC2;
 	if (camera.absBounds[0].x < 0)
 		correction.x = -camera.absBounds[0].x;
 	else if (camera.absBounds[1].x > maxX)
-		correction.x = maxX - camera.absBounds[1].x  ;
+		correction.x = maxX - camera.absBounds[1].x;
 
 	if (camera.absBounds[0].y < 0)
 		correction.y = -camera.absBounds[0].y;

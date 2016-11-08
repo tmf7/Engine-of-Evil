@@ -3,18 +3,7 @@
 
 #include "Math.h"
 
-// TODO: traslating the model-bounds yields the world-relative bounds
-// Doom declares a bounds object AND A absBounds object for each clipmodel (which has a pointer to an entity)
-// AS WELL AS an idVec3 origin that is moving around
-// this essentially gives each clipmodel/entity its own coordinate system
-/*
-FROM Clip.cpp (idClipModel::Link)
-absBounds[0] = bounds[0] + origin;
-absBounds[1] = bounds[1] + origin;
-// every single time the origin is moved the entity has to be relinked (otherwise the entity isn't updated due to origin mismatch)
-*/
-
-// Develop this class to account for bounds rotated about an origin
+// TODO: Develop this class to account for bounds rotated about an origin
 // to allow for better shape-fitting of rotated sprite animations
 // never translate the model-bounds (only the absBounds); allow rotation of the model-bounds
 // only ever get the model-bounds radius/dimensions

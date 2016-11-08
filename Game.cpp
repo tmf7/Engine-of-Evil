@@ -68,7 +68,7 @@ bool eGame::Run() {
 	static SDL_Event	event;
 	Uint32				start, frameDuration;
 	int					delay;
-	static const int	fps = 60;
+	static const int	fps = 30;
 	
 	start = SDL_GetTicks();
 	renderer.Clear();

@@ -73,11 +73,13 @@ void eRenderer::DrawOutlineText(char * string, const eVec2 & point, Uint8 r, Uin
 //***************
 // eRenderer::DrawPixel
 // Draws a single pixel to the backbuffer
-// user can optimize by checking eRenderer::OnScreen(point) == true;
 //***************
 void eRenderer::DrawPixel(const eVec2 & point, Uint8 r, Uint8 g, Uint8 b) {
 	Uint32 * buffer;
 	Uint32 color;
+
+	if (!OnScreen(point))
+		return;
 
 	if (SDL_MUSTLOCK(backbuffer)) {
 		if (SDL_LockSurface(backbuffer) < 0)
