@@ -21,7 +21,6 @@ public:
 
 					eImageManager();
 
-	void			SetRenderer(eRenderer & renderer);
 	eImage *		GetImage(const char * filename);
 	void			Free();
 
@@ -30,7 +29,6 @@ private:
 	eImage			images[MAX_IMAGES];
 	eHashIndex		imageHash;
 	int				numImages;
-	eRenderer *		renderer;
 };
 
 //***************
@@ -38,13 +36,6 @@ private:
 //***************
 inline eImageManager::eImageManager() {
 	numImages = 0;
-}
-
-//***************
-// eImageManager::SetRenderer
-//***************
-inline void eImageManager::SetRenderer(eRenderer & renderer) {
-	this->renderer = &renderer;
 }
 
 #endif /* EVIL_IMAGE_MANAGER_H */

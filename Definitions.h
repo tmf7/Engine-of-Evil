@@ -3,17 +3,22 @@
 
 #include "SDL.h"
 #include "SDL_ttf.h"
-#include <Windows.h>		// for rand()
-#include <stdio.h>			// FIXME: necessary at this point?
+#include <Windows.h>		// for memset
+#include <stdio.h>			// for rand
 
 #define BIT(a) (1<<a)
 typedef unsigned char byte_t;
 
 #define MAX_FILE_PATH 128
-#define MAX_MAP_ROWS 5//256
-#define MAX_MAP_COLUMNS 10//256
-#define MAX_ENTITIES 2		//	4096
-#define MAX_IMAGES 32		//	1024
+#define MAX_MAP_ROWS 256
+#define MAX_MAP_COLUMNS 256
+#define MAX_ENTITIES 4096
+#define MAX_IMAGES 1024
+//#define MAX_WAYPOINTS 1024		// not counting targeted entities (those are POINTERS to other entities' origins)
+								// FIXME: this may not be necessary once dynamic memory is fully implemented
+
+//#define ONE_GIGABYTE 1073741824
+//extern byte_t memoryPool[ONE_GIGABYTE];
 
 template<class type, int rows, int columns>
 class eSpatialIndexGrid;

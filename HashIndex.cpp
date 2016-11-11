@@ -1,5 +1,7 @@
 #include "HashIndex.h"
 
+int eHashIndex::INVALID_INDEX[1] = { -1 };
+
 //*******************
 // eHashIndex::GetSpread
 // returns number in the range [0-100] representing the spread over the hash table

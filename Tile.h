@@ -2,7 +2,7 @@
 #define EVIL_TILE_H
 
 #include "Definitions.h"
-#include "Math.h"
+#include "Vector.h"
 
 // Flyweight tile design
 

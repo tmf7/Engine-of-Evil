@@ -3,11 +3,8 @@
 
 #include "SDL.h"			// for SDL_sqrtf
 
-#define DEG2RAD(angle)	( angle*((float)(M_PI)/180.0f) )
-#define ORIGIN_VEC2		eVec2( 1.0f, 0.0f )
-#define ZERO_VEC2		eVec2( 0.0f, 0.0f )
-#define ZERO_VEC3		eVec3( 0.0f, 0.0f, 0.0f )
-#define ORIGIN_VEC3		eVec3( 1.0f, 0.0f, 0.0f )
+#define DEG2RAD(angle)	( angle * ((float)(M_PI)/180.0f) )
+#define ROTATION_INCREMENT 1.0f
 
 // handles vectors, quaternions, and their operations
 
@@ -17,8 +14,8 @@
 class eVec2 {
 public:
 
-	float x;
-	float y;
+	float		x;
+	float		y;
 
 				eVec2();
 	explicit	eVec2(const float x, const float y);
@@ -49,6 +46,9 @@ public:
 
 
 };
+
+extern eVec2 vec2_zero;
+extern eVec2 vec2_oneZero;
 
 //******************
 // eVec2::eVec2
@@ -273,9 +273,9 @@ inline eVec2 & eVec2::operator*=(const float a) {
 class eVec3 {
 public:
 
-	float x;
-	float y;
-	float z;
+	float		x;
+	float		y;
+	float		z;
 
 				eVec3();
 	explicit	eVec3(const float x, const float y, const float z);
@@ -307,6 +307,9 @@ public:
 	eVec3		Cross(const eVec3 &a) const;
 	eVec3 &		Cross(const eVec3 &a, const eVec3 &b);
 };
+
+extern eVec3 vec3_zero;
+extern eVec3 vec3_oneZero;
 
 //******************
 // eVec3::eVec3
@@ -563,10 +566,10 @@ inline eVec3 & eVec3::Cross(const eVec3 &a, const eVec3 &b) {
 class eQuat {
 public:
 
-	float x;
-	float y;
-	float z;
-	float w;
+	float			x;
+	float			y;
+	float			z;
+	float			w;
 
 					eQuat();
 	explicit		eQuat(const float x, const float y, const float z, const float w);
@@ -582,6 +585,8 @@ public:
 	eVec2			operator*(const eVec2 &a) const;
 	eQuat &			operator*=(const eQuat &a);
 };
+
+extern eQuat rotationQuat_Z;	// to rotate any vector about z-axis
 
 //******************
 // eQuat::eQuat

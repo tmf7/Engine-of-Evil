@@ -11,18 +11,17 @@
 #include "Game.h"
 
  int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR lpCmdLine, INT nCmdShow) {
-	eGame evil;
 	eGame::ErrorCode initCode;
 	
-	initCode = evil.Init();
+	initCode = game.Init();
 	if (initCode != eGame::INIT_SUCCESS) {
-		evil.Shutdown(initCode);
+		game.Shutdown(initCode);
 		return 0;
 	}
 
-	while (evil.Run());
+	while (game.Run());
 
-	evil.Shutdown(eGame::INIT_SUCCESS);
+	game.Shutdown(eGame::INIT_SUCCESS);
 
 	return 0;
 }

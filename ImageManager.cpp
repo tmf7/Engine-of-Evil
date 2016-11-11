@@ -1,4 +1,5 @@
 #include "ImageManager.h"
+#include "Game.h"
 
 //***************
 // eImageManager::GetImage
@@ -29,7 +30,7 @@ eImage * eImageManager::GetImage(const char * filename) {
 	if (surface == NULL)
 		return nullptr;
 
-	if (renderer->FormatSurface(&surface, true)) {	// FIXME: not all images should be colorKeyed
+	if (game.GetRenderer().FormatSurface(&surface, true)) {	// FIXME: not all images should be colorKeyed
 		imageHash.Add(key, numImages++);
 		i = imageHash.First(key);
 		images[i].Init(surface, filename);

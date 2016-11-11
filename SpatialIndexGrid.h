@@ -1,12 +1,8 @@
 #ifndef EVIL_SPATIAL_INDEX_GRID_H
 #define EVIL_SPATIAL_INDEX_GRID_H
 
-// TODO: given that in most game maps the full [rows][columns] limit of a
-// SpatialIndexGrid won't be used ==> potentially declare an array of eBounds 
-// to define a series of 2D arrays within the larger block of memory,
-// then declare SpatialIndexGrid<...>::SetGrid( size_t gridNumber );
-// to quickly swap between what is being checked/drawn 
-// without having to re-initialize the array
+// TODO: if a single level map consists of an upstairs/downstairs type arrangement
+// then load multiple SpatialIndexGrids and switch a pointer for the tilemap, then reset the camera parameters
 
 class eVec2;
 
@@ -15,10 +11,6 @@ class eVec2;
 //  Maps points in 2D space to elements of a 2D array
 //  by divinding the space into a regular grid of cells.
 //  This class uses stack memory.
-//  It is recommended to use a typedef such as
-//  typedef SpatialIndexGrid<int, num_rows, num_columns> map_t;
-//  to better access static error conditions such as
-//  map_t::INVALID_INDEX and map_t::INVALID_CELL
 //*************************************************
 template< class type, int rows, int columns>
 class eSpatialIndexGrid {
@@ -28,6 +20,7 @@ public:
 
 	bool					IsValid(const eVec2 & point) const;
 	void					Validate(eVec2 & point) const;
+	void					Validate(int & row, int & column) const;
 
 	void					Index(const eVec2 & point, int & row, int & column) const;
 	type &					Index(const eVec2 & point);
@@ -40,11 +33,8 @@ public:
 	void					SetCellWidth(const int cellWidth);
 	void					SetCellHeight(const int cellHeight);
 
-	int						RowLimit() const;
-	int						ColumnLimit() const;
-	void					SetRowLimit(const int maxRows);
-	void					SetColumnLimit(const int maxColumns);
-
+	int						Rows() const;
+	int						Columns() const;
 	int						Width() const;
 	int						Height() const;
 
@@ -55,11 +45,6 @@ private:
 	type					cells[rows][columns];
 	int						cellWidth;
 	int						cellHeight;
-
-	// these allow for a smaller chunck of the stack-allocated memory block
-	// to be utilized in-game for faster value-checking
-	int						rowLimit;							// allows for 0 <= row < rowLimit <= rows
-	int						columnLimit;						// allows for 0 <= column < columnLimit <= columns
 };
 
 
@@ -67,78 +52,78 @@ private:
 // eSpatialIndexGrid::eSpatialIndexGrid
 //******************
 template< class type, int rows, int columns>
-inline eSpatialIndexGrid<type, rows, columns>::eSpatialIndexGrid() : cellWidth(1), cellHeight(1),
-																	rowLimit(rows), columnLimit(columns) {
+inline eSpatialIndexGrid<type, rows, columns>::eSpatialIndexGrid() : cellWidth(1), cellHeight(1) {
 }
 
 //**************
 // eSpatialIndexGrid::IsValid
-// returns true if point lies within gird area
-// bound by the rowLimit and columnLimit
+// returns true if point lies within the grid area
 //**************
 template< class type, int rows, int columns>
 inline bool eSpatialIndexGrid<type, rows, columns>::IsValid(const eVec2 & point) const {
+	if (point.x >= 0 && point.x <= Width() - 1 && point.y >= 0 && point.y <= Height() - 1)
+		return true;
 
-	if ((point.x > Width() - 1) || (point.x < 0) || (point.y > Height() - 1) || (point.y < 0))
-		return false;
-
-	return true;
+	return false;
 }
 
 
 //******************
 // eSpatialIndexGrid::Validate
-// snaps out of bounds points to the closest valid point
-// returns false if the point had to move
-// returns true if the point is unchanged
+// snaps points beyond the grid area to the closest in-bounds point
 //******************
 template< class type, int rows, int columns>
 inline void eSpatialIndexGrid<type, rows, columns>::Validate(eVec2 & point) const {
-	int width; 
-	int height; 
+	int width;
+	int height;
 
 	width = Width() - 1;
+	height = Height() - 1;
 	if (point.x < 0)
 		point.x = 0;
 	else if (point.x > width)
 		point.x = width;
 	
-	height = Height() - 1;
 	if (point.y < 0)
 		point.y = 0;
 	else if (point.y > height)
 		point.y = height;
 }
 
-
 //******************
-// eSpatialIndexGrid::Index
-// sets the reference row and column to
-// grid-area-scaled values using the given point
-// snaps out of bounds points to the closest cell
+// eSpatialIndexGrid::Validate
+// snaps row, column values beyond the bounds of ([0, rows),[0, columns)) to the closest row and/or column
 //******************
 template< class type, int rows, int columns>
-inline void eSpatialIndexGrid<type, rows, columns>::Index(const eVec2 & point, int & row, int & column)  const {
-
-	row = (int)(point.x / cellWidth);
-	column = (int)(point.y / cellHeight);
-	
+inline void eSpatialIndexGrid<type, rows, columns>::Validate(int & row, int & column) const {
 	if (row < 0)
 		row = 0;
-	else if (row >= rowLimit)
-		row = rowLimit - 1;
+	else if (row >= rows)
+		row = rows - 1;
 
 	if (column < 0)
 		column = 0;
-	else if (column >= columnLimit)
-		column = columnLimit - 1;
+	else if (column >= columns)
+		column = columns - 1;
+}
+
+
+//******************
+// eSpatialIndexGrid::Index
+// sets the reference row and column to the cell the point lies within, and
+// those beyond the bounds of ([0, rows),[0, columns)) to the closest row and/or column
+//******************
+template< class type, int rows, int columns>
+inline void eSpatialIndexGrid<type, rows, columns>::Index(const eVec2 & point, int & row, int & column)  const {
+	row = (int)(point.x / cellWidth);
+	column = (int)(point.y / cellHeight);
+	Validate(row, column);
 }
 
 //******************
 // eSpatialIndexGrid::Index
 // returns cells[row][column] closest to the given point
 // to allow modification of the cell value
-// users must ensure inputs are within bounds
 //******************
 template< class type, int rows, int columns>
 inline type & eSpatialIndexGrid<type, rows, columns>::Index(const eVec2 & point) {
@@ -152,7 +137,6 @@ inline type & eSpatialIndexGrid<type, rows, columns>::Index(const eVec2 & point)
 //******************
 // eSpatialIndexGrid::Index
 // returns cells[row][column] closest to the given point
-// users must ensure inputs are within bounds
 //******************
 template< class type, int rows, int columns>
 inline const type & eSpatialIndexGrid<type, rows, columns>::Index(const eVec2 & point) const {
@@ -167,7 +151,7 @@ inline const type & eSpatialIndexGrid<type, rows, columns>::Index(const eVec2 & 
 // eSpatialIndexGrid::Index
 // returns cells[row][column]
 // to allow modification of the cell value
-// users must ensure inputs are within bounds
+// users must ensure inputs are within bounds of cells[rows][columns]
 //******************
 template< class type, int rows, int columns>
 inline type & eSpatialIndexGrid<type, rows, columns>::Index(const int row, const int column) {
@@ -177,7 +161,7 @@ inline type & eSpatialIndexGrid<type, rows, columns>::Index(const int row, const
 //******************
 // eSpatialIndexGrid::Index
 // returns cells[row][column]
-// users must ensure inputs are within bounds
+// users must ensure inputs are within bounds of cells[rows][columns]
 //******************
 template< class type, int rows, int columns>
 inline const type & eSpatialIndexGrid<type, rows, columns>::Index(const int row, const int column) const {
@@ -211,7 +195,7 @@ inline void eSpatialIndexGrid<type, rows, columns>::SetCellWidth(const int cellW
 
 //******************
 // eSpatialIndexGrid::SetCellHeight
-// minimum height is 1
+// minimum width is 1
 //******************
 template< class type, int rows, int columns>
 inline void eSpatialIndexGrid<type, rows, columns>::SetCellHeight(const int cellHeight) {
@@ -219,65 +203,37 @@ inline void eSpatialIndexGrid<type, rows, columns>::SetCellHeight(const int cell
 }
 
 //******************
-// eSpatialIndexGrid::RowLimit
+// eSpatialIndexGrid::Rows
 //******************
 template< class type, int rows, int columns>
-inline int eSpatialIndexGrid<type, rows, columns>::RowLimit() const {
-	return rowLimit;
+inline int eSpatialIndexGrid<type, rows, columns>::Rows() const {
+	return rows;
 }
 
 //******************
-// eSpatialIndexGrid::ColumnLimit
+// eSpatialIndexGrid::Columns
 //******************
 template< class type, int rows, int columns>
-inline int eSpatialIndexGrid<type, rows, columns>::ColumnLimit() const {
-	return columnLimit;
-}
-
-//******************
-// eSpatialIndexGrid::SetRowLimit
-// minimum limit is 1, max is rows
-//******************
-template< class type, int rows, int columns>
-inline void eSpatialIndexGrid<type, rows, columns>::SetRowLimit(const int maxRows) {
-	if (maxRows > rows)
-		rowLimit = rows;
-	else if (maxRows <= 0)
-		rowLimit = 1;
-	else
-		rowLimit = maxRows;
-}
-
-//******************
-// eSpatialIndexGrid::SetColumnLimit
-// minimum limit is 1, max is columns
-//******************
-template< class type, int rows, int columns>
-inline void eSpatialIndexGrid<type, rows, columns>::SetColumnLimit(const int maxColumns) {
-	if (maxColumns > columns)
-		columnLimit = columns;
-	else if (maxColumns <= 0)
-		columnLimit = 1;
-	else
-		columnLimit = maxColumns;
+inline int eSpatialIndexGrid<type, rows, columns>::Columns() const {
+	return columns;
 }
 
 //******************
 // eSpatialIndexGrid::Width
-// returns rowLimit * cellWidth
+// returns rowLimits * cellWidth
 //******************
 template< class type, int rows, int columns>
 inline int eSpatialIndexGrid<type, rows, columns>::Width() const {
-	return rowLimit * cellWidth;
+	return rows * cellWidth;
 }
 
 //******************
 // eSpatialIndexGrid::Height
-// returns columnLimit * cellHeight
+// returns columnLimits * cellHeight
 //******************
 template< class type, int rows, int columns>
 inline int eSpatialIndexGrid<type, rows, columns>::Height() const {
-	return columnLimit * cellHeight;
+	return columns * cellHeight;
 }
 
 //******************

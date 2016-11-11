@@ -7,17 +7,19 @@
 // initialize the window, its backbuffer surface, and a default font
 //***************
 bool eRenderer::Init() {
-	
+
 	window = SDL_CreateWindow("Evil", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 800, 600, SDL_WINDOW_SHOWN);
 
 	if (!window)
 		return false;
 
 	backbuffer = SDL_GetWindowSurface(window);
-	clear = SDL_LoadBMP("graphics/clear.bmp");
+//	clear = SDL_LoadBMP("graphics/clear.bmp");
 
-	if (!backbuffer || !clear)
+	if (!backbuffer)// || !clear
 		return false;
+
+	clearColor = SDL_MapRGB(backbuffer->format, 0, 0, 0);	// black
 
 	if (TTF_Init() == -1)
 		return false;
@@ -27,6 +29,8 @@ bool eRenderer::Init() {
 	if (!font)
 		return false;
 
+	screenBounds[1] = eVec2((float)backbuffer->w, (float)backbuffer->h);		// TODO:  allow the window to be resized and the screenBounds with it
+
 	return true;
 }
 
@@ -34,7 +38,7 @@ bool eRenderer::Init() {
 // eRenderer::Free
 // close the font and destroy the window
 //***************
-void eRenderer::Free() {
+void eRenderer::Free() const {
 
 	if (!font)
 		TTF_CloseFont(font);
@@ -50,7 +54,7 @@ void eRenderer::Free() {
 // Draws a string to the backbuffer
 // user can optimize by checking eRenderer::OnScreen(point) == true;
 //***************
-void eRenderer::DrawOutlineText(char * string, const eVec2 & point, Uint8 r, Uint8 g, Uint8 b) {
+void eRenderer::DrawOutlineText(char * string, const eVec2 & point, Uint8 r, Uint8 g, Uint8 b) const {
 	SDL_Surface * renderedText;
 	SDL_Color color;
 	SDL_Rect destRect;
@@ -73,12 +77,13 @@ void eRenderer::DrawOutlineText(char * string, const eVec2 & point, Uint8 r, Uin
 //***************
 // eRenderer::DrawPixel
 // Draws a single pixel to the backbuffer
+// after confirming the point is on the backbuffer
 //***************
-void eRenderer::DrawPixel(const eVec2 & point, Uint8 r, Uint8 g, Uint8 b) {
+void eRenderer::DrawPixel(const eVec2 & point, Uint8 r, Uint8 g, Uint8 b) const {
 	Uint32 * buffer;
 	Uint32 color;
 
-	if (!OnScreen(point))
+	if (!screenBounds.ContainsPoint(point))
 		return;
 
 	if (SDL_MUSTLOCK(backbuffer)) {
@@ -100,7 +105,7 @@ void eRenderer::DrawPixel(const eVec2 & point, Uint8 r, Uint8 g, Uint8 b) {
 // draws a source image's current frame onto the backbuffer
 // user can optimize by checking eRenderer::OnScreen(point) == true;
 //***************
-void eRenderer::DrawImage(eImage * image, const eVec2 & point) {
+void eRenderer::DrawImage(eImage * image, const eVec2 & point) const {
 	SDL_Rect destRect;
 
 	if (image == NULL || image->Source() == NULL)
@@ -118,7 +123,7 @@ void eRenderer::DrawImage(eImage * image, const eVec2 & point) {
 // draws a sprites image's current frame onto the backbuffer
 // user can optimize by checking eRenderer::OnScreen(point) == true;
 //***************
-void eRenderer::DrawSprite(eSprite * sprite, const eVec2 & point) {
+void eRenderer::DrawSprite(eSprite * sprite, const eVec2 & point) const {
 	DrawImage(sprite->Image(), point);
 }
 

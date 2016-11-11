@@ -1,5 +1,9 @@
 #include "Game.h"
 
+//byte_t memoryPool[ONE_GIGABYTE];
+eGame game;
+eAI boss;
+
 //****************
 // eGame::Init
 //****************
@@ -11,14 +15,16 @@ eGame::ErrorCode eGame::Init() {
 	if (!renderer.Init())
 		return RENDERER_ERROR;
 
-	imageManager.SetRenderer(renderer);
-
-	if (!map.Init("graphics/tiles.bmp", this, 160, 120))
+	if (!map.Init())
 		return MAP_ERROR;
 
 	numEntities++;
-	if (!entities[0].Init("graphics/hero.bmp", false, this))
+	entities[0] = &boss;
+	if (!(static_cast<eAI *>(entities[0])->Spawn()))
 		return ENTITY_ERROR;		// FIXME: make this entityID dependent
+
+// DEBUG: testing global static memory allocation, works (taskmanager shows 1GB in use for evil.exe; takes about 2 seconds to memset 1GB though, slow startup, ran quick after)
+//	memset(memoryPool, 0xff, sizeof(byte_t) * ONE_GIGABYTE);
 
 	return INIT_SUCCESS;
 }
@@ -80,27 +86,29 @@ bool eGame::Run() {
 			}
 			case SDL_MOUSEBUTTONDOWN: {
 				if (event.button.button == 3)
-					map.ToggleTile(eVec2((float)(event.button.x + map.camera.absBounds[0].x),
-										 (float)(event.button.y + map.camera.absBounds[0].y)));
+					map.ToggleTile(eVec2((float)(event.button.x + camera.GetAbsBounds().x),
+										 (float)(event.button.y + camera.GetAbsBounds().y)));
 				if (event.button.button == 1)
-					entities[0].AddUserWaypoint(eVec2((float)(event.button.x + map.camera.absBounds[0].x),
-												   (float)(event.button.y + map.camera.absBounds[0].y)));
+					static_cast<eAI *>(entities[0])->AddUserWaypoint(eVec2((float)(event.button.x + camera.GetAbsBounds().x),
+												   (float)(event.button.y + camera.GetAbsBounds().y)));
 				break;
 			}
 			case SDL_KEYDOWN: {
 				if (event.key.keysym.scancode == SDL_SCANCODE_0)
-					map.BuildTiles(eMap::TRAVERSABLE_TILE);					// set entire map to brick
+					map.BuildTiles(TRAVERSABLE_TILE);					// set entire map to brick
 				else if (event.key.keysym.scancode == SDL_SCANCODE_1)
-					map.BuildTiles(eMap::COLLISION_TILE);					// set entire map to water
+					map.BuildTiles(COLLISION_TILE);					// set entire map to water
 				else if (event.key.keysym.scancode == SDL_SCANCODE_2)
-					map.BuildTiles(eMap::RANDOM_TILE);						// set entire map random (the old way)
+					map.BuildTiles(RANDOM_TILE);						// set entire map random (the old way)
 				break;
 			}
 		}
 	}
 
-	map.Update();
-	entities[0].Update();
+	static_cast<eAI *>(entities[0])->Think();		// FIXME/BUG: this should call eAI::Think()
+	camera.Think();
+	map.Draw();
+	static_cast<eAI *>(entities[0])->Draw();		// FIXME/BUG: this should call eAI::Think()
 	renderer.Show();
 
 	frameDuration = SDL_GetTicks() - start;	// NOTE: always positive unless game runs for ~49 days

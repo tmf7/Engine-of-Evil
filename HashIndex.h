@@ -30,10 +30,16 @@ public:
 
 private:
 	int				hashSize;
-	int				hash[DEFAULT_HASH_SIZE];
+	int				hashPool[DEFAULT_HASH_SIZE];
+	int	*			hash;
 	int				indexSize;
 	int				indexChain[DEFAULT_HASH_SIZE];
 	int				hashMask;
+	int				lookupMask;
+
+	static int		INVALID_INDEX[1];
+
+	void			Init();
 };
 
 //*******************
@@ -43,8 +49,18 @@ inline eHashIndex::eHashIndex() {
 	hashSize = DEFAULT_HASH_SIZE;
 	indexSize = DEFAULT_HASH_SIZE;
 	hashMask = hashSize - 1;
+	hash = INVALID_INDEX;
+	lookupMask = 0;
+}
+
+//*******************
+// eHashIndex::Init
+//*******************
+inline void eHashIndex::Init() {
+	hash = hashPool;
 	memset(hash, 0xff, hashSize * sizeof(hash[0]));
 	memset(indexChain, 0xff, indexSize * sizeof(indexChain[0]));
+	lookupMask = -1;
 }
 
 //*******************
@@ -54,6 +70,9 @@ inline eHashIndex::eHashIndex() {
 //*******************
 inline void eHashIndex::Add(const int key, const int index) {
 	int k;
+
+	if (hash == INVALID_INDEX)
+		Init();
 
 	k = key & hashMask;
 	indexChain[index] = hash[k];
@@ -66,6 +85,9 @@ inline void eHashIndex::Add(const int key, const int index) {
 //*******************
 inline void eHashIndex::Remove(const int key, const int index) {
 	int k;
+
+	if (hash == INVALID_INDEX)
+		return;
 	
 	k = key & hashMask;
 	if (hash[k] == index) {
@@ -87,7 +109,7 @@ inline void eHashIndex::Remove(const int key, const int index) {
 // get the first index from the hash, returns -1 if empty hash entry
 //*******************
 inline int eHashIndex::First(const int key) const {
-	return hash[key & hashMask];
+	return hash[key & hashMask & lookupMask];
 }
 
 //*******************
@@ -96,7 +118,7 @@ inline int eHashIndex::First(const int key) const {
 // index >= 0 && index < indexSize only
 //*******************
 inline int eHashIndex::Next(const int index) const {
-	return indexChain[index];
+	return indexChain[index & lookupMask];
 }
 
 /*
@@ -171,7 +193,8 @@ inline void eHashIndex::RemoveIndex(const int key, const int index) {
 // only clears the hash table because clearing the indexChain is not really needed
 //*******************
 inline void eHashIndex::Clear() {
-	memset(hash, 0xff, hashSize * sizeof(hash[0]));
+	if (hash != INVALID_INDEX)
+		memset(hash, 0xff, hashSize * sizeof(hash[0]));
 }
 
 //*******************
@@ -194,13 +217,13 @@ inline int eHashIndex::GetIndexSize() const {
 //*******************
 inline int eHashIndex::GenerateKey(const char * string) const {
 	int i;
-	int hash;
+	int key;
 
-	hash = 0;
+	key = 0;
 	for (i = 0; *string != '\0'; i++) 
-		hash += (*string++) * (i + 119);
+		key += (*string++) * (i + 119);
 
-	return hash;
+	return key;
 }
 
 #endif /* EVIL_HASH_INDEX_H_ */

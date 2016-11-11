@@ -1,14 +1,7 @@
 #ifndef EVIL_DEQUE_H
 #define EVIL_DEQUE_H
 
-// TODO: add a dynamic memory constructor (copy constructor, destructor, and copy assignment) to allow for larger runtime deques
-// eg Deque<type>::Deque<type>(size_t capacity) : capacity(capacity) { Deque(); }
-// and std::unique_ptr<Node> nodePool; nodePool = new Node[capacity]; (to allocate a contiguous block of memory?)
-// and delete[] nodePool;
-
-// TODO: Node_s should only have type * data (not: type data)
-// or use a rvalue referece move operation
-// to increase speed/performance (instead of wasting time copying)
+// TODO: make this an intensive list/node class, instead of an extensive one
 
 //*************************************************
 //				eDeque
@@ -25,14 +18,14 @@ private:
 	typedef struct Node_s {
 		Node_s *	prev = this;
 		Node_s *	next = this;
-		type		data;
+		type 		data;
 	} Node_t;
 
 	int					numElements;
 	int					activeSlot;
 	Node_t *			front;
 	Node_t *			back;
-	Node_t				nodePool[capacity];
+	Node_t				nodePool[capacity];			// TODO: have the heap allocator class take care of this instead
 
 public:
 

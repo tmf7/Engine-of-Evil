@@ -1,15 +1,26 @@
-#ifndef GAME_H
-#define GAME_H
+#ifndef EVIL_GAME_H
+#define EVIL_GAME_H
 
 #include "Definitions.h"
 #include "Renderer.h"
 #include "ImageManager.h"
-#include "Math.h"
+#include "Vector.h"
 #include "Map.h"
 #include "Entity.h"
+#include "Camera.h"
+#include "AI.h"
 
 class eGame {
 public:
+
+	struct{
+		bool	GOAL_WAYPOINTS		= true;
+		bool	TRAIL_WAYPOINTS		= true;
+		bool	COLLISION_CIRCLE	= true;
+		bool	TOUCH_SENSORS		= true;
+		bool	KNOWN_MAP_DRAW		= true;
+		bool	KNOWN_MAP_CLEAR		= true;
+	} debugFlags;
 
 	enum ErrorCode {
 		SDL_ERROR,
@@ -25,21 +36,27 @@ public:
 	void				Shutdown(ErrorCode error);
 	bool				Run();
 
-	eRenderer &			Renderer();
-	eImageManager &		ImageManager();
-	eMap &				Map();
-	eEntity *			Entity(int entityID);
+	eRenderer &			GetRenderer();
+	eImageManager &		GetImageManager();
+	eCamera &			GetCamera();
+	eMap &				GetMap();
+	eEntity *			GetEntity(int entityID);
 
 private:
 
-	eEntity				entities[MAX_ENTITIES];
+	eEntity *			entities[MAX_ENTITIES];
 	eMap				map;
 	eRenderer			renderer;
 	eImageManager		imageManager;
+	eCamera				camera;
 	int					numEntities;
 
 	void				FreeAssets();
 };
+
+extern eGame game;						// one instance used by all objects
+extern eAI boss;						// FIXME: temporary solution to using dynamic memory to create object instances
+										// then downcast them to their base class (then type check when extracting/using)
 
 //****************
 // eGame::eGame
@@ -48,32 +65,39 @@ inline eGame::eGame() : numEntities(0) {
 }
 
 //****************
-// eGame::Renderer
+// eGame::GetRenderer
 //****************
-inline eRenderer & eGame::Renderer() {
+inline eRenderer & eGame::GetRenderer() {
 	return renderer;
 }
 
 //****************
-// eGame::ImageManager
+// eGame::GetImageManager
 //****************
-inline eImageManager & eGame::ImageManager() {
+inline eImageManager & eGame::GetImageManager() {
 	return imageManager;
 }
 
 //****************
-// eGame::Map
+// eGame::GetCamera
 //****************
-inline eMap & eGame::Map() {
+inline eCamera & eGame::GetCamera() {
+	return camera;
+}
+
+//****************
+// eGame::GetMap
+//****************
+inline eMap & eGame::GetMap() {
 	return map;
 }
 
 //****************
-// eGame::Entity
+// eGame::GetEntity
 // entityID >= 0 && entityID <= numEntities only
 //****************
-inline eEntity * eGame::Entity(int entityID) {
-	return &entities[entityID];
+inline eEntity * eGame::GetEntity(int entityID) {
+	return entities[entityID];
 }
 
-#endif /* GAME_H */
+#endif /* EVIL_GAME_H */

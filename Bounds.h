@@ -1,7 +1,7 @@
 #ifndef EVIL_BOUNDS_H
 #define EVIL_BOUNDS_H
 
-#include "Math.h"
+#include "Vector.h"
 
 // TODO: Develop this class to account for bounds rotated about an origin
 // to allow for better shape-fitting of rotated sprite animations
@@ -35,13 +35,11 @@ public:
 
 	float			Width() const;
 	float			Height() const;
-/*
-	bool			ContainsPoint(const eVec2 & point) const;			// includes touching
-	bool			IntersectsBounds(const eBounds & a) const;			// includes touching
-	bool			LineIntersection(const eVec2 & start, const eVec2 & end) const;
+	bool			ContainsPoint(const eVec2 & point) const;
+	bool			Overlaps(const eBounds & bounds) const;
+//	bool			LineIntersection(const eVec2 & start, const eVec2 & end) const;
 	// intersection point is start + dir * scale
-	bool			RayIntersection(const eVec2 & start, const eVec2 & dir, float & scale) const;
-*/
+//	bool			RayIntersection(const eVec2 & start, const eVec2 & dir, float & scale) const;
 
 private:
 
@@ -53,8 +51,8 @@ private:
 // single point on origin (0, 0)
 //*************
 inline eBounds::eBounds() {
-	bounds[0] = ZERO_VEC2;
-	bounds[1] = ZERO_VEC2;
+	bounds[0] = vec2_zero;
+	bounds[1] = vec2_zero;
 }
 
 //*************
@@ -197,6 +195,31 @@ inline float eBounds::Width() const {
 //*************
 inline float eBounds::Height() const {
 	return bounds[1].y - bounds[0].y;
+}
+
+//***************
+// eBounds::ContainsPoint
+// returns true if the given point is within the bounds
+// includes toucing
+//***************
+inline bool eBounds::ContainsPoint(const eVec2 & point) const {
+	if (point.x <= bounds[1].x && point.x >= bounds[0].x && point.y <= bounds[1].x && point.y >= bounds[0].y)
+		return true;
+
+	return false;
+}
+
+//***************
+// eBounds::Overlaps
+// returns true if a given bounds overlaps this bounds
+// includes touching
+//***************
+inline bool eBounds::Overlaps(const eBounds & that) const {
+	if (that.bounds[1].x < bounds[0].x || that.bounds[1].y < bounds[0].y ||
+		that.bounds[0].x > bounds[1].x || that.bounds[0].y > bounds[1].y)
+		return false;
+
+	return true;
 }
 
 #endif  /* EVIL_BOUNDS_H */

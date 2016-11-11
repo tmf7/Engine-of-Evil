@@ -3,7 +3,7 @@
 
 #include "Definitions.h"
 
-// TODO: allow for different format sprite-sheets (eg: variable frame sizes from frame to frame)
+// TODO: allow for different format sprite-sheets (eg: variable frame sizes from frame to frame, loaded from a file)
 // (also see Sprite class for similar TODO)
 
 // TODO: SDL_BlitSurface doesn't allow pixel data to be rotated, only uses AABB
@@ -40,7 +40,6 @@ private:
 // eImage::eImage
 //**************
 inline eImage::eImage() : source(NULL) {
-	memset(filename, '\0', sizeof(char) * MAX_FILE_PATH);
 }
 
 //**************
