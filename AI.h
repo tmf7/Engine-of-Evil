@@ -65,7 +65,7 @@ typedef enum {
 } movementType_t;
 
 typedef enum {
-	COMPASS_PATH,
+	COMPASS_FOLLOW_PATH,
 	WALL_FOLLOW_PATH
 } pathfindingType_t;
 
@@ -144,7 +144,7 @@ private:
 	void				DrawCollisionCircle() const;
 	void				DrawTouchSensors() const;
 	void				DrawKnownMap() const;
-	void				CheckClearKnownMap();
+	bool				CheckKnownMapCleared();
 };
 
 //***************

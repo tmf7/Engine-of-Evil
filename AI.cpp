@@ -22,7 +22,9 @@ bool eAI::Spawn() {
 	currentTile = &knownMap.Index(origin);
 	previousTile = currentTile;
 	lastTrailTile = nullptr;
-	pathingState = COMPASS_PATH; // WALL_FOLLOW_PATH;
+
+	pathingState = COMPASS_FOLLOW_PATH;
+	moveState = MOVE_TO_GOAL;
 	return true;
 }
 
@@ -31,8 +33,12 @@ bool eAI::Spawn() {
 // selects and updates a pathfinding type (eg: waypoint+obstacle avoid, A* optimal path, wall follow, Area awareness, raw compass?, etc)
 //***************
 void eAI::Think() {
-	byte_t * checkTile;
+	eInput * input;
 	bool wasStopped;
+
+	input = &game.GetInput();
+	if (input->MousePressed(SDL_BUTTON_LEFT))
+		AddUserWaypoint(eVec2(input->GetMouseX() + game.GetCamera().GetAbsBounds().x, input->GetMouseY() + game.GetCamera().GetAbsBounds().y));
 
 	// only move with a waypoint
 	if (UpdateWaypoint()) {
@@ -40,13 +46,7 @@ void eAI::Think() {
 		wasStopped = velocity == vec2_zero;
 		Move();
 
-		// mark the tile to help future movement decisions
-		checkTile = &knownMap.Index(origin);
-		if (checkTile != currentTile) {
-			previousTile = currentTile;	// FIXME: make this/add a collidedTile, then collision correct (to fix bug where wall-follower marking too many tiles)
-			UpdateKnownMap();
-			currentTile = checkTile;
-		}
+		UpdateKnownMap();
 
 		if (pathingState == WALL_FOLLOW_PATH) {
 			CheckCollision();	// collision detection **AND** response here
@@ -73,7 +73,7 @@ void eAI::Think() {
 void eAI::Move() {
 
 	// two ways of settin the velocity
-	if (pathingState == COMPASS_PATH) {
+	if (pathingState == COMPASS_FOLLOW_PATH) {
 		CompassFollow();
 	} else {
 		forward.vector.Set((float)((moveState == MOVE_RIGHT) - (moveState == MOVE_LEFT)), (float)((moveState == MOVE_DOWN) - (moveState == MOVE_UP)));
@@ -180,8 +180,7 @@ void eAI::CompassFollow() {
 	if (!moving) {
 		test.vector = vec2_oneZero;
 		maxRotation = 360.0f;
-	}
-	else {
+	} else {
 		CheckWalls(leftOpen, rightOpen, forwardHit);
 		test = right;		// counter-clockwise sweep of 180 degree arc from right to left in the forward direction
 
@@ -463,8 +462,7 @@ void eAI::CheckCollision() {
 	// correction adjusts the trailing edge of collision box
 	if (touch.ranged != touch.oldRanged) {
 		correction = vec2_zero;
-		row = (previousTile - knownMapStart) / MAX_MAP_COLUMNS;
-		column = (previousTile - knownMapStart) % MAX_MAP_COLUMNS;
+		knownMap.Index(previousTile, row, column);
 		tileAbsBounds = eBounds(eVec2((float)(row * knownMap.CellWidth()), (float)(column * knownMap.CellHeight())),
 			eVec2((float)(row * knownMap.CellWidth() + knownMap.CellWidth()), (float)(column * knownMap.CellHeight() + knownMap.CellHeight())));
 
@@ -549,7 +547,7 @@ bool eAI::UpdateWaypoint(bool getNext) {
 		return false;
 	}
 	default:
-		return true;			// changed to true from false, for the DEBUG of wall-follow w/waypoints
+		return pathingState == WALL_FOLLOW_PATH;
 	}
 }
 
@@ -572,48 +570,63 @@ bool eAI::CheckTrail() {
 // and resets tiles around the current goal waypoint to UNKNOWN_TILE
 //******************
 void eAI::UpdateKnownMap() {
+	byte_t * checkTile;
 	int row, column;
 	int startRow, startCol;
 	int endRow, endCol;
-	int tileResetRange = 0;		// size of the box around the goal to set tiles to UNKNOWN_TILE
+	int tileResetRange;		// size of the box around the goal to set tiles to UNKNOWN_TILE
 
-	// update the newly exited tile
-	*previousTile = VISITED_TILE;
+	// mark the tile to help future movement decisions
+	// FIXME/BUG: make this/add a collidedTile, then collision correct (to fix bug where wall-follower marking too many tiles)
+	checkTile = &knownMap.Index(origin);
+	if (checkTile != currentTile) {
+		previousTile = currentTile;
+		*previousTile = VISITED_TILE;
+		currentTile = checkTile;
+	}
 
-	// solid-box of tiles at the tileResetRange centered on **the current goal waypoint** to to reset the knownMap:
-	if (!goals.IsEmpty()) {
-		tileResetRange = (int)((goals.Back() - origin).Length() / (knownMap.CellWidth() * 2));
+	tileResetRange = 0;
+	if (!CheckKnownMapCleared()) {
+		
+		// solid-box of tiles at the tileResetRange centered on **the current goal waypoint** to to reset the knownMap
+		// FIXME: this Length() call is very costly and shouldn't run each frame
+		// SOLUTION: find a workaround for using the knownMap at all, and/or prevent the current "orbit" behavior
+		// that the AI displays when attempting to attain a goal (ie sometimes there's an opening that's missed in favor
+		// of maintaining the directional weight)
+		if (!goals.IsEmpty()) {
+			tileResetRange = (int)((goals.Back() - origin).Length() / (knownMap.CellWidth() * 2));
 
-		// find the knownMap row and column of the current goal waypoint
-		knownMap.Index(goals.Back(), row, column);
+			// find the knownMap row and column of the current goal waypoint
+			knownMap.Index(goals.Back(), row, column);
 
-		// set initial bounding box top-left and bottom-right indexes within knownMap
-		startRow = row - (tileResetRange / 2);
-		startCol = column - (tileResetRange / 2);
-		endRow = row + (tileResetRange / 2);
-		endCol = column + (tileResetRange / 2);
+			// set initial bounding box top-left and bottom-right indexes within knownMap
+			startRow = row - (tileResetRange / 2);
+			startCol = column - (tileResetRange / 2);
+			endRow = row + (tileResetRange / 2);
+			endCol = column + (tileResetRange / 2);
 
-		// snap bounding box rows & columns within range of the tileMap area
-		if (startRow < 0)
-			startRow = 0;
-		if (startCol < 0)
-			startCol = 0;
+			// snap bounding box rows & columns within range of the tileMap area
+			if (startRow < 0)
+				startRow = 0;
+			if (startCol < 0)
+				startCol = 0;
 
-		if (endRow >= knownMap.Rows())
-			endRow = knownMap.Rows() - 1;
-		if (endCol >= knownMap.Columns())
-			endCol = knownMap.Columns() - 1;
+			if (endRow >= knownMap.Rows())
+				endRow = knownMap.Rows() - 1;
+			if (endCol >= knownMap.Columns())
+				endCol = knownMap.Columns() - 1;
 
-		// reset tiles within the bounding box
-		row = startRow;
-		column = startCol;
-		while (row <= endRow) {
-			knownMap.Index(row, column) = UNKNOWN_TILE;
+			// reset tiles within the bounding box
+			row = startRow;
+			column = startCol;
+			while (row <= endRow) {
+				knownMap.Index(row, column) = UNKNOWN_TILE;
 
-			column++;
-			if (column > endCol) {
-				column = startCol;
-				row++;
+				column++;
+				if (column > endCol) {
+					column = startCol;
+					row++;
+				}
 			}
 		}
 	}
@@ -645,17 +658,17 @@ void eAI::Draw() {
 //******************
 void eAI::DrawGoalWaypoints() const {
 	static eImage * const debugImage = sprite.Image();
-	eBounds debugBounds;
+	eVec2 debugPoint;
 	int node;
 
 	if (!game.debugFlags.GOAL_WAYPOINTS)
 		return;
 
 	node = 0;
-	debugBounds.ExpandSelf(8);
 	while (node < goals.Size()) {
-		debugBounds += goals.FromBack(node) - game.GetCamera().GetAbsBounds();
-		game.GetRenderer().DrawImage(debugImage, debugBounds[0]);					// top-left corner
+		debugPoint = goals.FromBack(node) - game.GetCamera().GetAbsBounds();
+		debugPoint.SnapInt();
+		game.GetRenderer().DrawImage(debugImage, (eBounds(debugPoint).ExpandSelf(8))[0]);	// top-left corner
 		node++;
 
 	}
@@ -666,17 +679,17 @@ void eAI::DrawGoalWaypoints() const {
 //******************
 void eAI::DrawTrailWaypoints() const {
 	static eImage * const debugImage = sprite.Image();
-	eBounds debugBounds;
+	eVec2 debugPoint;
 	int node;
 
 	if (!game.debugFlags.TRAIL_WAYPOINTS)
 		return;
 
 	node = 0;
-	debugBounds.ExpandSelf(8);
 	while (node < trail.Size()) {
-		debugBounds += trail.FromFront(node) - game.GetCamera().GetAbsBounds();
-		game.GetRenderer().DrawImage(debugImage, debugBounds[0]);					// top-left corner
+		debugPoint = trail.FromFront(node) - game.GetCamera().GetAbsBounds();
+		debugPoint.SnapInt();
+		game.GetRenderer().DrawImage(debugImage, (eBounds(debugPoint).ExpandSelf(8))[0]);	// top-left corner
 		node++;
 	}
 }
@@ -707,6 +720,7 @@ void eAI::DrawCollisionCircle() const {
 
 		if (velocity*debugVector >= 0) {
 			debugPoint = origin + (debugVector * collisionRadius) - game.GetCamera().GetAbsBounds();
+			debugPoint.SnapInt();
 			game.GetRenderer().DrawPixel(debugPoint, color[0], color[1], color[2]);
 		}
 		debugVector = rotationQuat_Z*debugVector;	// rotate counter-clockwise
@@ -781,11 +795,11 @@ void eAI::DrawKnownMap() const {
 	screenRect.h = knownMap.CellHeight();
 	while (row <= endRow) {
 		if (knownMap.Index(row, column) == VISITED_TILE) {
-			screenRect.x = (int)((float)(row	* knownMap.CellWidth()) - game.GetCamera().GetAbsBounds().x);
-			screenRect.y = (int)((float)(column	* knownMap.CellHeight()) - game.GetCamera().GetAbsBounds().y);
+			screenRect.x = eMath::NearestInt(((float)(row * knownMap.CellWidth()) - game.GetCamera().GetAbsBounds().x));
+			screenRect.y = eMath::NearestInt(((float)(column * knownMap.CellHeight()) - game.GetCamera().GetAbsBounds().y));
 			game.GetRenderer().DrawClearRect(screenRect);
 		}
-
+		
 		column++;
 		if (column > endCol) {
 			column = startCol;
@@ -797,12 +811,14 @@ void eAI::DrawKnownMap() const {
 //******************
 // eAI::CheckClearKnownmap
 //******************
-void eAI::CheckClearKnownMap() {
-	const Uint8* keys = SDL_GetKeyboardState(NULL);
+bool eAI::CheckKnownMapCleared() {
+	eInput * input;
 
-	if (!game.debugFlags.KNOWN_MAP_CLEAR)
-		return;
-
-	if (keys[SDL_SCANCODE_R])
+	input = &game.GetInput();
+	if (game.debugFlags.KNOWN_MAP_CLEAR && input->KeyPressed(SDL_SCANCODE_R)) {
 		knownMap.ClearAllCells();
+		return true;
+	}
+
+	return false;
 }

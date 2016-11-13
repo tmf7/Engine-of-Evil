@@ -6,29 +6,11 @@
 #include "Bounds.h"
 #include "Vector.h"
 
-/*
-An entity will be any object in game, be it an AI, a Player, an inanimate object, 
-or an object with a scripted movement
-
-Entity should be capable of:
-- providing collision handling data
-- providing rendering data
-- etc (? later ?)
-
-AI should be capable of:
-- processing user commands (orders)
-- processing AI-Type-specific scripts (procedural waypoints and other actions)
-- deciding how to move (objectives) (access to a/the map)
-- etc (later)
-
-Player should be capable of:
-- sending commands to AI (be it an indirect command or direct control)
-- etc (later)
-*/
-
-//******************
-// eEntity
-//******************
+//*************************************************
+//
+//					eEntity
+//
+//*************************************************
 class eEntity {
 public:
 

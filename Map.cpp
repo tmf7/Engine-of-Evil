@@ -15,7 +15,8 @@ bool eMap::Init () {
 	tileMap.SetCellWidth(32);
 	tileMap.SetCellHeight(32);
 
-	// FIXME: SpatialIndexGrid cell width & height should not have to be the same as the tileSet frame width & height
+	// FIXME: SpatialIndexGrid cell width & height should always be the same as the tileSet frame width & height
+	// EG: zoom in/out scales the pixel data, so scale the cell size
 	tileSet->Frame()->w = tileMap.CellWidth();
 	tileSet->Frame()->h = tileMap.CellHeight();
 
@@ -108,6 +109,25 @@ bool eMap::IsValid(const eVec2 & point, bool ignoreCollision) const {
 }
 
 //***************
+// eMap::Think
+//***************
+void eMap::Think() {
+	eInput * input;
+
+	input = &game.GetInput();
+	if (input->KeyPressed(SDL_SCANCODE_0))
+		BuildTiles(TRAVERSABLE_TILE);					// set entire map to brick
+	else if (input->KeyPressed(SDL_SCANCODE_1))
+		BuildTiles(COLLISION_TILE);						// set entire map to water
+	else if (input->KeyPressed(SDL_SCANCODE_2))
+		BuildTiles(RANDOM_TILE);						// set entire map random (the old way)
+
+	if (input->MousePressed(SDL_BUTTON_RIGHT))
+		ToggleTile(eVec2(input->GetMouseX() + game.GetCamera().GetAbsBounds().x, input->GetMouseY() + game.GetCamera().GetAbsBounds().y));
+}
+
+
+//***************
 // eMap::Draw
 // TODO: the tileSet frame dimensions should match the tileMap cell dimensions at all times in the event of zoom in/out
 // TODO: post-process all areas of the screen corresponding to where entities have visited
@@ -132,8 +152,8 @@ void eMap::Draw() const {
 
 	while (row <= endRow) {
 		tileSet->SetFrame(tileMap.Index(row, column));
-		screenPoint.x = (float)(row		* tileMap.CellWidth())	- game.GetCamera().GetAbsBounds().x;
-		screenPoint.y = (float)(column	* tileMap.CellHeight()) - game.GetCamera().GetAbsBounds().y;
+		screenPoint.x = eMath::NearestFloat((float)(row		* tileMap.CellWidth())	- game.GetCamera().GetAbsBounds().x);
+		screenPoint.y = eMath::NearestFloat((float)(column	* tileMap.CellHeight()) - game.GetCamera().GetAbsBounds().y);
 		game.GetRenderer().DrawImage(tileSet, screenPoint);
 
 		column++;

@@ -20,6 +20,7 @@ public:
 
 	bool					Init();
 	bool					IsValid(const eVec2 & point, bool ignoreCollision = false) const;
+	void					Think();
 	void					Draw() const;
 	void					BuildTiles(const tileType_t type);
 	void					ToggleTile(const eVec2 & point);

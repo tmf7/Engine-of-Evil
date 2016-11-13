@@ -18,15 +18,20 @@ void eCamera::Init() {
 // eCamera::Think
 //***************
 void eCamera::Think() {
+	eInput * input;
 	eVec2 correction;
-	const Uint8 * keys = SDL_GetKeyboardState(NULL);
+	float x, y;
+
 	static const int maxX = game.GetMap().TileMap().Width() > (int)localBounds.Width() ? game.GetMap().TileMap().Width() : (int)localBounds.Width();
 	static const int maxY = game.GetMap().TileMap().Height() > (int)localBounds.Height() ? game.GetMap().TileMap().Height() : (int)localBounds.Height();
 
-	if (keys[SDL_SCANCODE_SPACE]) {
+	input = &game.GetInput();
+	if (input->KeyHeld(SDL_SCANCODE_SPACE)) {
 		SetOrigin(game.GetEntity(0)->Origin());
 	} else {
-		velocity.Set((float)(keys[SDL_SCANCODE_D] - keys[SDL_SCANCODE_A]), (float)(keys[SDL_SCANCODE_S] - keys[SDL_SCANCODE_W]));
+		x = speed * (float)(input->KeyHeld(SDL_SCANCODE_D) - input->KeyHeld(SDL_SCANCODE_A));
+		y = speed * (float)(input->KeyHeld(SDL_SCANCODE_S) - input->KeyHeld(SDL_SCANCODE_W));
+		velocity.Set(x, y);
 		UpdateOrigin();
 	}
 
@@ -45,6 +50,5 @@ void eCamera::Think() {
 
 	if (correction != vec2_zero)
 		SetOrigin(origin + correction);
-
 }
 

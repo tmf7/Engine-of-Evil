@@ -18,6 +18,11 @@ eGame::ErrorCode eGame::Init() {
 	if (!map.Init())
 		return MAP_ERROR;
 
+	if (!input.Init())
+		return INPUT_ERROR;
+
+	camera.Init();
+
 	numEntities++;
 	entities[0] = &boss;
 	if (!(static_cast<eAI *>(entities[0])->Spawn()))
@@ -39,6 +44,9 @@ void eGame::Shutdown(eGame::ErrorCode error) {
 		switch (error) {
 			case SDL_ERROR:
 				SDL_strlcpy(message, "SDL INIT FAILURE", 64);
+				break;
+			case INPUT_ERROR:
+				SDL_strlcpy(message, "INPUT INIT FAILURE", 64);
 				break;
 			case RENDERER_ERROR:
 				SDL_strlcpy(message, "RENDERER INIT FAILURE", 64);
@@ -77,38 +85,24 @@ bool eGame::Run() {
 	static const int	fps = 30;
 	
 	start = SDL_GetTicks();
-	renderer.Clear();
 
+	// FIXME/TODO: the event poll may be extremely slow if it has to search through all events
 	while (SDL_PollEvent(&event)) {
 		switch (event.type) {
 			case SDL_QUIT: {
 				return false;
 			}
-			case SDL_MOUSEBUTTONDOWN: {
-				if (event.button.button == 3)
-					map.ToggleTile(eVec2((float)(event.button.x + camera.GetAbsBounds().x),
-										 (float)(event.button.y + camera.GetAbsBounds().y)));
-				if (event.button.button == 1)
-					static_cast<eAI *>(entities[0])->AddUserWaypoint(eVec2((float)(event.button.x + camera.GetAbsBounds().x),
-												   (float)(event.button.y + camera.GetAbsBounds().y)));
-				break;
-			}
-			case SDL_KEYDOWN: {
-				if (event.key.keysym.scancode == SDL_SCANCODE_0)
-					map.BuildTiles(TRAVERSABLE_TILE);					// set entire map to brick
-				else if (event.key.keysym.scancode == SDL_SCANCODE_1)
-					map.BuildTiles(COLLISION_TILE);					// set entire map to water
-				else if (event.key.keysym.scancode == SDL_SCANCODE_2)
-					map.BuildTiles(RANDOM_TILE);						// set entire map random (the old way)
-				break;
-			}
 		}
 	}
-
-	static_cast<eAI *>(entities[0])->Think();		// FIXME/BUG: this should call eAI::Think()
+	
+	input.Update();
+	static_cast<eAI *>(entities[0])->Think();		// FIXME/BUG: this should call eAI::Think() (check dooms game::RunFrame)
 	camera.Think();
+	map.Think();
+
+	renderer.Clear();
 	map.Draw();
-	static_cast<eAI *>(entities[0])->Draw();		// FIXME/BUG: this should call eAI::Think()
+	static_cast<eAI *>(entities[0])->Draw();		// FIXME/BUG: this should call eAI::Draw()
 	renderer.Show();
 
 	frameDuration = SDL_GetTicks() - start;	// NOTE: always positive unless game runs for ~49 days

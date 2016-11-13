@@ -1,7 +1,8 @@
-#ifndef EVIL_MATH_H
-#define EVIL_MATH_H
+#ifndef EVIL_VECTOR_H
+#define EVIL_VECTOR_H
 
 #include "SDL.h"			// for SDL_sqrtf
+#include "Math.h"
 
 #define DEG2RAD(angle)	( angle * ((float)(M_PI)/180.0f) )
 #define ROTATION_INCREMENT 1.0f
@@ -44,7 +45,7 @@ public:
 	bool		operator==(const eVec2 &a) const;
 	bool		operator!=(const eVec2 &a) const;
 
-
+	void		SnapInt();
 };
 
 extern eVec2 vec2_zero;
@@ -268,6 +269,15 @@ inline eVec2 & eVec2::operator*=(const float a) {
 }
 
 //******************
+// eVec2::SnapInt
+// moves x and y to the nearest integer value
+//******************
+inline void eVec2::SnapInt() {
+	x = floorf(x + 0.5f);
+	y = floorf(y + 0.5f);
+}
+
+//******************
 // eVec3
 //******************
 class eVec3 {
@@ -306,6 +316,8 @@ public:
 
 	eVec3		Cross(const eVec3 &a) const;
 	eVec3 &		Cross(const eVec3 &a, const eVec3 &b);
+
+	void		SnapInt();
 };
 
 extern eVec3 vec3_zero;
@@ -560,6 +572,16 @@ inline eVec3 & eVec3::Cross(const eVec3 &a, const eVec3 &b) {
 }
 
 //******************
+// eVec3::SnapInt
+// moves x, y, and z to the nearest integer value
+//******************
+inline void eVec3::SnapInt() {
+	x = floorf(x + 0.5f);
+	y = floorf(y + 0.5f);
+	z = floorf(z + 0.5f);
+}
+
+//******************
 // eQuat
 // --only deals with unit length quaternions--
 //******************
@@ -723,5 +745,5 @@ inline void eQuat::Set(const float x, const float y, const float z, const float 
 	this->w = w;
 }
 
-#endif /* EVIL_MATH_H */
+#endif /* EVIL_VECTOR_H */
 

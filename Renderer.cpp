@@ -53,6 +53,7 @@ void eRenderer::Free() const {
 // eRenderer::DrawOutlineText
 // Draws a string to the backbuffer
 // user can optimize by checking eRenderer::OnScreen(point) == true;
+// NOTE: converts the input point float data to integer values
 //***************
 void eRenderer::DrawOutlineText(char * string, const eVec2 & point, Uint8 r, Uint8 g, Uint8 b) const {
 	SDL_Surface * renderedText;
@@ -104,6 +105,7 @@ void eRenderer::DrawPixel(const eVec2 & point, Uint8 r, Uint8 g, Uint8 b) const 
 // eRenderer::DrawImage
 // draws a source image's current frame onto the backbuffer
 // user can optimize by checking eRenderer::OnScreen(point) == true;
+// NOTE: converts the input point float data to integer values
 //***************
 void eRenderer::DrawImage(eImage * image, const eVec2 & point) const {
 	SDL_Rect destRect;

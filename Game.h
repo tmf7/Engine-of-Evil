@@ -9,6 +9,7 @@
 #include "Entity.h"
 #include "Camera.h"
 #include "AI.h"
+#include "Input.h"
 
 class eGame {
 public:
@@ -24,6 +25,7 @@ public:
 
 	enum ErrorCode {
 		SDL_ERROR,
+		INPUT_ERROR,
 		RENDERER_ERROR,
 		MAP_ERROR,
 		ENTITY_ERROR,
@@ -36,6 +38,7 @@ public:
 	void				Shutdown(ErrorCode error);
 	bool				Run();
 
+	eInput &			GetInput();
 	eRenderer &			GetRenderer();
 	eImageManager &		GetImageManager();
 	eCamera &			GetCamera();
@@ -45,6 +48,7 @@ public:
 private:
 
 	eEntity *			entities[MAX_ENTITIES];
+	eInput				input;
 	eMap				map;
 	eRenderer			renderer;
 	eImageManager		imageManager;
@@ -62,6 +66,13 @@ extern eAI boss;						// FIXME: temporary solution to using dynamic memory to cr
 // eGame::eGame
 //****************
 inline eGame::eGame() : numEntities(0) {
+}
+
+//****************
+// eGame::GetInput
+//****************
+inline eInput & eGame::GetInput() {
+	return input;
 }
 
 //****************
