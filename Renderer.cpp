@@ -14,9 +14,8 @@ bool eRenderer::Init() {
 		return false;
 
 	backbuffer = SDL_GetWindowSurface(window);
-//	clear = SDL_LoadBMP("graphics/clear.bmp");
 
-	if (!backbuffer)// || !clear
+	if (!backbuffer)
 		return false;
 
 	clearColor = SDL_MapRGB(backbuffer->format, 0, 0, 0);	// black
@@ -29,7 +28,7 @@ bool eRenderer::Init() {
 	if (!font)
 		return false;
 
-	screenBounds[1] = eVec2((float)backbuffer->w, (float)backbuffer->h);		// TODO:  allow the window to be resized and the screenBounds with it
+	screenBounds[1] = eVec2((float)backbuffer->w - 1.0f, (float)backbuffer->h - 1.0f);	// TODO:  allow the window to be resized and the screenBounds with it
 
 	return true;
 }
@@ -52,7 +51,6 @@ void eRenderer::Free() const {
 //***************
 // eRenderer::DrawOutlineText
 // Draws a string to the backbuffer
-// user can optimize by checking eRenderer::OnScreen(point) == true;
 // NOTE: converts the input point float data to integer values
 //***************
 void eRenderer::DrawOutlineText(char * string, const eVec2 & point, Uint8 r, Uint8 g, Uint8 b) const {
@@ -79,10 +77,15 @@ void eRenderer::DrawOutlineText(char * string, const eVec2 & point, Uint8 r, Uin
 // eRenderer::DrawPixel
 // Draws a single pixel to the backbuffer
 // after confirming the point is on the backbuffer
+// NOTE: converts the input point float data to integer values
 //***************
 void eRenderer::DrawPixel(const eVec2 & point, Uint8 r, Uint8 g, Uint8 b) const {
-	Uint32 * buffer;
+	Uint8 * targetPixel;
 	Uint32 color;
+	int x, y;
+
+//	static Uint8 * backbufferStart = (Uint8 *)backbuffer->pixels;
+//	static Uint8 * backbufferEnd = (Uint8 *)backbuffer->pixels + (backbuffer->h - 1) * backbuffer->pitch + (backbuffer->w - 1) * backbuffer->format->BytesPerPixel;
 
 	if (!screenBounds.ContainsPoint(point))
 		return;
@@ -92,10 +95,12 @@ void eRenderer::DrawPixel(const eVec2 & point, Uint8 r, Uint8 g, Uint8 b) const 
 			return;
 	}
 
-	color = SDL_MapRGB(backbuffer->format, r, g, b);
+	x = (int)point.x;
+	y = (int)point.y;
 
-	buffer = (Uint32 *)backbuffer->pixels + (int)point.y * backbuffer->pitch / 4 + (int)point.x;
-	(*buffer) = color;
+	color = SDL_MapRGB(backbuffer->format, r, g, b);
+	targetPixel = (Uint8 *)backbuffer->pixels + y * backbuffer->pitch + x * backbuffer->format->BytesPerPixel;
+	*targetPixel = color;		// DEBUG: assumes dereferenced targetPixel is a Uint32
 
 	if (SDL_MUSTLOCK(backbuffer))
 		SDL_UnlockSurface(backbuffer);
@@ -104,7 +109,6 @@ void eRenderer::DrawPixel(const eVec2 & point, Uint8 r, Uint8 g, Uint8 b) const 
 //***************
 // eRenderer::DrawImage
 // draws a source image's current frame onto the backbuffer
-// user can optimize by checking eRenderer::OnScreen(point) == true;
 // NOTE: converts the input point float data to integer values
 //***************
 void eRenderer::DrawImage(eImage * image, const eVec2 & point) const {

@@ -175,7 +175,7 @@ void eAI::CompassFollow() {
 	static const float leftBias = 1.0f;
 	static const float rightBias = 1.05f;
 	static const float forwardBias = 1.1f;
-	static const float waypointBias = 2.0f;
+	static const float waypointBias = 2.0f;		// TODO: potentially modulate this during deadends (make it less strong)
 
 	if (!moving) {
 		test.vector = vec2_oneZero;
@@ -383,32 +383,32 @@ void eAI::CheckTouch() {
 	// FIXME: (size was 15) bounds is 16 wide and high, the -1 -2 situation seems arbitrary,
 	// and also fails if the bounds is rotated
 	// horizontally oriented sensors
-	touch.local.RIGHT_TOP = !game.GetMap().IsValid(eVec2(absBounds[1].x - 1, absBounds[0].y + 1));
-	touch.local.RIGHT_BOTTOM = !game.GetMap().IsValid(eVec2(absBounds[1].x - 1, absBounds[1].y - 2));
-	touch.local.LEFT_BOTTOM = !game.GetMap().IsValid(eVec2(absBounds[0].x, absBounds[1].y - 2));
-	touch.local.LEFT_TOP = !game.GetMap().IsValid(eVec2(absBounds[0].x, absBounds[0].y + 1));
+	touch.local.RIGHT_TOP		= !game.GetMap().IsValid(eVec2(absBounds[1].x - 1, absBounds[0].y + 1));
+	touch.local.RIGHT_BOTTOM	= !game.GetMap().IsValid(eVec2(absBounds[1].x - 1, absBounds[1].y - 2));
+	touch.local.LEFT_BOTTOM		= !game.GetMap().IsValid(eVec2(absBounds[0].x, absBounds[1].y - 2));
+	touch.local.LEFT_TOP		= !game.GetMap().IsValid(eVec2(absBounds[0].x, absBounds[0].y + 1));
 
 	// vertically oriented sensors
-	touch.local.TOP_LEFT = !game.GetMap().IsValid(eVec2(absBounds[0].x + 1, absBounds[0].y));
-	touch.local.TOP_RIGHT = !game.GetMap().IsValid(eVec2(absBounds[1].x - 2, absBounds[0].y));
-	touch.local.BOTTOM_RIGHT = !game.GetMap().IsValid(eVec2(absBounds[1].x - 2, absBounds[1].y - 1));
-	touch.local.BOTTOM_LEFT = !game.GetMap().IsValid(eVec2(absBounds[0].x + 1, absBounds[1].y - 1));
+	touch.local.TOP_LEFT		= !game.GetMap().IsValid(eVec2(absBounds[0].x + 1, absBounds[0].y));
+	touch.local.TOP_RIGHT		= !game.GetMap().IsValid(eVec2(absBounds[1].x - 2, absBounds[0].y));
+	touch.local.BOTTOM_RIGHT	= !game.GetMap().IsValid(eVec2(absBounds[1].x - 2, absBounds[1].y - 1));
+	touch.local.BOTTOM_LEFT		= !game.GetMap().IsValid(eVec2(absBounds[0].x + 1, absBounds[1].y - 1));
 
 	// ranged off-sprite checks
 	touch.oldRanged = touch.ranged;
 	touch.ranged.Clear();
 
 	// horizontally oriented sensors
-	touch.ranged.RIGHT_TOP = !game.GetMap().IsValid(eVec2(absBounds[1].x + touch.reach - 1, absBounds[0].y));
-	touch.ranged.RIGHT_BOTTOM = !game.GetMap().IsValid(eVec2(absBounds[1].x + touch.reach - 1, absBounds[1].y - 1));
-	touch.ranged.LEFT_TOP = !game.GetMap().IsValid(eVec2(absBounds[0].x - touch.reach, absBounds[0].y));
-	touch.ranged.LEFT_BOTTOM = !game.GetMap().IsValid(eVec2(absBounds[0].x - touch.reach, absBounds[1].y - 1));
+	touch.ranged.RIGHT_TOP		= !game.GetMap().IsValid(eVec2(absBounds[1].x + touch.reach - 1, absBounds[0].y));
+	touch.ranged.RIGHT_BOTTOM	= !game.GetMap().IsValid(eVec2(absBounds[1].x + touch.reach - 1, absBounds[1].y - 1));
+	touch.ranged.LEFT_TOP		= !game.GetMap().IsValid(eVec2(absBounds[0].x - touch.reach, absBounds[0].y));
+	touch.ranged.LEFT_BOTTOM	= !game.GetMap().IsValid(eVec2(absBounds[0].x - touch.reach, absBounds[1].y - 1));
 
 	// vertically oriented sensors
-	touch.ranged.TOP_RIGHT = !game.GetMap().IsValid(eVec2(absBounds[1].x - 1, absBounds[0].y - touch.reach));
-	touch.ranged.TOP_LEFT = !game.GetMap().IsValid(eVec2(absBounds[0].x, absBounds[0].y - touch.reach));
-	touch.ranged.BOTTOM_RIGHT = !game.GetMap().IsValid(eVec2(absBounds[1].x - 1, absBounds[1].y + touch.reach - 1));
-	touch.ranged.BOTTOM_LEFT = !game.GetMap().IsValid(eVec2(absBounds[0].x, absBounds[1].y + touch.reach - 1));
+	touch.ranged.TOP_RIGHT		= !game.GetMap().IsValid(eVec2(absBounds[1].x - 1, absBounds[0].y - touch.reach));
+	touch.ranged.TOP_LEFT		= !game.GetMap().IsValid(eVec2(absBounds[0].x, absBounds[0].y - touch.reach));
+	touch.ranged.BOTTOM_RIGHT	= !game.GetMap().IsValid(eVec2(absBounds[1].x - 1, absBounds[1].y + touch.reach - 1));
+	touch.ranged.BOTTOM_LEFT	= !game.GetMap().IsValid(eVec2(absBounds[0].x, absBounds[1].y + touch.reach - 1));
 }
 
 //******************

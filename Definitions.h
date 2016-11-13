@@ -11,8 +11,8 @@
 typedef unsigned char byte_t;
 
 #define MAX_FILE_PATH 128
-#define MAX_MAP_ROWS 35//256
-#define MAX_MAP_COLUMNS 10//256
+#define MAX_MAP_ROWS 32//256
+#define MAX_MAP_COLUMNS 32//256
 #define MAX_ENTITIES 4096
 #define MAX_IMAGES 1024
 //#define MAX_WAYPOINTS 1024		// not counting targeted entities (those are POINTERS to other entities' origins)

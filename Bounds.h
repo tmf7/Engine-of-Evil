@@ -200,13 +200,14 @@ inline float eBounds::Height() const {
 //***************
 // eBounds::ContainsPoint
 // returns true if the given point is within the bounds
-// includes toucing
+// includes touching
 //***************
 inline bool eBounds::ContainsPoint(const eVec2 & point) const {
-	if (point.x <= bounds[1].x && point.x >= bounds[0].x && point.y <= bounds[1].x && point.y >= bounds[0].y)
-		return true;
+	if (point.x > bounds[1].x || point.x < bounds[0].x || 
+		point.y > bounds[1].y || point.y < bounds[0].y)
+		return false;
 
-	return false;
+	return true;
 }
 
 //***************
