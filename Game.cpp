@@ -18,14 +18,12 @@ eGame::ErrorCode eGame::Init() {
 	if (!map.Init())
 		return MAP_ERROR;
 
-	if (!input.Init())
-		return INPUT_ERROR;
-
+	input.Init();		// DEBUG: will crash if it fails (around the new allocation)
 	camera.Init();
 
 	numEntities++;
 	entities[0] = &boss;
-	if (!(static_cast<eAI *>(entities[0])->Spawn()))
+	if (!entities[0]->Spawn())
 		return ENTITY_ERROR;		// FIXME: make this entityID dependent
 
 // DEBUG: testing global static memory allocation, works (taskmanager shows 1GB in use for evil.exe; takes about 2 seconds to memset 1GB though, slow startup, ran quick after)
@@ -96,13 +94,13 @@ bool eGame::Run() {
 	}
 	
 	input.Update();
-	static_cast<eAI *>(entities[0])->Think();		// FIXME/BUG: this should call eAI::Think() (check dooms game::RunFrame)
+	entities[0]->Think();
 	camera.Think();
 	map.Think();
 
 	renderer.Clear();
 	map.Draw();
-	static_cast<eAI *>(entities[0])->Draw();		// FIXME/BUG: this should call eAI::Draw()
+	entities[0]->Draw();
 	renderer.Show();
 
 	frameDuration = SDL_GetTicks() - start;	// NOTE: always positive unless game runs for ~49 days

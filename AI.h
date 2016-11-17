@@ -56,17 +56,19 @@ inline bool sensors_s::operator!=(const sensors_s & that) {
 }
 
 typedef enum {
-	MOVE_LEFT,			// wall-follow
-	MOVE_RIGHT,			// wall-follow
-	MOVE_UP,			// wall-follow
-	MOVE_DOWN,			// wall-follow
-	MOVE_TO_GOAL,		// waypoint tracking
-	MOVE_TO_TRAIL		// waypoint tracking
+	MOVETYPE_NONE,
+	MOVETYPE_LEFT,		// wall-follow
+	MOVETYPE_RIGHT,		// wall-follow
+	MOVETYPE_UP,		// wall-follow
+	MOVETYPE_DOWN,		// wall-follow
+	MOVETYPE_GOAL,		// waypoint tracking
+	MOVETYPE_TRAIL		// waypoint tracking
 } movementType_t;
 
 typedef enum {
-	COMPASS_FOLLOW_PATH,
-	WALL_FOLLOW_PATH
+	PATHTYPE_NONE,
+	PATHTYPE_COMPASS,
+	PATHTYPE_WALL
 } pathfindingType_t;
 
 class eAI : public eEntity {
@@ -74,11 +76,11 @@ public:
 
 						eAI();
 
-	bool				Spawn();
-	virtual void		Think();
-	void				Draw();
-	void				AddUserWaypoint(eVec2 & waypoint);
-	const ai_map_t &	KnownMap() const;
+	virtual bool		Spawn() override;
+	virtual void		Think() override;
+	virtual void		Draw() override;
+	void				AddUserWaypoint(const eVec2 & waypoint);
+	const byte_map_t &	KnownMap() const;
 
 private:
 
@@ -91,7 +93,7 @@ private:
 		void			Clear() { ranged.Clear(); oldRanged.Clear(); local.Clear(); oldLocal.Clear(); }
 	} touch;
 
-	ai_map_t			knownMap;				// tracks visited tiles from the game_map_t tileMap; in Map class
+	byte_map_t			knownMap;				// tracks visited tiles from the byte_map_t tileMap; in Map class
 												// FIXME: this becomes 256 MB of ram for 4096 entities
 												// SOLUTIONs: 1) change the algorithm to not need location tracking
 												// 2) change the tileMap to track visited entities at each cell
@@ -104,9 +106,9 @@ private:
 	float				goalRange;				// acceptable range to consider the goal waypoint reached
 	float				sightRange;				// range of drawable visibility (fog of war)
 
-	eDeque<eVec2, 50>	trail;					// AI-defined waypoints for effective backtracking
-	eDeque<eVec2, 50>	goals;					// User-defined waypoints as terminal destinations
-	eVec2				currentWaypoint;		// simplifies switching between the deque being tracked
+	eDeque<eVec2>		trail;					// AI-defined waypoints for effective backtracking
+	eDeque<eVec2>		goals;					// User-defined waypoints as terminal destinations
+	eVec2 *				currentWaypoint;		// simplifies switching between the deque being tracked
 
 	decision_t			forward;				// currently used movement vector
 	decision_t			left;					// perpendicular to forward.vector counter-clockwise
@@ -133,7 +135,7 @@ private:
 	void				CompassFollow();
 	bool				CheckVectorPath(eVec2 from, decision_t & along);
 	void				CheckWalls(bool & leftOpen, bool & rightOpen, bool & forwardHit);
-	bool				UpdateWaypoint(bool getNext = false);
+	void				UpdateWaypoint(bool getNext = false);
 	void				StopMoving();									// FIXME: should this be public?
 	bool				CheckTrail();
 	void				UpdateKnownMap();
@@ -144,7 +146,6 @@ private:
 	void				DrawCollisionCircle() const;
 	void				DrawTouchSensors() const;
 	void				DrawKnownMap() const;
-	bool				CheckKnownMapCleared();
 };
 
 //***************
@@ -160,7 +161,7 @@ inline eAI::eAI() {
 //*************
 // eAI::KnownMap
 //*************
-inline const ai_map_t & eAI::KnownMap() const {
+inline const byte_map_t & eAI::KnownMap() const {
 	return knownMap;
 }
 
@@ -169,6 +170,7 @@ inline const ai_map_t & eAI::KnownMap() const {
 //******************
 inline void eAI::StopMoving() {
 	forward.vector.Zero();
+	velocity.Zero();
 	moving = false;
 }
 

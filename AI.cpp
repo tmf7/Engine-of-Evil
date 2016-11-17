@@ -12,19 +12,19 @@ bool eAI::Spawn() {
 
 	collisionRadius = localBounds.Radius();
 	StopMoving();
-	touch.Clear();
+	touch.Clear();		// FIXME: potentially just put this in the PATHTYPE_WALL initializaiton
 
 	// knownMap dimensions, based in initialized tileMap dimensions
 	knownMap.SetCellWidth(game.GetMap().TileMap().CellWidth());
 	knownMap.SetCellHeight(game.GetMap().TileMap().CellHeight());
 	knownMap.ClearAllCells();
 
-	currentTile = &knownMap.Index(origin);
-	previousTile = currentTile;
-	lastTrailTile = nullptr;
-
-	pathingState = COMPASS_FOLLOW_PATH;
-	moveState = MOVE_TO_GOAL;
+	currentTile		= &knownMap.Index(origin);
+	previousTile	= currentTile;
+	lastTrailTile	= nullptr;
+	currentWaypoint = nullptr;
+	pathingState	= PATHTYPE_NONE;
+	moveState		= MOVETYPE_NONE;
 	return true;
 }
 
@@ -36,33 +36,56 @@ void eAI::Think() {
 	eInput * input;
 	bool wasStopped;
 
+// BEGIN FREEHILL DEBUG AI/player control
 	input = &game.GetInput();
 	if (input->MousePressed(SDL_BUTTON_LEFT))
 		AddUserWaypoint(eVec2(input->GetMouseX() + game.GetCamera().GetAbsBounds().x, input->GetMouseY() + game.GetCamera().GetAbsBounds().y));
 
-	// only move with a waypoint
-	if (UpdateWaypoint()) {
+	if (input->KeyPressed(SDL_SCANCODE_C)) {
+		pathingState = PATHTYPE_COMPASS;
+		moveState = MOVETYPE_GOAL;
+	} else if (input->KeyPressed(SDL_SCANCODE_W)) { // FIXME: speed reduced by compass follow as it hit the goal not reset to MAX_SPEED
+//		pathingState = PATHTYPE_WALL;				// SOLUTION: have a constant acceleration/deceleration factor (and limits for velocity)
+//		moveState = MOVETYPE_RIGHT;
+	} else if (input->KeyPressed(SDL_SCANCODE_N)) {	// FIXME: this should be a full stop, not just a branch diversion
+		pathingState = PATHTYPE_NONE;				// IE: StopMoving() and clear all trail/goal waypoints
+		moveState = MOVETYPE_NONE;					// this makes this MOVE/PATHTYPE equivalent to standing ground
+	}
+// END FREEHILL DEBUG AI/player control
 
-		wasStopped = velocity == vec2_zero;
+	// only move with a waypoint
+	if (currentWaypoint != nullptr) {
+
+		wasStopped = velocity == vec2_zero; // == !moving; ??? 
 		Move();
 
-		UpdateKnownMap();
+		UpdateKnownMap();		// FIXME: there is a user-input controlled function in here, it will not be called if UpdateWaypoint returns false
 
-		if (pathingState == WALL_FOLLOW_PATH) {
-			CheckCollision();	// collision detection **AND** response here
+		if (pathingState == PATHTYPE_WALL) {
+			CheckTouch();		// FIXME: collision detection here (too specific?)
+			CheckCollision();	// FIXME: collision response here (too specific?)
+								// FIXME: this currently depends on UpdatKnownMap current/previousTile assignment
+								// FIXME: this also depends on the current moveState 
+								// ie: if WallFollow is called before this then moveState may change and affect the collisoin response
 			WallFollow();
 		}
 
-		// drop a trail waypoint (but never in a deadend)
-		if (moving && !wasStopped && moveState != MOVE_TO_TRAIL && lastTrailTile != currentTile) {
+		// drop a trail waypoint (but never in a deadend that stopped the entity last frame)
+		if (moving && !wasStopped && moveState != MOVETYPE_TRAIL && lastTrailTile != currentTile) {
 			trail.PushFront(origin);
 			lastTrailTile = currentTile;
 		}
 
 		// check if goal is close enough to stop
-		if (origin.Compare(currentWaypoint, goalRange)) {	// FIXME: wall follow starts w/o a waypoint (default)
-			StopMoving();									// FIXME: this does nothing to stop a wall follower
+		if (origin.Compare(*currentWaypoint, goalRange)) {
+			StopMoving();
 			UpdateWaypoint(true);
+		}
+
+		// finalize the move
+		if (velocity != vec2_zero) {
+			moving = true;
+			UpdateOrigin();
 		}
 	}
 }
@@ -73,23 +96,24 @@ void eAI::Think() {
 void eAI::Move() {
 
 	// two ways of settin the velocity
-	if (pathingState == COMPASS_FOLLOW_PATH) {
+	if (pathingState == PATHTYPE_COMPASS) {
 		CompassFollow();
-	} else {
-		forward.vector.Set((float)((moveState == MOVE_RIGHT) - (moveState == MOVE_LEFT)), (float)((moveState == MOVE_DOWN) - (moveState == MOVE_UP)));
+	} else if (pathingState == PATHTYPE_WALL) {
+		forward.vector.Set((float)((moveState == MOVETYPE_RIGHT) - (moveState == MOVETYPE_LEFT)), (float)((moveState == MOVETYPE_DOWN) - (moveState == MOVETYPE_UP)));
 		velocity = forward.vector * speed;
 		// FIXME: this assumes the moveState is only ONE of the four states (for an AI)
 		// and pairs as-such with eEntity::CheckCollision() for collision detection AND response
 		// FIXME: under what circumstances should the forward.vector or velocity be zero in wall-follow mode?
+		// EG: if it reaches a goal waypoint, or it determines its stuck on an interior/exterior island, or some
+		// other "frustration"/optimal pathingState factors (yeah, but should it really do a full-stop, or just a transition?)
 	}
-
+/*
 	// move and prep for the next frame (wall-follow)
 	if (velocity != vec2_zero) {
 		moving = true;
 		UpdateOrigin();
-		if (pathingState == WALL_FOLLOW_PATH)
-			CheckTouch();
 	}
+*/
 }
 
 //***************
@@ -101,54 +125,54 @@ void eAI::Move() {
 void eAI::WallFollow() {
 
 	switch (moveState) {
-		case MOVE_RIGHT: {
+		case MOVETYPE_RIGHT: {
 
 			// if it has lost its wall move in that direction
 			// if it hasn't lost its wall move opposite that wall
 			// if it never had a wall, move down
 			if ((touch.oldRanged.BOTTOM_LEFT && !touch.ranged.BOTTOM_LEFT) ||
 				((touch.ranged.RIGHT_TOP || touch.ranged.RIGHT_BOTTOM) && !touch.ranged.BOTTOM_LEFT))
-				moveState = MOVE_DOWN;
+				moveState = MOVETYPE_DOWN;
 
 			else if ((touch.oldRanged.TOP_LEFT && !touch.ranged.TOP_LEFT) ||
 				((touch.ranged.RIGHT_TOP || touch.ranged.RIGHT_BOTTOM) && !touch.ranged.TOP_LEFT))
-				moveState = MOVE_UP;
+				moveState = MOVETYPE_UP;
 
 			break;
 		}
-		case MOVE_LEFT: {
+		case MOVETYPE_LEFT: {
 
 			if ((touch.oldRanged.BOTTOM_RIGHT && !touch.ranged.BOTTOM_RIGHT) ||
 				((touch.ranged.LEFT_TOP || touch.ranged.LEFT_BOTTOM) && !touch.ranged.BOTTOM_RIGHT))
-				moveState = MOVE_DOWN;
+				moveState = MOVETYPE_DOWN;
 
 			else if ((touch.oldRanged.TOP_RIGHT && !touch.ranged.TOP_RIGHT) ||
 				((touch.ranged.LEFT_TOP || touch.ranged.LEFT_BOTTOM) && !touch.ranged.TOP_RIGHT))
-				moveState = MOVE_UP;
+				moveState = MOVETYPE_UP;
 
 			break;
 		}
-		case MOVE_UP: {
+		case MOVETYPE_UP: {
 
 			if ((touch.oldRanged.RIGHT_BOTTOM && !touch.ranged.RIGHT_BOTTOM) ||
 				((touch.ranged.TOP_LEFT || touch.ranged.TOP_RIGHT) && !touch.ranged.RIGHT_BOTTOM))
-				moveState = MOVE_RIGHT;
+				moveState = MOVETYPE_RIGHT;
 
 			else if ((touch.oldRanged.LEFT_BOTTOM && !touch.ranged.LEFT_BOTTOM) ||
 				((touch.ranged.TOP_LEFT || touch.ranged.TOP_RIGHT) && !touch.ranged.LEFT_BOTTOM))
-				moveState = MOVE_LEFT;
+				moveState = MOVETYPE_LEFT;
 
 			break;
 		}
-		case MOVE_DOWN: {
+		case MOVETYPE_DOWN: {
 
 			if ((touch.oldRanged.RIGHT_TOP && !touch.ranged.RIGHT_TOP) ||
 				((touch.ranged.BOTTOM_LEFT || touch.ranged.BOTTOM_RIGHT) && !touch.ranged.RIGHT_TOP))
-				moveState = MOVE_RIGHT;
+				moveState = MOVETYPE_RIGHT;
 
 			else if ((touch.oldRanged.LEFT_TOP && !touch.ranged.LEFT_TOP) ||
 				((touch.ranged.BOTTOM_LEFT || touch.ranged.BOTTOM_RIGHT) && !touch.ranged.LEFT_TOP))
-				moveState = MOVE_LEFT;
+				moveState = MOVETYPE_LEFT;
 
 			break;
 		}
@@ -171,11 +195,13 @@ void eAI::CompassFollow() {
 	bool		leftOpen, rightOpen, forwardHit;
 
 	// modulate entity speed if at least this close to a waypoint
-	static const float goalRangeSqr = maxSpeed * maxSpeed * maxSteps * maxSteps;
+	static const float goalRangeSqr = maxSpeed * maxSpeed * maxSteps * maxSteps;	// FIXME: get rid of this check in favor of "at least one step away"
+
+	// TODO: make this a switch/if something that changes the bias based on hits/opens and PATHTYPE_COMPASS/WALL
 	static const float leftBias = 1.0f;
 	static const float rightBias = 1.05f;
 	static const float forwardBias = 1.1f;
-	static const float waypointBias = 2.0f;		// TODO: potentially modulate this during deadends (make it less strong)
+	static const float waypointBias = 2.0f;	
 
 	if (!moving) {
 		test.vector = vec2_oneZero;
@@ -184,9 +210,9 @@ void eAI::CompassFollow() {
 		CheckWalls(leftOpen, rightOpen, forwardHit);
 		test = right;		// counter-clockwise sweep of 180 degree arc from right to left in the forward direction
 
-//		if (moveState == MOVE_TO_GOAL)
+//		if (moveState == MOVETYPE_GOAL)
 		maxRotation = 180.0f;
-//		else // moveState == MOVE_TO_TRAIL
+//		else // moveState == MOVETYPE_TRAIL
 //			maxRotation = 360.0f;				// FIXME/BUG: occasionally causes semi-permanent stuck-in-place jitter
 
 		// stuck in a corner (look for the quickest and most waypoint-oriented way out)
@@ -194,8 +220,9 @@ void eAI::CompassFollow() {
 			*currentTile = VISITED_TILE;
 	}
 
-	waypoint.vector = currentWaypoint - origin;
-	if (moveState == MOVE_TO_GOAL) {							// FIXME/BUG(?): stays slow if it was slow and switched to MOVE_TO_TRAIL
+	waypoint.vector = *currentWaypoint - origin;
+/*
+	if (moveState == MOVETYPE_GOAL) {							// FIXME/BUG(?): stays slow if it was slow and switched to MOVETYPE_TRAIL
 		distToWaypointSqr = waypoint.vector.LengthSquared();	// TODO: potentially use this value in UpdateKnownMap();
 
 		if (distToWaypointSqr < goalRangeSqr)
@@ -205,6 +232,7 @@ void eAI::CompassFollow() {
 		if (speed < 1)
 			speed = 1;
 	}
+*/
 	waypoint.vector.Normalize();
 
 	bestWeight = 0;
@@ -213,8 +241,8 @@ void eAI::CompassFollow() {
 
 		// check how clear the path is starting one step along it
 		// and head straight for the waypoint if the test.vector path crosses extremely near it
-		if (CheckVectorPath(origin + (test.vector*speed), test)) {
-			if (CheckVectorPath(origin + (waypoint.vector*speed), waypoint))
+		if (CheckVectorPath(origin + (test.vector * speed), test)) {
+			if (CheckVectorPath(origin + (waypoint.vector * speed), waypoint))
 				forward = waypoint;
 			else
 				forward = test;
@@ -225,7 +253,7 @@ void eAI::CompassFollow() {
 			return;
 		}
 
-		// FIXME/BUG: trail waypoint orbits or cannot attain sometimes 
+		// FIXME/BUG: trail waypoint orbits or cannot attain sometimes (bad corner, whatever)
 		// POTENTIALLY fixed by putting a trail waypoint on each new tile (its never too far to navigate straight back to)
 
 		// give the path a bias to help set priority
@@ -251,15 +279,15 @@ void eAI::CompassFollow() {
 		rotationAngle += ROTATION_INCREMENT;
 	}
 
-	if (moveState == MOVE_TO_GOAL && best.stepRatio == 0) {	// deadlocked, begin deadend protocols (ie follow the trail now)
+	if (moveState == MOVETYPE_GOAL && best.stepRatio == 0) {	// deadlocked, begin deadend protocols (ie follow the trail now)
 		StopMoving();
-		moveState = MOVE_TO_TRAIL;
+		moveState = MOVETYPE_TRAIL;
 	}
-	else if (moveState == MOVE_TO_TRAIL && best.stepRatio > 0) {
+	else if (moveState == MOVETYPE_TRAIL && best.stepRatio > 0) {
 		StopMoving();
-		moveState = MOVE_TO_GOAL;
+		moveState = MOVETYPE_GOAL;
 	}
-	else if (moveState == MOVE_TO_TRAIL && best.validSteps == 0) {
+	else if (moveState == MOVETYPE_TRAIL && best.validSteps == 0) {
 		StopMoving();
 	}
 	else {
@@ -318,7 +346,7 @@ bool eAI::CheckVectorPath(eVec2 from, decision_t & along) {
 			newSteps++;
 
 		// check if the goal waypoint is near the center of the validated test position
-		if (moveState == MOVE_TO_GOAL && from.Compare(currentWaypoint, goalRange))
+		if (moveState == MOVETYPE_GOAL && from.Compare(*currentWaypoint, goalRange))
 			return true;
 
 		// move to check validity of next position
@@ -422,8 +450,6 @@ void eAI::CheckCollision() {
 	eVec2 correction;
 	int row, column;
 
-	static const byte_t * knownMapStart = &knownMap.Index(0, 0);
-
 	// straight-on wall collision
 	// correction adjusts the leading edge of collision box
 	if (touch.local != touch.oldLocal) {
@@ -433,22 +459,22 @@ void eAI::CheckCollision() {
 			eVec2((float)(row * knownMap.CellWidth() + knownMap.CellWidth()), (float)(column * knownMap.CellHeight() + knownMap.CellHeight())));
 
 		switch (moveState) {
-			case MOVE_RIGHT: {
+			case MOVETYPE_RIGHT: {
 				if (touch.local.RIGHT_TOP || touch.local.RIGHT_BOTTOM)
 					correction.x = tileAbsBounds[1].x - absBounds[1].x;			// right edge of currentTile
 				break;
 			}
-			case MOVE_LEFT: {
+			case MOVETYPE_LEFT: {
 				if (touch.local.LEFT_TOP || touch.local.LEFT_BOTTOM)
 					correction.x = tileAbsBounds[0].x - absBounds[0].x;			// left edge of currentTile
 				break;
 			}
-			case MOVE_UP: {
+			case MOVETYPE_UP: {
 				if (touch.local.TOP_RIGHT || touch.local.TOP_LEFT)
 					correction.y = tileAbsBounds[0].y - absBounds[0].y;			// top edge of currentTile
 				break;
 			}
-			case MOVE_DOWN: {
+			case MOVETYPE_DOWN: {
 				if (touch.local.BOTTOM_RIGHT || touch.local.BOTTOM_LEFT)
 					correction.y = tileAbsBounds[1].y - absBounds[1].y;			// bottom edge of currentTile
 				break;
@@ -467,25 +493,25 @@ void eAI::CheckCollision() {
 			eVec2((float)(row * knownMap.CellWidth() + knownMap.CellWidth()), (float)(column * knownMap.CellHeight() + knownMap.CellHeight())));
 
 		switch (moveState) {
-			case MOVE_RIGHT: {
+			case MOVETYPE_RIGHT: {
 				if ((touch.oldRanged.BOTTOM_LEFT && !touch.ranged.BOTTOM_LEFT) ||
 					(touch.oldRanged.TOP_LEFT && !touch.ranged.TOP_LEFT))
 					correction.x = tileAbsBounds[1].x - absBounds[0].x;			// right edge of previousTile
 				break;
 			}
-			case MOVE_LEFT: {
+			case MOVETYPE_LEFT: {
 				if ((touch.oldRanged.BOTTOM_RIGHT && !touch.ranged.BOTTOM_RIGHT) ||
 					(touch.oldRanged.TOP_RIGHT && !touch.ranged.TOP_RIGHT))
 					correction.x = tileAbsBounds[0].x - absBounds[1].x;			// left edge of previousTile
 				break;
 			}
-			case MOVE_UP: {
+			case MOVETYPE_UP: {
 				if ((touch.oldRanged.LEFT_BOTTOM && !touch.ranged.LEFT_BOTTOM) ||
 					(touch.oldRanged.RIGHT_BOTTOM && !touch.ranged.RIGHT_BOTTOM))
 					correction.y = tileAbsBounds[0].y - absBounds[1].y;			// top edge of previousTile
 				break;
 			}
-			case MOVE_DOWN: {
+			case MOVETYPE_DOWN: {
 				if ((touch.oldRanged.LEFT_TOP && !touch.ranged.LEFT_TOP) ||
 					(touch.oldRanged.RIGHT_TOP && !touch.ranged.RIGHT_TOP))
 					correction.y = tileAbsBounds[1].y - absBounds[0].y;			// bottom edge of previousTile			
@@ -501,11 +527,12 @@ void eAI::CheckCollision() {
 // TODO: use SpatialIndexGrid::Validate(point) to snap a waypoint onto the nearest
 // in-bounds map point (like Age of Empires flags)
 //******************
-void eAI::AddUserWaypoint(eVec2 & waypoint) {
+void eAI::AddUserWaypoint(const eVec2 & waypoint) {
 
 	// TODO: disallow waypoints on collision tiles and off-map
 	// allow other entities to become waypoints (that move)
 	// moving waypoints would need to have their info updated in the deque (hence pointers instead of copies)
+	// of course that could be a separate category altogether
 
 	if (game.GetMap().IsValid(waypoint)) {
 		goals.PushFront(waypoint);
@@ -518,45 +545,56 @@ void eAI::AddUserWaypoint(eVec2 & waypoint) {
 // returns false if there's no waypoints available
 // TODO: make currentWaypoint a pointer, then set it to nullptr if there's no waypoints, then make this void return-type
 //******************
-bool eAI::UpdateWaypoint(bool getNext) {
+void eAI::UpdateWaypoint(bool getNext) {
 	switch (moveState) {
-	case MOVE_TO_GOAL: {
-		if (getNext) {
-			goals.PopBack();
-			trail.Clear();
+		case MOVETYPE_GOAL: {
+			if (getNext && !goals.IsEmpty()) {
+				goals.PopBack();
+				trail.Clear();
+			}
+			CheckTrail();
+			if (!goals.IsEmpty()) {
+				currentWaypoint = &goals.Back()->Data();
+				return;
+			}
+			currentWaypoint = nullptr;
+			return;
 		}
-		CheckTrail();
-		if (!goals.IsEmpty()) {
-			currentWaypoint = goals.Back();
-			return true;
+		case MOVETYPE_TRAIL: {
+			if (getNext && !trail.IsEmpty())
+				trail.PopFront();
+			if (!CheckTrail()) {
+				currentWaypoint = &trail.Front()->Data();
+				return;
+			} else if (!goals.IsEmpty()) {
+				moveState = MOVETYPE_GOAL;
+				currentWaypoint = &goals.Back()->Data();
+				return;
+			}
+			currentWaypoint = nullptr;
+			return;
 		}
-		return false;
-	}
-	case MOVE_TO_TRAIL: {
-		if (getNext)
-			trail.PopFront();
-		if (!CheckTrail()) {
-			currentWaypoint = trail.Front();
-			return true;
-		}
-		else if (!goals.IsEmpty()) {
-			moveState = MOVE_TO_GOAL;
-			currentWaypoint = goals.Back();
-			return true;
-		}
-		return false;
-	}
-	default:
-		return pathingState == WALL_FOLLOW_PATH;
+//		default:
+//			return pathingState == PATHTYPE_WALL;
+			// FIXME: this case logic is wrong, perhaps don't change the moveState in this function
+			// but also how can the cardinal directions be used to grab a waypoint? vs PATHTYPE_WALL/COMPASS
+			// EG: there could be situations that hamper a wall follow ==> stuck on interior/exterior island
+			// SOLUTION: generalize collision for vectors, allow for OBB to track diagonal wall sensor collisions,
+			// and reduce MOVETYPEs to GOAL and TRAIL; thus making PATHTYPE_WALL track touch sensors and forward.vector,
+			// while PATHTYPE_COMPASS tracks the "LOS" for potential forward.vectors
+			// AND/or DONT CHANGE THE MOVETYPE HERE???
 	}
 }
 
 //******************
 // eAI::CheckTrail
-// determine if the entity should fresh-start goal pathfinding
+// returns false if the entity should fresh-start goal pathfinding
 //******************
 bool eAI::CheckTrail() {
-	if (trail.IsEmpty()) {
+	eInput * input;
+
+	input = &game.GetInput();
+	if (trail.IsEmpty() || game.debugFlags.KNOWN_MAP_CLEAR && input->KeyPressed(SDL_SCANCODE_R)) {
 		knownMap.ClearAllCells();
 		lastTrailTile = nullptr;
 		return true;
@@ -586,7 +624,7 @@ void eAI::UpdateKnownMap() {
 	}
 
 	tileResetRange = 0;
-	if (!CheckKnownMapCleared()) {
+	if (!CheckTrail()) {
 		
 		// solid-box of tiles at the tileResetRange centered on **the current goal waypoint** to to reset the knownMap
 		// FIXME: this Length() call is very costly and shouldn't run each frame
@@ -594,10 +632,10 @@ void eAI::UpdateKnownMap() {
 		// that the AI displays when attempting to attain a goal (ie sometimes there's an opening that's missed in favor
 		// of maintaining the directional weight)
 		if (!goals.IsEmpty()) {
-			tileResetRange = (int)((goals.Back() - origin).Length() / (knownMap.CellWidth() * 2));
+			tileResetRange = (int)((goals.Back()->Data() - origin).Length() / (knownMap.CellWidth() * 2));
 
 			// find the knownMap row and column of the current goal waypoint
-			knownMap.Index(goals.Back(), row, column);
+			knownMap.Index(goals.Back()->Data(), row, column);
 
 			// set initial bounding box top-left and bottom-right indexes within knownMap
 			startRow = row - (tileResetRange / 2);
@@ -633,7 +671,7 @@ void eAI::UpdateKnownMap() {
 
 	// pop all trail waypoints that no longer fall on VISITED_TILEs
 	while (!trail.IsEmpty()) {
-		if (knownMap.Index(trail.Back()) == UNKNOWN_TILE)
+		if (knownMap.Index(trail.Back()->Data()) == UNKNOWN_TILE)
 			trail.PopBack();
 		else
 			break;
@@ -657,20 +695,18 @@ void eAI::Draw() {
 // eAI::DrawGoalWaypoints
 //******************
 void eAI::DrawGoalWaypoints() const {
-	static eImage * const debugImage = sprite.Image();
+	eNode<eVec2> * iterator;
 	eVec2 debugPoint;
-	int node;
+
+	static eImage * const debugImage = sprite.Image();
 
 	if (!game.debugFlags.GOAL_WAYPOINTS)
 		return;
 
-	node = 0;
-	while (node < goals.Size()) {
-		debugPoint = goals.FromBack(node) - game.GetCamera().GetAbsBounds();
+	for (iterator = goals.Back(); iterator != nullptr; iterator = iterator->Next()) {
+		debugPoint = iterator->Data() - game.GetCamera().GetAbsBounds();
 		debugPoint.SnapInt();
 		game.GetRenderer().DrawImage(debugImage, (eBounds(debugPoint).ExpandSelf(8))[0]);	// top-left corner
-		node++;
-
 	}
 }
 
@@ -678,19 +714,18 @@ void eAI::DrawGoalWaypoints() const {
 // eAI::DrawTrailWaypoints
 //******************
 void eAI::DrawTrailWaypoints() const {
-	static eImage * const debugImage = sprite.Image();
+	eNode<eVec2> * iterator;
 	eVec2 debugPoint;
-	int node;
+	
+	static eImage * const debugImage = sprite.Image();
 
 	if (!game.debugFlags.TRAIL_WAYPOINTS)
 		return;
 
-	node = 0;
-	while (node < trail.Size()) {
-		debugPoint = trail.FromFront(node) - game.GetCamera().GetAbsBounds();
+	for(iterator = trail.Front(); iterator != nullptr; iterator = iterator->Prev()) {
+		debugPoint = iterator->Data() - game.GetCamera().GetAbsBounds();
 		debugPoint.SnapInt();
 		game.GetRenderer().DrawImage(debugImage, (eBounds(debugPoint).ExpandSelf(8))[0]);	// top-left corner
-		node++;
 	}
 }
 
@@ -709,7 +744,7 @@ void eAI::DrawCollisionCircle() const {
 		return;
 
 	// draws one pixel for each point on the current collision circle 
-	if (moveState == MOVE_TO_GOAL)
+	if (moveState == MOVETYPE_GOAL)
 		color = pink;
 	else
 		color = blue;
@@ -717,13 +752,12 @@ void eAI::DrawCollisionCircle() const {
 	debugVector = vec2_oneZero;
 	rotationAngle = 0.0f;
 	while (rotationAngle < 360.0f) {
-
-		if (velocity*debugVector >= 0) {
+		if (velocity * debugVector >= 0) {
 			debugPoint = origin + (debugVector * collisionRadius) - game.GetCamera().GetAbsBounds();
 			debugPoint.SnapInt();
 			game.GetRenderer().DrawPixel(debugPoint, color[0], color[1], color[2]);
 		}
-		debugVector = rotationQuat_Z*debugVector;	// rotate counter-clockwise
+		debugVector = rotationQuat_Z * debugVector;	// rotate counter-clockwise
 		rotationAngle += ROTATION_INCREMENT;
 	}
 }
@@ -758,7 +792,7 @@ void eAI::DrawTouchSensors() const {
 
 	// FIXME: account for diagonal motion on printout
 	// movement direction
-	sprintf_s(buffer, "%s", moveState == MOVE_UP ? "UP" : moveState == MOVE_DOWN ? "DOWN" : moveState == MOVE_RIGHT ? "RIGHT" : moveState == MOVE_LEFT ? "LEFT" : moveState == MOVE_TO_GOAL ? "GOAL" : moveState == MOVE_TO_TRAIL ? "TRIAL" : " ");
+	sprintf_s(buffer, "%s", moveState == MOVETYPE_UP ? "UP" : moveState == MOVETYPE_DOWN ? "DOWN" : moveState == MOVETYPE_RIGHT ? "RIGHT" : moveState == MOVETYPE_LEFT ? "LEFT" : moveState == MOVETYPE_GOAL ? "GOAL" : moveState == MOVETYPE_TRAIL ? "TRAIL" : " ");
 	game.GetRenderer().DrawOutlineText(buffer, eVec2(150.0f, 300.0f), 255, 255, 0);
 
 	// entity position (center of bounding box)
@@ -806,19 +840,4 @@ void eAI::DrawKnownMap() const {
 			row++;
 		}
 	}
-}
-
-//******************
-// eAI::CheckClearKnownmap
-//******************
-bool eAI::CheckKnownMapCleared() {
-	eInput * input;
-
-	input = &game.GetInput();
-	if (game.debugFlags.KNOWN_MAP_CLEAR && input->KeyPressed(SDL_SCANCODE_R)) {
-		knownMap.ClearAllCells();
-		return true;
-	}
-
-	return false;
 }

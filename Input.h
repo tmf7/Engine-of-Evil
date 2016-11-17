@@ -17,7 +17,7 @@ public:
 						eInput();
 						~eInput();
 
-	bool				Init();
+	void				Init();
 	void				Update();
 
 	int					KeyHeld(int key) const;

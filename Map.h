@@ -24,12 +24,12 @@ public:
 	void					Draw() const;
 	void					BuildTiles(const tileType_t type);
 	void					ToggleTile(const eVec2 & point);
-	const game_map_t &		TileMap() const;
+	const byte_map_t &		TileMap() const;
 
 private:
 
 	eImage *				tileSet;
-	game_map_t				tileMap;
+	byte_map_t				tileMap;
 };
 
 //**************
@@ -41,7 +41,7 @@ inline eMap::eMap() {
 //**************
 // eMap::TileMap
 //**************
-inline const game_map_t & eMap::TileMap() const {
+inline const byte_map_t & eMap::TileMap() const {
 	return tileMap;
 }
 

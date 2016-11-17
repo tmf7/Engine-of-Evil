@@ -3,16 +3,13 @@
 //***************
 // eInput::Init
 //***************
-bool eInput::Init() {
+void eInput::Init() {
 	int i;
 	const Uint32 mouseState = SDL_GetMouseState(&mouseX, &mouseY);
 	const Uint8 * keyboard = SDL_GetKeyboardState(&numKeys);
 
 	keys = new Uint8[numKeys];
 	prevKeys = new Uint8[numKeys];
-
-	if (keys == NULL || prevKeys == NULL)
-		return false;
 
 	memcpy(keys, keyboard, sizeof(keyboard[0]) * numKeys);
 	memset(prevKeys, 0, sizeof(prevKeys[0]) * numKeys);
@@ -21,7 +18,6 @@ bool eInput::Init() {
 		prevMouseButtons[i - 1] = 0;
 		mouseButtons[i - 1] = mouseState & SDL_BUTTON(i);
 	}
-	return true;
 }
 
 //***************

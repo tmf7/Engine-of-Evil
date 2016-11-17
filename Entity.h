@@ -16,9 +16,9 @@ public:
 
 						eEntity();
 
-	bool				Spawn();
+	virtual bool		Spawn();
 	virtual void		Think() = 0;						// TODO: give this a definition, not pure virtual
-	void				Draw();								// FIXME: a eCamera is an eEntity, but it shouldn't Draw (have Think add things to a RenderQueue?)
+	virtual void		Draw();								// FIXME: a eCamera is an eEntity, but it shouldn't Draw (have Think add things to a RenderQueue?)
 	void				SetOrigin(const eVec2 & point);		// TODO: make this part of a physics class
 	const eVec2 &		Origin() const;						// TODO: make this part of a physics class
 	void				UpdateOrigin();						// TODO: make this part of a physics class

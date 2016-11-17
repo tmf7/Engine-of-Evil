@@ -10,7 +10,7 @@ bool eMap::Init () {
 	tileSet = game.GetImageManager().GetImage("graphics/tiles.bmp");
 	if (tileSet == nullptr)
 		return false;
-
+	
 	// map dimensions
 	tileMap.SetCellWidth(32);
 	tileMap.SetCellHeight(32);
@@ -96,6 +96,7 @@ void eMap::ToggleTile(const eVec2 & point) {
 // or perhaps some sort of tileFlags return value check (eg game->Map().IsValid(point) & TRAVERSABLE_TILE)
 // #define TRAVERSABLE_TILE (DOOR|STAIRS|BRICK_FLOOR) or whatever
 // and rename this tileFlags_t eMap::CheckTile(const eVec2 & point, byte_t * checkTile) const;
+// TODO: ALSO get rid of the references once the functionality of tile masking is separated
 //**************
 bool eMap::IsValid(const eVec2 & point, bool ignoreCollision) const {
 	

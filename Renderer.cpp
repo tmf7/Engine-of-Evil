@@ -100,7 +100,7 @@ void eRenderer::DrawPixel(const eVec2 & point, Uint8 r, Uint8 g, Uint8 b) const 
 
 	color = SDL_MapRGB(backbuffer->format, r, g, b);
 	targetPixel = (Uint8 *)backbuffer->pixels + y * backbuffer->pitch + x * backbuffer->format->BytesPerPixel;
-	*targetPixel = color;		// DEBUG: assumes dereferenced targetPixel is a Uint32
+	*(Uint32 *)targetPixel = color;		// DEBUG: assumes dereferenced targetPixel is a Uint32
 
 	if (SDL_MUSTLOCK(backbuffer))
 		SDL_UnlockSurface(backbuffer);

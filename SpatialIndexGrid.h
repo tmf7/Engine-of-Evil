@@ -134,8 +134,7 @@ inline void eSpatialIndexGrid<type, rows, columns>::Index(const eVec2 & point, i
 
 //******************
 // eSpatialIndexGrid::Index
-// returns cells[row][column] closest to the given point
-// to allow modification of the cell value
+// returns mutable cells[row][column] closest to the given point
 //******************
 template< class type, int rows, int columns>
 inline type & eSpatialIndexGrid<type, rows, columns>::Index(const eVec2 & point) {
@@ -148,7 +147,7 @@ inline type & eSpatialIndexGrid<type, rows, columns>::Index(const eVec2 & point)
 
 //******************
 // eSpatialIndexGrid::Index
-// returns cells[row][column] closest to the given point
+// returns const cells[row][column] closest to the given point
 //******************
 template< class type, int rows, int columns>
 inline const type & eSpatialIndexGrid<type, rows, columns>::Index(const eVec2 & point) const {

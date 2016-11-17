@@ -9,7 +9,7 @@ public:
 					
 						eCamera();
 
-	virtual void		Think();
+	virtual void		Think() override;
 	void				Init();
 	const eVec2 &		GetAbsBounds(bool minMax = false) const;
 };	

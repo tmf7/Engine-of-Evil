@@ -20,11 +20,8 @@ typedef unsigned char byte_t;
 
 //#define ONE_GIGABYTE 1073741824
 //extern byte_t memoryPool[ONE_GIGABYTE];
-
-template<class type, int rows, int columns>
+template<class type, int rows, int columns> 
 class eSpatialIndexGrid;
-
-typedef eSpatialIndexGrid<byte_t, MAX_MAP_ROWS, MAX_MAP_COLUMNS> ai_map_t;
-typedef eSpatialIndexGrid<byte_t, MAX_MAP_ROWS, MAX_MAP_COLUMNS> game_map_t;
+typedef eSpatialIndexGrid<byte_t, MAX_MAP_ROWS, MAX_MAP_COLUMNS> byte_map_t;
 
 #endif /* EVIL_DEFINITIONS_H */
