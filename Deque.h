@@ -1,7 +1,8 @@
 #ifndef EVIL_DEQUE_H
 #define EVIL_DEQUE_H
 
-#include <new.h>
+#include <new.h>		// std::move
+#include <utility>		// std::swap
 
 template<class type>
 class eDeque;
@@ -11,25 +12,44 @@ class eDeque;
 //*************************************************
 template<class type>
 class eNode {
-	
+
 	friend class eDeque<type>;
 
-public :
+public:
 
-					eNode()							 : prev(nullptr), next(nullptr), data() {};				// default constructor
-	explicit		eNode(const type & data)		 : prev(nullptr), next(nullptr), data(data) {};			// prevent implicit conversion
-					eNode(const eNode<type> & other) : prev(nullptr), next(nullptr), data(other.data) {};	// copy constructor
+					eNode()							 : prev(nullptr), next(nullptr), data() {};							// default constructor
+	explicit		eNode(const type & data)		 : prev(nullptr), next(nullptr), data(data) {};						// copy constructor (using data)
+	explicit		eNode(type && data)				 : prev(nullptr), next(nullptr), data(std::move(data)) {};			// move constructor (using data)
+					eNode(eNode<type> && other)		 : prev(nullptr), next(nullptr), data(std::move(other.data)) {};	// move constructor (using node)
+					eNode(const eNode<type> & other) : prev(nullptr), next(nullptr), data(other.data) {};				// copy constructor (using node)
 					// DEBUG: destructor omitted because no heap allocation occurs
 
-	eNode<type> &	operator=(const eNode<type> & other) {													// copy assignment
-												  data.~type(); 
-												  new (&data) type(other.data); 
-												  return *this;};	
+	eNode<type> &	operator=(eNode<type> other) {			// copy and swap assignment (defers to appropriate ctor) 
+		std::swap(data, other.data);
+		return *this;
+	};
 
-	const type &	Data() const				{ return data; };
-	type &			Data()						{ return data; };
-	eNode<type> *	Prev() const				{ return prev; };
-	eNode<type> *	Next() const				{ return next; };
+/*
+	eNode<type> &	operator=(const eNode<type> & other) {																// copy assignment
+		data.~type();
+		new (&data) type(other.data);
+		return *this;
+	};
+	eNode<type> &	operator=(eNode<type> && other) {																		// move assignment
+		//		  data.~type();			// DEBUG: std::unique_ptr calls its destructor (and deallocates its target)
+										// in its operator=(unique_ptr &&) function call
+										// so this would cause an assertion failure/crash.
+										// However, does omitting it then expose other problems
+										// like, the pointed-to object's destructor not getting called
+		std::swap(data, other.data);
+		return *this;
+	};
+*/
+
+	const type &	Data() const { return data; };
+	type &			Data() { return data; };
+	eNode<type> *	Prev() const { return prev; };
+	eNode<type> *	Next() const { return next; };
 
 private:
 
@@ -53,12 +73,17 @@ public:
 
 						eDeque();									// default constructor
 						eDeque(const eDeque<type> & other);			// copy constructor
+						eDeque(eDeque<type> && other);				// move constructor
 					   ~eDeque();									// destructor
-						
+
 	eDeque<type> &		operator=(const eDeque<type> & other);		// copy assignment
+	eDeque<type> &		operator=(eDeque<type> && other);			// move assignment
 
 	void				PushFront(const type & data);
 	void				PushBack(const type & data);
+	void				PushFront(type && data);					// emplace and move
+	void				PushBack(type && data);						// emplace and move
+
 	void				PopFront();
 	void				PopBack();
 
@@ -80,7 +105,7 @@ private:
 
 //******************
 // eDeque::eDeque
-// empty eDeque
+// default constructor empty eDeque
 //******************
 template <class type>
 inline eDeque<type>::eDeque() : nodeCount(0), front(nullptr), back(nullptr) {
@@ -88,6 +113,7 @@ inline eDeque<type>::eDeque() : nodeCount(0), front(nullptr), back(nullptr) {
 
 //******************
 // eDeque::eDeque
+// copy constructor
 //******************
 template <class type>
 inline eDeque<type>::eDeque(const eDeque<type> & other) {
@@ -95,6 +121,17 @@ inline eDeque<type>::eDeque(const eDeque<type> & other) {
 
 	for (otherIterator = other.back; otherIterator != nullptr; otherIterator = otherIterator->next)
 		PushFront(otherIterator->data);
+}
+
+//******************
+// eDeque::eDeque
+// move constructor
+//******************
+template <class type>
+inline eDeque<type>::eDeque(eDeque<type> && other) : nodeCount(0), front(nullptr), back(nullptr) {
+	std::swap(nodeCount, other.nodeCount);
+	std::swap(front, other.front);
+	std::swap(back, other.back);
 }
 
 //******************
@@ -107,6 +144,19 @@ inline eDeque<type>::~eDeque() {
 
 //******************
 // eDeque::operator=
+// move assignment
+//******************
+template <class type>
+inline eDeque<type> & eDeque<type>::operator=(eDeque<type> && other) {
+	Clear();
+	std::swap(nodeCount, other.nodeCount);
+	std::swap(front, other.front);
+	std::swap(back, other.back);
+	return *this;
+}
+
+//******************
+// eDeque::operator=
 // deep copy back to front
 //******************
 template <class type>
@@ -115,33 +165,77 @@ inline eDeque<type> & eDeque<type>::operator=(const eDeque<type> & other) {
 	eNode<type> * otherIterator;
 	eNode<type> * newFront;
 
-/*
+
 	// QUESTION: would this be faster than what I do in this function? Or, is heap deallocation/allocation more expensive?
-	Clear();
-	for (otherIterator = other.back; otherIterator != nullptr; otherIterator = otherIterator->next)
-		PushFront(otherIterator->data);
-*/	
+//	Clear();
+//	for (otherIterator = other.back; otherIterator != nullptr; otherIterator = otherIterator->next)
+//		PushFront(otherIterator->data);
+
 
 	// destroy and reconstruct pre-allocated memory if *this already has some
-	for (thisIterator	= back,				  otherIterator	 = other.back; 
-		 thisIterator  != nullptr	  &&	  otherIterator != nullptr;
-		 thisIterator	= thisIterator->next, otherIterator  = otherIterator->next)
-		(*thisIterator) = (*otherIterator);		// DEBUG: eNode copy assignemnt
-	
-	// establish a newFront if *this had more nodes than other
+	for (thisIterator = back, otherIterator = other.back;
+		thisIterator != nullptr	  &&	  otherIterator != nullptr;
+		thisIterator = thisIterator->next, otherIterator = otherIterator->next)
+		(*thisIterator) = (*otherIterator);		// DEBUG: eNode assignemnt, becomes move assignment for rvalues/unique_ptr
+
+												// establish a newFront if *this had more nodes than other
 	newFront = nullptr;
-	if (thisIterator && otherIterator == nullptr)
+	if (thisIterator != nullptr && otherIterator == nullptr)
 		newFront = thisIterator->prev;
 
 	// if *this had more nodes, pop all the nodes beyond other's size, down to newFront
-	for (thisIterator = front; thisIterator != newFront; thisIterator = front)
+	while (thisIterator != newFront) {
 		PopFront();
+		thisIterator = front;
+	}
 
 	// if *this had fewer nodes, push all the data remaining in other onto *this
 	for (/*continue moving*/; otherIterator != nullptr; otherIterator = otherIterator->next)
 		PushFront(otherIterator->data);
 
 	return *this;
+}
+
+//******************
+// eDeque::PushFront
+// emplace and move
+//******************
+template <class type>
+inline void eDeque<type>::PushFront(type && data) {
+	eNode<type> * newFront;
+
+	newFront = new eNode<type>(std::move(data));
+	if (front == nullptr) {
+		back = newFront;
+		front = newFront;
+	}
+	else {
+		newFront->prev = front;
+		front->next = newFront;
+		front = newFront;
+	}
+	nodeCount++;
+}
+
+//******************
+// eDeque::PushBack
+// emplace and move
+//******************
+template <class type>
+inline void eDeque<type>::PushBack(type && data) {
+	eNode<type> * newBack;
+
+	newBack = new eNode<type>(std::move(data));
+	if (back == nullptr) {
+		back = newBack;
+		front = newBack;
+	}
+	else {
+		newBack->next = back;
+		back->prev = newBack;
+		back = newBack;
+	}
+	nodeCount++;
 }
 
 //******************
@@ -156,7 +250,8 @@ inline void eDeque<type>::PushFront(const type & data) {
 	if (front == nullptr) {
 		front = newFront;
 		back = newFront;
-	} else {
+	}
+	else {
 		newFront->prev = front;
 		front->next = newFront;
 		front = newFront;
@@ -176,7 +271,8 @@ inline void eDeque<type>::PushBack(const type & data) {
 	if (back == nullptr) {
 		back = newBack;
 		front = newBack;
-	} else {
+	}
+	else {
 		newBack->next = back;
 		back->prev = newBack;
 		back = newBack;
@@ -192,12 +288,13 @@ template <class type>
 inline void eDeque<type>::PopFront() {
 	eNode<type> * newFront;
 	eNode<type> * oldFront;
-	
+
 	if (front->prev == nullptr) {			// last node in the deque
 		delete front;
 		front = nullptr;
 		back = nullptr;
-	} else {								// more than one node in the deque
+	}
+	else {								// more than one node in the deque
 		oldFront = front;
 		newFront = front->prev;
 		newFront->next = nullptr;
@@ -220,7 +317,8 @@ inline void eDeque<type>::PopBack() {
 		delete back;
 		front = nullptr;
 		back = nullptr;
-	} else {								// more than one node in the deque
+	}
+	else {								// more than one node in the deque
 		oldBack = back;
 		newBack = back->next;
 		newBack->prev = nullptr;
@@ -284,7 +382,7 @@ inline eNode<type> * eDeque<type>::FromBack(int index) const {
 
 	if (index >= nodeCount || index < 0)
 		return nullptr;
-	
+
 	if (index == nodeCount - 1)
 		return front;
 
@@ -325,18 +423,3 @@ inline bool eDeque<type>::IsEmpty() const {
 }
 
 #endif /* EVIL_DEQUE_H */
-
-/* 
- * BEGIN cctor and assignment test
-	// note: trail is a pre-existing eDeque<eVec2> in active use
-	eDeque<eVec2> A(trail);						// deque cctor test
-	eDeque<eVec2> B;
-	B = A;										// deque copy assignment test
-
-	eNode<eVec2> * newData = new eNode<eVec2>(eVec2(10.0f, 10.0f));
-	eNode<eVec2> * C = trail.Front();
-	C != nullptr ? (*C) = (*newData) : (void)0;	// node copy assignment test
-	eNode<eVec2> D(*newData);					// node cctor test only copies source node data, not source's next/prev
-	delete newData;								// D is still defined because it made a copy of the newData's data	
- * END cctor and assignment test
- */
