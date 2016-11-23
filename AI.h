@@ -17,50 +17,11 @@
 typedef struct decision_s {
 	eVec2			vector		= vec2_zero;
 	float			stepRatio	= 0.0f;		// ratio of valid steps to those that land on previously unvisited tiles
-	int				validSteps	= 0;		// collision-free steps that could be taken along the vector
+	float			validSteps	= 0.0f;		// collision-free steps that could be taken along the vector
 } decision_t;
-
-typedef struct sensors_s {
-	bool			TOP_LEFT		: 1;
-	bool			TOP_RIGHT		: 1;
-	bool			RIGHT_TOP		: 1;
-	bool			RIGHT_BOTTOM	: 1;
-	bool			BOTTOM_RIGHT	: 1;
-	bool			BOTTOM_LEFT		: 1;
-	bool			LEFT_BOTTOM		: 1;
-	bool			LEFT_TOP		: 1;
-	void			Clear() { memset(this, 0, sizeof(*this)); }
-	bool			operator==(const sensors_s & that);
-	bool			operator!=(const sensors_s & that);
-} sensors_t;
-
-//***************
-// sensors_s::operator==
-//***************
-inline bool sensors_s::operator==(const sensors_s & that) {
-	return (TOP_LEFT == that.TOP_LEFT			&&
-			TOP_RIGHT == that.TOP_RIGHT			&&
-			RIGHT_TOP == that.RIGHT_TOP			&&
-			RIGHT_BOTTOM == that.RIGHT_BOTTOM	&&
-			BOTTOM_RIGHT == that.BOTTOM_RIGHT	&&
-			BOTTOM_LEFT == that.BOTTOM_LEFT		&&
-			LEFT_BOTTOM == that.LEFT_BOTTOM		&&
-			LEFT_TOP == that.LEFT_TOP				);
-}
-
-//***************
-// sensors_s::operator!=
-//***************
-inline bool sensors_s::operator!=(const sensors_s & that) {
-	return !(*this == that);
-}
 
 typedef enum {
 	MOVETYPE_NONE,
-	MOVETYPE_LEFT,		// wall-follow
-	MOVETYPE_RIGHT,		// wall-follow
-	MOVETYPE_UP,		// wall-follow
-	MOVETYPE_DOWN,		// wall-follow
 	MOVETYPE_GOAL,		// waypoint tracking
 	MOVETYPE_TRAIL		// waypoint tracking
 } movementType_t;
@@ -83,15 +44,6 @@ public:
 	const byte_map_t &	KnownMap() const;
 
 private:
-
-	struct {
-		sensors_t		ranged;					// off-sprite sensors
-		sensors_t		oldRanged;				// off-sprite sensors from the previous frame
-		sensors_t		local;					// on-sprite sensors
-		sensors_t		oldLocal;				// on-sprite sensors from the previous frame
-		int				reach;					// distance beyond bounding box to trigger sensors
-		void			Clear() { ranged.Clear(); oldRanged.Clear(); local.Clear(); oldLocal.Clear(); }
-	} touch;
 
 	byte_map_t			knownMap;				// tracks visited tiles from the byte_map_t tileMap; in Map class
 												// FIXME: this becomes 256 MB of ram for 4096 entities
@@ -118,6 +70,9 @@ private:
 	byte_t *			currentTile;			// tile at the entity's origin
 	byte_t *			lastTrailTile;			// tile on which the last trail waypoint was placed (prevents redundant placement)
 
+	// pathfinding (wall-follow)
+	decision_t *		wallSide;				// direction to start sweeping from during PATHTYPE_WALL
+
 	bool				moving;
 	int					maxSteps;				// number of steps at current speed to project along a potential path
 
@@ -125,26 +80,25 @@ private:
 
 	bool				CheckFogOfWar(const eVec2 & point) const;		// FIXME: should this be public?
 
+	// pathfinding (general)
+	void				Move();
+	bool				CheckVectorPath(eVec2 from, decision_t & along);
+	void				CheckWalls(float * bias);
+	void				UpdateWaypoint(bool getNext = false);
+
 	// pathfinding (wall-follow)
 	void				WallFollow();
-	void				CheckTouch();
-	void				CheckCollision();								// FIXME: this should belong to a collision class
 
 	// pathfinding (compass)
-	void				Move();	
 	void				CompassFollow();
-	bool				CheckVectorPath(eVec2 from, decision_t & along);
-	void				CheckWalls(bool & leftOpen, bool & rightOpen, bool & forwardHit);
-	void				UpdateWaypoint(bool getNext = false);
-	void				StopMoving();									// FIXME: should this be public?
 	bool				CheckTrail();
 	void				UpdateKnownMap();
-
+	void				StopMoving();									// FIXME: should this be public?
+	
 	// debugging
 	void				DrawGoalWaypoints() const;
 	void				DrawTrailWaypoints() const;
 	void				DrawCollisionCircle() const;
-	void				DrawTouchSensors() const;
 	void				DrawKnownMap() const;
 };
 
@@ -154,7 +108,6 @@ private:
 inline eAI::eAI() {
 	sightRange	= 128.0f;
 	goalRange	= speed;
-	touch.reach = 1;
 	maxSteps	= 5;
 }
 
@@ -169,7 +122,8 @@ inline const byte_map_t & eAI::KnownMap() const {
 // eAI::StopMoving
 //******************
 inline void eAI::StopMoving() {
-	forward.vector.Zero();
+//	forward.vector.Zero();
+	wallSide = nullptr;
 	velocity.Zero();
 	moving = false;
 }

@@ -12,7 +12,6 @@ bool eAI::Spawn() {
 
 	collisionRadius = localBounds.Radius();
 	StopMoving();
-	touch.Clear();		// FIXME: potentially just put this in the PATHTYPE_WALL initializaiton
 
 	// knownMap dimensions, based in initialized tileMap dimensions
 	knownMap.SetCellWidth(game.GetMap().TileMap().CellWidth());
@@ -23,6 +22,7 @@ bool eAI::Spawn() {
 	previousTile	= currentTile;
 	lastTrailTile	= nullptr;
 	currentWaypoint = nullptr;
+	wallSide		= nullptr;
 	pathingState	= PATHTYPE_NONE;
 	moveState		= MOVETYPE_NONE;
 	return true;
@@ -44,9 +44,9 @@ void eAI::Think() {
 	if (input->KeyPressed(SDL_SCANCODE_C)) {
 		pathingState = PATHTYPE_COMPASS;
 		moveState = MOVETYPE_GOAL;
-	} else if (input->KeyPressed(SDL_SCANCODE_W)) { // FIXME: speed reduced by compass follow as it hit the goal not reset to MAX_SPEED
-//		pathingState = PATHTYPE_WALL;				// SOLUTION: have a constant acceleration/deceleration factor (and limits for velocity)
-//		moveState = MOVETYPE_RIGHT;
+	} else if (input->KeyPressed(SDL_SCANCODE_W)) {
+		pathingState = PATHTYPE_WALL;				
+		moveState = MOVETYPE_GOAL;
 	} else if (input->KeyPressed(SDL_SCANCODE_N)) {	// FIXME: this should be a full stop, not just a branch diversion
 		pathingState = PATHTYPE_NONE;				// IE: StopMoving() and clear all trail/goal waypoints
 		moveState = MOVETYPE_NONE;					// this makes this MOVE/PATHTYPE equivalent to standing ground
@@ -56,19 +56,9 @@ void eAI::Think() {
 	// only move with a waypoint
 	if (currentWaypoint != nullptr) {
 
-		wasStopped = velocity == vec2_zero; // == !moving; ??? 
+		wasStopped = !moving; 
 		Move();
-
 		UpdateKnownMap();		// FIXME: there is a user-input controlled function in here, it will not be called if UpdateWaypoint returns false
-
-		if (pathingState == PATHTYPE_WALL) {
-			CheckTouch();		// FIXME: collision detection here (too specific?)
-			CheckCollision();	// FIXME: collision response here (too specific?)
-								// FIXME: this currently depends on UpdatKnownMap current/previousTile assignment
-								// FIXME: this also depends on the current moveState 
-								// ie: if WallFollow is called before this then moveState may change and affect the collisoin response
-			WallFollow();
-		}
 
 		// drop a trail waypoint (but never in a deadend that stopped the entity last frame)
 		if (moving && !wasStopped && moveState != MOVETYPE_TRAIL && lastTrailTile != currentTile) {
@@ -95,88 +85,77 @@ void eAI::Think() {
 //***************
 void eAI::Move() {
 
-	// two ways of settin the velocity
-	if (pathingState == PATHTYPE_COMPASS) {
+	// set the velocity
+	if (pathingState == PATHTYPE_COMPASS)
 		CompassFollow();
-	} else if (pathingState == PATHTYPE_WALL) {
-		forward.vector.Set((float)((moveState == MOVETYPE_RIGHT) - (moveState == MOVETYPE_LEFT)), (float)((moveState == MOVETYPE_DOWN) - (moveState == MOVETYPE_UP)));
-		velocity = forward.vector * speed;
-		// FIXME: this assumes the moveState is only ONE of the four states (for an AI)
-		// and pairs as-such with eEntity::CheckCollision() for collision detection AND response
-		// FIXME: under what circumstances should the forward.vector or velocity be zero in wall-follow mode?
-		// EG: if it reaches a goal waypoint, or it determines its stuck on an interior/exterior island, or some
-		// other "frustration"/optimal pathingState factors (yeah, but should it really do a full-stop, or just a transition?)
-	}
-/*
-	// move and prep for the next frame (wall-follow)
-	if (velocity != vec2_zero) {
-		moving = true;
-		UpdateOrigin();
-	}
-*/
+	else if (pathingState == PATHTYPE_WALL)
+		WallFollow();
 }
 
-//***************
+//******************
 // eAI::WallFollow
-// checks if the moveState should change
-// given the current state of all ranged touch sensors
-// and the current moveState
-//***************
+// Determines the optimal movement vector to continue following a wall (as if a hand were placed on it)
+// TODO: incorperate knownMap/stepRatio usage, directional bias usage?, more stopping conditions, goal waypoint short-circuit (like CompassFollow)
+// DEBUG: default movement towards waypoint; default search for walls right-to-left using the first-found
+//******************
 void eAI::WallFollow() {
+	decision_t	test;					// vector tested for optimal travel decision
+	float		rotationAngle;			// cumulative amount the testVector has rotated in its search
+	eQuat *		rotationDirection;		// wallSide affects the sweep direction that constitutes around-front of the entity
+	bool		wallFollowing;
+	bool		nearWall;
 
-	switch (moveState) {
-		case MOVETYPE_RIGHT: {
-
-			// if it has lost its wall move in that direction
-			// if it hasn't lost its wall move opposite that wall
-			// if it never had a wall, move down
-			if ((touch.oldRanged.BOTTOM_LEFT && !touch.ranged.BOTTOM_LEFT) ||
-				((touch.ranged.RIGHT_TOP || touch.ranged.RIGHT_BOTTOM) && !touch.ranged.BOTTOM_LEFT))
-				moveState = MOVETYPE_DOWN;
-
-			else if ((touch.oldRanged.TOP_LEFT && !touch.ranged.TOP_LEFT) ||
-				((touch.ranged.RIGHT_TOP || touch.ranged.RIGHT_BOTTOM) && !touch.ranged.TOP_LEFT))
-				moveState = MOVETYPE_UP;
-
-			break;
-		}
-		case MOVETYPE_LEFT: {
-
-			if ((touch.oldRanged.BOTTOM_RIGHT && !touch.ranged.BOTTOM_RIGHT) ||
-				((touch.ranged.LEFT_TOP || touch.ranged.LEFT_BOTTOM) && !touch.ranged.BOTTOM_RIGHT))
-				moveState = MOVETYPE_DOWN;
-
-			else if ((touch.oldRanged.TOP_RIGHT && !touch.ranged.TOP_RIGHT) ||
-				((touch.ranged.LEFT_TOP || touch.ranged.LEFT_BOTTOM) && !touch.ranged.TOP_RIGHT))
-				moveState = MOVETYPE_UP;
-
-			break;
-		}
-		case MOVETYPE_UP: {
-
-			if ((touch.oldRanged.RIGHT_BOTTOM && !touch.ranged.RIGHT_BOTTOM) ||
-				((touch.ranged.TOP_LEFT || touch.ranged.TOP_RIGHT) && !touch.ranged.RIGHT_BOTTOM))
-				moveState = MOVETYPE_RIGHT;
-
-			else if ((touch.oldRanged.LEFT_BOTTOM && !touch.ranged.LEFT_BOTTOM) ||
-				((touch.ranged.TOP_LEFT || touch.ranged.TOP_RIGHT) && !touch.ranged.LEFT_BOTTOM))
-				moveState = MOVETYPE_LEFT;
-
-			break;
-		}
-		case MOVETYPE_DOWN: {
-
-			if ((touch.oldRanged.RIGHT_TOP && !touch.ranged.RIGHT_TOP) ||
-				((touch.ranged.BOTTOM_LEFT || touch.ranged.BOTTOM_RIGHT) && !touch.ranged.RIGHT_TOP))
-				moveState = MOVETYPE_RIGHT;
-
-			else if ((touch.oldRanged.LEFT_TOP && !touch.ranged.LEFT_TOP) ||
-				((touch.ranged.BOTTOM_LEFT || touch.ranged.BOTTOM_RIGHT) && !touch.ranged.LEFT_TOP))
-				moveState = MOVETYPE_LEFT;
-
-			break;
-		}
+	if (!moving) { 
+		forward.vector = *currentWaypoint - origin;
+		forward.vector.Normalize();
+		moving = true;
 	}
+
+	CheckWalls(nullptr);
+	if (wallSide != nullptr) {
+		test = *wallSide;
+		// initially sweep behind the entity to confirm wall location
+		rotationDirection = wallSide == &left ? &rotateCounterClockwiseZ : &rotateClockwiseZ;
+		wallFollowing = true;
+	} else {
+		test = forward;
+		// initially sweep in front of entity if no wall is being followed
+		rotationDirection = &rotateCounterClockwiseZ;
+		wallFollowing = false;
+	}
+
+	nearWall = false;
+	rotationAngle = 0.0f;
+	while (rotationAngle < 360.0f) {
+		CheckVectorPath(origin + (test.vector * speed), test);
+		if (wallFollowing && nearWall && test.validSteps > 0) { 
+			forward = test;
+			CheckWalls(nullptr);
+			break;					
+		} else if (wallFollowing && !nearWall && test.validSteps == 0) {
+			nearWall = true;
+			// change to sweeping in front of entity for a path along the wall
+			rotationDirection = wallSide == &left ? &rotateClockwiseZ : &rotateCounterClockwiseZ;
+			rotationAngle = 0.0f;
+		} else if (!wallFollowing && test.validSteps == 0) {
+			wallSide = right.vector * test.vector >= left.vector * test.vector ? &right : &left;
+			// continue sweeping in front of entity for a path along the wall
+			rotationDirection = wallSide == &left ? &rotateClockwiseZ : &rotateCounterClockwiseZ;
+			test = *wallSide;
+			rotationAngle = 0.0f;
+			wallFollowing = true;
+			continue;
+		}
+		test.vector = *rotationDirection * test.vector;
+		rotationAngle += ROTATION_INCREMENT;
+	}
+
+	if (wallSide != nullptr && (!nearWall || rotationAngle >= 360.0f))
+		StopMoving();
+	else 
+		velocity = forward.vector * speed;
+	// moveState may have changed, track the correct waypoint
+//	UpdateWaypoint();
 }
 
 //******************
@@ -187,27 +166,17 @@ void eAI::CompassFollow() {
 	decision_t	waypoint;				// from the sprite to the next waypoint
 	decision_t	test;					// vector tested for optimal travel decision
 	decision_t	best;					// optimal movement
-	float		distToWaypointSqr;		// to modulate speed
 	float		rotationAngle;			// cumulative amount the testVector has rotated in its search
-	float		maxRotation;			// to disallow vectors that backtrack if already moving
+	float		maxRotation;			// disallow vectors that backtrack if already moving
 	float		weight;					// net bias for a decision about a test
 	float		bestWeight;				// highest net result of all modifications to validSteps
-	bool		leftOpen, rightOpen, forwardHit;
-
-	// modulate entity speed if at least this close to a waypoint
-	static const float goalRangeSqr = maxSpeed * maxSpeed * maxSteps * maxSteps;	// FIXME: get rid of this check in favor of "at least one step away"
-
-	// TODO: make this a switch/if something that changes the bias based on hits/opens and PATHTYPE_COMPASS/WALL
-	static const float leftBias = 1.0f;
-	static const float rightBias = 1.05f;
-	static const float forwardBias = 1.1f;
-	static const float waypointBias = 2.0f;	
+	float		bias[4] = { 2.0f, 1.0f, 1.05f, 1.1f };	// { waypoint, left, right, forward }
 
 	if (!moving) {
 		test.vector = vec2_oneZero;
 		maxRotation = 360.0f;
 	} else {
-		CheckWalls(leftOpen, rightOpen, forwardHit);
+		CheckWalls(bias);
 		test = right;		// counter-clockwise sweep of 180 degree arc from right to left in the forward direction
 
 //		if (moveState == MOVETYPE_GOAL)
@@ -221,21 +190,9 @@ void eAI::CompassFollow() {
 	}
 
 	waypoint.vector = *currentWaypoint - origin;
-/*
-	if (moveState == MOVETYPE_GOAL) {							// FIXME/BUG(?): stays slow if it was slow and switched to MOVETYPE_TRAIL
-		distToWaypointSqr = waypoint.vector.LengthSquared();	// TODO: potentially use this value in UpdateKnownMap();
-
-		if (distToWaypointSqr < goalRangeSqr)
-			speed = SDL_sqrtf(distToWaypointSqr) / maxSteps;	// allows more accurate approach towards goal waypoint
-		else
-			speed = maxSpeed;									// in the event of a near-miss
-		if (speed < 1)
-			speed = 1;
-	}
-*/
 	waypoint.vector.Normalize();
 
-	bestWeight = 0;
+	bestWeight = 0.0f;
 	rotationAngle = 0.0f;
 	while (rotationAngle < maxRotation) {
 
@@ -248,91 +205,88 @@ void eAI::CompassFollow() {
 				forward = test;
 
 			// initilize the new left and right, and their validSteps that'll be used next frame
-			CheckWalls(leftOpen, rightOpen, forwardHit);
+			CheckWalls(nullptr);
 			velocity = forward.vector * speed;
 			return;
 		}
 
 		// FIXME/BUG: trail waypoint orbits or cannot attain sometimes (bad corner, whatever)
-		// POTENTIALLY fixed by putting a trail waypoint on each new tile (its never too far to navigate straight back to)
+		// SOMEWHAT fixed by putting a trail waypoint on each new tile (its never too far to navigate straight back to)
+		// SOMEWHAT fixed by modulating speed based on waypoint proximity, except backtracking looked weird so that was removed
 
 		// give the path a bias to help set priority
-		weight = (float)test.validSteps;
-		weight += test.vector*waypoint.vector * waypointBias;	// TODO(?): check the stepRatio along the waypointVector?
+		weight = test.validSteps;
+		weight += (test.vector * waypoint.vector) * bias[0];
 		if (moving) {
-			weight += (test.vector*left.vector) * leftOpen * (leftBias * left.stepRatio);
-			weight += (test.vector*right.vector) * rightOpen * (rightBias * right.stepRatio);
-			weight += (test.vector*forward.vector) * !forwardHit * (forwardBias * forward.stepRatio);
+			weight += (test.vector * left.vector) * bias[1];
+			weight += (test.vector * right.vector) * bias[2];
+			weight += (test.vector * forward.vector) * bias[3];
 		}
 
 		// more new tiles always beats better overall weight
 		if (test.stepRatio > best.stepRatio) {
 			bestWeight = weight;
 			best = test;
-		}
-		else if (test.stepRatio == best.stepRatio  && weight > bestWeight) {
+		} else if (test.stepRatio == best.stepRatio  && weight > bestWeight) {
 			bestWeight = weight;
 			best = test;
 		}
-
-		test.vector = rotationQuat_Z*test.vector; // rotate counter-clockwise
+		test.vector = rotateCounterClockwiseZ * test.vector;
 		rotationAngle += ROTATION_INCREMENT;
 	}
 
 	if (moveState == MOVETYPE_GOAL && best.stepRatio == 0) {	// deadlocked, begin deadend protocols (ie follow the trail now)
 		StopMoving();
 		moveState = MOVETYPE_TRAIL;
-	}
-	else if (moveState == MOVETYPE_TRAIL && best.stepRatio > 0) {
+	} else if (moveState == MOVETYPE_TRAIL && best.stepRatio > 0) {
 		StopMoving();
 		moveState = MOVETYPE_GOAL;
-	}
-	else if (moveState == MOVETYPE_TRAIL && best.validSteps == 0) {
+	} else if (moveState == MOVETYPE_TRAIL && best.validSteps == 0) {
 		StopMoving();
-	}
-	else {
+	} else {
 		forward = best;
 		// initilize the new left and right, and their validSteps that'll be used next frame
-		CheckWalls(leftOpen, rightOpen, forwardHit);
+		CheckWalls(nullptr);
+		velocity = forward.vector * speed;
 	}
 	// moveState may have changed, track the correct waypoint
 	UpdateWaypoint();
-	velocity = forward.vector * speed;
 }
 
 //******************
 // eAI::CheckVectorPath
 // determines the state of the entity's position for the next few frames
 // return true if a future position using along is near the waypoint
+// TODO: make this a proper area/volume trace
 //******************
 bool eAI::CheckVectorPath(eVec2 from, decision_t & along) {
 	eVec2 testPoint;
-	int newSteps;
+	float newSteps;
 
-	along.validSteps = 0;
+	along.validSteps = 0.0f;
 	along.stepRatio = 0.0f;
-	newSteps = 0;
+	newSteps = 0.0f;
 	while (along.validSteps < maxSteps) {
 
 		// forward test point (starts on circle circumscribing the sprite bounding box)
-		testPoint.x = from.x + (collisionRadius*along.vector.x);
-		testPoint.y = from.y + (collisionRadius*along.vector.y);
+		testPoint.x = from.x + (collisionRadius * along.vector.x);
+		testPoint.y = from.y + (collisionRadius * along.vector.y);
 
 		// check for collision
 		if (!(game.GetMap().IsValid(testPoint)))
 			break;
 
 		// forward test point rotated clockwise 90 degrees
-		testPoint.x = from.x + (collisionRadius*along.vector.y);
-		testPoint.y = from.y - (collisionRadius*along.vector.x);
+		testPoint.x = from.x + (collisionRadius * along.vector.y);
+		testPoint.y = from.y - (collisionRadius * along.vector.x);
 
 		// check for collision
 		if (!(game.GetMap().IsValid(testPoint)))
 			break;
 
 		// forward test point rotated counter-clockwise 90 degrees
-		testPoint.x = from.x - (collisionRadius*along.vector.y);
-		testPoint.y = from.y + (collisionRadius*along.vector.x);
+		testPoint.x = from.x - (collisionRadius * along.vector.y);
+		testPoint.y = from.y + (collisionRadius * along.vector.x);
 
 		// check for collision
 		if (!(game.GetMap().IsValid(testPoint)))
@@ -350,13 +304,13 @@ bool eAI::CheckVectorPath(eVec2 from, decision_t & along) {
 			return true;
 
 		// move to check validity of next position
-		from += along.vector*speed;
+		from += along.vector * speed;
 	}
 
-	if (along.validSteps == 0)
-		along.stepRatio = 0;
+	if (along.validSteps == 0.0f)
+		along.stepRatio = 0.0f;
 	else
-		along.stepRatio = (float)newSteps / (float)along.validSteps;
+		along.stepRatio = newSteps / along.validSteps;
 
 	return false;
 }
@@ -366,21 +320,26 @@ bool eAI::CheckVectorPath(eVec2 from, decision_t & along) {
 // assigns the vectors perpendicular to the forward vector
 // and checks if the range along them has significantly changed
 //**************
-void eAI::CheckWalls(bool & leftOpen, bool & rightOpen, bool & forwardHit) {
-	int oldLeftSteps = left.validSteps;
-	int oldRightSteps = right.validSteps;
-	static const int stepIncreaseThreshold = 2;
+void eAI::CheckWalls(float * bias) {
+	float oldLeftSteps = left.validSteps;
+	float oldRightSteps = right.validSteps;
+
+	static const float stepIncreaseThreshold = 2.0f;
 
 	left.vector.Set(-forward.vector.y, forward.vector.x);	// forward rotated 90 degrees counter-clockwise
 	right.vector.Set(forward.vector.y, -forward.vector.x);	// forward rotated 90 degrees clockwise
 
-	CheckVectorPath(origin + (forward.vector*speed), forward);
-	CheckVectorPath(origin + (left.vector*speed), left);
-	CheckVectorPath(origin + (right.vector*speed), right);
+	CheckVectorPath(origin + (forward.vector * speed), forward);
+	CheckVectorPath(origin + (left.vector * speed), left);
+	CheckVectorPath(origin + (right.vector * speed), right);
 
-	forwardHit = forward.validSteps == 0;
-	leftOpen = left.validSteps >= oldLeftSteps + stepIncreaseThreshold;
-	rightOpen = right.validSteps >= oldRightSteps + stepIncreaseThreshold;
+	if (bias == nullptr)
+		return;
+
+	// bias[0] == waypoint bias remains unchanged because if * test.stepRatio; or * waypoint.stepRatio; then trail-less backtracking occurs (bad)
+	bias[1] *= (left.validSteps >= oldLeftSteps + stepIncreaseThreshold) * left.stepRatio;		// left path opened
+	bias[2] *= (right.validSteps >= oldRightSteps + stepIncreaseThreshold) * right.stepRatio;	// right path opened
+	bias[3] *= !(forward.validSteps == 0.0f) * forward.stepRatio;								// forward path not closed
 }
 
 
@@ -395,131 +354,6 @@ bool eAI::CheckFogOfWar(const eVec2 & point) const {
 
 	lineOfSight = point - origin;
 	return lineOfSight.LengthSquared() <= sightRange;
-}
-
-//******************
-// eAI::CheckTouch
-// Sets a sensor bit for every point within the entity's range in a non-traversable area
-// --the entity effectively has 16 touch sensors--
-//******************
-void eAI::CheckTouch() {
-
-	// on-sprite checks
-	touch.oldLocal = touch.local;
-	touch.local.Clear();
-
-	// FIXME: (size was 15) bounds is 16 wide and high, the -1 -2 situation seems arbitrary,
-	// and also fails if the bounds is rotated
-	// horizontally oriented sensors
-	touch.local.RIGHT_TOP		= !game.GetMap().IsValid(eVec2(absBounds[1].x - 1, absBounds[0].y + 1));
-	touch.local.RIGHT_BOTTOM	= !game.GetMap().IsValid(eVec2(absBounds[1].x - 1, absBounds[1].y - 2));
-	touch.local.LEFT_BOTTOM		= !game.GetMap().IsValid(eVec2(absBounds[0].x, absBounds[1].y - 2));
-	touch.local.LEFT_TOP		= !game.GetMap().IsValid(eVec2(absBounds[0].x, absBounds[0].y + 1));
-
-	// vertically oriented sensors
-	touch.local.TOP_LEFT		= !game.GetMap().IsValid(eVec2(absBounds[0].x + 1, absBounds[0].y));
-	touch.local.TOP_RIGHT		= !game.GetMap().IsValid(eVec2(absBounds[1].x - 2, absBounds[0].y));
-	touch.local.BOTTOM_RIGHT	= !game.GetMap().IsValid(eVec2(absBounds[1].x - 2, absBounds[1].y - 1));
-	touch.local.BOTTOM_LEFT		= !game.GetMap().IsValid(eVec2(absBounds[0].x + 1, absBounds[1].y - 1));
-
-	// ranged off-sprite checks
-	touch.oldRanged = touch.ranged;
-	touch.ranged.Clear();
-
-	// horizontally oriented sensors
-	touch.ranged.RIGHT_TOP		= !game.GetMap().IsValid(eVec2(absBounds[1].x + touch.reach - 1, absBounds[0].y));
-	touch.ranged.RIGHT_BOTTOM	= !game.GetMap().IsValid(eVec2(absBounds[1].x + touch.reach - 1, absBounds[1].y - 1));
-	touch.ranged.LEFT_TOP		= !game.GetMap().IsValid(eVec2(absBounds[0].x - touch.reach, absBounds[0].y));
-	touch.ranged.LEFT_BOTTOM	= !game.GetMap().IsValid(eVec2(absBounds[0].x - touch.reach, absBounds[1].y - 1));
-
-	// vertically oriented sensors
-	touch.ranged.TOP_RIGHT		= !game.GetMap().IsValid(eVec2(absBounds[1].x - 1, absBounds[0].y - touch.reach));
-	touch.ranged.TOP_LEFT		= !game.GetMap().IsValid(eVec2(absBounds[0].x, absBounds[0].y - touch.reach));
-	touch.ranged.BOTTOM_RIGHT	= !game.GetMap().IsValid(eVec2(absBounds[1].x - 1, absBounds[1].y + touch.reach - 1));
-	touch.ranged.BOTTOM_LEFT	= !game.GetMap().IsValid(eVec2(absBounds[0].x, absBounds[1].y + touch.reach - 1));
-}
-
-//******************
-// eAI::CheckCollision
-// FIXME: this should belong to a Collision class that checks for overlapping bounds via graph nodes
-// then performs the collision response accordingly
-// Isolated check for overlap into non-traversable areas, and immediate sprite position correction
-//******************
-void eAI::CheckCollision() {
-	eBounds tileAbsBounds;	// tile the entity should be on the edge of in the event of collision
-	eVec2 correction;
-	int row, column;
-
-	// straight-on wall collision
-	// correction adjusts the leading edge of collision box
-	if (touch.local != touch.oldLocal) {
-		correction = vec2_zero;
-		knownMap.Index(oldOrigin, row, column);
-		tileAbsBounds = eBounds(eVec2((float)(row * knownMap.CellWidth()), (float)(column * knownMap.CellHeight())),
-			eVec2((float)(row * knownMap.CellWidth() + knownMap.CellWidth()), (float)(column * knownMap.CellHeight() + knownMap.CellHeight())));
-
-		switch (moveState) {
-			case MOVETYPE_RIGHT: {
-				if (touch.local.RIGHT_TOP || touch.local.RIGHT_BOTTOM)
-					correction.x = tileAbsBounds[1].x - absBounds[1].x;			// right edge of currentTile
-				break;
-			}
-			case MOVETYPE_LEFT: {
-				if (touch.local.LEFT_TOP || touch.local.LEFT_BOTTOM)
-					correction.x = tileAbsBounds[0].x - absBounds[0].x;			// left edge of currentTile
-				break;
-			}
-			case MOVETYPE_UP: {
-				if (touch.local.TOP_RIGHT || touch.local.TOP_LEFT)
-					correction.y = tileAbsBounds[0].y - absBounds[0].y;			// top edge of currentTile
-				break;
-			}
-			case MOVETYPE_DOWN: {
-				if (touch.local.BOTTOM_RIGHT || touch.local.BOTTOM_LEFT)
-					correction.y = tileAbsBounds[1].y - absBounds[1].y;			// bottom edge of currentTile
-				break;
-			}
-		}
-		SetOrigin(origin + correction);
-		// used to return here if a correction occured
-	}
-
-	// wall-follower AI outside turn wall alignment
-	// correction adjusts the trailing edge of collision box
-	if (touch.ranged != touch.oldRanged) {
-		correction = vec2_zero;
-		knownMap.Index(previousTile, row, column);
-		tileAbsBounds = eBounds(eVec2((float)(row * knownMap.CellWidth()), (float)(column * knownMap.CellHeight())),
-			eVec2((float)(row * knownMap.CellWidth() + knownMap.CellWidth()), (float)(column * knownMap.CellHeight() + knownMap.CellHeight())));
-
-		switch (moveState) {
-			case MOVETYPE_RIGHT: {
-				if ((touch.oldRanged.BOTTOM_LEFT && !touch.ranged.BOTTOM_LEFT) ||
-					(touch.oldRanged.TOP_LEFT && !touch.ranged.TOP_LEFT))
-					correction.x = tileAbsBounds[1].x - absBounds[0].x;			// right edge of previousTile
-				break;
-			}
-			case MOVETYPE_LEFT: {
-				if ((touch.oldRanged.BOTTOM_RIGHT && !touch.ranged.BOTTOM_RIGHT) ||
-					(touch.oldRanged.TOP_RIGHT && !touch.ranged.TOP_RIGHT))
-					correction.x = tileAbsBounds[0].x - absBounds[1].x;			// left edge of previousTile
-				break;
-			}
-			case MOVETYPE_UP: {
-				if ((touch.oldRanged.LEFT_BOTTOM && !touch.ranged.LEFT_BOTTOM) ||
-					(touch.oldRanged.RIGHT_BOTTOM && !touch.ranged.RIGHT_BOTTOM))
-					correction.y = tileAbsBounds[0].y - absBounds[1].y;			// top edge of previousTile
-				break;
-			}
-			case MOVETYPE_DOWN: {
-				if ((touch.oldRanged.LEFT_TOP && !touch.ranged.LEFT_TOP) ||
-					(touch.oldRanged.RIGHT_TOP && !touch.ranged.RIGHT_TOP))
-					correction.y = tileAbsBounds[1].y - absBounds[0].y;			// bottom edge of previousTile			
-				break;
-			}
-		}
-		SetOrigin(origin + correction);
-	}
 }
 
 //******************
@@ -542,8 +376,6 @@ void eAI::AddUserWaypoint(const eVec2 & waypoint) {
 
 //******************
 // eAI::UpdateWaypoint
-// returns false if there's no waypoints available
-// TODO: make currentWaypoint a pointer, then set it to nullptr if there's no waypoints, then make this void return-type
 //******************
 void eAI::UpdateWaypoint(bool getNext) {
 	switch (moveState) {
@@ -574,15 +406,20 @@ void eAI::UpdateWaypoint(bool getNext) {
 			currentWaypoint = nullptr;
 			return;
 		}
-//		default:
-//			return pathingState == PATHTYPE_WALL;
-			// FIXME: this case logic is wrong, perhaps don't change the moveState in this function
-			// but also how can the cardinal directions be used to grab a waypoint? vs PATHTYPE_WALL/COMPASS
-			// EG: there could be situations that hamper a wall follow ==> stuck on interior/exterior island
-			// SOLUTION: generalize collision for vectors, allow for OBB to track diagonal wall sensor collisions,
-			// and reduce MOVETYPEs to GOAL and TRAIL; thus making PATHTYPE_WALL track touch sensors and forward.vector,
-			// while PATHTYPE_COMPASS tracks the "LOS" for potential forward.vectors
-			// AND/or DONT CHANGE THE MOVETYPE HERE???
+		default: {		// DEBUG: currently for PATHTYPE_WALL
+						// FIXME/TODO: have PATHTYPE_WALL pay attention to knownMap and trail waypoints too
+			if (getNext && !goals.IsEmpty()) {
+				goals.PopBack();
+				trail.Clear();
+			}
+			CheckTrail();
+			if (!goals.IsEmpty()) {
+				currentWaypoint = &goals.Back()->Data();
+				return;
+			}
+			currentWaypoint = nullptr;
+			return;
+		}
 	}
 }
 
@@ -688,7 +525,6 @@ void eAI::Draw() {
 	DrawGoalWaypoints();
 	eEntity::Draw();
 	DrawCollisionCircle();
-	DrawTouchSensors();
 }
 
 //******************
@@ -757,48 +593,9 @@ void eAI::DrawCollisionCircle() const {
 			debugPoint.SnapInt();
 			game.GetRenderer().DrawPixel(debugPoint, color[0], color[1], color[2]);
 		}
-		debugVector = rotationQuat_Z * debugVector;	// rotate counter-clockwise
+		debugVector = rotateCounterClockwiseZ * debugVector;
 		rotationAngle += ROTATION_INCREMENT;
 	}
-}
-
-//******************
-// eAI::DrawTouchSensors
-// debug screen printout of 8 ranged entity touch sensors' statuses
-// TODO(?): make a toggleable console, then print text to that
-//******************
-void eAI::DrawTouchSensors() const {
-	char buffer[64];
-
-	if (!game.debugFlags.TOUCH_SENSORS)
-		return;
-
-	// touch sensors
-	sprintf_s(buffer, "%s|%s", touch.ranged.TOP_LEFT ? "TL" : " ",
-		touch.ranged.TOP_RIGHT ? "TR" : " ");
-	game.GetRenderer().DrawOutlineText(buffer, eVec2(100.0f, 150.0f), 255, 0, 0);
-
-	sprintf_s(buffer, "%s|%s", touch.ranged.RIGHT_TOP ? "RT" : " ",
-		touch.ranged.RIGHT_BOTTOM ? "RB" : " ");
-	game.GetRenderer().DrawOutlineText(buffer, eVec2(200.0f, 200.0f), 0, 255, 0);
-
-	sprintf_s(buffer, "%s|%s", touch.ranged.BOTTOM_RIGHT ? "BR" : " ",
-		touch.ranged.BOTTOM_LEFT ? "BL" : " ");
-	game.GetRenderer().DrawOutlineText(buffer, eVec2(150.0f, 250.0f), 0, 0, 255);
-
-	sprintf_s(buffer, "%s|%s", touch.ranged.LEFT_BOTTOM ? "LB" : " ",
-		touch.ranged.LEFT_TOP ? "LT" : " ");
-	game.GetRenderer().DrawOutlineText(buffer, eVec2(50.0f, 200.0f), 255, 255, 0);
-
-	// FIXME: account for diagonal motion on printout
-	// movement direction
-	sprintf_s(buffer, "%s", moveState == MOVETYPE_UP ? "UP" : moveState == MOVETYPE_DOWN ? "DOWN" : moveState == MOVETYPE_RIGHT ? "RIGHT" : moveState == MOVETYPE_LEFT ? "LEFT" : moveState == MOVETYPE_GOAL ? "GOAL" : moveState == MOVETYPE_TRAIL ? "TRAIL" : " ");
-	game.GetRenderer().DrawOutlineText(buffer, eVec2(150.0f, 300.0f), 255, 255, 0);
-
-	// entity position (center of bounding box)
-	sprintf_s(buffer, "%i, %i", (int)Origin().x, (int)Origin().y);
-	game.GetRenderer().DrawOutlineText(buffer, eVec2(150.0f, 350.0f), 255, 255, 255);
-
 }
 
 //******************

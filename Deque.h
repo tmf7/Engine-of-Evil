@@ -20,14 +20,12 @@ public:
 					eNode()							 : prev(nullptr), next(nullptr), data() {};							// default constructor
 	explicit		eNode(const type & data)		 : prev(nullptr), next(nullptr), data(data) {};						// copy constructor (using data)
 	explicit		eNode(type && data)				 : prev(nullptr), next(nullptr), data(std::move(data)) {};			// move constructor (using data)
-					eNode(eNode<type> && other)		 : prev(nullptr), next(nullptr), data(std::move(other.data)) {};	// move constructor (using node)
-					eNode(const eNode<type> & other) : prev(nullptr), next(nullptr), data(other.data) {};				// copy constructor (using node)
+					eNode(eNode<type> && other)			= delete; // : prev(nullptr), next(nullptr), data(std::move(other.data)) {};	// move constructor (using node)
+					eNode(const eNode<type> & other)	= delete; // : prev(nullptr), next(nullptr), data(other.data) {};				// copy constructor (using node)
 					// DEBUG: destructor omitted because no heap allocation occurs
-
-	eNode<type> &	operator=(eNode<type> other) {			// copy and swap assignment (defers to appropriate ctor) 
-		std::swap(data, other.data);
-		return *this;
-	};
+	
+	// copy and swap assignment (defers to appropriate ctor)
+	eNode<type> &	operator=(eNode<type> other) = delete; // { std::swap(data, other.data); return *this; };
 
 /*
 	eNode<type> &	operator=(const eNode<type> & other) {																// copy assignment
@@ -208,8 +206,7 @@ inline void eDeque<type>::PushFront(type && data) {
 	if (front == nullptr) {
 		back = newFront;
 		front = newFront;
-	}
-	else {
+	} else {
 		newFront->prev = front;
 		front->next = newFront;
 		front = newFront;
@@ -229,8 +226,7 @@ inline void eDeque<type>::PushBack(type && data) {
 	if (back == nullptr) {
 		back = newBack;
 		front = newBack;
-	}
-	else {
+	} else {
 		newBack->next = back;
 		back->prev = newBack;
 		back = newBack;
@@ -250,8 +246,7 @@ inline void eDeque<type>::PushFront(const type & data) {
 	if (front == nullptr) {
 		front = newFront;
 		back = newFront;
-	}
-	else {
+	} else {
 		newFront->prev = front;
 		front->next = newFront;
 		front = newFront;
@@ -271,8 +266,7 @@ inline void eDeque<type>::PushBack(const type & data) {
 	if (back == nullptr) {
 		back = newBack;
 		front = newBack;
-	}
-	else {
+	} else {
 		newBack->next = back;
 		back->prev = newBack;
 		back = newBack;
@@ -293,8 +287,7 @@ inline void eDeque<type>::PopFront() {
 		delete front;
 		front = nullptr;
 		back = nullptr;
-	}
-	else {								// more than one node in the deque
+	} else {								// more than one node in the deque
 		oldFront = front;
 		newFront = front->prev;
 		newFront->next = nullptr;
@@ -317,8 +310,7 @@ inline void eDeque<type>::PopBack() {
 		delete back;
 		front = nullptr;
 		back = nullptr;
-	}
-	else {								// more than one node in the deque
+	} else {								// more than one node in the deque
 		oldBack = back;
 		newBack = back->next;
 		newBack->prev = nullptr;

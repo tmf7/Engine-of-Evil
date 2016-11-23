@@ -608,7 +608,8 @@ public:
 	eQuat &			operator*=(const eQuat &a);
 };
 
-extern eQuat rotationQuat_Z;	// to rotate any vector about z-axis
+extern eQuat rotateCounterClockwiseZ;	// rotate ROTATION_INCREMENT counter-clockwise about z-axis
+extern eQuat rotateClockwiseZ;			// rotate ROTATION_INCREMENT clockwise about z-axis
 
 //******************
 // eQuat::eQuat
