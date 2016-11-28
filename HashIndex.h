@@ -13,7 +13,8 @@
 
 class eHashIndex {
 public:
-	eHashIndex();
+					
+					eHashIndex();
 
 	void			Add(const int key, const int index);
 	void			Remove(const int key, const int index);
@@ -29,6 +30,7 @@ public:
 	int				GenerateKey(const char * string) const;
 
 private:
+
 	int				hashSize;
 	int				hashPool[DEFAULT_HASH_SIZE];
 	int	*			hash;

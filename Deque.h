@@ -74,6 +74,7 @@ public:
 						eDeque(eDeque<type> && other);				// move constructor
 					   ~eDeque();									// destructor
 
+//	eDeque<type> &		operator=(eDeque<type> other);				// copy and swap assignment
 	eDeque<type> &		operator=(const eDeque<type> & other);		// copy assignment
 	eDeque<type> &		operator=(eDeque<type> && other);			// move assignment
 
@@ -139,10 +140,31 @@ template <class type>
 inline eDeque<type>::~eDeque() {
 	Clear();
 }
+/*
+////////////////////////////////////////
+// BEGIN FREEHILL copy swap test
+//******************
+// eDeque::operator=
+// copy and swap assignment
+// leaves the deque in a valid state in the event of self assignement or swap failure
+// HOWEVER, it may be slower than the current copy assignment
+//******************
+template <class type>
+inline eDeque<type> & eDeque<type>::operator=(eDeque<type> other) {
+	std::swap(nodeCount, other.nodeCount);
+	std::swap(front, other.front);
+	std::swap(back, other.back);
+	return *this;
+	// other's destructor called now ( which calls other.Clear(); )
+}
+// END FREEHILL copy swap test
+//////////////////////////////////////////
+*/
 
 //******************
 // eDeque::operator=
 // move assignment
+// FIXME/BUG: self-assignment clears the deque AND failure to swap leaves the deque empty
 //******************
 template <class type>
 inline eDeque<type> & eDeque<type>::operator=(eDeque<type> && other) {

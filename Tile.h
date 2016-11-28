@@ -3,6 +3,7 @@
 
 #include "Definitions.h"
 #include "Vector.h"
+#include "Image.h"
 
 // Flyweight tile design
 
@@ -12,36 +13,26 @@
 class eTileImpl {
 private:
 
-	SDL_Surface * image;	// pointer into the ImageManager's surface array
+	eImage * tileSet;		// all tiles refer to the same source image, tileType determines which frame of it to use
 						
-							// TODO:
-							// ImageManager initializes surfaces as requested by objects and returns a POINTER to the surface
-							// each ImageManager image gets a unique ID (hashtable?) (based on its file? or turn order)
-							// such that if a requested file is already loaded, then ImageManager just returns the pointer
-							// without setting surface data
-							// if an object that uses a surface pointer goes out of scope, its pointer gets deleted
-							// but the surface data remains
-							// WHICH leaves it up to the ImageManager to free all the surfaces at shutdown
-				
-
-
 	const int type;			// game-specific value to simplifiy hard-coded or scripted responses to this type
 	static const int INVALID_TILE_TYPE = -1;
 	static const int MAX_TILE_TYPES = 32;
 	
 	// TODO: other type-specific properties here (size, damage, movement?, etc)
-	// eVec2 bounds[2];	// mins and maxs given its general size, make this an eBounds such that it can be handled easier?
+	// eVec2 bounds[2];	// mins and maxs given its general size, make this an eBounds such that it can be handled easier? for collision purposes?
 
 public:
 
 	// TODO: mods must update this list for new tile-based game logic to take effect
+	// TODO: even better => have a map file define what the gameTiles are and forget this enum
 	enum gameTiles {
 		BRICK,
 		WATER
 	};
 
 	eTileImpl();
-	eTileImpl(SDL_Surface * image, int type);
+	eTileImpl(eImage * tileSet, int type);
 	const int Type() const;
 	static bool InitTileTypes();
 	static eTileImpl tileTypes[MAX_TILE_TYPES];
@@ -59,13 +50,13 @@ bool eTileImpl::InitTileTypes() {
 //************
 // eTileType
 //************
-eTileImpl::eTileImpl() : image(NULL), type(INVALID_TILE_TYPE) {
+eTileImpl::eTileImpl() : tileSet(NULL), type(INVALID_TILE_TYPE) {
 }
 
 //************
 // eTileType
 //************
-eTileImpl::eTileImpl(SDL_Surface * image, const int type) : image(image), type(type) {
+eTileImpl::eTileImpl(eImage * tileSet, const int type) : tileSet(tileSet), type(type) {
 	// TODO: other properties?	 
 }
 

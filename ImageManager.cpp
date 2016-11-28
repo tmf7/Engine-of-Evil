@@ -19,7 +19,7 @@ eImage * eImageManager::GetImage(const char * filename) {
 	key = imageHash.GenerateKey(filename);
 	for (i = imageHash.First(key); i != -1; i = imageHash.Next(i)) {
 		if (images[i].Name() && !SDL_strcmp(images[i].Name(), filename)) {	// FIXME: strcmp returns 0 for matching strings, yes?
-			return &images[i];
+			return &images[i];												// the real test here is multiple entities or similar tiles (if using eTile)
 		}
 	}
 
