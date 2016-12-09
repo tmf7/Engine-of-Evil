@@ -9,9 +9,15 @@
 //**********************************************
 
 #include "Game.h"
+#include "Heap.h"
 
  int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR lpCmdLine, INT nCmdShow) {
 	eGame::ErrorCode initCode;
+
+	/////////////////////
+	auto max = [](int a, int b) { return a > b; };
+	eHeap<int, decltype(max)> test(max);
+	//////////////////////
 	
 	initCode = game.Init();
 	if (initCode != eGame::INIT_SUCCESS) {

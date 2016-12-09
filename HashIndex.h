@@ -28,6 +28,7 @@ public:
 	int				GetIndexSize() const;
 	int				GetSpread() const;
 	int				GenerateKey(const char * string) const;
+	int				GenerateKey(const int value) const;
 
 private:
 
@@ -226,6 +227,13 @@ inline int eHashIndex::GenerateKey(const char * string) const {
 		key += (*string++) * (i + 119);
 
 	return key;
+}
+
+//*******************
+// eHashIndex::GenerateKey
+//*******************
+inline int eHashIndex::GenerateKey(const int value) const {
+	return value & hashMask;
 }
 
 #endif /* EVIL_HASH_INDEX_H_ */

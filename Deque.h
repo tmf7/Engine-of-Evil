@@ -33,12 +33,7 @@ public:
 		new (&data) type(other.data);
 		return *this;
 	};
-	eNode<type> &	operator=(eNode<type> && other) {																		// move assignment
-		//		  data.~type();			// DEBUG: std::unique_ptr calls its destructor (and deallocates its target)
-										// in its operator=(unique_ptr &&) function call
-										// so this would cause an assertion failure/crash.
-										// However, does omitting it then expose other problems
-										// like, the pointed-to object's destructor not getting called
+	eNode<type> &	operator=(eNode<type> && other) noexcept {																	// move assignment
 		std::swap(data, other.data);
 		return *this;
 	};
@@ -71,12 +66,12 @@ public:
 
 						eDeque();									// default constructor
 						eDeque(const eDeque<type> & other);			// copy constructor
-						eDeque(eDeque<type> && other);				// move constructor
+						eDeque(eDeque<type> && other) noexcept;		// move constructor
 					   ~eDeque();									// destructor
 
-//	eDeque<type> &		operator=(eDeque<type> other);				// copy and swap assignment
+//	eDeque<type> &		operator=(eDeque<type> other) noexcept;		// copy and swap assignment
 	eDeque<type> &		operator=(const eDeque<type> & other);		// copy assignment
-	eDeque<type> &		operator=(eDeque<type> && other);			// move assignment
+	eDeque<type> &		operator=(eDeque<type> && other) noexcept;	// move assignment
 
 	void				PushFront(const type & data);
 	void				PushBack(const type & data);
@@ -127,7 +122,7 @@ inline eDeque<type>::eDeque(const eDeque<type> & other) {
 // move constructor
 //******************
 template <class type>
-inline eDeque<type>::eDeque(eDeque<type> && other) : nodeCount(0), front(nullptr), back(nullptr) {
+inline eDeque<type>::eDeque(eDeque<type> && other) noexcept : nodeCount(0), front(nullptr), back(nullptr)  {
 	std::swap(nodeCount, other.nodeCount);
 	std::swap(front, other.front);
 	std::swap(back, other.back);
@@ -150,7 +145,7 @@ inline eDeque<type>::~eDeque() {
 // HOWEVER, it may be slower than the current copy assignment
 //******************
 template <class type>
-inline eDeque<type> & eDeque<type>::operator=(eDeque<type> other) {
+inline eDeque<type> & eDeque<type>::operator=(eDeque<type> other) noexcept {
 	std::swap(nodeCount, other.nodeCount);
 	std::swap(front, other.front);
 	std::swap(back, other.back);
@@ -167,7 +162,7 @@ inline eDeque<type> & eDeque<type>::operator=(eDeque<type> other) {
 // FIXME/BUG: self-assignment clears the deque AND failure to swap leaves the deque empty
 //******************
 template <class type>
-inline eDeque<type> & eDeque<type>::operator=(eDeque<type> && other) {
+inline eDeque<type> & eDeque<type>::operator=(eDeque<type> && other) noexcept {
 	Clear();
 	std::swap(nodeCount, other.nodeCount);
 	std::swap(front, other.front);

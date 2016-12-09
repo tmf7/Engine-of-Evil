@@ -3,6 +3,7 @@
 
 #include <new.h>		// std::move
 #include <utility>		// std::swap
+#include "HashIndex.h"
 
 #define DEFAULT_HEAP_SIZE 1024
 #define DEFAULT_HEAP_GRANULARITY 1024
@@ -25,7 +26,7 @@
 // TODO (A* search): heap can be cleared once the search is complete (not the memory freed)
 // AND after its list of best waypoints has been pushed onto a bestPath deque
 
-// TODO (eDeque/eHeap): add "noexcept" after all functions that use std::swap (move semantics exception safety guarantee)
+// TODO: add a eHashIndex to implement FindKey/etc faster
 
 //********************************************
 //				eHeap
@@ -35,32 +36,32 @@
 // This copies/moves pushed data, so changing 
 // the source data will not affect this heap.
 // This class only works with contiguous memory.
+// User must ensure heap isn't empty via IsEmpty()
+// prior to operator[] and PeekRoot()
 //*******************************************
 template <class type, class lambdaCompare>
 class eHeap {
 public:
 
-	typedef eHeap<type, lambdaCompare> heap_t;
-
 							eHeap() = delete;															// disallow instantiation without lambdaCompare object		
 							eHeap(lambdaCompare & compare, const int initialHeapSize = DEFAULT_HEAP_SIZE);// relaced default constructor
 							eHeap(lambdaCompare & compare, const type * data, const int numElements);	// heapify copy constructor 
 							eHeap(lambdaCompare & compare, type * data, const int numElements);			// heapify move constructor 
-							eHeap(const eHeap<type, lambdaCompare> & other);							// copy constructor
-							eHeap(eHeap<type, lambdaCompare> && other);									// move constructor
+							eHeap(const eHeap & other);													// copy constructor
+							eHeap(eHeap && other) noexcept;												// move constructor
 							~eHeap();																	// destructor
 
-	heap_t					operator+(const eHeap<type, lambdaCompare> & other);						// copy merge
-	heap_t					operator+(eHeap<type, lambdaCompare> && other);								// move merge
-	heap_t &				operator+=(const eHeap<type, lambdaCompare> & other);						// copy meld
-	heap_t &				operator+=(eHeap<type, lambdaCompare> && other);							// move meld
-	heap_t &				operator=(eHeap<type, lambdaCompare> other);								// copy and swap assignement
-	const type * const		operator[](const int index) const;											// debug const content access	
+	eHeap					operator+(const eHeap & other);			// copy merge
+	eHeap					operator+(eHeap && other);				// move merge
+	eHeap &					operator+=(const eHeap & other);		// copy meld
+	eHeap &					operator+=(eHeap && other);				// move meld
+	eHeap &					operator=(eHeap other) noexcept;		// copy and swap assignement
+	const type &			operator[](int index) const;			// debug const content access	
 
-	const type * const		PeekRoot() const;
+	const type &			PeekRoot() const;
 	void					PushHeap(const type & data);
 	void					PushHeap(type && data);
-	void					PopRoot();
+	void					PopRoot() noexcept;
 	void					ReplaceRoot(const type & data);
 	void					ReplaceRoot(type && data);
 
@@ -69,7 +70,7 @@ public:
 	const type * const		FindByKey(DataMember && key, lambdaEquals & equals) const;	
 
 	template<typename DataMember, typename lambdaEquals>
-	bool					RemoveByKey(DataMember && key, lambdaEquals & equals);
+	bool					RemoveByKey(DataMember && key, lambdaEquals & equals) noexcept;
 
 	template<typename DataMember, typename lambdaEquals>
 	bool					ReplaceByKey(DataMember && oldKey, type & newData, lambdaEquals & equals);
@@ -92,14 +93,15 @@ private:
 	
 	void					Allocate(const int newHeapSize);
 	void					Heapify();
-	void					SiftUp(const int index);
-	void					SiftDown(const int index);
+	void					SiftUp(const int index) noexcept;
+	void					SiftDown(const int index) noexcept;
 
 private:
 
 	type *					heap;			
 	lambdaCompare			compare;
-	int						numElements;
+	eHashIndex				keyHash;			// TODO: populate this HashIndex during ctor/copy/move/assign/push/replace
+	int						numElements;		// and use it in FindKey/ReplaceKey/RemoveKey
 	int						granularity;
 	int						heapSize;
 };
@@ -205,7 +207,7 @@ inline eHeap<type, lambdaCompare>::eHeap(const eHeap<type, lambdaCompare> & othe
 // move constructor
 //***************
 template<class type, class lambdaCompare>
-inline eHeap<type, lambdaCompare>::eHeap(eHeap<type, lambdaCompare> && other) 
+inline eHeap<type, lambdaCompare>::eHeap(eHeap<type, lambdaCompare> && other) noexcept
 	: compare(other.compare),
 	  numElements(0),
 	  granularity(DEFAULT_HEAP_GRANULARITY),
@@ -337,7 +339,7 @@ inline eHeap<type, lambdaCompare> & eHeap<type, lambdaCompare>::operator+=(const
 // copy and swap assignement
 //***************
 template<class type, class lambdaCompare>
-inline eHeap<type, lambdaCompare> & eHeap<type, lambdaCompare>::operator=(eHeap<type, lambdaCompare> other) {
+inline eHeap<type, lambdaCompare> & eHeap<type, lambdaCompare>::operator=(eHeap<type, lambdaCompare> other) noexcept {
 	std::swap(numElements, other.numElements);
 	std::swap(granularity, other.granularity);
 	std::swap(heapSize, other.heapSize);
@@ -351,16 +353,16 @@ inline eHeap<type, lambdaCompare> & eHeap<type, lambdaCompare>::operator=(eHeap<
 // eHeap::operator[]
 //***************
 template<class type, class lambdaCompare>
-inline const type * const eHeap<type, lambdaCompare>::operator[](const int index) const {
-	return (heap == nullptr || index >= numElements || index < 0) ? nullptr : &heap[index];
+inline const type & eHeap<type, lambdaCompare>::operator[](int index) const {
+	return heap[index];
 }
 
 //***************
 // eHeap::PeekRoot
 //***************
 template<class type, class lambdaCompare>
-inline const type * const eHeap<type, lambdaCompare>::PeekRoot() const {
-	return heap == nullptr ? nullptr : &heap[0];
+inline const type & eHeap<type, lambdaCompare>::PeekRoot() const {
+	return heap[0];
 }
 
 //***************
@@ -399,7 +401,7 @@ inline void eHeap<type, lambdaCompare>::PushHeap(type && data) {
 // eHeap::PopRoot
 //***************
 template<class type, class lambdaCompare>
-inline void eHeap<type, lambdaCompare>::PopRoot() {
+inline void eHeap<type, lambdaCompare>::PopRoot() noexcept {
 	if (heap == nullptr) {
 		return;
 	} else if (numElements == 1) {
@@ -464,7 +466,7 @@ inline const type * const eHeap<type, lambdaCompare>::FindByKey(DataMember && ke
 //****************
 template<class type, class lambdaCompare>
 template<typename DataMember, typename lambdaEquals>
-inline bool eHeap<type, lambdaCompare>::RemoveByKey(DataMember && key, lambdaEquals & equals) {
+inline bool eHeap<type, lambdaCompare>::RemoveByKey(DataMember && key, lambdaEquals & equals) noexcept {
 	int i;
 
 	for (i = 0; i < numElements; i++) {
@@ -562,7 +564,7 @@ inline void eHeap<type, lambdaCompare>::Heapify() {
 // eHeap::SiftUp
 //**************
 template<class type, class lambdaCompare>
-inline void eHeap<type, lambdaCompare>::SiftUp(const int index) {
+inline void eHeap<type, lambdaCompare>::SiftUp(const int index) noexcept {
 	int parent;
 	int child;
 
@@ -582,7 +584,7 @@ inline void eHeap<type, lambdaCompare>::SiftUp(const int index) {
 // eHeap::SiftDown
 //**************
 template<class type, class lambdaCompare>
-inline void eHeap<type, lambdaCompare>::SiftDown(const int index) {
+inline void eHeap<type, lambdaCompare>::SiftDown(const int index) noexcept {
 	int parent;
 	int child;
 
