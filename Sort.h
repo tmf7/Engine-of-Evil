@@ -115,7 +115,7 @@ void HeapSort(type * data, const int numElements, lambdaCompare & compare) noexc
 	}
 }
 
-#ifdef 0
+#if 0
 // global mergesort
 // only works on contiguous memory
 // lambdaCompare defines the closure type of a lambda function used for sort order

@@ -1,29 +1,33 @@
 #include "HashIndex.h"
 
-int eHashIndex::INVALID_INDEX[1] = { -1 };
-
 //*******************
 // eHashIndex::GetSpread
-// returns number in the range [0-100] representing the spread over the hash table
+// returns an int in the range [0-100] representing the spread over the hash table
 //*******************
 int eHashIndex::GetSpread() const {
-	int numHashItems[DEFAULT_HASH_SIZE];
-	int i, index;
-	int totalItems, average;
-	int error, e;
+	int i, index, totalItems;
+	std::vector<int> numHashItems;
+	int average, error, e;
+
+	const int hashSize = hash.size();
+
+	if (NumUniqueKeys() == 0) {
+		return 100;
+	}
 
 	totalItems = 0;
+	numHashItems.reserve(hashSize);
+	numHashItems.assign(hashSize, 0);
 	for (i = 0; i < hashSize; i++) {
-		numHashItems[i] = 0;
-		for (index = hash[i]; index >= 0; index = indexChain[index]) {
+		for (index = hash[i]; index != INVALID_INDEX; index = indexChain[index]) {
 			numHashItems[i]++;
 		}
 		totalItems += numHashItems[i];
 	}
-	
-	if (totalItems <= 1) // one or none items in hash
+	// if no items in hash
+	if (totalItems <= 1) {
 		return 100;
-
+	}
 	average = totalItems / hashSize;
 	error = 0;
 	for (i = 0; i < hashSize; i++) {

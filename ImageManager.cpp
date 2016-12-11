@@ -8,23 +8,19 @@
 // returns nullptr on failure
 //***************
 eImage * eImageManager::GetImage(const char * filename) {
-	SDL_Surface * surface;
-	int key;
-	int i;
-
 	if (filename == NULL)
 		return nullptr;
 
 	// search for pre-existing image
-	key = imageHash.GenerateKey(filename);
-	for (i = imageHash.First(key); i != -1; i = imageHash.Next(i)) {
-		if (images[i].Name() && !SDL_strcmp(images[i].Name(), filename)) {	// FIXME: strcmp returns 0 for matching strings, yes?
-			return &images[i];												// the real test here is multiple entities or similar tiles (if using eTile)
+	int key = imageHash.GenerateKey(filename);
+	for (int i = imageHash.First(key); i != -1; i = imageHash.Next(i)) {
+		if (images[i].Name() && SDL_strcmp(images[i].Name(), filename) == 0) {	
+			return &images[i];											
 		}
 	}
 
 	// no mathes found, initilize the image
-	surface = SDL_LoadBMP(filename);
+	SDL_Surface * surface = SDL_LoadBMP(filename);
 
 	// unable to initialize
 	if (surface == NULL)
@@ -32,9 +28,9 @@ eImage * eImageManager::GetImage(const char * filename) {
 
 	if (game.GetRenderer().FormatSurface(&surface, true)) {	// FIXME: not all images should be colorKeyed
 		imageHash.Add(key, numImages++);
-		i = imageHash.First(key);
-		images[i].Init(surface, filename);
-		return &images[i];
+//		int k = imageHash.First(key);
+		images[numImages].Init(surface, filename);
+		return &images[numImages];
 	}
 
 	// unable to format the image to the backbuffer format

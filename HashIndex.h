@@ -1,83 +1,79 @@
-#ifndef EVIL_HASH_INDEX_H_
-#define EVIL_HASH_INDEX_H_
+#ifndef EVIL_HASH_INDEX_H
+#define EVIL_HASH_INDEX_H
 
-#include <Windows.h>		// for memset
+#include <vector>
 
 //************************************
 //			HashIndex
 //	Fast hash table for indexes and arrays.
-//	uses stack-allocated memory
+//	uses std::vector<int> for memory management
+//  DEBUG: resizing the hash while in use invalidates
+//  all the hashMask-dependent keys (no matter the type)
 //************************************
-
-#define DEFAULT_HASH_SIZE			1024		// must be a power of two
-
 class eHashIndex {
 public:
 					
-					eHashIndex();
+						eHashIndex();
+	explicit			eHashIndex(const int initialHashSize);
 
-	void			Add(const int key, const int index);
-	void			Remove(const int key, const int index);
-	int				First(const int key) const;
-	int				Next(const int index) const;
+	void				Add(const int key, const int index);
+	void				Remove(const int key, const int index);
+	int					First(const int key) const;
+	int					Next(const int index) const;
 
-//	void			InsertIndex(const int key, const int index);
-//	void			RemoveIndex(const int key, const int index);
-	void			Clear();
-	int				GetHashSize() const;
-	int				GetIndexSize() const;
-	int				GetSpread() const;
-	int				GenerateKey(const char * string) const;
-	int				GenerateKey(const int value) const;
+	void				InsertIndex(const int key, const int index);
+	void				RemoveIndex(const int key, const int index);
+	void				Clear();
+	void				ClearAndResize(const int newHashSize);
+	int					NumUniqueKeys() const;
+	int					NumDuplicateKeys() const;
+	int					GetSpread() const;
+	int					GenerateKey(const char * string) const;
+	int					GenerateKey(const int value) const;
+
+	// slots allocated by std::vector<int>
+	size_t				HashCapacity() const;
+	size_t				IndexCapacity() const;
 
 private:
 
-	int				hashSize;
-	int				hashPool[DEFAULT_HASH_SIZE];
-	int	*			hash;
-	int				indexSize;
-	int				indexChain[DEFAULT_HASH_SIZE];
-	int				hashMask;
-	int				lookupMask;
+	std::vector<int>	hash;
+	std::vector<int>	indexChain;
+	int					hashMask;
 
-	static int		INVALID_INDEX[1];
-
-	void			Init();
+	static const int	defaultHashSize = 1024;		// must be a power of two, represents the number of available unique keys
+	static const int	INVALID_INDEX = -1;
 };
 
 //*******************
 // eHashIndex::eHashIndex
 //*******************
-inline eHashIndex::eHashIndex() {
-	hashSize = DEFAULT_HASH_SIZE;
-	indexSize = DEFAULT_HASH_SIZE;
-	hashMask = hashSize - 1;
-	hash = INVALID_INDEX;
-	lookupMask = 0;
+inline eHashIndex::eHashIndex() : eHashIndex(defaultHashSize) {
 }
 
 //*******************
-// eHashIndex::Init
+// eHashIndex::eHashIndex
 //*******************
-inline void eHashIndex::Init() {
-	hash = hashPool;
-	memset(hash, 0xff, hashSize * sizeof(hash[0]));
-	memset(indexChain, 0xff, indexSize * sizeof(indexChain[0]));
-	lookupMask = -1;
+inline eHashIndex::eHashIndex(const int initialHashSize) {
+	hash.reserve(initialHashSize);
+	indexChain.reserve(initialHashSize);
+	hash.assign(initialHashSize, INVALID_INDEX);
+	indexChain.assign(initialHashSize, INVALID_INDEX);
+	hashMask = hash.size() - 1;
 }
 
 //*******************
 // eHashIndex::Add
-// add an index to the hash, assumes the index has not yet been added to the hash
-// index >= 0 && index < indexSize only
+// add an index to the hash
+// --only add unique indexes--
+// sets this most recently added index as the First() one to be viewed
+// DEBUG: assert (index >= 0)
 //*******************
 inline void eHashIndex::Add(const int key, const int index) {
-	int k;
+	if (index >= indexChain.size()) // DEBUG: std::vector may allocate more than max-signed-int values
+		indexChain.resize(index + 1);
 
-	if (hash == INVALID_INDEX)
-		Init();
-
-	k = key & hashMask;
+	int k = key & hashMask;
 	indexChain[index] = hash[k];
 	hash[k] = index;
 }
@@ -85,26 +81,27 @@ inline void eHashIndex::Add(const int key, const int index) {
 //*******************
 // eHashIndex::Remove
 // remove an index from the hash
+// --ensure the input key/index pair exists (even if a duplicate)--
+// DEBUG: assert( index >= 0 && index < indexChain.size() )
 //*******************
 inline void eHashIndex::Remove(const int key, const int index) {
 	int k;
 
-	if (hash == INVALID_INDEX)
+	if (hash.empty())
 		return;
 	
 	k = key & hashMask;
 	if (hash[k] == index) {
 		hash[k] = indexChain[index];
-	}
-	else {
-		for (int i = hash[k]; i != -1; i = indexChain[i]) {
+	} else {
+		for (int i = hash[k]; i != INVALID_INDEX; i = indexChain[i]) {
 			if (indexChain[i] == index) {
 				indexChain[i] = indexChain[index];
 				break;
 			}
 		}
 	}
-	indexChain[index] = -1;
+	indexChain[index] = INVALID_INDEX;
 }
 
 //*******************
@@ -112,7 +109,7 @@ inline void eHashIndex::Remove(const int key, const int index) {
 // get the first index from the hash, returns -1 if empty hash entry
 //*******************
 inline int eHashIndex::First(const int key) const {
-	return hash[key & hashMask & lookupMask];
+	return hash[key & hashMask];
 }
 
 //*******************
@@ -121,21 +118,20 @@ inline int eHashIndex::First(const int key) const {
 // index >= 0 && index < indexSize only
 //*******************
 inline int eHashIndex::Next(const int index) const {
-	return indexChain[index & lookupMask];
+	return indexChain[index];
 }
 
-/*
+
 //*******************
 // eHashIndex::Insertindex
-// insert an entry into the index and add it to the hash, increasing all indexes >= index
-// index >= 0 && index < indexSize only
+// insert an new index into the indexChain and add it to the hash, increasing all indexes >= index
+// useful for dynamically-sized array indexing
+// --ensure the source array has actually resized by one, making the key/index pair valid--
+// DEBUG: assert (index >= 0)
 //*******************
 inline void eHashIndex::InsertIndex(const int key, const int index) {
-	int i;
-	int max;
-
-	max = index;
-	for (i = 0; i < hashSize; i++) {
+	int max = index;
+	for (size_t i = 0; i < hash.size(); i++) {
 		if (hash[i] >= index) {
 			hash[i]++;
 			if (hash[i] > max) {
@@ -143,7 +139,7 @@ inline void eHashIndex::InsertIndex(const int key, const int index) {
 			}
 		}
 	}
-	for (i = 0; i < indexSize; i++) {
+	for (size_t i = 0; i < indexChain.size(); i++) {
 		if (indexChain[i] >= index) {
 			indexChain[i]++;
 			if (indexChain[i] > max) {
@@ -151,24 +147,27 @@ inline void eHashIndex::InsertIndex(const int key, const int index) {
 			}
 		}
 	}
-	for (i = max; i > index; i--) {
+	if (max >= indexChain.size()) {
+		indexChain.resize(max + 1);
+	}
+	for (int i = max; i > index; i--) {
 		indexChain[i] = indexChain[i - 1];
 	}
-	indexChain[index] = -1;
+	indexChain[index] = INVALID_INDEX;
 	Add(key, index);
 }
 
 //*******************
 // eHashIndex::RemoveIndex
-// remove an entry from the index and remove it from the hash, decreasing all indexes >= index
+// remove an index from the indexChain and remove it from the hash, decreasing all indexes >= index
+// useful for dynamically-sized array indexing 
+// ensure the target index is actually removed from the source array first
+// DEBUG: assert ( index >= 0 && index < indexChain.size() )
 //*******************
 inline void eHashIndex::RemoveIndex(const int key, const int index) {
-	int i;
-	int max;
-
 	Remove(key, index);
-	max = index;
-	for (i = 0; i < hashSize; i++) {
+	int max = index;
+	for (size_t i = 0; i < hash.size(); i++) {
 		if (hash[i] >= index) {
 			if (hash[i] > max) {
 				max = hash[i];
@@ -176,7 +175,7 @@ inline void eHashIndex::RemoveIndex(const int key, const int index) {
 			hash[i]--;
 		}
 	}
-	for (i = 0; i < indexSize; i++) {
+	for (size_t i = 0; i < indexChain.size(); i++) {
 		if (indexChain[i] >= index) {
 			if (indexChain[i] > max) {
 				max = indexChain[i];
@@ -184,34 +183,56 @@ inline void eHashIndex::RemoveIndex(const int key, const int index) {
 			indexChain[i]--;
 		}
 	}
-	for (i = index; i < max; i++) {
+	for (int i = index; i < max; i++) {
 		indexChain[i] = indexChain[i + 1];
 	}
-	indexChain[max] = -1;
+	indexChain[max] = INVALID_INDEX;
 }
-*/
 
 //*******************
 // eHashIndex::Clear
 // only clears the hash table because clearing the indexChain is not really needed
 //*******************
 inline void eHashIndex::Clear() {
-	if (hash != INVALID_INDEX)
-		memset(hash, 0xff, hashSize * sizeof(hash[0]));
+	hash.assign(hash.capacity(), INVALID_INDEX);
 }
 
 //*******************
-// eHashIndex::GetHashSize
+// eHashIndex::Clear
+// only clears the hash table because clearing the indexChain is not really needed
 //*******************
-inline int eHashIndex::GetHashSize() const {
-	return hashSize;
+inline void eHashIndex::ClearAndResize(const int newHashSize) {
+	hash.resize(newHashSize);
+	hash.assign(hash.capacity(), INVALID_INDEX);
+	hashMask = hash.size() - 1;
 }
 
 //*******************
-// eHashIndex::GetIndexSize
+// eHashIndex::NumUniqueKeys
+// returns the number of unique keys in use
+// DEBUG: these are stored in the primary hash vector
 //*******************
-inline int eHashIndex::GetIndexSize() const {
-	return indexSize;
+inline int eHashIndex::NumUniqueKeys() const {
+	int uniqueCount = 0;
+	for (size_t i = 0; i < hash.size(); i++) {
+		if (hash[i] != -1)
+			uniqueCount++;
+	}
+	return uniqueCount;
+}
+
+//*******************
+// eHashIndex::NumDuplicateKeys
+// returns the current number of indexes with duplicate keys
+// DEBUG: these are stored in the indexChain vector
+//*******************
+inline int eHashIndex::NumDuplicateKeys() const {
+	int registeredCount = 0;
+	for (size_t i = 0; i < indexChain.size(); i++) {
+		if (indexChain[i] != -1)
+			registeredCount++;
+	}
+	return registeredCount;
 }
 
 //*******************
@@ -236,6 +257,18 @@ inline int eHashIndex::GenerateKey(const int value) const {
 	return value & hashMask;
 }
 
-#endif /* EVIL_HASH_INDEX_H_ */
+//*******************
+// eHashIndex::HashCapacity
+//*******************
+inline size_t eHashIndex::HashCapacity() const {
+	return hash.capacity();
+}
 
+//*******************
+// eHashIndex::IndexCapacity
+//*******************
+inline size_t eHashIndex::IndexCapacity() const {
+	return indexChain.capacity();
+}
 
+#endif /* EVIL_HASH_INDEX_H */

@@ -3,7 +3,7 @@
 
 #include <new.h>		// std::move
 #include <utility>		// std::swap
-#include "HashIndex.h"
+//#include "HashIndex.h"
 
 #define DEFAULT_HEAP_SIZE 1024
 #define DEFAULT_HEAP_GRANULARITY 1024
@@ -100,7 +100,7 @@ private:
 
 	type *					heap;			
 	lambdaCompare			compare;
-	eHashIndex				keyHash;			// TODO: populate this HashIndex during ctor/copy/move/assign/push/replace
+//	eHashIndex				keyHash;			// TODO: populate this HashIndex during ctor/copy/move/assign/push/replace
 	int						numElements;		// and use it in FindKey/ReplaceKey/RemoveKey
 	int						granularity;
 	int						heapSize;

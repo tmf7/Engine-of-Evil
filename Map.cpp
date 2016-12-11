@@ -35,6 +35,15 @@ void eMap::BuildTiles(const tileType_t type) {
 	byte_t * tile;
 	static const byte_t * tileMapEnd = &tileMap.Index(tileMap.Rows() - 1, tileMap.Columns() - 1);
 
+/*
+// TODO: if very large random numbers are needed ( ie greater than RAND_MAX 32,767 )
+#include <random>
+	std::random_device r;
+	std::default_random_engine engine(r());	// seed the mersenne twister
+	std::uniform_int_distribution<int> uniform_dist(0, NUM_ELEMENTS);
+	int r = uniform_dist(engine) % NUM_ELEMENTS;
+*/
+
 	switch (type) {
 		case RANDOM_TILE: {
 			for (tile = &tileMap.Index(0, 0); tile <= tileMapEnd; tile++) {

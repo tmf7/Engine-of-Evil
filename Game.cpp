@@ -80,7 +80,17 @@ bool eGame::Run() {
 	static SDL_Event	event;
 	Uint32				start, frameDuration;
 	int					delay;
-	static const int	fps = 30;
+	static const int	fps = 60;
+
+/*
+// TODO: as an alternative method of timing in general
+// BUG: subsequent calls to now() will affect calculated run times (ie later intervals may seem quicker)
+#include <chrono>
+	auto t1 = std::chrono::high_resolution_clock::now();
+	auto t2 = std::chrono::high_resolution_clock::now();
+	printf("%I64i milliseconds\n\n", std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count());
+
+*/
 	
 	start = SDL_GetTicks();
 
