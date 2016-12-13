@@ -5,7 +5,7 @@
 
 //************************************
 //			HashIndex
-//	Fast hash table for indexes and arrays.
+//	Fast hash table for indexes and arrays
 //	uses std::vector<int> for memory management
 //  DEBUG: resizing the hash while in use invalidates
 //  all the hashMask-dependent keys (no matter the type)
@@ -14,22 +14,26 @@ class eHashIndex {
 public:
 					
 						eHashIndex();
-	explicit			eHashIndex(const int initialHashSize);
+	explicit			eHashIndex(int initialHashSize);
 
-	void				Add(const int key, const int index);
-	void				Remove(const int key, const int index);
-	int					First(const int key) const;
+						template <class ForwardIterator, class HashFunction>
+						eHashIndex(ForwardIterator begin, ForwardIterator end, HashFunction hasher);
+
+						template <class ForwardIterator, class HashFunction>
+	void				Rebuild(ForwardIterator begin, ForwardIterator end, HashFunction hasher);
+
+	void				Add(const int hashkey, const int index);
+	void				Remove(const int hashkey, const int index);
+	int					First(const int hashkey) const;
 	int					Next(const int index) const;
 
-	void				InsertIndex(const int key, const int index);
-	void				RemoveIndex(const int key, const int index);
+	void				InsertIndex(const int hashkey, const int index);
+	void				RemoveIndex(const int hashkey, const int index);
 	void				Clear();
-	void				ClearAndResize(const int newHashSize);
+	void				ClearAndResize(int newHashSize);
 	int					NumUniqueKeys() const;
 	int					NumDuplicateKeys() const;
 	int					GetSpread() const;
-	int					GenerateKey(const char * string) const;
-	int					GenerateKey(const int value) const;
 
 	// slots allocated by std::vector<int>
 	size_t				HashCapacity() const;
@@ -41,7 +45,7 @@ private:
 	std::vector<int>	indexChain;
 	int					hashMask;
 
-	static const int	defaultHashSize = 1024;		// must be a power of two, represents the number of available unique keys
+	static const int	defaultHashSize = 1024;
 	static const int	INVALID_INDEX = -1;
 };
 
@@ -53,13 +57,43 @@ inline eHashIndex::eHashIndex() : eHashIndex(defaultHashSize) {
 
 //*******************
 // eHashIndex::eHashIndex
+// initialHashSize will resize to the next closest power of 2
+// to improve hash key spread
 //*******************
-inline eHashIndex::eHashIndex(const int initialHashSize) {
+inline eHashIndex::eHashIndex(int initialHashSize) {
+	int power = 0;
+	while (initialHashSize >> ++power)
+		;
+	initialHashSize = 1 << power;
+
 	hash.reserve(initialHashSize);
 	indexChain.reserve(initialHashSize);
 	hash.assign(initialHashSize, INVALID_INDEX);
 	indexChain.assign(initialHashSize, INVALID_INDEX);
 	hashMask = hash.size() - 1;
+}
+
+//*******************
+// eHashIndex::eHashIndex
+// build using the source array
+// ensuring each index is registered once
+//*******************
+template <class ForwardIterator, class HashFunction>
+inline eHashIndex::eHashIndex(ForwardIterator begin, ForwardIterator end, HashFunction hasher) : eHashIndex(std::distance(begin, end)) {
+	for (ForwardIterator i = begin; i != end; i++)
+		Add(hasher(*i), std::distance(begin, i));
+}
+
+//*******************
+// eHashIndex::Rebuild
+// clear, resize, and build using the source array
+// ensuring each index is registered once
+//*******************
+template <class ForwardIterator, class HashFunction>
+inline void eHashIndex::Rebuild(ForwardIterator begin, ForwardIterator end, HashFunction hasher) {
+	ClearAndResize(std::distance(begin, end));
+	for (ForwardIterator i = begin; i != end; i++)
+		Add(hasher(*i), std::distance(begin, i));
 }
 
 //*******************
@@ -69,11 +103,11 @@ inline eHashIndex::eHashIndex(const int initialHashSize) {
 // sets this most recently added index as the First() one to be viewed
 // DEBUG: assert (index >= 0)
 //*******************
-inline void eHashIndex::Add(const int key, const int index) {
-	if (index >= indexChain.size()) // DEBUG: std::vector may allocate more than max-signed-int values
-		indexChain.resize(index + 1);
+inline void eHashIndex::Add(const int hashkey, const int index) {
+	if (index >= indexChain.size())		// DEBUG: std::vector may allocate more than max-signed-int values, but not for my purposes
+		indexChain.resize(index + 1);	// DEBUG: indexChain.size() need not be a power of 2, it doesn't affect hashkey spread
 
-	int k = key & hashMask;
+	int k = hashkey & hashMask;
 	indexChain[index] = hash[k];
 	hash[k] = index;
 }
@@ -84,13 +118,13 @@ inline void eHashIndex::Add(const int key, const int index) {
 // --ensure the input key/index pair exists (even if a duplicate)--
 // DEBUG: assert( index >= 0 && index < indexChain.size() )
 //*******************
-inline void eHashIndex::Remove(const int key, const int index) {
+inline void eHashIndex::Remove(const int hashkey, const int index) {
 	int k;
 
 	if (hash.empty())
 		return;
 	
-	k = key & hashMask;
+	k = hashkey & hashMask;
 	if (hash[k] == index) {
 		hash[k] = indexChain[index];
 	} else {
@@ -108,14 +142,14 @@ inline void eHashIndex::Remove(const int key, const int index) {
 // eHashIndex::First
 // get the first index from the hash, returns -1 if empty hash entry
 //*******************
-inline int eHashIndex::First(const int key) const {
-	return hash[key & hashMask];
+inline int eHashIndex::First(const int hashkey) const {
+	return hash[hashkey & hashMask];
 }
 
 //*******************
 // eHashIndex::Next
-// get the next index from the hash, returns -1 if at the end of the hash chain
-// index >= 0 && index < indexSize only
+// get the next index with the same hashkey, returns -1 if at the end of a chain
+// DEBUG: assert( index >= 0 && index < indexSize )
 //*******************
 inline int eHashIndex::Next(const int index) const {
 	return indexChain[index];
@@ -127,9 +161,9 @@ inline int eHashIndex::Next(const int index) const {
 // insert an new index into the indexChain and add it to the hash, increasing all indexes >= index
 // useful for dynamically-sized array indexing
 // --ensure the source array has actually resized by one, making the key/index pair valid--
-// DEBUG: assert (index >= 0)
+// DEBUG: assert( index >= 0 )
 //*******************
-inline void eHashIndex::InsertIndex(const int key, const int index) {
+inline void eHashIndex::InsertIndex(const int hashkey, const int index) {
 	int max = index;
 	for (size_t i = 0; i < hash.size(); i++) {
 		if (hash[i] >= index) {
@@ -148,13 +182,13 @@ inline void eHashIndex::InsertIndex(const int key, const int index) {
 		}
 	}
 	if (max >= indexChain.size()) {
-		indexChain.resize(max + 1);
+		indexChain.resize(max + 1);		// DEBUG: indexChain.size() need not be a power of 2, it doesn't affect hashkey spread
 	}
 	for (int i = max; i > index; i--) {
 		indexChain[i] = indexChain[i - 1];
 	}
 	indexChain[index] = INVALID_INDEX;
-	Add(key, index);
+	Add(hashkey, index);
 }
 
 //*******************
@@ -162,10 +196,10 @@ inline void eHashIndex::InsertIndex(const int key, const int index) {
 // remove an index from the indexChain and remove it from the hash, decreasing all indexes >= index
 // useful for dynamically-sized array indexing 
 // ensure the target index is actually removed from the source array first
-// DEBUG: assert ( index >= 0 && index < indexChain.size() )
+// DEBUG: assert( index >= 0 && index < indexChain.size() )
 //*******************
-inline void eHashIndex::RemoveIndex(const int key, const int index) {
-	Remove(key, index);
+inline void eHashIndex::RemoveIndex(const int hashkey, const int index) {
+	Remove(hashkey, index);
 	int max = index;
 	for (size_t i = 0; i < hash.size(); i++) {
 		if (hash[i] >= index) {
@@ -191,19 +225,27 @@ inline void eHashIndex::RemoveIndex(const int key, const int index) {
 
 //*******************
 // eHashIndex::Clear
-// only clears the hash table because clearing the indexChain is not really needed
 //*******************
 inline void eHashIndex::Clear() {
 	hash.assign(hash.capacity(), INVALID_INDEX);
+	indexChain.assign(hash.capacity(), INVALID_INDEX);
 }
 
 //*******************
-// eHashIndex::Clear
-// only clears the hash table because clearing the indexChain is not really needed
+// eHashIndex::ClearAndResize
+// newHashSize will resize to the next closest power of 2
+// to improve hash key spread
 //*******************
-inline void eHashIndex::ClearAndResize(const int newHashSize) {
+inline void eHashIndex::ClearAndResize(int newHashSize) {
+	int power = 0;
+	while (newHashSize >> ++power)
+		;
+	newHashSize = 1 << power;
+
 	hash.resize(newHashSize);
+	indexChain.resize(newHashSize);
 	hash.assign(hash.capacity(), INVALID_INDEX);
+	indexChain.assign(hash.capacity(), INVALID_INDEX);
 	hashMask = hash.size() - 1;
 }
 
@@ -227,34 +269,12 @@ inline int eHashIndex::NumUniqueKeys() const {
 // DEBUG: these are stored in the indexChain vector
 //*******************
 inline int eHashIndex::NumDuplicateKeys() const {
-	int registeredCount = 0;
+	int duplicateCount = 0;
 	for (size_t i = 0; i < indexChain.size(); i++) {
 		if (indexChain[i] != -1)
-			registeredCount++;
+			duplicateCount++;
 	}
-	return registeredCount;
-}
-
-//*******************
-// eHashIndex::GenerateKey
-// returns a case-sensitive key for a string
-//*******************
-inline int eHashIndex::GenerateKey(const char * string) const {
-	int i;
-	int key;
-
-	key = 0;
-	for (i = 0; *string != '\0'; i++) 
-		key += (*string++) * (i + 119);
-
-	return key;
-}
-
-//*******************
-// eHashIndex::GenerateKey
-//*******************
-inline int eHashIndex::GenerateKey(const int value) const {
-	return value & hashMask;
+	return duplicateCount;
 }
 
 //*******************
@@ -271,4 +291,4 @@ inline size_t eHashIndex::IndexCapacity() const {
 	return indexChain.capacity();
 }
 
-#endif /* EVIL_HASH_INDEX_H */
+#endif /* EVIL_HASH_INDEX_H_ */

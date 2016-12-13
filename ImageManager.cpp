@@ -1,3 +1,4 @@
+#include <functional>
 #include "ImageManager.h"
 #include "Game.h"
 
@@ -12,8 +13,9 @@ eImage * eImageManager::GetImage(const char * filename) {
 		return nullptr;
 
 	// search for pre-existing image
-	int key = imageHash.GenerateKey(filename);
-	for (int i = imageHash.First(key); i != -1; i = imageHash.Next(i)) {
+	auto hasher = std::hash<const char *>{};
+	int hashkey = hasher(filename);
+	for (int i = imageHash.First(hashkey); i != -1; i = imageHash.Next(i)) {
 		if (images[i].Name() && SDL_strcmp(images[i].Name(), filename) == 0) {	
 			return &images[i];											
 		}
@@ -27,7 +29,7 @@ eImage * eImageManager::GetImage(const char * filename) {
 		return nullptr;
 
 	if (game.GetRenderer().FormatSurface(&surface, true)) {	// FIXME: not all images should be colorKeyed
-		imageHash.Add(key, numImages++);
+		imageHash.Add(hashkey, numImages++);
 //		int k = imageHash.First(key);
 		images[numImages].Init(surface, filename);
 		return &images[numImages];
