@@ -180,13 +180,6 @@ inline eDeque<type> & eDeque<type>::operator=(const eDeque<type> & other) {
 	eNode<type> * otherIterator;
 	eNode<type> * newFront;
 
-
-	// QUESTION: would this be faster than what I do in this function? Or, is heap deallocation/allocation more expensive?
-//	Clear();
-//	for (otherIterator = other.back; otherIterator != nullptr; otherIterator = otherIterator->next)
-//		PushFront(otherIterator->data);
-
-
 	// destroy and reconstruct pre-allocated memory if *this already has some
 	for (thisIterator = back, otherIterator = other.back;
 		thisIterator != nullptr	  &&	  otherIterator != nullptr;

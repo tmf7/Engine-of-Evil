@@ -38,7 +38,7 @@ public:
 	bool			ContainsPoint(const eVec2 & point) const;
 	bool			Overlaps(const eBounds & bounds) const;
 //	bool			LineIntersection(const eVec2 & start, const eVec2 & end) const;
-	// intersection point is start + dir * scale
+					// intersection point is start + dir * scale
 //	bool			RayIntersection(const eVec2 & start, const eVec2 & dir, float & scale) const;
 
 private:

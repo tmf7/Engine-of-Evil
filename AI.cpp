@@ -519,7 +519,7 @@ void eAI::UpdateKnownMap() {
 // eAI::Draw
 // TODO: make this draw independent of eEntity::Draw()
 //***************
-void eAI::Draw() {
+void eAI::Draw() const {
 	DrawKnownMap();	
 	DrawTrailWaypoints();
 	DrawGoalWaypoints();

@@ -25,7 +25,7 @@ bool eEntity::Spawn() {
 // eEntity::Draw
 // draw the sprite at it current animation frame
 //***************
-void eEntity::Draw() {
+void eEntity::Draw() const {
 	eVec2 drawPoint;
 	drawPoint = absBounds[0] - game.GetCamera().absBounds[0];
 	drawPoint.SnapInt();

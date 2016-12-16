@@ -10,7 +10,7 @@
 //			eImageManager
 // Handles allocating and freeing 
 // all resource  image surfaces.
-// NOTE: only modify surface data as it is being BLITTED, 
+// DEBUG: only modify surface data as it is being BLITTED, 
 // not before, ie mask/modify it enroute to the screen
 // not in memory otherwise it will have game-wide
 // consequences when drawing anything that uses

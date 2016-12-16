@@ -1,18 +1,13 @@
-#ifndef EVIL_HEAP_H
-#define EVIL_HEAP_H
+#ifndef EVIL_BINARY_HEAP_H
+#define EVIL_BINARY_HEAP_H
 
 #include <new.h>		// std::move
 #include <utility>		// std::swap
-//#include "HashIndex.h"
 
-#define DEFAULT_HEAP_SIZE 1024
-#define DEFAULT_HEAP_GRANULARITY 1024
+// TODO (A* search): use lazy deletion for IncreaseKey/DecreaseKey: insert the new data at the bottom and heapify,
+// AND somehow mark the old data as "visited" then just pop it when it reaches the top
 
-
-// TODO (A* search): use lazy deletion for IncreaseKey/DecreaseKey: insert new data at the bottom and heapify, as well as
-// mark data as "visited" then pop it when it reaches the top)
-
-// TODO: this class will be used to implement two priority queues of eTiles, each eTile will have:
+// TODO: two priority queues of eTiles, each eTile will have:
 // A float for its weight (for A* search) (one way of ordering a heap)
 // An int for its z-depth (for draw order heapsort) (another way of ordering, then sorting, a heap)
 
@@ -25,8 +20,6 @@
 
 // TODO (A* search): heap can be cleared once the search is complete (not the memory freed)
 // AND after its list of best waypoints has been pushed onto a bestPath deque
-
-// TODO: add a eHashIndex to implement FindKey/etc faster
 
 //********************************************
 //				eHeap
@@ -44,7 +37,7 @@ class eHeap {
 public:
 
 							eHeap() = delete;															// disallow instantiation without lambdaCompare object		
-							eHeap(lambdaCompare & compare, const int initialHeapSize = DEFAULT_HEAP_SIZE);// relaced default constructor
+							eHeap(lambdaCompare & compare, const int initialCapacity = defaultCapacity);// relaced default constructor
 							eHeap(lambdaCompare & compare, const type * data, const int numElements);	// heapify copy constructor 
 							eHeap(lambdaCompare & compare, type * data, const int numElements);			// heapify move constructor 
 							eHeap(const eHeap & other);													// copy constructor
@@ -56,7 +49,7 @@ public:
 	eHeap &					operator+=(const eHeap & other);		// copy meld
 	eHeap &					operator+=(eHeap && other);				// move meld
 	eHeap &					operator=(eHeap other) noexcept;		// copy and swap assignement
-	const type &			operator[](int index) const;			// debug const content access	
+	const type &			operator[](int index) const;			// random access without bounds checking
 
 	const type &			PeekRoot() const;
 	void					PushHeap(const type & data);
@@ -65,18 +58,9 @@ public:
 	void					ReplaceRoot(const type & data);
 	void					ReplaceRoot(type && data);
 
-	// DEBUG: universal/forwarding references
-	template<typename DataMember, typename lambdaEquals>
-	const type * const		FindByKey(DataMember && key, lambdaEquals & equals) const;	
-
-	template<typename DataMember, typename lambdaEquals>
-	bool					RemoveByKey(DataMember && key, lambdaEquals & equals) noexcept;
-
-	template<typename DataMember, typename lambdaEquals>
-	bool					ReplaceByKey(DataMember && oldKey, type & newData, lambdaEquals & equals);
-
-	template<typename DataMember, typename lambdaEquals>
-	bool					ReplaceByKey(DataMember && oldKey, type && newData, lambdaEquals & equals);
+	void					Remove(const int index) noexcept;
+	void					Replace(const int index, type & newData);
+	void					Replace(const int index, type && newData);
  
 	int						Size() const;
 	bool					IsEmpty() const;
@@ -85,13 +69,13 @@ public:
 	size_t					Allocated() const;
 	void					SetGranularity(const int newGranularity);
 	void					Free();
-	void					Resize(const int newHeapSize);
+	void					Resize(const int newCapacity);
 	void					Clear();
-	void					ClearAndResize(const int newHeapSize);
+	void					ClearAndResize(const int newCapacity);
 
 private:
 	
-	void					Allocate(const int newHeapSize);
+	void					Allocate(const int newCapacity);
 	void					Heapify();
 	void					SiftUp(const int index) noexcept;
 	void					SiftDown(const int index) noexcept;
@@ -100,10 +84,12 @@ private:
 
 	type *					heap;			
 	lambdaCompare			compare;
-//	eHashIndex				keyHash;			// TODO: populate this HashIndex during ctor/copy/move/assign/push/replace
-	int						numElements;		// and use it in FindKey/ReplaceKey/RemoveKey
+	int						numElements;
 	int						granularity;
-	int						heapSize;
+	int						capacity;
+
+	static const int		defaultCapacity = 1024;
+	static const int		defaultGranularity = 1024;
 };
 
 //***************
@@ -111,11 +97,11 @@ private:
 // default constructor
 //*****************
 template<class type, class lambdaCompare>
-inline eHeap<type, lambdaCompare>::eHeap(lambdaCompare & compare, const int initialHeapSize) 
+inline eHeap<type, lambdaCompare>::eHeap(lambdaCompare & compare, const int initialCapacity) 
 	: compare(compare),
 	  numElements(0),
-	  granularity(DEFAULT_HEAP_GRANULARITY),
-	  heapSize(initialHeapSize),
+	  granularity(defaultGranularity),
+	  capacity(initialCapacity),
 	  heap(nullptr) 
 {
 }
@@ -129,23 +115,23 @@ template<class type, class lambdaCompare>
 inline eHeap<type, lambdaCompare>::eHeap(lambdaCompare & compare, const type * data, const int numElements) 
 	: compare(compare),
 	  numElements(numElements),
-	  granularity(DEFAULT_HEAP_GRANULARITY)
+	  granularity(defaultGranularity)
 {
 	int mod;
 	int i;
 
 	mod = numElements % granularity;
 	if (numElements > 0 && !mod) {
-		heapSize = numElements;
+		capacity = numElements;
 	} else {
-		heapSize = numElements + granularity - mod;
+		capacity = numElements + granularity - mod;
 	}
 
 	if (data == nullptr) {
 		heap = nullptr;
 		return;
 	}
-	heap = new type[heapSize];
+	heap = new type[capacity];
 	for (i = 0; i < numElements; i++)
 		heap[i] = data[i];
 
@@ -161,24 +147,23 @@ template<class type, class lambdaCompare>
 inline eHeap<type, lambdaCompare>::eHeap(lambdaCompare & compare, type * data, const int numElements)
 	: compare(compare),
 	numElements(numElements),
-	granularity(DEFAULT_HEAP_GRANULARITY)
+	granularity(defaultGranularity)
 {
 	int mod;
 	int i;
 
 	mod = numElements % granularity;
 	if (numElements > 0 && !mod) {
-		heapSize = numElements;
-	}
-	else {
-		heapSize = numElements + granularity - mod;
+		capacity = numElements;
+	} else {
+		capacity = numElements + granularity - mod;
 	}
 
 	if (data == nullptr) {
 		heap = nullptr;
 		return;
 	}
-	heap = new type[heapSize];
+	heap = new type[capacity];
 	for (i = 0; i < numElements; i++)
 		heap[i] = std::move(data[i]);
 
@@ -194,11 +179,11 @@ inline eHeap<type, lambdaCompare>::eHeap(const eHeap<type, lambdaCompare> & othe
 	: compare(other.compare),
 	  numElements(other.numElements),
 	  granularity(other.granularity),
-	  heapSize(other.heapSize)
+	  capacity(other.capacity)
 {
 	int i;
-	heap = new type[heapSize];
-	for (i = 0; i < heapSize; i++)
+	heap = new type[capacity];
+	for (i = 0; i < capacity; i++)
 		heap[i] = other.heap[i];
 }
 
@@ -210,13 +195,13 @@ template<class type, class lambdaCompare>
 inline eHeap<type, lambdaCompare>::eHeap(eHeap<type, lambdaCompare> && other) noexcept
 	: compare(other.compare),
 	  numElements(0),
-	  granularity(DEFAULT_HEAP_GRANULARITY),
-	  heapSize(DEFAULT_HEAP_SIZE),
+	  granularity(defaultGranularity),
+	  capacity(defaultCapacity),
 	  heap(nullptr) 
 {
 	std::swap(numElements, other.numElements);
 	std::swap(granularity, other.granularity);
-	std::swap(heapSize, other.heapSize);
+	std::swap(capacity, other.capacity);
 	std::swap(heap, other.heap);
 }
 
@@ -296,9 +281,9 @@ inline eHeap<type, lambdaCompare> & eHeap<type, lambdaCompare>::operator+=(eHeap
 		return *this;
 
 	if (heap == nullptr) {
-		Allocate(other.heapSize);
-	} else if (numElements + other.numElements > heapSize) {
-		Resize(heapSize + other.numElements);
+		Allocate(other.capacity);
+	} else if (numElements + other.numElements > capacity) {
+		Resize(capacity + other.numElements);
 	}
 
 	for (i = 0; i < other.numElements; i++)
@@ -321,9 +306,9 @@ inline eHeap<type, lambdaCompare> & eHeap<type, lambdaCompare>::operator+=(const
 		return *this;
 
 	if (heap == nullptr) {
-		Allocate(other.heapSize);
-	} else if (numElements + other.numElements > heapSize) {
-		Resize(heapSize + other.numElements);
+		Allocate(other.capacity);
+	} else if (numElements + other.numElements > capacity) {
+		Resize(capacity + other.numElements);
 	}
 
 	for (i = 0; i < other.numElements; i++)
@@ -342,7 +327,7 @@ template<class type, class lambdaCompare>
 inline eHeap<type, lambdaCompare> & eHeap<type, lambdaCompare>::operator=(eHeap<type, lambdaCompare> other) noexcept {
 	std::swap(numElements, other.numElements);
 	std::swap(granularity, other.granularity);
-	std::swap(heapSize, other.heapSize);
+	std::swap(capacity, other.capacity);
 	std::swap(heap, other.heap);
 	// DEBUG: lambdaCompare closure object swap is omitted because both eHeaps already contain relevant instances,
 	// as well as to avoid invoking deleted default lambda constructor
@@ -371,9 +356,9 @@ inline const type & eHeap<type, lambdaCompare>::PeekRoot() const {
 template<class type, class lambdaCompare>
 inline void eHeap<type, lambdaCompare>::PushHeap(const type & data) {
 	if (heap == nullptr) {
-		Allocate(heapSize);
-	} else if (numElements + 1 >= heapSize) {
-		Resize(heapSize + 1);
+		Allocate(capacity);
+	} else if (numElements + 1 >= capacity) {
+		Resize(capacity + 1);
 	}
 	heap[numElements] = data;
 	SiftUp(numElements);
@@ -388,9 +373,9 @@ inline void eHeap<type, lambdaCompare>::PushHeap(const type & data) {
 template<class type, class lambdaCompare>
 inline void eHeap<type, lambdaCompare>::PushHeap(type && data) {
 	if (heap == nullptr) {
-		Allocate(heapSize);
-	} else if (numElements + 1 >= heapSize) {
-		Resize(heapSize + 1);
+		Allocate(capacity);
+	} else if (numElements + 1 >= capacity) {
+		Resize(capacity + 1);
 	}
 	heap[numElements] = std::move(data);
 	SiftUp(numElements);
@@ -442,92 +427,45 @@ inline void eHeap<type, lambdaCompare>::ReplaceRoot(type && data) {
 }
 
 //***************
-// eHeap::FindByKey
-// search keys can differ from compare keys
-// returns pointer to the first match regardless of duplicates
-// returns nullptr if key not found
-//***************
-template<class type, class lambdaCompare>
-template<typename DataMember, typename lambdaEquals>
-inline const type * const eHeap<type, lambdaCompare>::FindByKey(DataMember && key, lambdaEquals & equals) const {
-	int i;
-
-	for (i = 0; i < numElements; i++) {
-		if (equals(heap[i], std::forward<DataMember>(key)))
-			return &heap[i];
-	}
-	return nullptr;
-}
-
-//***************
-// eHeap::RemoveByKey
-// search keys can differ from compare keys
-// returns false if key not found
+// eHeap::Remove
+// DEBUG: assert( index >= 0 && index <= numElements)
 //****************
 template<class type, class lambdaCompare>
-template<typename DataMember, typename lambdaEquals>
-inline bool eHeap<type, lambdaCompare>::RemoveByKey(DataMember && key, lambdaEquals & equals) noexcept {
-	int i;
-
-	for (i = 0; i < numElements; i++) {
-		if (equals(heap[i], std::forward<DataMember>(key))) {
-			std::swap(heap[i], std::move(heap[numElements - 1]));
-			numElements--;
-			SiftDown(i);
-			return true;
-		}
-	}
-	return false;
+inline void eHeap<type, lambdaCompare>::Remove(const int index) noexcept {
+	numElements--;
+	std::swap(heap[index], heap[numElements]);
+	SiftDown(index);
 }
 
 //***************
-// eHeap::ReplaceByKey
-// search keys can differ from compare keys
-// returns false if key not found
+// eHeap::Replace
 // DEBUG: instead of explicit IncreaseKey and DecreaseKey
+// DEBUG: assert( index >= 0 && index <= numElements)
 //***************
 template<class type, class lambdaCompare>
-template<typename DataMember, typename lambdaEquals>
-inline bool eHeap<type, lambdaCompare>::ReplaceByKey(DataMember && oldKey, type & newData, lambdaEquals & equals) {
-	int i;
-
-	for (i = 0; i < numElements; i++) {
-		if (equals(heap[i], std::forward<DataMember>(oldKey))) {
-			heap[i] = newData;
-			if (i > 0 && compare(heap[(i - 1) / 2], heap[i])) {
-				SiftUp(i);
-			} else {
-				SiftDown(i);
-			}
-			return true;
-		}
+inline void eHeap<type, lambdaCompare>::Replace(const int index, type & newData) {
+	heap[index] = newData;
+	if (index > 0 && compare(heap[(index - 1) / 2], heap[index])) {		// compare to parent
+		SiftUp(index);
+	} else {
+		SiftDown(index);
 	}
-	return false;
 }
 
 //***************
-// eHeap::ReplaceByKey
+// eHeap::Replace
 // emplace and move
-// search keys can differ from compare keys
-// returns false if item not found
+// DEBUG: instead of explicit IncreaseKey and DecreaseKey
+// DEBUG: assert( index >= 0 && index <= numElements)
 //****************
 template<class type, class lambdaCompare>
-template<typename DataMember, typename lambdaEquals>
-inline bool eHeap<type, lambdaCompare>::ReplaceByKey(DataMember && oldKey, type && newData, lambdaEquals & equals) {
-	int i;
-
-	for (i = 0; i < numElements; i++) {
-		if (equals(heap[i], std::forward<DataMember>(oldKey))) {
-			heap[i] = std::move(newData);
-			if (i > 0 && compare(heap[(i - 1) / 2], heap[i])) {
-				SiftUp(i);
-			} else {
-				SiftDown(i);
-			}
-			return true;
-		}
+inline void eHeap<type, lambdaCompare>::Replace(const int index, type && newData) {
+	heap[index] = std::move(newData);
+	if (index > 0 && compare(heap[(index - 1) / 2], heap[index])) {		// compare to parent
+		SiftUp(index);
+	} else {
+		SiftDown(index);
 	}
-	return false;
 }
 
 //***************
@@ -568,9 +506,6 @@ inline void eHeap<type, lambdaCompare>::SiftUp(const int index) noexcept {
 	int parent;
 	int child;
 
-	if (heap == nullptr)
-		return;
-
 	for (child = index; child > 0; child = parent) {
 		parent = (child - 1) / 2;
 		if (!compare(heap[parent], heap[child]))
@@ -588,9 +523,6 @@ inline void eHeap<type, lambdaCompare>::SiftDown(const int index) noexcept {
 	int parent;
 	int child;
 
-	if (heap == nullptr || numElements <= 1)
-		return;
-
 	// DEBUG: a right child's existance (child + 1) implies that a left child exists, but not vis versa
 	for (parent = index, child = 2 * parent + 1; child < numElements; child = 2 * parent + 1) {
 		if (child + 1 < numElements && compare(heap[child], heap[child + 1]))
@@ -607,11 +539,11 @@ inline void eHeap<type, lambdaCompare>::SiftDown(const int index) noexcept {
 // eHeap::Allocate
 //**************
 template<class type, class lambdaCompare>
-inline void eHeap<type, lambdaCompare>::Allocate(const int newHeapSize) {
+inline void eHeap<type, lambdaCompare>::Allocate(const int newCapacity) {
 	Free();
-	heapSize = newHeapSize;
-	heap = new type[heapSize];					
-	memset(heap, 0, heapSize * sizeof(type));
+	capacity = newCapacity;
+	heap = new type[capacity];
+	memset(heap, 0, capacity * sizeof(type));
 }
 
 //***************
@@ -620,7 +552,7 @@ inline void eHeap<type, lambdaCompare>::Allocate(const int newHeapSize) {
 //**************
 template<class type, class lambdaCompare>
 inline size_t eHeap<type, lambdaCompare>::Allocated() const {
-	return heap == nullptr * heapSize * sizeof(type);
+	return (heap == nullptr) * capacity * sizeof(type);
 }
 
 //***************
@@ -651,33 +583,33 @@ inline void eHeap<type, lambdaCompare>::Free() {
 // and expand available memory
 //**************
 template<class type, class lambdaCompare>
-inline void eHeap<type, lambdaCompare>::Resize(const int newHeapSize) {
+inline void eHeap<type, lambdaCompare>::Resize(const int newCapacity) {
 	type * oldHeap;
 	int mod;
-	int newSize;
+	int newCap;
 	int i;
 
-	if (newHeapSize <= heapSize)
+	if (newCapacity <= capacity)
 		return;
 
-	mod = newHeapSize % granularity;
+	mod = newCapacity % granularity;
 	if (!mod)
-		newSize = newHeapSize;
+		newCap = newCapacity;
 	else
-		newSize = newHeapSize + granularity - mod;
+		newCap = newCapacity + granularity - mod;
 
 	if (heap == nullptr) {
-		heapSize = newSize;
+		capacity = newCap;
 		return;
 	}
 
 	oldHeap = heap;
-	heap = new type[newSize];
-	for (i = 0; i < heapSize; i++)
+	heap = new type[newCap];
+	for (i = 0; i < capacity; i++)
 		heap[i] = std::move(oldHeap[i]);
 
 	delete[] oldHeap;
-	heapSize = newSize;
+	capacity = newCap;
 }
 
 //***************
@@ -690,7 +622,7 @@ inline void eHeap<type, lambdaCompare>::Clear() {
 	// std::unique_ptr or std::string will cause a leak
 	// because its destructor cannot deallocate its original pointer
 //	if (heap != nullptr) {
-//		memset(heap, 0, heapSize * sizeof(type));
+//		memset(heap, 0, capacity * sizeof(type));
 		numElements = 0;
 //	}
 }
@@ -701,9 +633,9 @@ inline void eHeap<type, lambdaCompare>::Clear() {
 // set the new heap size to be allocated when the next element is added
 //**************
 template<class type, class lambdaCompare>
-inline void eHeap<type, lambdaCompare>::ClearAndResize(const int newHeapSize) {
+inline void eHeap<type, lambdaCompare>::ClearAndResize(const int newCapacity) {
 	Free();
-	heapSize = newHeapSize;
+	capacity = newCapacity;
 }
 
-#endif /* EVIL_HEAP_H */
+#endif /* EVIL_BINARY_HEAP_H */

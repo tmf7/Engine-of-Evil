@@ -36,7 +36,7 @@ void QuickSort(type * data, const int numElements, lambdaCompare & compare) noex
 			// partition left and right sublists
 			// DEBUG: may wind up swapping two duplicates of the pivot value
 			do {
-				// NOTE: explicitly checking <= or >= has a notable impact 
+				// DEBUG: explicitly checking <= or >= has a notable impact 
 				// on speed compared to < or > alone, for large data sets
 				while (compare(data[leftIndex], pivot) < 0) { if (++leftIndex >= rightIndex) break; };
 				while (compare(data[rightIndex], pivot) > 0) { if(--rightIndex <= leftIndex) break; };

@@ -109,11 +109,14 @@ bool eGame::Run() {
 	map.Think();
 
 	renderer.Clear();
+
+	// TODO: this draw order should be z-depth dependent on a per-entity/tile basis
 	map.Draw();
 	entities[0]->Draw();
+
 	renderer.Show();
 
-	frameDuration = SDL_GetTicks() - start;	// NOTE: always positive unless game runs for ~49 days
+	frameDuration = SDL_GetTicks() - start;	// DEBUG: always positive unless game runs for ~49 days
 	delay = (1000 / fps) - frameDuration;
 	SDL_Delay(delay > 0 ? delay : 0);
 
