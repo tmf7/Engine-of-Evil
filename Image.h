@@ -21,19 +21,20 @@ public:
 
 						eImage();
 
-	void				Init(SDL_Surface * source, const char * filename);
+	void				Init(SDL_Surface * source, const char * name);
 	bool				IsValid() const;
 	void				SetSource(SDL_Surface * source);	
 	SDL_Surface *		Source() const;
 	void				SetFrame(const int frameNumber);
-	SDL_Rect *			Frame();
+	SDL_Rect &			Frame();
+	const SDL_Rect &	Frame() const;
 	const char *		Name() const;
 
 private:
 
 	SDL_Surface *		source;		// pointer to the surface in the ImageManager dictionary/hashtable
 	SDL_Rect			frame;
-	char				filename[MAX_FILE_PATH];
+	char				name[MAX_STRING_LENGTH];
 };
 
 //**************
@@ -45,9 +46,9 @@ inline eImage::eImage() : source(NULL) {
 //**************
 // eImage::Init
 //**************
-inline void eImage::Init(SDL_Surface * source, const char * filename) {
+inline void eImage::Init(SDL_Surface * source, const char * name) {
 	this->source = source;
-	SDL_strlcpy(this->filename, filename, MAX_FILE_PATH);		// FIXME/BUG: potential overflow
+	SDL_strlcpy(this->name, name, MAX_STRING_LENGTH);		// FIXME/BUG: potential overflow
 	frame.w = source->w;
 	frame.h = source->h;
 	frame.x = 0;
@@ -78,10 +79,18 @@ inline SDL_Surface * eImage::Source() const {
 
 //**************
 // eImage::Frame
-// direct access to frame data members x, y, width, and height
+// mutable access to frame data members x, y, width, and height
 //**************
-inline SDL_Rect * eImage::Frame() {
-	return &frame;
+inline SDL_Rect & eImage::Frame() {
+	return frame;
+}
+
+//**************
+// eImage::Frame
+// read-only access to frame data members x, y, width, and height
+//**************
+inline const SDL_Rect & eImage::Frame() const {
+	return frame;
 }
 
 //**************
@@ -110,7 +119,7 @@ inline bool eImage::IsValid() const {
 // eImage::Name
 //**************
 inline const char * eImage::Name() const {
-	return filename;
+	return name;
 }
 
 #endif /* EVIL_IMAGE_H */

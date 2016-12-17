@@ -519,18 +519,18 @@ void eAI::UpdateKnownMap() {
 // eAI::Draw
 // TODO: make this draw independent of eEntity::Draw()
 //***************
-void eAI::Draw() const {
-	DrawKnownMap();	
-	DrawTrailWaypoints();
-	DrawGoalWaypoints();
+void eAI::Draw() {
+//	DrawKnownMap();	
+//	DrawTrailWaypoints();
+//	DrawGoalWaypoints();
 	eEntity::Draw();
-	DrawCollisionCircle();
+//	DrawCollisionCircle();
 }
 
 //******************
 // eAI::DrawGoalWaypoints
 //******************
-void eAI::DrawGoalWaypoints() const {
+void eAI::DrawGoalWaypoints() {
 	eNode<eVec2> * iterator;
 	eVec2 debugPoint;
 
@@ -542,14 +542,14 @@ void eAI::DrawGoalWaypoints() const {
 	for (iterator = goals.Back(); iterator != nullptr; iterator = iterator->Next()) {
 		debugPoint = iterator->Data() - game.GetCamera().GetAbsBounds();
 		debugPoint.SnapInt();
-		game.GetRenderer().DrawImage(debugImage, (eBounds(debugPoint).ExpandSelf(8))[0]);	// top-left corner
+//		game.GetRenderer().DrawImage(debugImage, (eBounds(debugPoint).ExpandSelf(8))[0]);	// top-left corner
 	}
 }
 
 //******************
 // eAI::DrawTrailWaypoints
 //******************
-void eAI::DrawTrailWaypoints() const {
+void eAI::DrawTrailWaypoints() {
 	eNode<eVec2> * iterator;
 	eVec2 debugPoint;
 	
@@ -561,7 +561,7 @@ void eAI::DrawTrailWaypoints() const {
 	for(iterator = trail.Front(); iterator != nullptr; iterator = iterator->Prev()) {
 		debugPoint = iterator->Data() - game.GetCamera().GetAbsBounds();
 		debugPoint.SnapInt();
-		game.GetRenderer().DrawImage(debugImage, (eBounds(debugPoint).ExpandSelf(8))[0]);	// top-left corner
+//		game.GetRenderer().DrawImage(debugImage, (eBounds(debugPoint).ExpandSelf(8))[0]);	// top-left corner
 	}
 }
 

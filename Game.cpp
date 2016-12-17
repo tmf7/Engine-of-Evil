@@ -75,6 +75,7 @@ void eGame::FreeAssets() {
 // eGame::Run
 // map and entities must already be initialized
 // TODO: check victory condition here or in the entities for alternate quit
+// TODO: modify the frame rate governance
 //****************
 bool eGame::Run() {
 	static SDL_Event	event;
@@ -113,6 +114,9 @@ bool eGame::Run() {
 	// TODO: this draw order should be z-depth dependent on a per-entity/tile basis
 	map.Draw();
 	entities[0]->Draw();
+
+	// DEBUG: new function that does all the final blitting
+	renderer.FlushRenderQueue();
 
 	renderer.Show();
 

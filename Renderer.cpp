@@ -120,17 +120,7 @@ void eRenderer::DrawImage(eImage * image, const eVec2 & point) const {
 	destRect.x = (int)point.x;
 	destRect.y = (int)point.y;
 
-	SDL_BlitSurface(image->Source(), image->Frame(), backbuffer, &destRect);
-}
-
-//***************
-// eRenderer::DrawSprite
-// convenience function
-// draws a sprites image's current frame onto the backbuffer
-// user can optimize by checking eRenderer::OnScreen(point) == true;
-//***************
-void eRenderer::DrawSprite(const eSprite * sprite, const eVec2 & point) const {
-	DrawImage(sprite->Image(), point);
+	SDL_BlitSurface(image->Source(), &image->Frame(), backbuffer, &destRect);
 }
 
 //***************

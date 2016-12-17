@@ -15,17 +15,17 @@ public:
 
 					eSprite();
 
-	eImage *		Image() const;
-	void			SetImage(eImage * image);
+	eImage *		Image();
+	void			SetImage(const eImage & image);
 	void			NextFrame();
 	void			SetAnimation(const int first, const int last, const int frameDelay);
-	void			Pause(bool on = true);
+	void			Pause(bool wantPause = true);
 	const int		Width() const;
 	const int		Height() const;
 
 private:
 
-	eImage *		image;
+	eImage			image;
 	int				firstFrame;
 	int				lastFrame;
 	int				frameDelay;
@@ -38,21 +38,21 @@ private:
 // eSprite::eSprite
 //************
 inline eSprite::eSprite() : firstFrame(NULL), lastFrame(NULL), frameDelay(NULL),
-							currentFrame(NULL), delayCounter(NULL), image(NULL), paused(true) {
+							currentFrame(NULL), delayCounter(NULL), paused(true) {
 }
 
 //************
 // eSprite::Image
-// direct access to sprite's image pixel data
+// mutable access to sprite's image pixel data
 //************
-inline eImage * eSprite::Image() const {
-	return image;
+inline eImage * eSprite::Image() {
+	return &image;
 }
 
 //************
 // eSprite::SetImage
 //************
-inline void eSprite::SetImage(eImage * image) {
+inline void eSprite::SetImage(const eImage & image) {
 	this->image = image;
 }
 
@@ -91,8 +91,8 @@ inline void eSprite::SetAnimation(const int first, const int last, const int fra
 // eSprite::Pause
 // stops sprite animation on the currentFrame
 //************
-inline void eSprite::Pause(bool on) {
-	paused = on;
+inline void eSprite::Pause(bool wantPause) {
+	paused = wantPause;
 }
 
 //************
@@ -100,7 +100,7 @@ inline void eSprite::Pause(bool on) {
 // wrapper function for sprite's current frame width
 //************
 inline const int eSprite::Width() const {
-	return image->IsValid() ? image->Frame()->w : -1;
+	return image.IsValid() ? image.Frame().w : -1;
 }
 
 //************
@@ -108,7 +108,7 @@ inline const int eSprite::Width() const {
 // wrapper function for sprite's current frame height
 //************
 inline const int eSprite::Height() const {
-	return image->IsValid() ? image->Frame()->h : -1;
+	return image.IsValid() ? image.Frame().h : -1;
 }
 
 #endif /* EVIL_SPRITE_H */

@@ -3,14 +3,15 @@
 
 #include "SDL.h"
 #include "SDL_ttf.h"
-#include <Windows.h>		// for memset
+#include <Windows.h>		// for memset (overkill)
+#include <fstream>
 #include <stdio.h>			// for rand
 #include "Math.h"
 
 #define BIT(a) (1<<a)
 typedef unsigned char byte_t;
 
-#define MAX_FILE_PATH 128
+#define MAX_STRING_LENGTH 128
 #define MAX_MAP_ROWS 32//256
 #define MAX_MAP_COLUMNS 32//256
 #define MAX_ENTITIES 4096

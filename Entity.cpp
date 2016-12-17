@@ -15,7 +15,7 @@ bool eEntity::Spawn() {
 	if (spriteImage == nullptr)
 		return false;
 
-	sprite.SetImage(spriteImage);
+	sprite.SetImage(*spriteImage);
 	localBounds.ExpandSelf(8);	// 16 x 16 square with (0, 0) at its center
 	SetOrigin(eVec2(8.0f, 8.0f));
 	return true;
@@ -25,10 +25,11 @@ bool eEntity::Spawn() {
 // eEntity::Draw
 // draw the sprite at it current animation frame
 //***************
-void eEntity::Draw() const {
+void eEntity::Draw() {
 	eVec2 drawPoint;
 	drawPoint = absBounds[0] - game.GetCamera().absBounds[0];
 	drawPoint.SnapInt();
-	game.GetRenderer().DrawSprite(&sprite, drawPoint);
+	game.GetRenderer().AddToRenderQueue(drawPoint, sprite.Image(), 0);	// DEBUG: initial test zDepth of 0
+//	game.GetRenderer().DrawSprite(&sprite, drawPoint);
 }
 

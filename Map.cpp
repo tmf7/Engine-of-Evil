@@ -6,22 +6,35 @@
 // eMap::Init
 //**************
 bool eMap::Init () {
+
+	// TODO: move this into "Tile.h" and just call InitTileTypes(filename, filename2);
+	//*********************START HERE (and in eTile)********************
 	//load the tile file
 	tileSet = game.GetImageManager().GetImage("graphics/tiles.bmp");
 	if (tileSet == nullptr)
 		return false;
+
+	// TODO: establish better tileSet rules for tileType connecting rules (pulled from a tileSet format file)
+	// TODO: initilize BASE eTile types using the loaded image and a format file (ie set their frames within tileSet)
+	// Then BuildTiles will start modifying specifics about eTiles (exact world-map positions, etc)
+	// THEN: eRenderer can take (&eImage) for individual eTiles because each eImage has its own Frame()
+
+	// TODO: so... the each eTile would have an eTileType which would be constructed as eTileTypes[index], maybe(?)
+
+	// TODO: call eTileImpl::InitTileTypes("graphics/tiles.bmp", "graphics/tiles_format.def");
+	// THEN BuilTiles() will fill in the eSpatialIndexGrid<eTile> tileMap;
 	
 	// map dimensions
 	tileMap.SetCellWidth(32);
 	tileMap.SetCellHeight(32);
 
-	// FIXME: SpatialIndexGrid cell width & height should always be the same as the tileSet frame width & height
+	// FIXME(?): SpatialIndexGrid cell width & height should always be the same as the tileSet frame width & height
+	// DEBUG(?): the spatial breakdown for drawing should be independent of the spatial breakdown for collision detection
 	// EG: zoom in/out scales the pixel data, so scale the cell size
-	tileSet->Frame()->w = tileMap.CellWidth();
-	tileSet->Frame()->h = tileMap.CellHeight();
+	tileSet->Frame().w = tileMap.CellWidth();
+	tileSet->Frame().h = tileMap.CellHeight();
 
 	BuildTiles(RANDOM_TILE);
-
 	return true;
 }
 
@@ -83,6 +96,7 @@ void eMap::BuildTiles(const tileType_t type) {
 // eMap::ToggleTile
 // toggles the tile type at tileMap[r][c] 
 // closest to the given point
+// TODO (map editor): add functionality to drag-and-drop any-size tiles (with optional snap-to-grid)
 //**************
 void eMap::ToggleTile(const eVec2 & point) {
 	byte_t * tile;
@@ -164,7 +178,16 @@ void eMap::Draw() const {
 		tileSet->SetFrame(tileMap.Index(row, column));
 		screenPoint.x = eMath::NearestFloat((float)(row		* tileMap.CellWidth())	- game.GetCamera().GetAbsBounds().x);
 		screenPoint.y = eMath::NearestFloat((float)(column	* tileMap.CellHeight()) - game.GetCamera().GetAbsBounds().y);
-		game.GetRenderer().DrawImage(tileSet, screenPoint);
+
+		// FIXME/BUG/TODO: incorperate a more stable zDepth for each tile (instead of randomizing it each frame!)
+		// also ensure that a specific image type is blitted because eRenderer currently only has a pointer to tileSet
+		// which means ALL tiles will draw to whatever the last state of the tileSet frame was
+		// ONWARDS to eTile!!?? and separate tile files (or a clever tileSet load)****************
+		// ...or maybe just separate tile surfaces generated from a single file ( eg: eImageManager::DeconstructImage(...) )
+		// FIXME/BUG(!): ensure entities never occupy the same LAYER (ie: independent of zDepth) as world tiles 
+		// (otherwise the unstable quicksort will put them at RANDOM draw orders relative to the same zDepth tiles)
+		game.GetRenderer().AddToRenderQueue(screenPoint, tileSet, rand() % 2);		// DEBUG: test zDepths of 0 and 1
+//		game.GetRenderer().DrawImage(tileSet, screenPoint);
 
 		column++;
 		if (column > endCol) {
@@ -173,5 +196,6 @@ void eMap::Draw() const {
 		}
 	}
 }
+
 
 

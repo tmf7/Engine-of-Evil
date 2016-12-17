@@ -39,7 +39,7 @@ public:
 
 	virtual bool		Spawn() override;
 	virtual void		Think() override;
-	virtual void		Draw() const override;
+	virtual void		Draw() override;
 	void				AddUserWaypoint(const eVec2 & waypoint);
 	const byte_map_t &	KnownMap() const;
 
@@ -96,8 +96,8 @@ private:
 	void				StopMoving();									// FIXME: should this be public?
 	
 	// debugging
-	void				DrawGoalWaypoints() const;
-	void				DrawTrailWaypoints() const;
+	void				DrawGoalWaypoints();
+	void				DrawTrailWaypoints();
 	void				DrawCollisionCircle() const;
 	void				DrawKnownMap() const;
 };
