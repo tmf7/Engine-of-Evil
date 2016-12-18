@@ -37,8 +37,9 @@ private:
 //************
 // eSprite::eSprite
 //************
-inline eSprite::eSprite() : firstFrame(NULL), lastFrame(NULL), frameDelay(NULL),
-							currentFrame(NULL), delayCounter(NULL), paused(true) {
+inline eSprite::eSprite() 
+	: firstFrame(NULL), lastFrame(NULL), frameDelay(NULL),
+	  currentFrame(NULL), delayCounter(NULL), paused(true) {
 }
 
 //************

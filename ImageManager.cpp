@@ -63,7 +63,7 @@ void eImageManager::Free() {
 // return success/fail
 bool eImageManager::DeconstructImage(eImage * source, const char * format, std::vector<eImage *> * result) {
 	std::string		buffer;
-	char			subName[MAX_STRING_LENGTH];
+	char			subName[MAX_ESTRING_LENGTH];
 	SDL_Surface *	subSurface = NULL;
 	auto			hasher = std::hash<const char *>{};
 	std::ifstream	in(format);				// the file used to breakdown the image

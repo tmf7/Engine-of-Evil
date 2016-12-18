@@ -1,4 +1,5 @@
 #include "Map.h"
+#include "Tile.h"
 #include "Game.h"
 #include "AI.h"
 
@@ -6,23 +7,8 @@
 // eMap::Init
 //**************
 bool eMap::Init () {
-
-	// TODO: move this into "Tile.h" and just call InitTileTypes(filename, filename2);
-	//*********************START HERE (and in eTile)********************
-	//load the tile file
-	tileSet = game.GetImageManager().GetImage("graphics/tiles.bmp");
-	if (tileSet == nullptr)
-		return false;
-
-	// TODO: establish better tileSet rules for tileType connecting rules (pulled from a tileSet format file)
-	// TODO: initilize BASE eTile types using the loaded image and a format file (ie set their frames within tileSet)
-	// Then BuildTiles will start modifying specifics about eTiles (exact world-map positions, etc)
-	// THEN: eRenderer can take (&eImage) for individual eTiles because each eImage has its own Frame()
-
-	// TODO: so... the each eTile would have an eTileType which would be constructed as eTileTypes[index], maybe(?)
-
-	// TODO: call eTileImpl::InitTileTypes("graphics/tiles.bmp", "graphics/tiles_format.def");
-	// THEN BuilTiles() will fill in the eSpatialIndexGrid<eTile> tileMap;
+	eTileImpl::InitTileTypes("graphics/tiles.bmp", "graphics/tiles_format.def");
+	// TODO: have BuildTiles() fill in the eSpatialIndexGrid<eTile> tileMap; (instead of <byte_t>)
 	
 	// map dimensions
 	tileMap.SetCellWidth(32);
@@ -157,7 +143,7 @@ void eMap::Think() {
 // TODO: post-process all areas of the screen corresponding to where entities have visited
 // dim for visited and bright for entity is within its sightRange (see AI::CheckFogOfWar(...))
 //***************
-void eMap::Draw() const {
+void eMap::Draw() {
 	eVec2 screenPoint;
 	int row, column;
 	int endRow, startCol, endCol;

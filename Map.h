@@ -21,15 +21,15 @@ public:
 	bool					Init();
 	bool					IsValid(const eVec2 & point, bool ignoreCollision = false) const;
 	void					Think();
-	void					Draw() const;
+	void					Draw();
 	void					BuildTiles(const tileType_t type);
 	void					ToggleTile(const eVec2 & point);
-	const byte_map_t &		TileMap() const;
+	const tile_map_t &		TileMap() const;
 
 private:
 
 	eImage *				tileSet;
-	byte_map_t				tileMap;
+	tile_map_t				tileMap;
 };
 
 //**************
@@ -41,7 +41,7 @@ inline eMap::eMap() {
 //**************
 // eMap::TileMap
 //**************
-inline const byte_map_t & eMap::TileMap() const {
+inline const tile_map_t & eMap::TileMap() const {
 	return tileMap;
 }
 

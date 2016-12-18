@@ -146,8 +146,8 @@ inline void eRenderer::FlushRenderQueue() {
 					return 0; 
 				}
 	);
-	for (auto && it : renderQueue)
-		DrawImage(it.image, it.position);
+	for (auto && iter : renderQueue)
+		DrawImage(iter.image, iter.position);
 
 	renderQueue.clear();
 }

@@ -34,7 +34,7 @@ private:
 
 	SDL_Surface *		source;		// pointer to the surface in the ImageManager dictionary/hashtable
 	SDL_Rect			frame;
-	char				name[MAX_STRING_LENGTH];
+	char				name[MAX_ESTRING_LENGTH];
 };
 
 //**************
@@ -48,7 +48,7 @@ inline eImage::eImage() : source(NULL) {
 //**************
 inline void eImage::Init(SDL_Surface * source, const char * name) {
 	this->source = source;
-	SDL_strlcpy(this->name, name, MAX_STRING_LENGTH);		// FIXME/BUG: potential overflow
+	SDL_strlcpy(this->name, name, MAX_ESTRING_LENGTH);		// FIXME/BUG: potential overflow
 	frame.w = source->w;
 	frame.h = source->h;
 	frame.x = 0;

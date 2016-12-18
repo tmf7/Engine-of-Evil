@@ -4,142 +4,134 @@
 #include "Definitions.h"
 #include "Vector.h"
 #include "Image.h"
-#include "Bounds.h"
+#include "Game.h"
+//#include "Bounds.h"
 
 // Flyweight tile design
 
 //***********************************************
-//		eTileImpl for general tile type data
+//				eTileImpl 
+// general tile type data for use by all tiles
+// TODO: establish better tileSet rules for 
+// tileType connecting rules (pulled from a tileSet format file)
 //***********************************************
 class eTileImpl {
 private:
 
 	friend class eTile;
-	typedef void (*eTileBehavior_f)();
+//	typedef void (*eTileBehavior_f)();
 
 public:
-	
-
 						eTileImpl();
-						eTileImpl(const eImage & tileImage, const int type, eTileBehavior_f behavior);
 
-	const int			Type() const;		// what index of the tileTypes array this belongs to
-	void				(*tileBehavior)();
+	int					Type() const;		// what index of the tileTypes array this belongs to
+	const char *		Name() const;
+//	void				(*tileBehavior)();
+
 	static bool			InitTileTypes(const char * tileSetImageFile, const char * tileFormatFile);
 
 private:
 	
 	eImage				tileImage;			// all refer to same source image, type determines which frame to use
-	eBounds				absCollisionBox;
 	int					type;				// game-specific value to simplifiy hard-coded or scripted responses to this type
 
 	static const int	invalidTileType = -1;
 	static const int	maxTileTypes = 32;
+	static int			numTileTypes;
 	static eTileImpl	tileTypes[maxTileTypes];
-	// TODO: other type-specific properties here (size, damage, movement?, etc)
+	static eImage *		tileSet;
 };
+
+int eTileImpl::numTileTypes = 0;
+eImage * eTileImpl::tileSet = nullptr;
 
 //************
 // eTileImpl::eTileImpl
 // returns false on failure to init, true otherwise
 //************
 bool eTileImpl::InitTileTypes(const char * tileSetImageFile, const char * tileFormatFile) {
-	// TODO:
-	// read from a formatted file: image_file, type_id (which corresponds to eg eTileType::BRICK == 0)
-	// then types[index++] = eTileImpl( ImageManager->Image(image_file_to_hash), type) )
-/////////////////////////////////////////////////////////////
-	char			buffer[MAX_STRING_LENGTH];
-	char			subName[MAX_STRING_LENGTH];
-	SDL_Surface *	subSurface = NULL;
-	auto			hasher = std::hash<const char *>{};
-	std::ifstream	in(tileFormatFile);				// the file used to breakdown the image
+	char buffer[MAX_ESTRING_LENGTH];
+	char tileName[MAX_ESTRING_LENGTH];
 
-    if(!in.good())
+	// load the tile file
+	tileSet = game.GetImageManager().GetImage(tileSetImageFile);
+	if (tileSet == nullptr)
+		return false;
+
+	std::ifstream	read(tileFormatFile);
+    if(!read.good())
         return false;
 
-	while (1) {								// FIXME/BUG: make this stop the read/register loop at EOF
+	int typeIndex = 0;
+	read.ignore(std::numeric_limits<std::streamsize>::max(), '\n'); // skip the first line of the file
+	while (!read.eof()) {
+		tileTypes[typeIndex].type = typeIndex;
 
+		// read and set the tile name
 		// EG: "graphics/tiles.bmp_brick"
-//		SDL_strlcpy(buffer, nullptr, 999);
-		strcpy(subName, source->Name());
-		strcat(subName, "_");				
+		memset(tileName, 0, sizeof(tileName));
+		strcpy(tileName, tileSetImageFile);
+		strcat(tileName, "_");
 
-		// TODO: read the name, x, y, w, h, then generate a frame for each eTile image
+		// TODO(?): tileName[read.gcount()] = '\0'; 
+		// TODO: Breakpoint test to ensure getline() and gcount() behave as expected
+		read.getline(buffer, sizeof(buffer), ' ');
+		// unrecoverable read error or improperly formatted file
+		if (read.bad() || read.fail()) {
+			read.clear();
+			read.close();
+			return false;
+		}
+		auto testCount = read.gcount();
+		strncat(tileName, buffer, testCount);
 
-		// FIXME/BUG: potential issue copying pixel data from memory
-		// FIXME/BUG: this also doesn't specify the SDL_Rect to use to specify the size of the new surface
-//		subSurface = SDL_LoadBMP_RW((SDL_RWops *)source->Source(), 1);
-
-		//Get the line that says 'width'
-		getline(in, buffer, ' ');
-		//Get the width value
-		getline(in, buffer, '\n');
-		width = atoi(buffer.c_str());
-
-		//Get the line that says 'height'
-		getline(in, buffer, ' ');
-		//Get the width value
-		getline(in, buffer, '\n');
-		height = atoi(buffer.c_str());
-
-		//Get the line that says 'tile_width'
-		getline(in, buffer, ' ');
-		//Get the width value
-		getline(in, buffer, '\n');
-		tileWidth = atoi(buffer.c_str());
-
-		//Get the line that says 'tile_height'
-		getline(in, buffer, ' ');
-		//Get the width value
-		getline(in, buffer, '\n');
-		tileHeight = atoi(buffer.c_str());
-
-		//Get the line taht says 'solid_tiles' and ignore it
-		getline(in, buffer, '\n');
-		//Get the row containing solid tiles and ignore it
-		getline(in, buffer, '\n');
-		//Get the row containing 'layer1' and ignore it
-		getline(in, buffer, '\n');
-
-		//Get the tile data
-		data = new int[width * height];
-
-		int i = 0;
-		for(int y = 0; y < height; y++)
-		{
-			for(int x = 0; x < width; x++)
-			{
-				char delim = ',';
-
-				if(x == width-1)
-					delim = '\n';
-
-				getline(in, buffer, delim);
-				data[i] = atoi(buffer.c_str());
-				i++;
+		// initialize the image
+		tileTypes[typeIndex].tileImage.Init(tileSet->Source(), tileName);
+		
+		// read the tile frame data
+		SDL_Rect & targetFrame = tileTypes[typeIndex++].tileImage.Frame();
+		for (int targetData = 0; targetData < 4; targetData++) {
+			switch (targetData) {
+				case 0: read >> targetFrame.x; break;
+				case 1: read >> targetFrame.y; break;
+				case 2: read >> targetFrame.w; break;
+				case 3: read >> targetFrame.h; break;
+				default: break;
+			}
+		
+			// unrecoverable read error or improperly formatted file
+			if (read.bad() || read.fail()) {
+				read.clear();
+				read.close();
+				return false;
 			}
 		}
 	}
-    in.close();
-////////////////////////////////////////////////////////////
-	return false;
+	numTileTypes = typeIndex;
+	read.close();
+	return true;
 }
 
 //************
 // eTileImpl::eTileImpl
 //************
-eTileImpl::eTileImpl() : type(invalidTileType) {
+inline eTileImpl::eTileImpl() 
+	: type(invalidTileType) {
 }
 
 //************
-// eTileImpl::eTileImpl
+// eTileImpl::Type
 //************
-eTileImpl::eTileImpl(const eImage & tileImage, const int type, eTileBehavior_f behavior) 
-	: tileImage(tileImage), type(type), tileBehavior(behavior) {
-}
-
-const int eTileImpl::Type() const {
+inline int eTileImpl::Type() const {
 	return type;
+}
+
+//************
+// eTileImpl::Name
+// DEBUG (format): "graphics/tiles.bmp_brick"
+//************
+inline const char * eTileImpl::Name() const {
+	return tileTypes[type].tileImage.Name();
 }
 
 //***********************************************
@@ -148,15 +140,16 @@ const int eTileImpl::Type() const {
 class eTile {
 public:
 						eTile(const eVec2 & origin, const int type);
-	const int			Type() const;
+	int					Type() const;
+	const char *		Name() const;
 
 private:
 
 	eTileImpl *			impl;			// general tile type data
-	eBounds				localCollisionBox;
+//	eBounds				localCollisionBox;
 	eVec2				origin;			// raw top-left x,y in map at large; does not account for camera position
 	unsigned int		GUID;			// the unique memory index in Tile map[][]
-	bool				visited;		// for fog of war queries
+//	bool				visited;		// for fog of war queries
 };
 
 //************
@@ -173,8 +166,16 @@ inline eTile::eTile(const eVec2 & origin, const int type)
 // if (tile != nullptr && tile->Type() == eTileImpl::WATER) return false;
 // OR (more flexibly) just invoke a function pointer for a tileImpl behavior
 //************
-inline const int eTile::Type() const {
+inline int eTile::Type() const {
 	return impl->Type();
+}
+
+//************
+// eTile::Name
+// DEBUG (format): "graphics/tiles.bmp_brick"
+//************
+inline const char * eTile::Name() const {
+	return impl->Name();
 }
 
 #endif /* EVIL_TILE_H */
