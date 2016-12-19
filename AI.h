@@ -13,6 +13,12 @@
 #define VISITED_TILE 1		// FIXME: should be Entity::VISITED_TILE
 #define UNKNOWN_TILE 0		// FIXME: should be Entity::UNKOWN_TILE
 
+typedef unsigned char byte_t;
+template <class type, int rows, int columns>
+class eSpatialIndexGrid;
+typedef eSpatialIndexGrid<byte_t, MAX_MAP_ROWS, MAX_MAP_COLUMNS> byte_map_t;
+
+
 // used to decide on a new movement direction
 typedef struct decision_s {
 	eVec2			vector		= vec2_zero;

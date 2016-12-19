@@ -6,37 +6,33 @@
 #include "SpatialIndexGrid.h"
 #include "Bounds.h"
 #include "Image.h"
+#include "Tile.h"
+
+template<class type, int rows, int columns>
+class eSpatialIndexGrid;
+typedef eSpatialIndexGrid<eTile, MAX_MAP_ROWS, MAX_MAP_COLUMNS> tile_map_t;
 
 typedef enum {
-	TRAVERSABLE_TILE,
-	COLLISION_TILE,
-	RANDOM_TILE
-} tileType_t;
+	TRAVERSABLE_MAP,
+	COLLISION_MAP,
+	RANDOM_MAP
+} mapType_t;
 
 class eMap {
 public:
-
-							eMap();
 
 	bool					Init();
 	bool					IsValid(const eVec2 & point, bool ignoreCollision = false) const;
 	void					Think();
 	void					Draw();
-	void					BuildTiles(const tileType_t type);
+	void					BuildTiles(const int configuration);
 	void					ToggleTile(const eVec2 & point);
 	const tile_map_t &		TileMap() const;
 
 private:
 
-	eImage *				tileSet;
 	tile_map_t				tileMap;
 };
-
-//**************
-// eMap::eMap
-//**************
-inline eMap::eMap() {
-}
 
 //**************
 // eMap::TileMap

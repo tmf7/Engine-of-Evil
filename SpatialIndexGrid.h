@@ -1,9 +1,6 @@
 #ifndef EVIL_SPATIAL_INDEX_GRID_H
 #define EVIL_SPATIAL_INDEX_GRID_H
 
-// TODO: if a single level map consists of an upstairs/downstairs type arrangement
-// then load multiple SpatialIndexGrids and switch a pointer for the tilemap, then reset the camera parameters
-
 class eVec2;
 
 //*************************************************
@@ -34,6 +31,14 @@ public:
 	void					SetCellWidth(const int cellWidth);
 	void					SetCellHeight(const int cellHeight);
 
+/*
+	// for use by iterators
+	type *					begin() const;
+	type *					end() const;
+	const type *			begin() const;
+	const type *			end() const;
+*/
+
 	int						Rows() const;
 	int						Columns() const;
 	int						Width() const;
@@ -53,7 +58,8 @@ private:
 // eSpatialIndexGrid::eSpatialIndexGrid
 //******************
 template< class type, int rows, int columns>
-inline eSpatialIndexGrid<type, rows, columns>::eSpatialIndexGrid() : cellWidth(1), cellHeight(1) {
+inline eSpatialIndexGrid<type, rows, columns>::eSpatialIndexGrid() 
+	: cellWidth(1), cellHeight(1) {
 }
 
 //**************
@@ -212,7 +218,45 @@ template< class type, int rows, int columns>
 inline void eSpatialIndexGrid<type, rows, columns>::SetCellHeight(const int cellHeight) {
 	this->cellHeight = cellHeight > 0 ? cellHeight : 1;
 }
+////////////////////////////////////////////////////////////////////////////////////////////////
+// BEGIN iterator test
+/*
+//******************
+// eSpatialIndexGrid::begin
+//******************
+template< class type, int rows, int columns>
+inline type * eSpatialIndexGrid<type, rows, columns>::begin() const {
+	return &cells[0][0];
+}
 
+//******************
+// eSpatialIndexGrid::end
+// DEBUG: returns one-past the last element of the contiguous memory block
+//******************
+template< class type, int rows, int columns>
+inline type * eSpatialIndexGrid<type, rows, columns>::end() const {
+	return &cells[rows - 1][columns];
+}
+
+//******************
+// eSpatialIndexGrid::begin
+//******************
+template< class type, int rows, int columns>
+inline const type * eSpatialIndexGrid<type, rows, columns>::begin() const {
+	return &cells[0][0];
+}
+
+//******************
+// eSpatialIndexGrid::end
+// DEBUG: returns one-past the last element of the contiguous memory block
+//******************
+template< class type, int rows, int columns>
+inline const type * eSpatialIndexGrid<type, rows, columns>::end() const {
+	return &cells[rows - 1][columns];
+}
+*/
+// END iterator test
+////////////////////////////////////////////////////////////////////////////////////////////////
 //******************
 // eSpatialIndexGrid::Rows
 //******************

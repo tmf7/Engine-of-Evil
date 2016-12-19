@@ -1,5 +1,4 @@
 #include "Map.h"
-#include "Tile.h"
 #include "Game.h"
 #include "AI.h"
 
@@ -7,20 +6,20 @@
 // eMap::Init
 //**************
 bool eMap::Init () {
-	eTileImpl::InitTileTypes("graphics/tiles.bmp", "graphics/tiles_format.def");
-	// TODO: have BuildTiles() fill in the eSpatialIndexGrid<eTile> tileMap; (instead of <byte_t>)
+	if (!eTileImpl::InitTileTypes("graphics/tiles.bmp", "graphics/tiles_format.def"))
+		return false;
 	
 	// map dimensions
 	tileMap.SetCellWidth(32);
 	tileMap.SetCellHeight(32);
 
-	// FIXME(?): SpatialIndexGrid cell width & height should always be the same as the tileSet frame width & height
-	// DEBUG(?): the spatial breakdown for drawing should be independent of the spatial breakdown for collision detection
+	// FIXME(?): Should eSpatialIndexGrid cell width & height always be the same as the tileSet frame width & height
+	// FIXME(?): the spatial breakdown for drawing should be independent of the spatial breakdown for collision detection
 	// EG: zoom in/out scales the pixel data, so scale the cell size
 	tileSet->Frame().w = tileMap.CellWidth();
 	tileSet->Frame().h = tileMap.CellHeight();
 
-	BuildTiles(RANDOM_TILE);
+	BuildTiles(RANDOM_MAP);
 	return true;
 }
 
@@ -29,10 +28,12 @@ bool eMap::Init () {
 // Procedure for initial map layout
 // Populates a matrix for future collision and redraw
 //**************
-void eMap::BuildTiles(const tileType_t type) {
-	int solid;
-	byte_t * tile;
-	static const byte_t * tileMapEnd = &tileMap.Index(tileMap.Rows() - 1, tileMap.Columns() - 1);
+void eMap::BuildTiles(const int configuration) {
+	int row, column;
+	int type;
+	eTile * tile;
+
+	static const eTile * tileMapEnd = &tileMap.Index(tileMap.Rows() - 1, tileMap.Columns() - 1);
 
 /*
 // TODO: if very large random numbers are needed ( ie greater than RAND_MAX 32,767 )
@@ -42,60 +43,60 @@ void eMap::BuildTiles(const tileType_t type) {
 	std::uniform_int_distribution<int> uniform_dist(0, NUM_ELEMENTS);
 	int r = uniform_dist(engine) % NUM_ELEMENTS;
 */
-
-	switch (type) {
-		case RANDOM_TILE: {
-			for (tile = &tileMap.Index(0, 0); tile <= tileMapEnd; tile++) {
-				solid = rand() % 4;
-				if (solid < 3)
-					*tile = TRAVERSABLE_TILE;
-				else
-					*tile = COLLISION_TILE;
+	row = 0;
+	column = 0;
+//	for (auto && derp : tileMap) {		// TODO: get rid of tileMapEnd ???
+	for (tile = &tileMap.Index(0, 0); tile <= tileMapEnd; tile++) {
+		switch (configuration) {
+			case RANDOM_MAP: {
+				type = rand() % eTileImpl::NumTileTypes();
+				break;
 			}
+			case TRAVERSABLE_MAP: {
+				while (eTileImpl::IsCollidableHack(type = rand() % eTileImpl::NumTileTypes()))
+					;
+				break;
+			}
+			case COLLISION_MAP: {
+				while (!eTileImpl::IsCollidableHack(type = rand() % eTileImpl::NumTileTypes()))
+					;
+				break;
+			}
+			default: {	// RANDOM_MAP
+				type = rand() % eTileImpl::NumTileTypes();
 			break;
+			}
 		}
-		case TRAVERSABLE_TILE: {
-			for (tile = &tileMap.Index(0, 0); tile <= tileMapEnd; tile++) {
-				*tile = TRAVERSABLE_TILE;
-			}
-			break;
-		}
-		case COLLISION_TILE: {
-			for (tile = &tileMap.Index(0, 0); tile <= tileMapEnd; tile++) {
-				*tile = COLLISION_TILE;
-			}
-			break;
-		}
-		default: {	// RANDOM
-			for (tile = &tileMap.Index(0, 0); tile <= tileMapEnd; tile++) {
-				solid = rand() % 4;
-				if (solid < 3)
-					*tile = TRAVERSABLE_TILE;
-				else
-					*tile = COLLISION_TILE;
-			}
-			break;
+		// FIXME/TODO: tileMap.CellWidth/CellHeight may not be representative of a tile's actual size
+		// ALSO: the final procedural generation should be allow tiles to interlock, but also some to float free
+		// this currently locks each cell-sized tile into individual cells
+		// AND draws the map using that breakdown as well
+		*tile = eTile( eVec2( (float)(row * tileMap.CellWidth()), (float)(column * tileMap.CellHeight()) ), type );
+		column++;
+		if (column >= tileMap.Columns()) {		// FIXME/BUG: may need to be columns - 1 or purely > columns
+			column = 0;
+			row++;
 		}
 	}
 }
 //**************
 // eMap::ToggleTile
-// toggles the tile type at tileMap[r][c] 
-// closest to the given point
+// toggles the tile type at tileMap[r][c] closest to the given point
 // TODO (map editor): add functionality to drag-and-drop any-size tiles (with optional snap-to-grid)
 //**************
 void eMap::ToggleTile(const eVec2 & point) {
-	byte_t * tile;
+	int tileType;
+	eTile * tile;
 	
 	if (!IsValid(point, true))
 		return;
 
 	tile = &tileMap.Index(point);
-	if (*tile == TRAVERSABLE_TILE)
-		*tile = COLLISION_TILE;
-	else // *tile == COLLISION_TILE
-		*tile = TRAVERSABLE_TILE;
-
+	tileType = tile->Type();
+	tileType++;
+	if (tileType >= eTileImpl::NumTileTypes())
+		tileType = 0;
+	tile->SetType(tileType);
 }
 
 //**************
@@ -112,7 +113,7 @@ bool eMap::IsValid(const eVec2 & point, bool ignoreCollision) const {
 	if	( !tileMap.IsValid(point) )
 		return false;
 
-	if ( !ignoreCollision && tileMap.Index(point) == COLLISION_TILE )
+	if ( !ignoreCollision && eTileImpl::IsCollidableHack(tileMap.Index(point).Type()) )
 		return false;
 
 	return true;
@@ -126,11 +127,11 @@ void eMap::Think() {
 
 	input = &game.GetInput();
 	if (input->KeyPressed(SDL_SCANCODE_0))
-		BuildTiles(TRAVERSABLE_TILE);					// set entire map to brick
+		BuildTiles(TRAVERSABLE_MAP);
 	else if (input->KeyPressed(SDL_SCANCODE_1))
-		BuildTiles(COLLISION_TILE);						// set entire map to water
+		BuildTiles(COLLISION_MAP);
 	else if (input->KeyPressed(SDL_SCANCODE_2))
-		BuildTiles(RANDOM_TILE);						// set entire map random (the old way)
+		BuildTiles(RANDOM_MAP);	
 
 	if (input->MousePressed(SDL_BUTTON_RIGHT))
 		ToggleTile(eVec2(input->GetMouseX() + game.GetCamera().GetAbsBounds().x, input->GetMouseY() + game.GetCamera().GetAbsBounds().y));
@@ -161,18 +162,12 @@ void eMap::Draw() {
 	tileMap.Validate(endRow, endCol);
 
 	while (row <= endRow) {
-		tileSet->SetFrame(tileMap.Index(row, column));
-		screenPoint.x = eMath::NearestFloat((float)(row		* tileMap.CellWidth())	- game.GetCamera().GetAbsBounds().x);
-		screenPoint.y = eMath::NearestFloat((float)(column	* tileMap.CellHeight()) - game.GetCamera().GetAbsBounds().y);
+//		tileSet->SetFrame(tileMap.Index(row, column));
+		eTile & tile = tileMap.Index(row, column);
+		screenPoint.x = eMath::NearestFloat(tile.Origin().x - game.GetCamera().GetAbsBounds().x);
+		screenPoint.y = eMath::NearestFloat(tile.Origin().y - game.GetCamera().GetAbsBounds().y);
 
-		// FIXME/BUG/TODO: incorperate a more stable zDepth for each tile (instead of randomizing it each frame!)
-		// also ensure that a specific image type is blitted because eRenderer currently only has a pointer to tileSet
-		// which means ALL tiles will draw to whatever the last state of the tileSet frame was
-		// ONWARDS to eTile!!?? and separate tile files (or a clever tileSet load)****************
-		// ...or maybe just separate tile surfaces generated from a single file ( eg: eImageManager::DeconstructImage(...) )
-		// FIXME/BUG(!): ensure entities never occupy the same LAYER (ie: independent of zDepth) as world tiles 
-		// (otherwise the unstable quicksort will put them at RANDOM draw orders relative to the same zDepth tiles)
-		game.GetRenderer().AddToRenderQueue(screenPoint, tileSet, rand() % 2);		// DEBUG: test zDepths of 0 and 1
+		game.GetRenderer().AddToRenderQueue(screenPoint, tile.Image(), tile.zDepthHack());	// DEBUG: test zDepths of 0 and 2
 //		game.GetRenderer().DrawImage(tileSet, screenPoint);
 
 		column++;

@@ -29,7 +29,7 @@ void eEntity::Draw() {
 	eVec2 drawPoint;
 	drawPoint = absBounds[0] - game.GetCamera().absBounds[0];
 	drawPoint.SnapInt();
-	game.GetRenderer().AddToRenderQueue(drawPoint, sprite.Image(), 0);	// DEBUG: initial test zDepth of 0
+	game.GetRenderer().AddToRenderQueue(drawPoint, sprite.Image(), 1);	// DEBUG: initial test zDepth of 1
 //	game.GetRenderer().DrawSprite(&sprite, drawPoint);
 }
 

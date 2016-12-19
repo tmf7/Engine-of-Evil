@@ -136,6 +136,8 @@ inline void eRenderer::AddToRenderQueue(const eVec2 & position, eImage * image, 
 
 //***************
 // eRenderer::FlushRenderQueue
+// FIXME/BUG(!): ensure entities never occupy the same LAYER (ie: independent of zDepth) as world tiles 
+// (otherwise the unstable quicksort will put them at RANDOM draw orders relative to the same zDepth tiles)
 //***************
 inline void eRenderer::FlushRenderQueue() {
 	QuickSort(renderQueue.data(), 

@@ -8,6 +8,7 @@
 //*
 //**********************************************
 
+#include <Windows.h>
 #include "Game.h"
 
  int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR lpCmdLine, INT nCmdShow) {
