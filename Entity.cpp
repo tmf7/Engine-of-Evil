@@ -11,7 +11,7 @@
 bool eEntity::Spawn() {
 	eImage * spriteImage = NULL;
 
-	spriteImage = game.GetImageManager().GetImage("graphics/hero.bmp");
+	spriteImage = game.GetImageManager().GetImage("graphics/hero.bmp", nullptr);
 	if (spriteImage == nullptr)
 		return false;
 
@@ -29,7 +29,6 @@ void eEntity::Draw() {
 	eVec2 drawPoint;
 	drawPoint = absBounds[0] - game.GetCamera().absBounds[0];
 	drawPoint.SnapInt();
-	game.GetRenderer().AddToRenderQueue(drawPoint, sprite.Image(), 1);	// DEBUG: initial test zDepth of 1
-//	game.GetRenderer().DrawSprite(&sprite, drawPoint);
+	game.GetRenderer().AddToRenderQueue(renderImage_t(drawPoint, sprite.Image(), 1));	// DEBUG: test layer == 1
 }
 

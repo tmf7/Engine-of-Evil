@@ -7,17 +7,16 @@
 #include "Bounds.h"
 #include "Entity.h"
 
-// FIXME: make these public enums, or eliminate them altogether
-// and add public bool Entity::HasVisited(row,column) {...} or the like
-// knownMap values
-#define VISITED_TILE 1		// FIXME: should be Entity::VISITED_TILE
-#define UNKNOWN_TILE 0		// FIXME: should be Entity::UNKOWN_TILE
-
 typedef unsigned char byte_t;
 template <class type, int rows, int columns>
 class eSpatialIndexGrid;
 typedef eSpatialIndexGrid<byte_t, MAX_MAP_ROWS, MAX_MAP_COLUMNS> byte_map_t;
 
+// values for byte_map_t knownMap;
+typedef enum {
+	UNKNOWN_TILE,
+	VISITED_TILE
+} tileState_t ;
 
 // used to decide on a new movement direction
 typedef struct decision_s {
@@ -27,13 +26,13 @@ typedef struct decision_s {
 } decision_t;
 
 typedef enum {
-	MOVETYPE_NONE,
+	MOVETYPE_NONE,		// TODO: actually integrate this
 	MOVETYPE_GOAL,		// waypoint tracking
 	MOVETYPE_TRAIL		// waypoint tracking
 } movementType_t;
 
 typedef enum {
-	PATHTYPE_NONE,
+	PATHTYPE_NONE,		// TODO: actually integrate this
 	PATHTYPE_COMPASS,
 	PATHTYPE_WALL
 } pathfindingType_t;
@@ -48,15 +47,11 @@ public:
 	virtual void		Draw() override;
 	void				AddUserWaypoint(const eVec2 & waypoint);
 	const byte_map_t &	KnownMap() const;
+	bool				CheckFogOfWar(const eVec2 & point) const;
 
 private:
 
-	byte_map_t			knownMap;				// tracks visited tiles from the byte_map_t tileMap; in Map class
-												// FIXME: this becomes 256 MB of ram for 4096 entities
-												// SOLUTIONs: 1) change the algorithm to not need location tracking
-												// 2) change the tileMap to track visited entities at each cell
-												// 3) only give this to AI entities (significantly fewer than MAX_ENTITIES)
-												// 4) use heap memory to only allocate visited locations (use hashindex or hashmap, slows the query?)
+	byte_map_t			knownMap;				// tracks visited tiles 
 	movementType_t		moveState;
 	pathfindingType_t	pathingState;
 
@@ -84,8 +79,6 @@ private:
 
 private:
 
-	bool				CheckFogOfWar(const eVec2 & point) const;		// FIXME: should this be public?
-
 	// pathfinding (general)
 	void				Move();
 	bool				CheckVectorPath(eVec2 from, decision_t & along);
@@ -99,7 +92,7 @@ private:
 	void				CompassFollow();
 	bool				CheckTrail();
 	void				UpdateKnownMap();
-	void				StopMoving();									// FIXME: should this be public?
+	void				StopMoving();
 	
 	// debugging
 	void				DrawGoalWaypoints();

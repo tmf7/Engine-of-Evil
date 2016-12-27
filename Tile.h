@@ -26,22 +26,20 @@ public:
 public:
 						eTileImpl();
 
-	int					Type() const;		// what index of the tileTypes array this belongs to
+	int					Type() const;
 	const char *		Name() const;
 //	void				(*tileBehavior)();
 
-	static bool			InitTileTypes(char tileSetImageFile[], char tileFormatFile[]);
+	static bool			InitTileTypes(const char * tileSetImageFile, const char * tileFormatFile);
 	static int			NumTileTypes();
 
 	static bool			IsCollidableHack(int type);
-	int					zDepthHack() const;
 	
 private:
 	
 	eImage				tileImage;			// all refer to same source image, type determines which frame to use
 	int					type;				// game-specific value to simplifiy hard-coded or scripted responses to this type
 	
-	int					depthHack;			// FIXME(!!!): temporary solution to assigning map depth (this should be tile specific during eMap::BuildTiles procedural generation)
 	bool				collisionHack;		// FIXME: temporary solution to set entire CELL of spatial index grid to TRAVERSABLE/COLLISION
 };
 
@@ -67,7 +65,7 @@ inline bool eTileImpl::IsCollidableHack(int type) {
 // eTileImpl::eTileImpl
 //************
 inline eTileImpl::eTileImpl() 
-	: type(invalidTileType), depthHack(-1), collisionHack(false) {
+	: type(invalidTileType), collisionHack(false) {
 }
 
 //************
@@ -85,20 +83,16 @@ inline const char * eTileImpl::Name() const {
 	return tileTypes[type].tileImage.Name();
 }
 
-//************
-// eTileImpl::zDepthHack
-//************
-inline int eTileImpl::zDepthHack() const {
-	return depthHack;
-}
-
 //***********************************************
-//		eTile for localized tile data
+//
+//				eTile 
+//		for localized tile data
+//
 //***********************************************
 class eTile {
 public:
 						eTile();
-						eTile(const eVec2 & origin, const int type);
+						eTile(const eVec2 & origin, const int type, const int layer);
 	
 	eImage *			Image();
 	int					Type() const;
@@ -108,8 +102,10 @@ public:
 	void				SetOrigin(const float x, const float y);
 	void				SetOrigin(const eVec2 & point);
 
-	bool				IsCollidableHack() const;
-	int					zDepthHack() const;
+	int					Layer() const;
+	void				SetLayer(const int newLayer);
+
+	bool				IsCollidableHack() const;	
 
 private:
 
@@ -118,6 +114,7 @@ private:
 	eVec2				origin;			// raw top-left x,y in map at large; does not account for camera position
 //	unsigned int		GUID;			// the unique memory index in Tile map[][]
 //	bool				visited;		// for fog of war queries
+	int					layer;			// layers draw in order back to front
 };
 
 //************
@@ -130,8 +127,8 @@ inline eTile::eTile()
 //************
 // eTile::eTile
 //************
-inline eTile::eTile(const eVec2 & origin, const int type) 
-	: origin(origin), impl(&tileTypes[type]) {
+inline eTile::eTile(const eVec2 & origin, const int type, const int layer) 
+	: origin(origin), impl(&tileTypes[type]), layer(layer) {
 }
 
 
@@ -186,17 +183,24 @@ inline void eTile::SetOrigin(const eVec2 & point) {
 }
 
 //************
+// eTile::Layer
+//************
+inline int eTile::Layer() const {
+	return layer;
+}
+
+//************
+// eTile::SetLayer
+//************
+inline void eTile::SetLayer(const int newLayer) {
+	layer = newLayer;
+}
+
+//************
 // eTile::IsCollidableHack
 //************
 inline bool eTile::IsCollidableHack() const {
 	return impl->collisionHack;
-}
-
-//************
-// eTile::zDepthHack
-//************
-inline int eTile::zDepthHack() const {
-	return impl->depthHack;
 }
 
 #endif /* EVIL_TILE_H */

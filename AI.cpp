@@ -47,9 +47,6 @@ void eAI::Think() {
 	} else if (input->KeyPressed(SDL_SCANCODE_W)) {
 		pathingState = PATHTYPE_WALL;				
 		moveState = MOVETYPE_GOAL;
-	} else if (input->KeyPressed(SDL_SCANCODE_N)) {	// FIXME: this should be a full stop, not just a branch diversion
-		pathingState = PATHTYPE_NONE;				// IE: StopMoving() and clear all trail/goal waypoints
-		moveState = MOVETYPE_NONE;					// this makes this MOVE/PATHTYPE equivalent to standing ground
 	}
 // END FREEHILL DEBUG AI/player control
 
@@ -452,7 +449,6 @@ void eAI::UpdateKnownMap() {
 	int tileResetRange;		// size of the box around the goal to set tiles to UNKNOWN_TILE
 
 	// mark the tile to help future movement decisions
-	// FIXME/BUG: make this/add a collidedTile, then collision correct (to fix bug where wall-follower marking too many tiles)
 	checkTile = &knownMap.Index(origin);
 	if (checkTile != currentTile) {
 		previousTile = currentTile;

@@ -25,14 +25,14 @@ public:
 	bool				IsValid() const;
 	void				SetSource(SDL_Surface * source);	
 	SDL_Surface *		Source() const;
-	void				SetFrame(const int frameNumber);
+	void				SetSubImage(const int frameNumber);
 	SDL_Rect &			Frame();
 	const SDL_Rect &	Frame() const;
 	const char *		Name() const;
 
 private:
 
-	SDL_Surface *		source;		// pointer to the surface in the ImageManager dictionary/hashtable
+	SDL_Surface *		source;
 	SDL_Rect			frame;
 	char				name[MAX_ESTRING_LENGTH];
 };
@@ -48,7 +48,7 @@ inline eImage::eImage() : source(NULL) {
 //**************
 inline void eImage::Init(SDL_Surface * source, const char * name) {
 	this->source = source;
-	SDL_strlcpy(this->name, name, MAX_ESTRING_LENGTH);		// FIXME/BUG: potential overflow
+	strcpy_s(this->name, name);
 	frame.w = source->w;
 	frame.h = source->h;
 	frame.x = 0;
@@ -94,11 +94,11 @@ inline const SDL_Rect & eImage::Frame() const {
 }
 
 //**************
-// eImage::SetFrame
+// eImage::SetSubImage
 // select a source-size-dependent area of source
 // user must ensure source data is not NULL via Image::IsValid()
 //**************
-inline void eImage::SetFrame(const int frameNumber) {
+inline void eImage::SetSubImage(const int frameNumber) {
 	int sourceColumns;
 
 	// treat the source surface as a 2D array of images

@@ -21,11 +21,8 @@ public:
 
 					eImageManager();
 
-	eImage *		GetImage(const char * name);
+	eImage *		GetImage(const char * name, int * colorKey);
 	void			Free();
-
-//private:
-//	bool			DeconstructImage(eImage * source, const char * format, std::vector<eImage *> * result);
 
 private:
 
@@ -37,7 +34,8 @@ private:
 //***************
 // eImageManager::eImageManager
 //***************
-inline eImageManager::eImageManager() : numImages(0) {
+inline eImageManager::eImageManager() 
+	: numImages(0) {
 }
 
 #endif /* EVIL_IMAGE_MANAGER_H */

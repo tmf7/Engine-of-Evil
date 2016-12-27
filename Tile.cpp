@@ -10,12 +10,12 @@ eTileImpl	tileTypes[eTileImpl::maxTileTypes];
 // eTileImpl::eTileImpl
 // returns false on failure to init, true otherwise
 //************
-bool eTileImpl::InitTileTypes(char tileSetImageFile[], char tileFormatFile[]) {
+bool eTileImpl::InitTileTypes(const char * tileSetImageFile, const char * tileFormatFile) {
 	char buffer[MAX_ESTRING_LENGTH];
 	char tileName[MAX_ESTRING_LENGTH];
 
 	// load the tile file
-	tileSet = game.GetImageManager().GetImage(tileSetImageFile);
+	tileSet = game.GetImageManager().GetImage(tileSetImageFile, nullptr);
 	if (tileSet == nullptr)
 		return false;
 
@@ -57,7 +57,6 @@ bool eTileImpl::InitTileTypes(char tileSetImageFile[], char tileFormatFile[]) {
 				case 2: read >> targetFrame.w; break;
 				case 3: read >> targetFrame.h; break;
 				case 4: read >> tileTypes[typeIndex].collisionHack; break;
-				case 5: read >> tileTypes[typeIndex].depthHack; break;
 				default: break;
 			}
 		

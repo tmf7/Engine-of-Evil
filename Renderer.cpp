@@ -126,23 +126,22 @@ void eRenderer::DrawImage(eImage * image, const eVec2 & point) const {
 //***************
 // eRenderer::FormatSurface
 // converts the given surface to the backbuffer format
+// for color keying
 // returns false on failure
-// TODO: make the colorKey paramater more flexible (eg: user-defined keys and/or alpha values)
 //***************
-bool eRenderer::FormatSurface(SDL_Surface ** surface, bool colorKey) const {
+bool eRenderer::FormatSurface(SDL_Surface ** surface, int * colorKey) const {
 	SDL_Surface * formattedSurface;
 	Uint32 colorMap;
-	int pink[3] = {255, 0, 255};
 
-	formattedSurface = SDL_ConvertSurface(*surface, backbuffer->format, 0);
+	formattedSurface = SDL_ConvertSurface(*surface, backbuffer->format, SDL_RLEACCEL);
 	if (formattedSurface == NULL)
 		return false;
 
-	SDL_FreeSurface(*surface);		// free the memory allocated for the original surface
+	SDL_FreeSurface(*surface);		// DEBUG: free the memory allocated for the original surface
 	*surface = formattedSurface;		// point to the newly formatted surface memory block
-	
-	if (colorKey) {
-		colorMap = SDL_MapRGB((*surface)->format, pink[0], pink[1], pink[2]);
+
+	if (colorKey != nullptr) {
+		colorMap = SDL_MapRGB((*surface)->format, colorKey[0], colorKey[1], colorKey[2]);
 		SDL_SetColorKey(*surface, SDL_TRUE, colorMap);
 	}
 	return true;

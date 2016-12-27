@@ -1,6 +1,6 @@
-#name	x	y	w	h	collisionHack	depthHack	#ensure the last line doesn't have a \n or \r
-brick	0	0	32	32	0		0
-water	32	0	32	32	1		0
-fire	64	0	32	32	1		0
-grass	96	0	32	32	0		0
-sky	128	0	32	32	0		2
+#name	x	y	w	h	collisionHack	#ensure the last line doesn't have a \n or \r
+left	0	0	64	128	0
+corner	192	384	64	128	1
+right	320	0	64	128	0
+Rdoor	192	0	64	128	0
+Ldoor	128	0	64	128	0
