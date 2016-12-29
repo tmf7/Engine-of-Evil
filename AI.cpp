@@ -38,8 +38,12 @@ void eAI::Think() {
 
 // BEGIN FREEHILL DEBUG AI/player control
 	input = &game.GetInput();
-	if (input->MousePressed(SDL_BUTTON_LEFT))
-		AddUserWaypoint(eVec2(input->GetMouseX() + game.GetCamera().GetAbsBounds().x, input->GetMouseY() + game.GetCamera().GetAbsBounds().y));
+	if (input->MousePressed(SDL_BUTTON_LEFT)) {
+		// TODO(?1/2?): funtionalize these two lines of getting mouse and camera, then converting to isometric
+		eVec2 point = eVec2((float)input->GetMouseX() + game.GetCamera().GetAbsBounds().x, (float)input->GetMouseY() + game.GetCamera().GetAbsBounds().y);
+		eMath::IsometricToCartesian(point.x, point.y);
+		AddUserWaypoint(point);
+	}
 
 	if (input->KeyPressed(SDL_SCANCODE_C)) {
 		pathingState = PATHTYPE_COMPASS;

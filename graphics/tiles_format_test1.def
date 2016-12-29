@@ -1,0 +1,6 @@
+#name	x	y	w	h	collisionHack	#ensure the last line doesn't have a \n or \r
+left	0	0	64	128	0
+corner	192	384	64	128	1
+right	320	0	64	128	0
+Rdoor	192	0	64	128	0
+Ldoor	128	0	64	128	0

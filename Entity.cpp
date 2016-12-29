@@ -23,11 +23,12 @@ bool eEntity::Spawn() {
 
 //***************
 // eEntity::Draw
-// draw the sprite at it current animation frame
+// draw the sprite at its current animation frame
 //***************
 void eEntity::Draw() {
-	eVec2 drawPoint;
-	drawPoint = absBounds[0] - game.GetCamera().absBounds[0];
+	eVec2 drawPoint = absBounds[0];
+	eMath::CartesianToIsometric(drawPoint.x, drawPoint.y);
+	drawPoint -= game.GetCamera().absBounds[0];
 	drawPoint.SnapInt();
 	game.GetRenderer().AddToRenderQueue(renderImage_t(drawPoint, sprite.Image(), 1));	// DEBUG: test layer == 1
 }

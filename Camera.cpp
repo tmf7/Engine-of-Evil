@@ -16,6 +16,10 @@ void eCamera::Init() {
 
 //***************
 // eCamera::Think
+// FIXME/TODO: the origin update HERE (not in entity overall) should convert to isometric (possibly)
+// because it currently does not snap to the AI's location properly
+// FIXME/TODO: modify the movement limits (either stay inside the "diamond" or allow some minimal wander beyond it
+// EG: an overall larger rectangle that the diamond is within [risky, given that some corner gaps would lead to total abyss])
 //***************
 void eCamera::Think() {
 	eInput * input;
@@ -34,7 +38,7 @@ void eCamera::Think() {
 		velocity.Set(x, y);
 		UpdateOrigin();
 	}
-
+/*
 	// collision response with map edge
 	// TODO(?): move this to a collision detection/handling class
 	correction = vec2_zero;
@@ -50,5 +54,6 @@ void eCamera::Think() {
 
 	if (correction != vec2_zero)
 		SetOrigin(origin + correction);
+*/
 }
 

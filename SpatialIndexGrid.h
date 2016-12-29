@@ -133,7 +133,7 @@ inline void eSpatialIndexGrid<type, rows, columns>::Index(type * const indexPtr,
 //******************
 template< class type, int rows, int columns>
 inline void eSpatialIndexGrid<type, rows, columns>::Index(const eVec2 & point, int & row, int & column)  const {
-	row = (int)(point.x / cellWidth);
+	row = (int)(point.x / cellWidth);		
 	column = (int)(point.y / cellHeight);
 	Validate(row, column);
 }

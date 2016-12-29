@@ -10,17 +10,8 @@ bool eMap::Init () {
 		return false;
 	
 	// map dimensions
-	tileMap.SetCellWidth(64);
-	tileMap.SetCellHeight(64);
-
-	// FIXME(?): Should eSpatialIndexGrid cell width & height always be the same as the tileSet frame width & height
-	// FIXME(?): the spatial breakdown for drawing should be independent of the spatial breakdown for collision detection
-	// EG: zoom in/out scales the pixel data, so scale the cell size
-	// TODO: tileSet frame width/height is used to select a tile NUMBER from the set based on old image indexing
-	// get rid of this useless re-initialization
-	tileSet->Frame().w = tileMap.CellWidth();
-	tileSet->Frame().h = tileMap.CellHeight();
-
+	tileMap.SetCellWidth(32);
+	tileMap.SetCellHeight(32);
 	BuildTiles(RANDOM_MAP);
 	return true;
 }
@@ -69,11 +60,18 @@ void eMap::BuildTiles(const int configuration) {
 			break;
 			}
 		}
-		// FIXME/TODO: tileMap.CellWidth/CellHeight may not be representative of a tile's actual size
+		// FIXME/TODO: tileMap.CellWidth/CellHeight may not be representative of a tile's actual/visual size
 		// ALSO: the final procedural generation should be allow tiles to interlock, but also some to float free
 		// this currently locks each cell-sized tile into individual cells
 		// AND draws the map using that breakdown as well
-		*tile = eTile( eVec2( (float)(row * tileMap.CellWidth()), (float)(column * tileMap.CellHeight()) ), type, 2);	// DEBUG: test layer == 0
+		eVec2 tileOrigin = eVec2((float)(row * tileMap.CellWidth()), (float)(column * tileMap.CellHeight()));
+		eMath::CartesianToIsometric(tileOrigin.x, tileOrigin.y);
+		tileOrigin.y -= 16;	// tileset specific offset
+							// FIXME/TODO: allow for tileset master image drawing offset if its a bit wonky source
+		tileOrigin.x -= 32;	// logical-to-screen isometric coordinate calculation hack
+							// FIXME/BUG/TODO: make this flexibly based on the tile image sizes (image frames read in)
+							// AND the cartesian size of a logical tile base
+		*tile = eTile(tileOrigin, type, 0);	// DEBUG: test layer == 0
 		column++;
 		if (column >= tileMap.Columns()) {
 			column = 0;
@@ -87,18 +85,16 @@ void eMap::BuildTiles(const int configuration) {
 // TODO (map editor): add functionality to drag-and-drop any-size tiles (with optional snap-to-grid)
 //**************
 void eMap::ToggleTile(const eVec2 & point) {
-	int tileType;
-	eTile * tile;
-	
 	if (!IsValid(point, true))
 		return;
 
-	tile = &tileMap.Index(point);
-	tileType = tile->Type();
+	eTile & tile = tileMap.Index(point);
+	int tileType = tile.Type();
+
 	tileType++;
 	if (tileType >= eTileImpl::NumTileTypes())
 		tileType = 0;
-	tile->SetType(tileType);
+	tile.SetType(tileType);
 }
 
 //**************
@@ -123,6 +119,8 @@ bool eMap::IsValid(const eVec2 & point, bool ignoreCollision) const {
 
 //***************
 // eMap::Think
+// TODO: these commands should belong to a UserCommand interface
+// independent of eMap (and eMap shouldn't really have a ::Think())
 //***************
 void eMap::Think() {
 	eInput * input;
@@ -135,8 +133,12 @@ void eMap::Think() {
 	else if (input->KeyPressed(SDL_SCANCODE_2))
 		BuildTiles(RANDOM_MAP);	
 
-	if (input->MousePressed(SDL_BUTTON_RIGHT))
-		ToggleTile(eVec2(input->GetMouseX() + game.GetCamera().GetAbsBounds().x, input->GetMouseY() + game.GetCamera().GetAbsBounds().y));
+	if (input->MousePressed(SDL_BUTTON_RIGHT)) { 
+		// TODO(?2/2?): funtionalize these two lines of getting mouse and camera, then converting to isometric
+		eVec2 point = eVec2((float)input->GetMouseX() + game.GetCamera().GetAbsBounds().x, (float)input->GetMouseY() + game.GetCamera().GetAbsBounds().y);
+		eMath::IsometricToCartesian(point.x, point.y);
+		ToggleTile(point);
+	}
 }
 
 
@@ -144,8 +146,8 @@ void eMap::Think() {
 // eMap::Draw
 // TODO: post-process all areas of the screen corresponding to where entities have visited
 // dim for visited and bright for entity is within its sightRange (see AI::CheckFogOfWar(...))
-// TODO: draw areas closer to the (isometric) camera first, then those farther, for one depth layer
-// repeat for all other layers
+// TODO: add areas closer to the (isometric) camera first, then those farther, for one depth layer
+// repeat for all other layers (algorithm currently assumes a single layer)
 //***************
 void eMap::Draw() {
 	eVec2 screenPoint;
@@ -154,11 +156,15 @@ void eMap::Draw() {
 
 	// maximum number of tiles to draw on the current window (max 1 boarder tile beyond in all directions)
 	// TODO: allow this value to change in the event that cell size changes or the window resizes
+	// FIXME/BUG: this currently is not calculating the camera overlap properly and stops drawing tiles too soon
 	static const int maxScreenRows = (int)(game.GetRenderer().Width() / tileMap.CellWidth()) + 2;
 	static const int maxScreenColumns = (int)(game.GetRenderer().Height() / tileMap.CellHeight()) + 2;
 	
 	// initialize the area of the tileMap to query
-	tileMap.Index(game.GetCamera().GetAbsBounds(), row, column);
+	// TODO: make this an isometric bounds check
+	eVec2 camPoint = game.GetCamera().GetAbsBounds();
+//	eMath::IsometricToCartesian(camPoint.x, camPoint.y);
+	tileMap.Index(camPoint, row, column);
 	startRow = row;
 	endRow = row + maxScreenRows;
 	endCol = column + maxScreenColumns;
