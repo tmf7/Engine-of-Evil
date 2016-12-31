@@ -80,7 +80,7 @@ inline int eTileImpl::Type() const {
 // DEBUG (format): "graphics/tiles.bmp_brick"
 //************
 inline const char * eTileImpl::Name() const {
-	return tileTypes[type].tileImage.Name();
+	return tileTypes[type].tileImage.Name().c_str();
 }
 
 //***********************************************

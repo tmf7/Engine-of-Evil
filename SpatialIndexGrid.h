@@ -19,7 +19,7 @@ public:
 	void					Validate(eVec2 & point) const;
 	void					Validate(int & row, int & column) const;
 
-	void					Index(type * const indexPtr, int & row, int & column) const;
+//	void					Index(type * const indexPtr, int & row, int & column) const;
 	void					Index(const eVec2 & point, int & row, int & column) const;
 	type &					Index(const eVec2 & point);
 	const type &			Index(const eVec2 & point) const;
@@ -114,28 +114,31 @@ inline void eSpatialIndexGrid<type, rows, columns>::Validate(int & row, int & co
 		column = columns - 1;
 }
 
+/*
 //******************
 // eSpatialIndexGrid::Index
 // sets the reference row and column using the given pointer into cells, and
 // those beyond the bounds of ([0, rows),[0, columns)) to the closest row and/or column
+// DEBUG: for possible future use
 //******************
+
 template< class type, int rows, int columns>
 inline void eSpatialIndexGrid<type, rows, columns>::Index(type * const indexPtr, int & row, int & column)  const {
 	row = (indexPtr - (type *)&cells[0][0]) / columns;
 	column = (indexPtr - (type *)&cells[0][0]) % columns;
 	Validate(row, column);
 }
+*/
 
 //******************
 // eSpatialIndexGrid::Index
-// sets the reference row and column to the cell the point lies within, and
-// those beyond the bounds of ([0, rows),[0, columns)) to the closest row and/or column
+// sets the reference row and column to the cell the point lies within
+// user should to eSpatialIndexGrid::Validate(row, column) as needed
 //******************
 template< class type, int rows, int columns>
 inline void eSpatialIndexGrid<type, rows, columns>::Index(const eVec2 & point, int & row, int & column)  const {
 	row = (int)(point.x / cellWidth);		
 	column = (int)(point.y / cellHeight);
-	Validate(row, column);
 }
 
 //******************

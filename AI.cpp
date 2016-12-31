@@ -591,7 +591,7 @@ void eAI::DrawCollisionCircle() const {
 		if (velocity * debugVector >= 0) {
 			debugPoint = origin + (debugVector * collisionRadius) - game.GetCamera().GetAbsBounds();
 			debugPoint.SnapInt();
-			game.GetRenderer().DrawPixel(debugPoint, color[0], color[1], color[2]);
+//			game.GetRenderer().DrawPixel(debugPoint, color[0], color[1], color[2]);
 		}
 		debugVector = rotateCounterClockwiseZ * debugVector;
 		rotationAngle += ROTATION_INCREMENT;
@@ -609,8 +609,8 @@ void eAI::DrawKnownMap() const {
 
 	// maximum number of tiles to draw on the current window (max 1 boarder tile beyond in all directions)
 	// TODO: allow this value to change in the event that cell size changes
-	static const int maxScreenRows = (int)(game.GetRenderer().Width() / knownMap.CellWidth()) + 2;
-	static const int maxScreenColumns = (int)(game.GetRenderer().Height() / knownMap.CellHeight()) + 2;
+	static const int maxScreenRows = (int)(game.GetRenderer().ViewArea().w / knownMap.CellWidth()) + 2;
+	static const int maxScreenColumns = (int)(game.GetRenderer().ViewArea().h / knownMap.CellHeight()) + 2;
 	
 	if (!game.debugFlags.KNOWN_MAP_DRAW)
 		return;
@@ -628,7 +628,7 @@ void eAI::DrawKnownMap() const {
 		if (knownMap.Index(row, column) == VISITED_TILE) {
 			screenRect.x = eMath::NearestInt(((float)(row * knownMap.CellWidth()) - game.GetCamera().GetAbsBounds().x));
 			screenRect.y = eMath::NearestInt(((float)(column * knownMap.CellHeight()) - game.GetCamera().GetAbsBounds().y));
-			game.GetRenderer().DrawClearRect(screenRect);
+			game.GetRenderer().DrawDebugRect(screenRect);
 		}
 		
 		column++;

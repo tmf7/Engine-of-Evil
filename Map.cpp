@@ -8,7 +8,7 @@
 bool eMap::Init () {
 	if (!eTileImpl::InitTileTypes("graphics/tiles.png", "graphics/tiles_format.def"))
 		return false;
-	
+
 	// map dimensions
 	tileMap.SetCellWidth(32);
 	tileMap.SetCellHeight(32);
@@ -135,52 +135,69 @@ void eMap::Think() {
 
 	if (input->MousePressed(SDL_BUTTON_RIGHT)) { 
 		// TODO(?2/2?): funtionalize these two lines of getting mouse and camera, then converting to isometric
-		eVec2 point = eVec2((float)input->GetMouseX() + game.GetCamera().GetAbsBounds().x, (float)input->GetMouseY() + game.GetCamera().GetAbsBounds().y);
-		eMath::IsometricToCartesian(point.x, point.y);
-		ToggleTile(point);
+		eVec2 tilePoint = eVec2((float)input->GetMouseX() + game.GetCamera().GetAbsBounds().x, (float)input->GetMouseY() + game.GetCamera().GetAbsBounds().y);
+		eMath::IsometricToCartesian(tilePoint.x, tilePoint.y);
+		ToggleTile(tilePoint);
 	}
 }
 
-
 //***************
 // eMap::Draw
-// TODO: post-process all areas of the screen corresponding to where entities have visited
-// dim for visited and bright for entity is within its sightRange (see AI::CheckFogOfWar(...))
-// TODO: add areas closer to the (isometric) camera first, then those farther, for one depth layer
-// repeat for all other layers (algorithm currently assumes a single layer)
+// TODO: dim for visited and bright for entity is within its sightRange (see AI::CheckFogOfWar(...))
+// TODO: repeat draw order for all other layers (algorithm currently assumes a single layer)
 //***************
 void eMap::Draw() {
-	eVec2 screenPoint;
+	// DEBUG: these constants assume a cell is square, and that its isometric projection
+	// is twice as wide as it is tall, the invIsoCellHeight is halved to account for the
+	// staggered isometric cell alignment
+	static const float invIsoCellWidth = 1.0f / (float)(tileMap.CellWidth() << 1);
+	static const float invIsoCellHeight = 1.0f / (float)(tileMap.CellHeight() >> 1);
+
+	int maxHorizCells = (int)(game.GetRenderer().ViewArea().w * invIsoCellWidth) + 5;
+	int maxVertCells = (int)(game.GetRenderer().ViewArea().h * invIsoCellHeight) + 5;
+
+	eVec2 camTopLeft = eVec2(game.GetCamera().GetAbsBounds().x, game.GetCamera().GetAbsBounds().y);
+	eMath::IsometricToCartesian(camTopLeft.x, camTopLeft.y);
+
+	int startRow, startCol;
 	int row, column;
-	int endRow, startRow, endCol;
+	tileMap.Index(camTopLeft, startRow, startCol);		// DEBUG: this tile has isometric coordinates
+	startRow -= 2;										// DEBUG: ensure enough rows cover the screen area
+	row = startRow;
+	column = startCol;
 
-	// maximum number of tiles to draw on the current window (max 1 boarder tile beyond in all directions)
-	// TODO: allow this value to change in the event that cell size changes or the window resizes
-	// FIXME/BUG: this currently is not calculating the camera overlap properly and stops drawing tiles too soon
-	static const int maxScreenRows = (int)(game.GetRenderer().Width() / tileMap.CellWidth()) + 2;
-	static const int maxScreenColumns = (int)(game.GetRenderer().Height() / tileMap.CellHeight()) + 2;
-	
-	// initialize the area of the tileMap to query
-	// TODO: make this an isometric bounds check
-	eVec2 camPoint = game.GetCamera().GetAbsBounds();
-//	eMath::IsometricToCartesian(camPoint.x, camPoint.y);
-	tileMap.Index(camPoint, row, column);
-	startRow = row;
-	endRow = row + maxScreenRows;
-	endCol = column + maxScreenColumns;
-	tileMap.Validate(endRow, endCol);
-
-	while (column <= endCol) {
-		eTile & tile = tileMap.Index(row, column);
-		screenPoint.x = eMath::NearestFloat(tile.Origin().x - game.GetCamera().GetAbsBounds().x);
-		screenPoint.y = eMath::NearestFloat(tile.Origin().y - game.GetCamera().GetAbsBounds().y);
-		game.GetRenderer().AddToRenderQueue(renderImage_t(screenPoint, tile.Image(), tile.Layer()));
-		row++;
-		if (row > endRow) {
-			row = startRow;
-			column++;
+	// staggered tile query and draw order
+	bool oddLine = false;
+	for (int vertCount = 0; vertCount < maxVertCells; vertCount++) {
+		for (int horizCount = 0; horizCount < maxHorizCells; horizCount++) {
+			if (row < tileMap.Rows() && row >= 0 && column < tileMap.Columns() && column >= 0) {
+				eTile & tile = tileMap.Index(row, column);
+				eVec2 screenPoint = eVec2(
+					eMath::NearestFloat(tile.Origin().x - game.GetCamera().GetAbsBounds().x),
+					eMath::NearestFloat(tile.Origin().y - game.GetCamera().GetAbsBounds().y)
+					);
+				game.GetRenderer().AddToRenderQueue(renderImage_t(screenPoint, tile.Image(), tile.Layer()));
+			}
+			row++; column--;
 		}
+		oddLine = !oddLine;
+		oddLine ? startCol++ : startRow++;
+		row = startRow;
+		column = startCol;
 	}
+
+	// TODO: draw the screen area using a staggered approach
+	// get the top left point of the visible window
+	// convert from ISO to CART
+	// grab the tileMap tile using that point
+	// (potentially decrease the row by 1 to start at a wider point, be sure to Validate() it though)
+
+	// query and draw tiles "diagonally" until the isometric cell width has exceeded the current window width
+	// IE: from the start [r][c] go to [r++][c--]
+
+	// once a line is complete, go back to start [r][c], trigger the ODD row bool, then start drawing from [r][c++]
+	// repeat the movement across the screen width
+	// once this ODD line is complete, go back to the "new" start, reset the ODD row bool, then start drawing from [r++][c]
 }
 
 

@@ -119,7 +119,7 @@ bool eGame::Run() {
 
 	frameDuration = SDL_GetTicks() - start;	// DEBUG: always positive unless game runs for ~49 days
 	delay = (1000 / fps) - frameDuration;
-	SDL_Delay(delay > 0 ? delay : 0);
+	SDL_Delay(delay > 0 ? delay : 0);		// FIXME: SDL_Delay isn't the most reliable frame delay method
 
 	return true;
 }

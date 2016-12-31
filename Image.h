@@ -3,12 +3,6 @@
 
 #include "Definitions.h"
 
-// TODO: allow for different format sprite-sheets (eg: variable frame sizes from frame to frame, loaded from a file)
-// (also see Sprite class for similar TODO)
-
-// TODO: SDL_BlitSurface doesn't allow pixel data to be rotated, only uses AABB
-// (however image rotation is implemented, the collision BBOX must also be rotated)
-
 //***************************************
 //				eImage
 // Provides access to pixel data as well (source)
@@ -19,61 +13,54 @@
 class eImage {
 public:
 
-						eImage();
+							eImage();
 
-	void				Init(SDL_Surface * source, const char * name);
-	bool				IsValid() const;
-	void				SetSource(SDL_Surface * source);	
-	SDL_Surface *		Source() const;
-	void				SetSubImage(const int frameNumber);
-	SDL_Rect &			Frame();
-	const SDL_Rect &	Frame() const;
-	const char *		Name() const;
+	void					Init(SDL_Texture * source, const char * name);
+	bool					IsValid() const;
+	void					SetSource(SDL_Texture * source);
+	SDL_Texture *			Source() const;
+	void					SetSubImage(const int frameNumber);	// FIXME: heavily modify this logic**********
+	SDL_Rect &				Frame();
+	const SDL_Rect &		Frame() const;
+	std::string				Name() const;
 
 private:
 
-	SDL_Surface *		source;
-	SDL_Rect			frame;
-	char				name[MAX_ESTRING_LENGTH];
+	SDL_Texture *			source;
+	std::vector<SDL_Rect>	subFrames;			// list of all SDL_Texture sub-image frames
+	SDL_Rect *				focusFrame;			// currently used sub-image frame
+	std::string				name;
 };
 
 //**************
 // eImage::eImage
 //**************
-inline eImage::eImage() : source(NULL) {
+inline eImage::eImage() : source(nullptr) {
 }
 
 //**************
 // eImage::Init
+// current frame is left undefined
 //**************
-inline void eImage::Init(SDL_Surface * source, const char * name) {
+inline void eImage::Init(SDL_Texture * source, const char * name) {
 	this->source = source;
-	strcpy_s(this->name, name);
-	frame.w = source->w;
-	frame.h = source->h;
-	frame.x = 0;
-	frame.y = 0;
+	this->name = name;
+	focusFrame = nullptr;
 }
 
 //**************
 // eImage::SetSource
-// resets the frame size to the source's size
+// invalidates the current frame
 //**************
-inline void eImage::SetSource(SDL_Surface * source) {
+inline void eImage::SetSource(SDL_Texture * source) {
 	this->source = source;
-
-	if (source == NULL)
-		return;
-	frame.w = source->w;
-	frame.h = source->h;
-	frame.x = 0;
-	frame.y = 0;
+	focusFrame = nullptr;
 }
 
 //**************
 // eImage::Source
 //**************
-inline SDL_Surface * eImage::Source() const {
+inline SDL_Texture * eImage::Source() const {
 	return source;
 }
 
@@ -82,7 +69,7 @@ inline SDL_Surface * eImage::Source() const {
 // mutable access to frame data members x, y, width, and height
 //**************
 inline SDL_Rect & eImage::Frame() {
-	return frame;
+	return *focusFrame;
 }
 
 //**************
@@ -90,21 +77,26 @@ inline SDL_Rect & eImage::Frame() {
 // read-only access to frame data members x, y, width, and height
 //**************
 inline const SDL_Rect & eImage::Frame() const {
-	return frame;
+	return *focusFrame;
 }
 
 //**************
 // eImage::SetSubImage
 // select a source-size-dependent area of source
 // user must ensure source data is not NULL via Image::IsValid()
+// DEBUG: this indirectly modifies frame data
+// FIXME/BUG: alter this logic heavily*************************
 //**************
 inline void eImage::SetSubImage(const int frameNumber) {
 	int sourceColumns;
+	int textureWidth, textureHeight;
 
 	// treat the source surface as a 2D array of images
-	sourceColumns = source->w / frame.w;
-	frame.x = (frameNumber % sourceColumns) * frame.w;	// mod give col
-	frame.y = (frameNumber / sourceColumns) * frame.h;	// div gives row
+	// FIXME/BUG: focusFrame is potentially nullptr (constructed, init, and set all leave it nullptr)
+	SDL_QueryTexture(source, NULL, NULL, &textureWidth, &textureHeight);
+	sourceColumns = textureWidth / focusFrame->w;
+	focusFrame->x = (frameNumber % sourceColumns) * focusFrame->w;	// mod give col
+	focusFrame->y = (frameNumber / sourceColumns) * focusFrame->h;	// div gives row
 }
 
 //**************
@@ -118,7 +110,7 @@ inline bool eImage::IsValid() const {
 //**************
 // eImage::Name
 //**************
-inline const char * eImage::Name() const {
+inline std::string eImage::Name() const {
 	return name;
 }
 

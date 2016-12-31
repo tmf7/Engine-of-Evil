@@ -26,8 +26,7 @@ typedef struct renderImage_s {
 //**************************************************
 //				eRenderer
 // Base class for all window/fullscreen drawing. 
-// Contains the backbuffer, window, and font handles.
-// TODO: add renderer context handle (SDL_Renderer) for proper openGL code
+// Contains the window, renderer, and font handles
 //****************************************************
 class eRenderer {
 public:
@@ -38,17 +37,18 @@ public:
 	void				Free() const;
 	void				Clear() const;
 	void				Show() const;
-	int					Width() const;
-	int					Height() const;
+	SDL_Rect			ViewArea() const;
+
+	SDL_Renderer *		GetSDLRenderer() const;
 
 	void				AddToRenderQueue(renderImage_t & renderImage);
 	void				FlushRenderQueue();
 
-	void				DrawOutlineText(char * string, const eVec2 & point, Uint8 r, Uint8 g, Uint8 b) const;
-	void				DrawPixel(const eVec2 & point, Uint8 r, Uint8 g, Uint8 b) const;
+	void				DrawOutlineText(char * string, const eVec2 & point, Uint8 r, Uint8 g, Uint8 b, Uint8 a) const;
+//	void				DrawPixel(const eVec2 & point, Uint8 r, Uint8 g, Uint8 b) const;	// DEBUG: deprecated
 	void				DrawImage(eImage * image, const eVec2 & point) const;
-	bool				FormatSurface(SDL_Surface ** surface, int * colorKey) const;
-	void				DrawClearRect(const SDL_Rect & rect) const;
+//	bool				FormatSurface(SDL_Surface ** surface, int * colorKey) const;	// DEBUG: deprecated
+	void				DrawDebugRect(const SDL_Rect & rect) const;
 
 	bool				OnScreen(const eVec2 & point) const;
 	bool				OnScreen(const eBounds & bounds) const;
@@ -58,11 +58,8 @@ private:
 	static const int				defaultRenderCapacity = 1024;
 	std::vector<renderImage_t>		renderQueue;
 
-	eBounds				screenBounds;
-	Uint32				clearColor;
-	SDL_Surface *		backbuffer;
 	SDL_Window *		window;
-//	SDL_Renderer *		renderer;
+	SDL_Renderer *		internal_renderer;
 	TTF_Font *			font;
 };
 
@@ -75,11 +72,9 @@ inline eRenderer::eRenderer() {
 
 //***************
 // eRenderer::Clear
-// resets the backbuffer to the clear image
 //***************
 inline void eRenderer::Clear() const {
-	SDL_FillRect(backbuffer, NULL, clearColor);
-//	SDL_BlitSurface(clear, NULL, backbuffer, NULL);
+	SDL_RenderClear(internal_renderer);
 }
 
 //***************
@@ -87,27 +82,33 @@ inline void eRenderer::Clear() const {
 // updates the visible screen area
 //***************
 inline void eRenderer::Show() const {
-	SDL_UpdateWindowSurface(window);
+	SDL_RenderPresent(internal_renderer);
 }
 
 //***************
-// eRenderer::Width
+// eRenderer::ViewArea
 //***************
-inline int eRenderer::Width() const {
-	return backbuffer->w;
+inline SDL_Rect eRenderer::ViewArea() const {
+	SDL_Rect viewArea;
+	SDL_RenderGetViewport(internal_renderer, &viewArea);
+	return viewArea;
 }
 
 //***************
-// eRenderer::Height
+// eRenderer::GetRenderer
 //***************
-inline int eRenderer::Height() const {
-	return backbuffer->h;
+inline SDL_Renderer * eRenderer::GetSDLRenderer() const {
+	return internal_renderer;
 }
 
 //***************
 // eRenderer::OnScreen
 //***************
 inline bool eRenderer::OnScreen(const eVec2 & point) const {
+	SDL_Rect viewArea;
+	SDL_RenderGetViewport(internal_renderer, &viewArea);
+	eBounds screenBounds = eBounds(eVec2((float)viewArea.x, (float)viewArea.y), 
+									eVec2((float)(viewArea.x + viewArea.w), (float)(viewArea.y + viewArea.h)));
 	return screenBounds.ContainsPoint(point);
 }
 
@@ -115,15 +116,19 @@ inline bool eRenderer::OnScreen(const eVec2 & point) const {
 // eRenderer::OnScreen
 //***************
 inline bool eRenderer::OnScreen(const eBounds & bounds) const {
+	SDL_Rect viewArea;
+	SDL_RenderGetViewport(internal_renderer, &viewArea);
+	eBounds screenBounds = eBounds(eVec2(viewArea.x, viewArea.y),
+		eVec2(viewArea.x + viewArea.w, viewArea.y + viewArea.h));
 	return screenBounds.Overlaps(bounds);
 }
 
 //***************
-// eRenderer::DrawClearRect
+// eRenderer::DrawDebugRect
 // sets the specified area of the screen to the clearColor
 //***************
-inline void eRenderer::DrawClearRect(const SDL_Rect & rect) const {
-	SDL_FillRect(backbuffer, &rect, clearColor);
+inline void eRenderer::DrawDebugRect(const SDL_Rect & rect) const {
+	SDL_RenderFillRect(internal_renderer, &rect);
 }
 
 ////////////////////////////////////////////////////////////////////////////////

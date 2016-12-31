@@ -13,48 +13,63 @@
 class eSprite {
 public:
 
-					eSprite();
+							eSprite();
 
-	eImage *		Image();
-	void			SetImage(const eImage & image);
-	void			NextFrame();
-	void			SetAnimation(const int first, const int last, const int frameDelay);
-	void			Pause(bool wantPause = true);
-	const int		Width() const;
-	const int		Height() const;
+	bool					Init(const char * filename);
+	eImage *				Image();
+	void					SetImage(eImage * image);
+	void					NextFrame();
+	void					SetAnimation(const int first, const int last, const int frameDelay);
+	void					Pause(bool wantPause = true);
+	const int				Width() const;
+	const int				Height() const;
 
 private:
 
-	eImage			image;
-	int				firstFrame;
-	int				lastFrame;
-	int				frameDelay;
-	int				currentFrame;
-	int				delayCounter;
-	bool			paused;
+	std::vector<eImage>		images;				// all animation sheets used by this sprite
+	eImage *				currentImage;		// currently active animation sheet
+	int						firstFrame;
+	int						lastFrame;
+	int						frameDelay;
+	int						currentFrame;
+	int						delayCounter;
+	bool					paused;
+
+	// experimental
+	int						drawOrigin;
+	std::string				name;
 };
 
 //************
 // eSprite::eSprite
 //************
 inline eSprite::eSprite() 
-	: firstFrame(NULL), lastFrame(NULL), frameDelay(NULL),
+	: firstFrame(NULL), lastFrame(NULL), frameDelay(NULL), currentImage(nullptr),
 	  currentFrame(NULL), delayCounter(NULL), paused(true) {
 }
 
 //************
+// eSprite::Init
+// TODO: parse a sprite def file to load images and their associated frame data
+// pass each image's frame data to each individual image (it tracks its own list of subframes)
+//************
+inline bool eSprite::Init(const char * filename) {
+	return false;
+}
+
+//************
 // eSprite::Image
-// mutable access to sprite's image pixel data
+// mutable access to sprite's current image pixel data
 //************
 inline eImage * eSprite::Image() {
-	return &image;
+	return currentImage;
 }
 
 //************
 // eSprite::SetImage
 //************
-inline void eSprite::SetImage(const eImage & image) {
-	this->image = image;
+inline void eSprite::SetImage(eImage * image) {
+	currentImage = image;
 }
 
 //************
@@ -63,7 +78,6 @@ inline void eSprite::SetImage(const eImage & image) {
 // must be unpaused to fully animate
 //************
 inline void eSprite::NextFrame() {
-	
 	if (paused)
 		return;
 
@@ -101,7 +115,7 @@ inline void eSprite::Pause(bool wantPause) {
 // wrapper function for sprite's current frame width
 //************
 inline const int eSprite::Width() const {
-	return image.IsValid() ? image.Frame().w : -1;
+	return currentImage->IsValid() ? currentImage->Frame().w : -1;
 }
 
 //************
@@ -109,7 +123,7 @@ inline const int eSprite::Width() const {
 // wrapper function for sprite's current frame height
 //************
 inline const int eSprite::Height() const {
-	return image.IsValid() ? image.Frame().h : -1;
+	return currentImage->IsValid() ? currentImage->Frame().h : -1;
 }
 
 #endif /* EVIL_SPRITE_H */

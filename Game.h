@@ -3,7 +3,7 @@
 
 #include "Definitions.h"
 #include "Renderer.h"
-#include "ImageManager.h"
+#include "TextureManager.h"
 #include "Vector.h"
 #include "Map.h"
 #include "Entity.h"
@@ -39,7 +39,7 @@ public:
 
 	eInput &			GetInput();
 	eRenderer &			GetRenderer();
-	eImageManager &		GetImageManager();
+	eTextureManager &	GetTextureManager();
 	eCamera &			GetCamera();
 	eMap &				GetMap();
 	eEntity *			GetEntity(int entityID);
@@ -50,7 +50,7 @@ private:
 	eInput				input;
 	eMap				map;
 	eRenderer			renderer;
-	eImageManager		imageManager;
+	eTextureManager		textureManager;
 	eCamera				camera;
 	int					numEntities;
 
@@ -84,8 +84,8 @@ inline eRenderer & eGame::GetRenderer() {
 //****************
 // eGame::GetImageManager
 //****************
-inline eImageManager & eGame::GetImageManager() {
-	return imageManager;
+inline eTextureManager & eGame::GetTextureManager() {
+	return textureManager;
 }
 
 //****************

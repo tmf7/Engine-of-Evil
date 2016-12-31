@@ -3,21 +3,21 @@
 
 //***************
 // eEntity::Spawn
-// TODO: set the initial frame of animation
-// TODO: determine a failure to spawn condition (ie when to return false)
-// TODO: call a GetSpawnPoint() to use a list of (semi-)pre-defined spawn points,
-// possibly parsed from a file
 //***************
 bool eEntity::Spawn() {
-	eImage * spriteImage = NULL;
 
-	spriteImage = game.GetImageManager().GetImage("graphics/hero.bmp", nullptr);
+	// TODO: pass in some spawn arguments for the animation definitions file
+	// TODO: set the initial (no input/movement) default animation
+	eImage * spriteImage = game.GetImageManager().GetImage("graphics/hero.bmp", nullptr);
 	if (spriteImage == nullptr)
 		return false;
 
-	sprite.SetImage(*spriteImage);
-	localBounds.ExpandSelf(8);	// 16 x 16 square with (0, 0) at its center
-	SetOrigin(eVec2(8.0f, 8.0f));
+	sprite.SetImage(spriteImage);		// TODO: change this to a sprite.Init(...) maybe and return false if it fails
+	localBounds.ExpandSelf(8);			// FIXME: 16 x 16 square with (0, 0) at its center, 
+										// this is the current collision box
+										// but its also used to position the sprite, move away from this methodology
+										// becuase a hit box may be smaller than the sprite... give the sprite an origin?
+	SetOrigin(eVec2(8.0f, 8.0f));		// TODO: call a GetSpawnPoint() to use a list of procedurally-defined spawn points
 	return true;
 }
 
