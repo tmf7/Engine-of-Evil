@@ -6,6 +6,7 @@
 // eMap::Init
 //**************
 bool eMap::Init () {
+	// TODO: initialize multiple tile sheets (somewhat like sprites do)
 	if (!eTileImpl::InitTileTypes("graphics/tiles.png", "graphics/tiles_format.def"))
 		return false;
 

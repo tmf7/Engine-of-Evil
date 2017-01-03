@@ -8,8 +8,8 @@ bool eEntity::Spawn() {
 
 	// TODO: pass in some spawn arguments for the animation definitions file
 	// TODO: set the initial (no input/movement) default animation
-	eImage * spriteImage = game.GetImageManager().GetImage("graphics/hero.bmp", nullptr);
-	if (spriteImage == nullptr)
+	SDL_Texture * spriteTexture = game.GetTextureManager().GetTexture("graphics/hero.bmp");
+	if (spriteTexture == nullptr)
 		return false;
 
 	sprite.SetImage(spriteImage);		// TODO: change this to a sprite.Init(...) maybe and return false if it fails

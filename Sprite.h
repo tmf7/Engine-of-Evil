@@ -2,6 +2,7 @@
 #define EVIL_SPRITE_H
 
 #include "Image.h"
+#include "HashIndex.h"
 
 // TODO: handle sprite sheets that have multiple different frame sizes (even in a single animation)
 // that use alpha values instead of color keys
@@ -26,6 +27,7 @@ public:
 
 private:
 
+	eHashIndex				imageHash;			// to quickly lookup an animation sheet by name
 	std::vector<eImage>		images;				// all animation sheets used by this sprite
 	eImage *				currentImage;		// currently active animation sheet
 	int						firstFrame;

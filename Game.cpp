@@ -67,7 +67,7 @@ void eGame::Shutdown(eGame::ErrorCode error) {
 // eGame::FreeAssets
 //****************
 void eGame::FreeAssets() {
-	imageManager.Free();
+	textureManager.Free();
 	renderer.Free();
 }
 
