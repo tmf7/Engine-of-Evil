@@ -78,10 +78,10 @@ void eGame::FreeAssets() {
 // TODO: modify the frame rate governance
 //****************
 bool eGame::Run() {
-	static SDL_Event	event;
+	static SDL_Event	event;					// FIXME: don't make this static
 	Uint32				start, frameDuration;
 	int					delay;
-	static const int	fps = 60;
+	static const int	fps = 60;				// FIXME: don't make this static
 
 /*
 // TODO: as an alternative method of timing in general

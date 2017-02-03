@@ -21,7 +21,7 @@ private:
 public:
 
 	static const int	invalidTileType = -1;
-	static const int	maxTileTypes = 32;
+	static const int	maxTileTypes = 32;	// TODO: make this much larger, and use std::vector.reserve accordingly
 
 public:
 						eTileImpl();
@@ -37,6 +37,8 @@ public:
 	
 private:
 	
+	// TODO: change this to an std::vector<eImage *> tileSets, where each eImage stores tile subframes for a tileset
+	// then the tileTypes array may need not exist
 	eImage				tileImage;			// all refer to same source image, type determines which frame to use
 	int					type;				// game-specific value to simplifiy hard-coded or scripted responses to this type
 	

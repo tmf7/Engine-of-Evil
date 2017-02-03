@@ -2,6 +2,7 @@
 #include "Game.h"
 
 // FIXME: don't use these global non-const variables
+// they should be class static
 int			numTileTypes = 0;
 eImage *	tileSet = nullptr;
 eTileImpl	tileTypes[eTileImpl::maxTileTypes];
@@ -27,7 +28,7 @@ bool eTileImpl::InitTileTypes(const char * tileSetImageFile, const char * tileFo
 	int typeIndex = 0;
 	read.ignore(std::numeric_limits<std::streamsize>::max(), '\n'); // skip the first line of the file
 	while (!read.eof()) {
-		tileTypes[typeIndex].type = typeIndex;
+		tileTypes[typeIndex].type = typeIndex;		// TODO: have this actually indicate the eImage subframe index for a tileSet
 
 		// read and set the tile name
 		// EG: "graphics/tiles.bmp_brick"
