@@ -11,7 +11,17 @@ public:
 
 	virtual void		Think() override;
 	void				Init();
+	float				GetZoom() const;
+	void				SetZoom(float level);
 	const eVec2 &		GetAbsBounds(bool minMax = false) const;
+
+	static constexpr const float zoomIncrement = 0.1f;
+	static constexpr const float maxZoom = 2.0f;
+	static constexpr const float minZoom = 0.1f;
+
+private:
+
+	float				zoomLevel;
 };	
 
 //***************
@@ -19,6 +29,13 @@ public:
 //***************
 inline eCamera::eCamera() {
 	speed = 10.0f;
+}
+
+//***************
+// eCamera::GetZoom
+//***************
+inline float eCamera::GetZoom() const {
+	return zoomLevel;
 }
 
 //***************

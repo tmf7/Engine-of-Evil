@@ -3,7 +3,8 @@
 
 #include "Definitions.h"
 #include "Renderer.h"
-#include "TextureManager.h"
+#include "ImageManager.h"
+#include "ImageTilerManager.h"
 #include "Vector.h"
 #include "Map.h"
 #include "Entity.h"
@@ -14,7 +15,7 @@
 class eGame {
 public:
 
-	struct{
+	struct{ // TODO: change these names to DEBUG_NAME_HERE
 		bool	GOAL_WAYPOINTS		= true;
 		bool	TRAIL_WAYPOINTS		= true;
 		bool	COLLISION_CIRCLE	= true;
@@ -39,7 +40,8 @@ public:
 
 	eInput &			GetInput();
 	eRenderer &			GetRenderer();
-	eTextureManager &	GetTextureManager();
+	eImageManager &			GetImageManager();
+	eImageTilerManager &	GetImageTilerManager();
 	eCamera &			GetCamera();
 	eMap &				GetMap();
 	eEntity *			GetEntity(int entityID);
@@ -50,13 +52,15 @@ private:
 	eInput				input;
 	eMap				map;
 	eRenderer			renderer;
-	eTextureManager		textureManager;
+	eImageManager		imageManager;
+	eImageTilerManager	imageTilerManager;
 	eCamera				camera;
 	int					numEntities;
 
 	void				FreeAssets();
 };
 
+extern Uint32 globalIDPool;	// globally unique identifier: each resource gets, regardless of copying, moving, or type
 extern eGame game;						// one instance used by all objects
 extern eAI boss;						// FIXME: temporary solution to using dynamic memory to create object instances
 										// then downcast them to their base class (then type check when extracting/using)
@@ -81,11 +85,18 @@ inline eRenderer & eGame::GetRenderer() {
 	return renderer;
 }
 
-//****************
-// eGame::GetImageManager
-//****************
-inline eTextureManager & eGame::GetTextureManager() {
-	return textureManager;
+//*****************
+// eEditor::GetImageManager
+//*****************
+inline eImageManager & eGame::GetImageManager() {
+	return imageManager;
+}
+
+//*****************
+// eEditor::GetImageTilerManager
+//*****************
+inline eImageTilerManager & eGame::GetImageTilerManager() {
+	return imageTilerManager;
 }
 
 //****************

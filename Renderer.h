@@ -7,20 +7,30 @@
 #include "Vector.h"
 #include "Bounds.h"
 #include "Sort.h"
+#include "Image.h"
 
-class eImage;
-class eSprite;
+typedef enum {
+	RENDERTYPE_STATIC,
+	RENDERTYPE_DYNAMIC
+} eRenderType;
 
 typedef struct renderImage_s {
-	eVec2			position;	// where on the screen
-	eImage *		image;		// for entities, this would be which frame of the eSprite is being drawn
-	size_t			priority;
+	std::shared_ptr<eImage>		image;			// for entities, this would be which frame of the eSprite is being drawn
+	const SDL_Rect *			srcRect;		// what part of the source image to draw (nullptr for all of it)
+	SDL_Rect					dstRect;		// where on the screen and what size
+	Uint32						priority;
 
 	renderImage_s()
-		: position(vec2_zero), image(nullptr), priority(UINT_MAX) {};
-
-	renderImage_s(const eVec2 & position, eImage * image, const int layer)
-		: position(position), image(image), priority(layer << 16) {};
+		: image(nullptr),
+		  srcRect(nullptr),
+		  priority(MAX_LAYER << 16) {};
+	
+	renderImage_s(std::shared_ptr<eImage> image, const SDL_Rect * srcRect, const SDL_Rect & dstRect, const Uint8 layer)
+		: image(image),
+		  srcRect(srcRect), 
+		  dstRect(dstRect),
+		  priority(layer << 16) {};	// DEBUG: most-significant 2 bytes are layer
+									// least-significant 2 bytes are renderPool push order
 } renderImage_t;
 
 //**************************************************
@@ -32,7 +42,7 @@ class eRenderer {
 public:
 
 						eRenderer();
-
+						
 	bool				Init();
 	void				Free() const;
 	void				Clear() const;
@@ -40,40 +50,50 @@ public:
 	SDL_Rect			ViewArea() const;
 
 	SDL_Renderer *		GetSDLRenderer() const;
+	SDL_Window *		GetWindow() const;
 
-	void				AddToRenderQueue(renderImage_t & renderImage);
-	void				FlushRenderQueue();
+	void				AddToRenderPool(renderImage_t & renderImage, bool dynamic);
+	void				Flush();
 
-	void				DrawOutlineText(char * string, const eVec2 & point, Uint8 r, Uint8 g, Uint8 b, Uint8 a) const;
-//	void				DrawPixel(const eVec2 & point, Uint8 r, Uint8 g, Uint8 b) const;	// DEBUG: deprecated
-	void				DrawImage(eImage * image, const eVec2 & point) const;
-//	bool				FormatSurface(SDL_Surface ** surface, int * colorKey) const;	// DEBUG: deprecated
-	void				DrawDebugRect(const SDL_Rect & rect) const;
+	void				DrawOutlineText(const char * text, const eVec2 & point, const SDL_Color & color, bool constText, bool dynamic) const;
+	void				DrawImage(std::shared_ptr<eImage> image, const SDL_Rect * srcRect, const SDL_Rect * destRect) const;
+	void				DrawDebugRect(const SDL_Color & color, const SDL_Rect & rect, bool fill, bool dynamic) const;
+	void				DrawDebugRects(const SDL_Color & color, const std::vector<SDL_Rect> & rects, bool fill, bool dynamic) const;
 
 	bool				OnScreen(const eVec2 & point) const;
 	bool				OnScreen(const eBounds & bounds) const;
 
 private:
 
-	static const int				defaultRenderCapacity = 1024;
-	std::vector<renderImage_t>		renderQueue;
+	static const int				defaultRenderCapacity = 1024;// maximum separate items to indirectly draw from the pool
+	std::vector<renderImage_t>		staticPool;					
+	std::vector<renderImage_t>		dynamicPool;				
 
 	SDL_Window *		window;
 	SDL_Renderer *		internal_renderer;
+	SDL_Texture *		scalableTarget;
 	TTF_Font *			font;
 };
+
+// utility colors
+extern const SDL_Color clearColor;
+extern const SDL_Color black;
 
 //***************
 // eRenderer::eRenderer
 //***************
 inline eRenderer::eRenderer() {
-	renderQueue.reserve(defaultRenderCapacity);
+	staticPool.reserve(defaultRenderCapacity);
+	dynamicPool.reserve(defaultRenderCapacity);
 }
 
 //***************
 // eRenderer::Clear
 //***************
 inline void eRenderer::Clear() const {
+	SDL_SetRenderTarget(internal_renderer, scalableTarget);
+	SDL_RenderClear(internal_renderer);
+	SDL_SetRenderTarget(internal_renderer, NULL);
 	SDL_RenderClear(internal_renderer);
 }
 
@@ -101,66 +121,11 @@ inline SDL_Renderer * eRenderer::GetSDLRenderer() const {
 	return internal_renderer;
 }
 
-//***************
-// eRenderer::OnScreen
-//***************
-inline bool eRenderer::OnScreen(const eVec2 & point) const {
-	SDL_Rect viewArea;
-	SDL_RenderGetViewport(internal_renderer, &viewArea);
-	eBounds screenBounds = eBounds(eVec2((float)viewArea.x, (float)viewArea.y), 
-									eVec2((float)(viewArea.x + viewArea.w), (float)(viewArea.y + viewArea.h)));
-	return screenBounds.ContainsPoint(point);
+//*****************
+// eRenderer::GetWindow
+//*****************
+inline SDL_Window * eRenderer::GetWindow() const {
+	return window;
 }
 
-//***************
-// eRenderer::OnScreen
-//***************
-inline bool eRenderer::OnScreen(const eBounds & bounds) const {
-	SDL_Rect viewArea;
-	SDL_RenderGetViewport(internal_renderer, &viewArea);
-	eBounds screenBounds = eBounds(eVec2(viewArea.x, viewArea.y),
-		eVec2(viewArea.x + viewArea.w, viewArea.y + viewArea.h));
-	return screenBounds.Overlaps(bounds);
-}
-
-//***************
-// eRenderer::DrawDebugRect
-// sets the specified area of the screen to the clearColor
-//***************
-inline void eRenderer::DrawDebugRect(const SDL_Rect & rect) const {
-	SDL_RenderFillRect(internal_renderer, &rect);
-}
-
-////////////////////////////////////////////////////////////////////////////////
-// BEGIN FREEHILL draw order sort test
-//***************
-// eRenderer::AddToRenderQueue
-// DEBUG: the second 2 bytes of priority were set using the layer during construction,
-// the the first 2 bytes are now set according to the order the renderImage was added to the renderQueue
-//***************
-inline void eRenderer::AddToRenderQueue(renderImage_t & renderImage) {
-	renderImage.priority |= renderQueue.size();
-	renderQueue.push_back(renderImage);
-}
-
-//***************
-// eRenderer::FlushRenderQueue
-// FIXME/BUG(!): ensure entities never occupy the same layer/depth as world tiles 
-// (otherwise the unstable quicksort will put them at RANDOM draw orders relative to the same layer/depth tiles)
-//***************
-inline void eRenderer::FlushRenderQueue() {
-	QuickSort(renderQueue.data(), 
-			  renderQueue.size(), 
-			  [](auto && a, auto && b) { 
-					if (a.priority < b.priority) return -1; 
-					else if (a.priority > b.priority) return 1;
-					return 0; 
-				}
-	);
-	for (auto && iter : renderQueue)
-		DrawImage(iter.image, iter.position);
-
-	renderQueue.clear();
-}
-// END FREEHILL draw order sort test
 #endif /* EVIL_RENDERER_H */

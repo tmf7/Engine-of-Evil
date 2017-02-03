@@ -1,6 +1,7 @@
 #include "Game.h"
 
 //byte_t memoryPool[ONE_GIGABYTE];
+Uint32 globalIDPool = 0;
 eGame game;
 eAI boss;
 
@@ -67,7 +68,6 @@ void eGame::Shutdown(eGame::ErrorCode error) {
 // eGame::FreeAssets
 //****************
 void eGame::FreeAssets() {
-	textureManager.Free();
 	renderer.Free();
 }
 
@@ -113,7 +113,7 @@ bool eGame::Run() {
 	entities[0]->Draw();
 
 	// DEBUG: new function that does all the final blitting
-	renderer.FlushRenderQueue();
+	renderer.Flush();
 
 	renderer.Show();
 

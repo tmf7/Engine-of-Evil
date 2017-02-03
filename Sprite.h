@@ -1,8 +1,7 @@
 #ifndef EVIL_SPRITE_H
 #define EVIL_SPRITE_H
 
-#include "Image.h"
-#include "HashIndex.h"
+#include "ImageTiler.h"
 
 // TODO: handle sprite sheets that have multiple different frame sizes (even in a single animation)
 // that use alpha values instead of color keys
@@ -18,7 +17,7 @@ public:
 
 	bool					Init(const char * filename);
 	eImage *				Image();
-	void					SetImage(eImage * image);
+	void					AddImageTiler(eImage * image);
 	void					NextFrame();
 	void					SetAnimation(const int first, const int last, const int frameDelay);
 	void					Pause(bool wantPause = true);
@@ -27,9 +26,11 @@ public:
 
 private:
 
-	eHashIndex				imageHash;			// to quickly lookup an animation sheet by name
-	std::vector<eImage>		images;				// all animation sheets used by this sprite
-	eImage *				currentImage;		// currently active animation sheet
+	typedef std::shared_ptr<eImageTiler> Tiler_t;
+
+	std::vector<Tiler_t>	animations;		// all source images and their associated sub-frames (clip-rects) to fully animate this "character"
+
+	// TODO: first, last, current may be deprecated due to the circular-link list that ImageTiler provieds for animation sequences
 	int						firstFrame;
 	int						lastFrame;
 	int						frameDelay;

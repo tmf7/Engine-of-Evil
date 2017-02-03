@@ -5,56 +5,64 @@
 
 //***************************************
 //				eImage
-// Provides access to pixel data as well (source)
-// as a subset of that pixel data (frame)
-// users must ensure frame dimensions and position
-// does not exceed that of the source dimensions
+// stores access pointer to SDL_Texture 
+// and is handled by eImageManager
 //***************************************
 class eImage {
 public:
-
 							eImage();
+							eImage(SDL_Texture * source, const char * filename, int id);
+							~eImage();
 
-	void					Init(SDL_Texture * source, const char * name);
 	bool					IsValid() const;
-	void					SetSource(SDL_Texture * source);
 	SDL_Texture *			Source() const;
-	void					SetSubImage(const int frameNumber);	// FIXME: heavily modify this logic**********
-	SDL_Rect &				Frame();
-	const SDL_Rect &		Frame() const;
-	std::string				Name() const;
+	int						GetWidth() const;
+	int						GetHeight() const;
+	std::string				GetFilename() const;
+	unsigned int			GetID() const;
 
 private:
 
 	SDL_Texture *			source;
-	std::vector<SDL_Rect>	subFrames;			// list of all SDL_Texture sub-image frames
-	SDL_Rect *				focusFrame;			// currently used sub-image frame
-	std::string				name;
+	SDL_Point				size;
+	std::string				filename;		// source file loaded from
+	int						id;				// index within eImageManager::images
 };
 
 //**************
 // eImage::eImage
 //**************
-inline eImage::eImage() : source(nullptr) {
+inline eImage::eImage()
+	: source(nullptr),
+	  filename("invalid_file"), 
+	  id(INVALID_ID) {
+	size = SDL_Point{ 0, 0 };
 }
 
 //**************
-// eImage::Init
-// current frame is left undefined
+// eImage::eImage
+// frame is the size of the texture
 //**************
-inline void eImage::Init(SDL_Texture * source, const char * name) {
-	this->source = source;
-	this->name = name;
-	focusFrame = nullptr;
+inline eImage::eImage(SDL_Texture * source, const char * filename, int id)
+	: source(source), 
+	  filename(filename), 
+	  id(id) {
+	SDL_QueryTexture(source, NULL, NULL, &size.x, &size.y);
 }
 
 //**************
-// eImage::SetSource
-// invalidates the current frame
+// eImage::~eImage
 //**************
-inline void eImage::SetSource(SDL_Texture * source) {
-	this->source = source;
-	focusFrame = nullptr;
+inline eImage::~eImage() {
+	SDL_DestroyTexture(source);
+}
+
+//**************
+// eImage::IsValid
+// returns true if source != NULL
+//**************
+inline bool eImage::IsValid() const {
+	return source != nullptr;
 }
 
 //**************
@@ -65,53 +73,31 @@ inline SDL_Texture * eImage::Source() const {
 }
 
 //**************
-// eImage::Frame
-// mutable access to frame data members x, y, width, and height
+// eImage::GetWidth
 //**************
-inline SDL_Rect & eImage::Frame() {
-	return *focusFrame;
+inline int eImage::GetWidth() const {
+	return size.x;
 }
 
 //**************
-// eImage::Frame
-// read-only access to frame data members x, y, width, and height
+// eImage::GetHeight
 //**************
-inline const SDL_Rect & eImage::Frame() const {
-	return *focusFrame;
+inline int eImage::GetHeight() const {
+	return size.y;
 }
 
 //**************
-// eImage::SetSubImage
-// select a source-size-dependent area of source
-// user must ensure source data is not NULL via Image::IsValid()
-// DEBUG: this indirectly modifies frame data
-// FIXME/BUG: alter this logic heavily*************************
+// eImage::GetFilename
 //**************
-inline void eImage::SetSubImage(const int frameNumber) {
-	int sourceColumns;
-	int textureWidth, textureHeight;
-
-	// treat the source surface as a 2D array of images
-	// FIXME/BUG: focusFrame is potentially nullptr (constructed, init, and set all leave it nullptr)
-	SDL_QueryTexture(source, NULL, NULL, &textureWidth, &textureHeight);
-	sourceColumns = textureWidth / focusFrame->w;
-	focusFrame->x = (frameNumber % sourceColumns) * focusFrame->w;	// mod give col
-	focusFrame->y = (frameNumber / sourceColumns) * focusFrame->h;	// div gives row
+inline std::string eImage::GetFilename() const {
+	return filename;
 }
 
 //**************
-// eImage::IsValid
-// returns true if source != NULL
+// eImage::GetID
 //**************
-inline bool eImage::IsValid() const {
-	return source != NULL;
-}
-
-//**************
-// eImage::Name
-//**************
-inline std::string eImage::Name() const {
-	return name;
+inline unsigned int eImage::GetID() const {
+	return id;
 }
 
 #endif /* EVIL_IMAGE_H */

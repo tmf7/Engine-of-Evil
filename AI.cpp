@@ -517,7 +517,7 @@ void eAI::UpdateKnownMap() {
 
 //***************
 // eAI::Draw
-// TODO: make this draw independent of eEntity::Draw()
+// TODO(?): make this draw independent of eEntity::Draw()
 //***************
 void eAI::Draw() {
 //	DrawKnownMap();	
@@ -548,6 +548,7 @@ void eAI::DrawGoalWaypoints() {
 
 //******************
 // eAI::DrawTrailWaypoints
+// FIXME: add this properly to the renderPool
 //******************
 void eAI::DrawTrailWaypoints() {
 	eNode<eVec2> * iterator;
@@ -567,6 +568,7 @@ void eAI::DrawTrailWaypoints() {
 
 //******************
 // eAI::DrawCollisionCircle
+// FIXME: add this properly to the renderPool
 //******************
 void eAI::DrawCollisionCircle() const {
 	eVec2 debugVector;
@@ -600,6 +602,7 @@ void eAI::DrawCollisionCircle() const {
 
 //******************
 // eAI::DrawKnownMap
+// FIXME: add this properly to the renderPool
 //******************
 void eAI::DrawKnownMap() const {
 	SDL_Rect screenRect;
@@ -628,7 +631,7 @@ void eAI::DrawKnownMap() const {
 		if (knownMap.Index(row, column) == VISITED_TILE) {
 			screenRect.x = eMath::NearestInt(((float)(row * knownMap.CellWidth()) - game.GetCamera().GetAbsBounds().x));
 			screenRect.y = eMath::NearestInt(((float)(column * knownMap.CellHeight()) - game.GetCamera().GetAbsBounds().y));
-			game.GetRenderer().DrawDebugRect(screenRect);
+			game.GetRenderer().DrawDebugRect(black, screenRect, true, RENDERTYPE_DYNAMIC);
 		}
 		
 		column++;

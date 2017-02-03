@@ -3,19 +3,19 @@
 
 #include "Definitions.h"
 
-//*************************************************************************
-//							eInput
-// TODO: fix the mouse indexing, currently SDL_BUTTON_LEFT/MIDDLE/RIGHT are used
-// which are 1/2/3 respectively, which does not align nicely with mousButtons array.
-// Therefore, currently the hack of decreasing the queried button by 1 is used in
-// MouseHeld/MousePressed/MouseReleased, which could break the code if more buttons
-// are ever used
-//*************************************************************************
+//*************************************
+//				eInput
+//*************************************
 class eInput {
 public:
 
 						eInput();
+						eInput(const eInput & other) = delete;
+						eInput(eInput && other) = delete;
 						~eInput();
+
+	eInput &			operator=(const eInput & other) = delete;
+	eInput				operator=(eInput && other) = delete;
 
 	void				Init();
 	void				Update();
@@ -46,7 +46,8 @@ private:
 //***************
 // eInput::eInput
 //***************
-inline eInput::eInput() : keys(nullptr), prevKeys(nullptr) {
+inline eInput::eInput() 
+	: keys(nullptr), prevKeys(nullptr) {
 }
 
 #endif /* EVIL_INPUT_H */

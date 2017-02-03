@@ -177,7 +177,10 @@ void eMap::Draw() {
 					eMath::NearestFloat(tile.Origin().x - game.GetCamera().GetAbsBounds().x),
 					eMath::NearestFloat(tile.Origin().y - game.GetCamera().GetAbsBounds().y)
 					);
-				game.GetRenderer().AddToRenderQueue(renderImage_t(screenPoint, tile.Image(), tile.Layer()));
+				// FIXME: this should be the shared_ptr<eImage> of a tile, its srcRect (nullptr for entire image), destRect (screen position) and layer)
+//				SDL_Rect dstRect{ (int)screenPoint.x, (int)screenPoint.y, target->GetWidth() , target->GetHeight() };
+//				renderer.AddToRenderPool(renderImage_t{ target, nullptr, dstRect, 0 }, RENDERTYPE_DYNAMIC);
+				game.GetRenderer().AddToRenderPool(renderImage_t(screenPoint, tile.Image(), tile.Layer()), RENDERTYPE_DYNAMIC);
 			}
 			row++; column--;
 		}

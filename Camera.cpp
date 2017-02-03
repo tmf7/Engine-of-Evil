@@ -7,9 +7,8 @@
 // TODO: allow the localBounds to be resized as the window resizes or goes fullscreen
 //***************
 void eCamera::Init() {
-	eVec2 screenCorner = eVec2((float)game.GetRenderer().ViewArea().w, (float)game.GetRenderer().ViewArea().h);
-	localBounds = eBounds(-screenCorner / 2.0f, screenCorner / 2.0f);	// variable rectangle with (0, 0) at its center)
-	SetOrigin(screenCorner / 2.0f);
+	SetZoom(1);
+	SetOrigin(localBounds[1] / 2.0f);
 }
 
 //***************
@@ -26,6 +25,11 @@ void eCamera::Think() {
 	static const int maxY = game.GetMap().TileMap().Height() > (int)localBounds.Height() ? game.GetMap().TileMap().Height() : (int)localBounds.Height();
 
 	input = &game.GetInput();
+	if (input->KeyPressed(SDL_SCANCODE_EQUALS))
+		SetZoom(zoomLevel + zoomIncrement);
+	else if (input->KeyPressed(SDL_SCANCODE_MINUS))
+		SetZoom(zoomLevel - zoomIncrement);
+
 	if (input->KeyHeld(SDL_SCANCODE_SPACE)) {
 		eVec2 snapFocus = game.GetEntity(0)->Origin();
 		eMath::CartesianToIsometric(snapFocus.x, snapFocus.y);
@@ -53,5 +57,23 @@ void eCamera::Think() {
 	if (correction != vec2_zero)
 		SetOrigin(origin + correction);
 */
+}
+
+//***************
+// eCamera::SetZoom
+//***************
+void eCamera::SetZoom(float level) {
+	if (level < minZoom)
+		level = minZoom;
+	else if (level > maxZoom)
+		level = maxZoom;
+
+	zoomLevel = level;
+
+	eVec2 screenBottomRight = eVec2((float)game.GetRenderer().ViewArea().w, (float)game.GetRenderer().ViewArea().h);
+	screenBottomRight *= level;
+
+	// variable rectangle with (0, 0) at its center)
+	localBounds = eBounds(-screenBottomRight / 2.0f, screenBottomRight / 2.0f);
 }
 

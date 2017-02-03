@@ -1,4 +1,6 @@
 #include "Input.h"
+#include "SDL.h"
+#include <cstring>		// memset
 
 //***************
 // eInput::Init
@@ -84,7 +86,7 @@ int eInput::KeyReleased(int key) const {
 // returns 1 if the button is currently being pressed, 0 if not, -1 if invalid button
 //***************
 int eInput::MouseHeld(int button) const {
-	if (button < 1 || button > 3)
+	if (button < SDL_BUTTON_LEFT || button > SDL_BUTTON_RIGHT)
 		return -1;
 
 	return mouseButtons[button - 1];
@@ -95,7 +97,7 @@ int eInput::MouseHeld(int button) const {
 // returns 1 if the button changed state from released to pressed, 0 if not, -1 if invalid button
 //***************
 int eInput::MousePressed(int button) const {
-	if (button < 1 || button > 3)
+	if (button < SDL_BUTTON_LEFT || button > SDL_BUTTON_RIGHT)
 		return -1;
 
 	return (mouseButtons[button - 1] & ~prevMouseButtons[button - 1]);
