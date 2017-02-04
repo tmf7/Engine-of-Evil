@@ -16,27 +16,28 @@ public:
 							eSprite();
 
 	bool					Init(const char * filename);
-	eImage *				Image();
-	void					AddImageTiler(eImage * image);
+	std::shared_ptr<eImage>	GetImage() const;
+	void					SetImage(std::shared_ptr<eImage> & image);
 	void					NextFrame();
 	void					SetAnimation(const int first, const int last, const int frameDelay);
 	void					Pause(bool wantPause = true);
-	const int				Width() const;
-	const int				Height() const;
+	const SDL_Rect &		GetFrameHack() const;
 
 private:
 
-	typedef std::shared_ptr<eImageTiler> Tiler_t;
-
-	std::vector<Tiler_t>	animations;		// all source images and their associated sub-frames (clip-rects) to fully animate this "character"
+//	typedef std::shared_ptr<eImageTiler> Tiler_t;
+//	std::vector<Tiler_t>	animations;		// all source images and their associated sub-frames (clip-rects) to fully animate this "character"
 
 	// TODO: first, last, current may be deprecated due to the circular-link list that ImageTiler provieds for animation sequences
+	std::shared_ptr<eImage>	currentImage;
 	int						firstFrame;
 	int						lastFrame;
 	int						frameDelay;
 	int						currentFrame;
 	int						delayCounter;
 	bool					paused;
+
+	SDL_Rect				spriteFrameHack;		// FIXME: hack for single-frame non-animated sprite (images themselves dont use frames, they just wrap a texture)
 
 	// experimental
 	int						drawOrigin;
@@ -61,18 +62,18 @@ inline bool eSprite::Init(const char * filename) {
 }
 
 //************
-// eSprite::Image
-// mutable access to sprite's current image pixel data
+// eSprite::GetImage
 //************
-inline eImage * eSprite::Image() {
+inline std::shared_ptr<eImage> eSprite::GetImage() const {
 	return currentImage;
 }
 
 //************
 // eSprite::SetImage
 //************
-inline void eSprite::SetImage(eImage * image) {
+inline void eSprite::SetImage(std::shared_ptr<eImage> & image) {
 	currentImage = image;
+	spriteFrameHack = SDL_Rect{ 0, 0, image->GetWidth(), image->GetHeight() };
 }
 
 //************
@@ -114,19 +115,11 @@ inline void eSprite::Pause(bool wantPause) {
 }
 
 //************
-// eSprite::Width
-// wrapper function for sprite's current frame width
+// eSprite::GetFrame
+// FIXME: hack function to test single-frame non-animated sprite
 //************
-inline const int eSprite::Width() const {
-	return currentImage->IsValid() ? currentImage->Frame().w : -1;
-}
-
-//************
-// eSprite::Height
-// wrapper function for sprite's current frame height
-//************
-inline const int eSprite::Height() const {
-	return currentImage->IsValid() ? currentImage->Frame().h : -1;
+inline const SDL_Rect & eSprite::GetFrameHack() const {
+	return spriteFrameHack;
 }
 
 #endif /* EVIL_SPRITE_H */

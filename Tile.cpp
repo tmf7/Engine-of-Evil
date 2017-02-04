@@ -1,77 +1,37 @@
 #include "Tile.h"
 #include "Game.h"
 
-// FIXME: don't use these global non-const variables
-// they should be class static
-int			numTileTypes = 0;
-eImage *	tileSet = nullptr;
-eTileImpl	tileTypes[eTileImpl::maxTileTypes];
+// FIXME: these should be class static
+int									numTileTypes = 0;
+std::shared_ptr<eImageTiler>		tileSet;
+eTileImpl							tileTypes[eTileImpl::maxTileTypes];
 
 //************
 // eTileImpl::eTileImpl
 // returns false on failure to init, true otherwise
 //************
-bool eTileImpl::InitTileTypes(const char * tileSetImageFile, const char * tileFormatFile) {
-	char buffer[MAX_ESTRING_LENGTH];
-	char tileName[MAX_ESTRING_LENGTH];
-
+bool eTileImpl::InitTileTypes(const char * tilerFilename) {
 	// load the tile file
-	tileSet = game.GetImageManager().GetImage(tileSetImageFile, nullptr);
-	if (tileSet == nullptr)
+	if (!game.GetImageTilerManager().LoadTiler(tilerFilename, tileSet))
 		return false;
 
-	std::ifstream	read(tileFormatFile);
-	// unable to find/open file
-	if(!read.good())
+	numTileTypes = tileSet->GetNumSequences();
+	if (!numTileTypes)
 		return false;
 
-	int typeIndex = 0;
-	read.ignore(std::numeric_limits<std::streamsize>::max(), '\n'); // skip the first line of the file
-	while (!read.eof()) {
-		tileTypes[typeIndex].type = typeIndex;		// TODO: have this actually indicate the eImage subframe index for a tileSet
+	// configure the tileTypes array according to each sequence in tileSet
+	for (int i = 0; i < numTileTypes; i++) {
+		std::string name = tileSet->GetSequenceName(i);
+		tileTypes[i].name = name;
+		tileTypes[i].type = tileSet->GetFirstIndex(name);
 
-		// read and set the tile name
-		// EG: "graphics/tiles.bmp_brick"
-		memset(tileName, 0, sizeof(tileName));
-		strcpy_s(tileName, tileSetImageFile);
-		strcat_s(tileName, "_");
-
-		read.getline(buffer, sizeof(buffer), '\t');
-		// unrecoverable read error or improperly formatted file
-		if (read.bad() || read.fail()) {
-			read.clear();
-			read.close();
+		if (tileTypes[i].type == invalidTileType)
 			return false;
-		}
-		strncat_s(tileName, buffer, read.gcount());
 
-		// initialize the image
-		tileTypes[typeIndex].tileImage.Init(tileSet->Source(), tileName);
-		
-		// read the tile frame data
-		// DEBUG: as well as hack collision and hack zDepth data
-		SDL_Rect & targetFrame = tileTypes[typeIndex].tileImage.Frame();
-		for (int targetData = 0; targetData < 6; targetData++) {
-			switch (targetData) {
-				case 0: read >> targetFrame.x; break;
-				case 1: read >> targetFrame.y; break;
-				case 2: read >> targetFrame.w; break;
-				case 3: read >> targetFrame.h; break;
-				case 4: read >> tileTypes[typeIndex].collisionHack; break;
-				default: break;
-			}
-		
-			// unrecoverable read error or improperly formatted file
-			if (read.bad() || read.fail()) {
-				read.clear();
-				read.close();
-				return false;
-			}
-		}
-		read.ignore(std::numeric_limits<std::streamsize>::max(), '\n'); // skip the rest of the line
-		typeIndex++;
-	}
-	numTileTypes = typeIndex;
-	read.close();
+		// TODO: script this somewhere, possibly in another file type
+		// that stores the .tls file to load the imageTiler
+		// and then parallel data for things like collision and such
+		tileTypes[i].collisionHack = tileTypes[i].type == 0 ? false : true;
+	}	
 	return true;
 }

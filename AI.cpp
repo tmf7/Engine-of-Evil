@@ -534,7 +534,7 @@ void eAI::DrawGoalWaypoints() {
 	eNode<eVec2> * iterator;
 	eVec2 debugPoint;
 
-	static eImage * const debugImage = sprite.Image();
+	static const std::shared_ptr<eImage>  debugImage = sprite.GetImage();
 
 	if (!game.debugFlags.GOAL_WAYPOINTS)
 		return;
@@ -554,7 +554,7 @@ void eAI::DrawTrailWaypoints() {
 	eNode<eVec2> * iterator;
 	eVec2 debugPoint;
 	
-	static eImage * const debugImage = sprite.Image();
+	static const std::shared_ptr<eImage> debugImage = sprite.GetImage();
 
 	if (!game.debugFlags.TRAIL_WAYPOINTS)
 		return;

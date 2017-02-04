@@ -7,7 +7,8 @@
 //**************
 bool eMap::Init () {
 	// TODO: initialize multiple tile sheets (somewhat like sprites do)
-	if (!eTileImpl::InitTileTypes("graphics/tiles.png", "graphics/tiles_format.def"))
+//	if (!eTileImpl::InitTileTypes("graphics/tiles.png", "graphics/tiles_format.def"))
+	if (!eTileImpl::InitTileTypes("graphics/grass_and_water.tls"))
 		return false;
 
 	// map dimensions
@@ -177,11 +178,10 @@ void eMap::Draw() {
 					eMath::NearestFloat(tile.Origin().x - game.GetCamera().GetAbsBounds().x),
 					eMath::NearestFloat(tile.Origin().y - game.GetCamera().GetAbsBounds().y)
 					);
-				// FIXME: this should be the shared_ptr<eImage> of a tile, its srcRect (nullptr for entire image), destRect (screen position) and layer)
-//				SDL_Rect dstRect{ (int)screenPoint.x, (int)screenPoint.y, target->GetWidth() , target->GetHeight() };
-//				renderer.AddToRenderPool(renderImage_t{ target, nullptr, dstRect, 0 }, RENDERTYPE_DYNAMIC);
-				game.GetRenderer().AddToRenderPool(renderImage_t(screenPoint, tile.Image(), tile.Layer()), RENDERTYPE_DYNAMIC);
-			}
+				const SDL_Rect & srcRect = tile.ImageFrame();
+				SDL_Rect dstRect = { (int)screenPoint.x, (int)screenPoint.y, srcRect.w, srcRect.h };
+				game.GetRenderer().AddToRenderPool(renderImage_t{ tileSet->Source(), &srcRect, dstRect, tile.GetLayer() }, RENDERTYPE_DYNAMIC);
+			} 
 			row++; column--;
 		}
 		oddLine = !oddLine;

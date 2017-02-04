@@ -2,7 +2,7 @@
 #define EVIL_TILE_H
 
 #include "Vector.h"
-#include "Image.h"
+#include "ImageTiler.h"
 
 // Flyweight tile design
 
@@ -21,33 +21,30 @@ private:
 public:
 
 	static const int	invalidTileType = -1;
-	static const int	maxTileTypes = 32;	// TODO: make this much larger, and use std::vector.reserve accordingly
+	static const int	maxTileTypes = 32;	// TODO: make this much larger, and use std::vector::reserve accordingly
 
 public:
 						eTileImpl();
 
 	int					Type() const;
-	const char *		Name() const;
+	const std::string &	Name() const;
 //	void				(*tileBehavior)();
 
-	static bool			InitTileTypes(const char * tileSetImageFile, const char * tileFormatFile);
+	static bool			InitTileTypes(const char * tilerFilename);
 	static int			NumTileTypes();
 
 	static bool			IsCollidableHack(int type);
 	
 private:
 	
-	// TODO: change this to an std::vector<eImage *> tileSets, where each eImage stores tile subframes for a tileset
-	// then the tileTypes array may need not exist
-	eImage				tileImage;			// all refer to same source image, type determines which frame to use
-	int					type;				// game-specific value to simplifiy hard-coded or scripted responses to this type
-	
+	int					type;				// index of the tileSet eImageTiler used
+	std::string			name;				// name of the sequence (or single tile image) in the tileSet
 	bool				collisionHack;		// FIXME: temporary solution to set entire CELL of spatial index grid to TRAVERSABLE/COLLISION
 };
 
-extern eTileImpl	tileTypes[eTileImpl::maxTileTypes];
-extern eImage *		tileSet;
-extern int			numTileTypes;
+extern eTileImpl					tileTypes[eTileImpl::maxTileTypes];
+extern std::shared_ptr<eImageTiler>	tileSet;				// TODO: allow this to be an array of tilesets (eImageTilers) to mix and match
+extern int							numTileTypes;
 
 //************
 // eTileImpl::NumTileTypes
@@ -79,10 +76,10 @@ inline int eTileImpl::Type() const {
 
 //************
 // eTileImpl::Name
-// DEBUG (format): "graphics/tiles.bmp_brick"
+// DEBUG (from .tls file): "water" or "grass, etc
 //************
-inline const char * eTileImpl::Name() const {
-	return tileTypes[type].tileImage.Name().c_str();
+inline const std::string & eTileImpl::Name() const {
+	return name;
 }
 
 //***********************************************
@@ -96,15 +93,15 @@ public:
 						eTile();
 						eTile(const eVec2 & origin, const int type, const int layer);
 	
-	eImage *			Image();
+	const SDL_Rect &	ImageFrame() const;
 	int					Type() const;
 	void				SetType(int newType);
-	const char *		Name() const;
+	const std::string &	Name() const;
 	const eVec2 &		Origin() const;
 	void				SetOrigin(const float x, const float y);
 	void				SetOrigin(const eVec2 & point);
 
-	int					Layer() const;
+	Uint8				GetLayer() const;
 	void				SetLayer(const int newLayer);
 
 	bool				IsCollidableHack() const;	
@@ -116,7 +113,7 @@ private:
 	eVec2				origin;			// raw top-left x,y in map at large; does not account for camera position
 //	unsigned int		GUID;			// the unique memory index in Tile map[][]
 //	bool				visited;		// for fog of war queries
-	int					layer;			// layers draw in order back to front
+	Uint8				layer;			// layers draw in order back to front
 };
 
 //************
@@ -135,10 +132,16 @@ inline eTile::eTile(const eVec2 & origin, const int type, const int layer)
 
 
 //************
-// eTile::Image
+// eTile::ImageFrame
+// TODO: currently assumes a tile is not animated
+// but re-code for:
+// eImageFrame result;
+// tileSet->GetFirstFrame(impl->Name(), result);
+// to utilize and advance an animated tile through
+// currentFrame = currentFrame.Next();
 //************
-inline eImage * eTile::Image() {
-	return &impl->tileImage;
+inline const SDL_Rect & eTile::ImageFrame() const {
+	return tileSet->GetFrame(impl->type).Frame();
 }
 
 //************
@@ -159,7 +162,7 @@ inline void eTile::SetType(int newType) {
 // eTile::Name
 // DEBUG (format): "graphics/tiles.bmp_brick"
 //************
-inline const char * eTile::Name() const {
+inline const std::string & eTile::Name() const {
 	return impl->Name();
 }
 
@@ -187,7 +190,7 @@ inline void eTile::SetOrigin(const eVec2 & point) {
 //************
 // eTile::Layer
 //************
-inline int eTile::Layer() const {
+inline Uint8 eTile::GetLayer() const {
 	return layer;
 }
 

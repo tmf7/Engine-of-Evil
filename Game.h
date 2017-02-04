@@ -27,6 +27,8 @@ public:
 		SDL_ERROR,
 		INPUT_ERROR,
 		RENDERER_ERROR,
+		IMAGE_MANAGER_ERROR,
+		TILER_MANAGER_ERROR,
 		MAP_ERROR,
 		ENTITY_ERROR,
 		INIT_SUCCESS = -1
@@ -60,10 +62,24 @@ private:
 	void				FreeAssets();
 };
 
-extern Uint32 globalIDPool;	// globally unique identifier: each resource gets, regardless of copying, moving, or type
-extern eGame game;						// one instance used by all objects
-extern eAI boss;						// FIXME: temporary solution to using dynamic memory to create object instances
-										// then downcast them to their base class (then type check when extracting/using)
+extern Uint32	globalIDPool;						// globally unique identifier: each resource gets, regardless of copying, moving, or type
+extern eGame	game;								// one instance used by all objects
+extern eAI		boss;								// FIXME: temporary solution to using dynamic memory to create object instances
+													// then downcast them to their base class (then type check when extracting/using)
+
+//*****************
+// VerifyRead 
+// global file I/O utility
+// tests for unrecoverable read error or improperly formatted file
+//*****************
+inline bool VerifyRead(std::ifstream & read) {
+	if (read.bad() || read.fail()) {
+		read.clear();
+		read.close();
+		return false;
+	}
+	return true;
+}
 
 //****************
 // eGame::eGame

@@ -1,19 +1,6 @@
 #include "ImageTilerManager.h"
 #include "Game.h"
 
-//*****************
-// VerifyRead (global)
-// tests for unrecoverable read error or improperly formatted file
-//*****************
-inline bool VerifyRead(std::ifstream & read) {
-	if (read.bad() || read.fail()) {
-		read.clear();
-		read.close();
-		return false;
-	}
-	return true;
-}
-
 //***************
 // eImageTilerManager::Init
 //***************
@@ -26,19 +13,23 @@ bool eImageTilerManager::Init() {
 	std::shared_ptr<eImage> error_image;
 	game.GetImageManager().GetImage(0, error_image);
 
-	// generate an single-sequence sequenceHash 
+	// generate an single-sequence sequenceHash (with one name)
 	// and frameList of one frame the size of the error_image
 	auto hasher = std::hash<std::string>{};
+	std::vector<std::string> sequenceNames;
 	eHashIndex sequenceHash;
 	std::vector<eImageFrame> frameList;
+	sequenceNames.reserve(1);
 	frameList.reserve(1);
 	sequenceHash.ClearAndResize(1);
-	sequenceHash.Add(hasher("error_imageTiler"), 0);
+	std::string error_name = "error_imageTiler";
+	sequenceNames.push_back(error_name);
+	sequenceHash.Add(hasher(error_name), 0);
 	frameList.push_back(eImageFrame( SDL_Rect{ 0, 0, error_image->GetWidth(), error_image->GetHeight() } , frameList.data()));
 
 	// register the error_imageTiler as the first element of tilerList
-	tilerFilenameHash.Add(hasher("error_imageTiler"), tilerList.size());
-	tilerList.push_back(std::make_shared<eImageTiler>(error_image, std::move(frameList), std::move(sequenceHash), "invalid_file", tilerList.size()));
+	tilerFilenameHash.Add(hasher(error_name), tilerList.size());
+	tilerList.push_back(std::make_shared<eImageTiler>(error_image, std::move(frameList), std::move(sequenceNames), std::move(sequenceHash), "invalid_file", tilerList.size()));
 	globalIDPool++;
 	return true;
 }
@@ -125,6 +116,7 @@ bool eImageTilerManager::LoadTiler(const char * filename, std::shared_ptr<eImage
 		return true;
 
 	char buffer[MAX_ESTRING_LENGTH];
+	std::vector<std::string> sequenceNames;
 	eHashIndex sequenceHash;
 	std::vector<eImageFrame> frameList;
 	std::shared_ptr<eImage> source = nullptr;
@@ -145,8 +137,8 @@ bool eImageTilerManager::LoadTiler(const char * filename, std::shared_ptr<eImage
 		return false;
 	}
 
-	// get a pointer to the source image
-	if (!game.GetImageManager().GetImage(buffer, source)) {
+	// get a pointer to the source image (or try to load it if it doesn't exist yet)
+	if (!game.GetImageManager().LoadImage(buffer, SDL_TEXTUREACCESS_STATIC, source)) {
 		result = tilerList[0];	// error imageTiler
 		return false;
 	}
@@ -166,6 +158,7 @@ bool eImageTilerManager::LoadTiler(const char * filename, std::shared_ptr<eImage
 		}
 	}
 	frameList.reserve(numFrames);					// minimize dynamic allocations
+	sequenceNames.reserve(numSequences);
 	sequenceHash.ClearAndResize(numSequences);		// esure each sequenceName has a unique hash
 
 	while (!read.eof()) {
@@ -178,6 +171,7 @@ bool eImageTilerManager::LoadTiler(const char * filename, std::shared_ptr<eImage
 		}
 
 		// add the sequence name and index to the hash
+		sequenceNames.push_back(buffer);
 		sequenceHash.Add(hasher(buffer), frameList.size());
 		eImageFrame * firstFrame = frameList.data() + frameList.size();		// used to close sequence loops
 
@@ -214,7 +208,7 @@ bool eImageTilerManager::LoadTiler(const char * filename, std::shared_ptr<eImage
 
 	// register the requested imageTiler
 	tilerFilenameHash.Add(hasher(filename), tilerList.size());
-	result = std::make_shared<eImageTiler>(source, std::move(frameList), std::move(sequenceHash), filename, tilerList.size());
+	result = std::make_shared<eImageTiler>(source, std::move(frameList), std::move(sequenceNames), std::move(sequenceHash), filename, tilerList.size());
 	tilerList.push_back(result);
 	globalIDPool++;
 	return true;

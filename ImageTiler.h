@@ -17,11 +17,15 @@ class eImageFrame {
 	friend class eImageTiler;
 
 public:
-	
+						eImageFrame() 
+							: frame(SDL_Rect{ 0, 0, 0, 0 }), 
+							  next(nullptr) {
+						};
+
 						eImageFrame(const SDL_Rect & frame, eImageFrame * next)
 							: frame(frame), 
 							  next(next) {
-							};
+						};
 
 	SDL_Rect			Frame()		  { return frame; };
 	const SDL_Rect &	Frame() const { return frame; };
@@ -44,17 +48,21 @@ private:
 class eImageTiler {
 public:
 
-								eImageTiler(std::shared_ptr<eImage> image, std::vector<eImageFrame> && frameList, eHashIndex && sequenceHash, const char * filename, int id);
+								eImageTiler(std::shared_ptr<eImage> image, std::vector<eImageFrame> && frameList, std::vector<std::string> && sequenceNames, eHashIndex && sequenceHash, const char * filename, int id);
 
 	std::shared_ptr<eImage>		Source() const;
-	bool						GetFirstFrame(const char * sequenceName, eImageFrame & result) const;
-	const SDL_Rect &			GetFrame(int frameNumber) const;
+	const std::string &			GetSequenceName(int sequenceNumber) const;
+	int							GetFirstIndex(const std::string & sequenceName) const;
+	const eImageFrame &			GetFirstFrame(const std::string & sequenceName) const;
+	const eImageFrame &			GetFrame(int frameNumber) const;
 	int							GetNumFrames() const;
+	int							GetNumSequences() const;
 	const std::string &			GetFilename() const;
 
 private:
 
-	eHashIndex					sequenceHash;		// name, frameList-index pairs with index as the first of a sequence
+	std::vector<std::string>	sequenceNames;
+	eHashIndex					sequenceHash;		// hashed-name, frameList-index pairs with index as the first of a sequence
 	std::shared_ptr<eImage>		source;				// overall image to sub-divide
 	std::vector<eImageFrame>	frameList;			// subsections of image to focus on
 	std::string					filename;			// source file loaded from
@@ -64,9 +72,10 @@ private:
 //**************
 // eImageTiler::eImageTiler
 //**************
-inline eImageTiler::eImageTiler(std::shared_ptr<eImage> image, std::vector<eImageFrame> && frameList, eHashIndex && sequenceHash, const char * filename, int id)
+inline eImageTiler::eImageTiler(std::shared_ptr<eImage> image, std::vector<eImageFrame> && frameList, std::vector<std::string> && sequenceNames, eHashIndex && sequenceHash, const char * filename, int id)
 	: source(image),
 	  frameList(std::move(frameList)),
+	  sequenceNames(std::move(sequenceNames)),
 	  sequenceHash(std::move(sequenceHash)),
 	  filename(filename),
 	  id(id) {
@@ -80,35 +89,41 @@ inline std::shared_ptr<eImage> eImageTiler::Source() const {
 }
 
 //**************
-// eImageTiler::GetFirstFrame
-// DEBUG: assumes each sequenceName is unique
-// and therefore has a unique hash within the
-// scope of this eImageTiler
-// DEBUG: duplicate sequence names are allowed
-// to appear across separate eImageTilers
-// returns false on failure, true otherwise
+// eImageTiler::GetSequenceName
 //**************
-inline bool eImageTiler::GetFirstFrame(const char * sequenceName, eImageFrame & result) const {
-	if (!sequenceName)
-		return false;
+inline const std::string & eImageTiler::GetSequenceName(int sequenceNumber) const {
+	return sequenceNames[sequenceNumber];
+}
 
-	// check that the sequence exists
-	// and that there is no name collision
+
+//**************
+// eImageTiler::GetFirstIndex
+// DEBUG: assumes each sequenceName exists,
+// is is unique, and has a unique hash within this eImageTiler
+// DEBUG: if any of these assumptions prove false this returns -1
+//**************
+inline int eImageTiler::GetFirstIndex(const std::string & sequenceName) const {
+	auto hasher = std::hash<std::string>{};
+	return sequenceHash.First(hasher(sequenceName));
+}
+
+//**************
+// eImageTiler::GetFirstFrame
+// DEBUG: assumes each sequenceName exists,
+// is is unique, and has a unique hash within this eImageTiler
+//**************
+inline const eImageFrame & eImageTiler::GetFirstFrame(const std::string & sequenceName) const {
 	auto hasher = std::hash<std::string>{};
 	int index = sequenceHash.First(hasher(sequenceName));
-	if (index >= 0 && sequenceHash.Next(index) < 0) {
-		result = frameList[index];
-		return true;
-	}
-	return false;
+	return frameList[index];
 }
 
 //**************
 // eImageTiler::GetFrame
-// convenience function
+// get a specific frame from the imageTiler
 //**************
-inline const SDL_Rect & eImageTiler::GetFrame(int frameNumber) const {
-	return frameList[frameNumber].frame;
+inline const eImageFrame & eImageTiler::GetFrame(int frameNumber) const {
+	return frameList[frameNumber];
 }
 
 //**************
@@ -117,6 +132,14 @@ inline const SDL_Rect & eImageTiler::GetFrame(int frameNumber) const {
 inline int eImageTiler::GetNumFrames() const {
 	return frameList.size();
 }
+
+//**************
+// eImageTiler::GetNumSequences
+//**************
+inline int eImageTiler::GetNumSequences() const {
+	return sequenceNames.size();
+}
+
 //**************
 // eImageTiler::GetFilename
 //**************

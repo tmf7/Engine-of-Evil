@@ -1,0 +1,4 @@
+graphics/grass_and_water.png
+2 2
+grass	{0 0 64 64}
+water	{192 320 64 64}

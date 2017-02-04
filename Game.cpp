@@ -16,6 +16,12 @@ eGame::ErrorCode eGame::Init() {
 	if (!renderer.Init())
 		return RENDERER_ERROR;
 
+	if (!imageManager.Init())
+		return IMAGE_MANAGER_ERROR;
+
+	if (!imageTilerManager.Init())
+		return TILER_MANAGER_ERROR;
+
 	if (!map.Init())
 		return MAP_ERROR;
 
@@ -49,6 +55,12 @@ void eGame::Shutdown(eGame::ErrorCode error) {
 				break;
 			case RENDERER_ERROR:
 				SDL_strlcpy(message, "RENDERER INIT FAILURE", 64);
+				break;
+			case IMAGE_MANAGER_ERROR:
+				SDL_strlcpy(message, "IMAGE MANAGER INIT FAILURE", 64);
+				break;
+			case TILER_MANAGER_ERROR:
+				SDL_strlcpy(message, "TILER MANAGER INIT FAILURE", 64);
 				break;
 			case MAP_ERROR:
 				SDL_strlcpy(message, "MAP INIT FAILURE", 64);
