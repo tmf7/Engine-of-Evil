@@ -15,6 +15,7 @@ public:
 
 							eSpatialIndexGrid();
 
+	bool					IsValid(const int row, const int column) const;
 	bool					IsValid(const eVec2 & point) const;
 	void					Validate(eVec2 & point) const;
 	void					Validate(int & row, int & column) const;
@@ -31,13 +32,11 @@ public:
 	void					SetCellWidth(const int cellWidth);
 	void					SetCellHeight(const int cellHeight);
 
-/*
-	// for use by iterators
+	// iterator hooks
 	type *					begin() const;
 	type *					end() const;
 	const type *			begin() const;
 	const type *			end() const;
-*/
 
 	int						Rows() const;
 	int						Columns() const;
@@ -53,11 +52,10 @@ private:
 	int						cellHeight;
 };
 
-
 //******************
 // eSpatialIndexGrid::eSpatialIndexGrid
 //******************
-template< class type, int rows, int columns>
+template< class type, int rows, int columns >
 inline eSpatialIndexGrid<type, rows, columns>::eSpatialIndexGrid() 
 	: cellWidth(1), cellHeight(1) {
 }
@@ -74,6 +72,17 @@ inline bool eSpatialIndexGrid<type, rows, columns>::IsValid(const eVec2 & point)
 	return false;
 }
 
+//**************
+// eSpatialIndexGrid::IsValid
+// returns true if row and column lie within the grid area
+//**************
+template< class type, int rows, int columns>
+inline bool eSpatialIndexGrid<type, rows, columns>::IsValid(const int row, const int column) const {
+	if (row >= 0 && row < rows && column >= 0 && column < columns)
+		return true;
+
+	return false;
+}
 
 //******************
 // eSpatialIndexGrid::Validate
@@ -221,9 +230,7 @@ template< class type, int rows, int columns>
 inline void eSpatialIndexGrid<type, rows, columns>::SetCellHeight(const int cellHeight) {
 	this->cellHeight = cellHeight > 0 ? cellHeight : 1;
 }
-////////////////////////////////////////////////////////////////////////////////////////////////
-// BEGIN iterator test
-/*
+
 //******************
 // eSpatialIndexGrid::begin
 //******************
@@ -257,9 +264,7 @@ template< class type, int rows, int columns>
 inline const type * eSpatialIndexGrid<type, rows, columns>::end() const {
 	return &cells[rows - 1][columns];
 }
-*/
-// END iterator test
-////////////////////////////////////////////////////////////////////////////////////////////////
+
 //******************
 // eSpatialIndexGrid::Rows
 //******************

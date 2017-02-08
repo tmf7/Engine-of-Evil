@@ -25,6 +25,10 @@ void eCamera::Think() {
 	static const int maxY = game.GetMap().TileMap().Height() > (int)localBounds.Height() ? game.GetMap().TileMap().Height() : (int)localBounds.Height();
 
 	input = &game.GetInput();
+
+	// TODO/FIXME (much later): zoom in/out adversly affects drawing coordinates
+	// and number of tiles drawn to the screen (which is currently more-or-less hardcoded)
+	// So right now this is more of an experiment/novelty than a feature
 	if (input->KeyPressed(SDL_SCANCODE_EQUALS))
 		SetZoom(zoomLevel + zoomIncrement);
 	else if (input->KeyPressed(SDL_SCANCODE_MINUS))

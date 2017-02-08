@@ -3,7 +3,6 @@
 //byte_t memoryPool[ONE_GIGABYTE];
 Uint32 globalIDPool = 0;
 eGame game;
-eAI boss;
 
 //****************
 // eGame::Init
@@ -28,8 +27,7 @@ eGame::ErrorCode eGame::Init() {
 	input.Init();		// DEBUG: will crash if it fails (around the new allocation)
 	camera.Init();
 
-	numEntities++;
-	entities[0] = &boss;
+	entities.push_back(std::make_shared<eAI>());
 	if (!entities[0]->Spawn())
 		return ENTITY_ERROR;		// FIXME: make this entityID dependent
 
@@ -82,56 +80,68 @@ void eGame::Shutdown(eGame::ErrorCode error) {
 void eGame::FreeAssets() {
 	renderer.Free();
 }
+//****************
+// eGame::DrawFPS
+// add fps text to the renderPool
+//****************
+void eGame::DrawFPS() {
+	std::string fraps = "FPS: ";
+	fraps += std::to_string(fixedFPS);
+	fraps += "/";
+	fraps += std::to_string(GetDynamicFPS());
+	renderer.DrawOutlineText(fraps.c_str(), vec2_zero, redColor, false, RENDERTYPE_STATIC);
+}
 
 //****************
 // eGame::Run
-// map and entities must already be initialized
-// TODO: check victory condition here or in the entities for alternate quit
-// TODO: modify the frame rate governance
 //****************
-bool eGame::Run() {
-	static SDL_Event	event;					// FIXME: don't make this static
-	Uint32				start, frameDuration;
-	int					delay;
-	static const int	fps = 60;				// FIXME: don't make this static
+bool eGame::Run() {	
+	Uint32 startTime = SDL_GetTicks();
 
-/*
-// TODO: as an alternative method of timing in general
-// BUG: subsequent calls to now() will affect calculated run times (ie later intervals may seem quicker)
-#include <chrono>
-	auto t1 = std::chrono::high_resolution_clock::now();
-	auto t2 = std::chrono::high_resolution_clock::now();
-	printf("%I64i milliseconds\n\n", std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count());
-
-*/
-	
-	start = SDL_GetTicks();
-
-	// FIXME/TODO: the event poll may be extremely slow if it has to search through all events
+	// FIXME/TODO: the event poll may be extremely slow
+	SDL_Event event;
 	while (SDL_PollEvent(&event)) {
 		if (event.type == SDL_QUIT)
 			return false;
 	}
 	
+	// system updates
 	input.Update();
-	entities[0]->Think();
+	entities[0]->Think();			// TODO: loop over all entities
 	camera.Think();
 	map.Think();
 
+	// draw the dynamic/scalable gameplay
 	renderer.Clear();
-
-	// TODO: this draw order should be z-depth dependent on a per-entity/tile basis
 	map.Draw();
 	entities[0]->Draw();
+	renderer.FlushDynamicPool();
 
-	// DEBUG: new function that does all the final blitting
-	renderer.Flush();
+	// TODO: write and call these DYNAMIC geometry debug draw calls
+	// draw all debug information as an overlay
+	//	map.DebugDraw();				// draw the collision bounds of collidable tiles
+	//	entities[0].DebugDraw();		// loop over all entities for their collision bounds, and grid occupancy
+										// ALSO: only draw goal/trail_waypoints and known_map for a SINGLE currently SELECTED entity
 
+	// TODO: the HUD would be a static/non-scalable overlay...which should draw with the player...
+	// BUT THAT'S FINE because FlushStaticPool gets called last, whew!
+
+	// draw static debug information
+	if (debugFlags.FRAMERATE)
+		DrawFPS();
+
+	renderer.FlushStaticPool();
 	renderer.Show();
 
-	frameDuration = SDL_GetTicks() - start;	// DEBUG: always positive unless game runs for ~49 days
-	delay = (1000 / fps) - frameDuration;
-	SDL_Delay(delay > 0 ? delay : 0);		// FIXME: SDL_Delay isn't the most reliable frame delay method
+	// frame-rate governing delay
+	deltaTime = SDL_GetTicks() - startTime;
 
+	// DEBUG: breakpoint handling
+	if (deltaTime > 1000)
+		deltaTime = frameTime;
+
+	// DEBUG: delta time of this last frame is not used as the global update interval,
+	// instead the globally available update interval is fixed to frameTime
+	deltaTime <= frameTime ? SDL_Delay(frameTime - deltaTime) : SDL_Delay(deltaTime - frameTime);
 	return true;
 }

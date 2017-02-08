@@ -15,17 +15,17 @@ typedef enum {
 } eRenderType;
 
 typedef struct renderImage_s {
-	std::shared_ptr<eImage>		image;			// for entities, this would be which frame of the eSprite is being drawn
+	std::shared_ptr<eImage>		image;			// source image (ie texture wrapper)
 	const SDL_Rect *			srcRect;		// what part of the source image to draw (nullptr for all of it)
 	SDL_Rect					dstRect;		// where on the screen and what size
-	Uint32						priority;
+	Uint32						priority;		// lower priority draws first
 
 	renderImage_s()
 		: image(nullptr),
 		  srcRect(nullptr),
 		  priority(MAX_LAYER << 16) {};
 	
-	renderImage_s(std::shared_ptr<eImage> image, const SDL_Rect * srcRect, const SDL_Rect & dstRect, const Uint8 layer)
+	renderImage_s(std::shared_ptr<eImage> & image, const SDL_Rect * srcRect, const SDL_Rect & dstRect, const Uint8 layer)
 		: image(image),
 		  srcRect(srcRect), 
 		  dstRect(dstRect),
@@ -37,6 +37,11 @@ typedef struct renderImage_s {
 //				eRenderer
 // Base class for all window/fullscreen drawing. 
 // Contains the window, renderer, and font handles
+// DynamicPool draws to a scalable target that typically tracks with the camera
+// StaticPool draws so a non-scalable target that typically draws to screen coordinates
+// DEBUG: RENDERTYPE_STATIC items must always be drawn last 
+// otherwise they will be overwritten by the scalable target
+// and its RENDERTYPE_DYANMIC items
 //****************************************************
 class eRenderer {
 public:
@@ -53,10 +58,12 @@ public:
 	SDL_Window *		GetWindow() const;
 
 	void				AddToRenderPool(renderImage_t & renderImage, bool dynamic);
-	void				Flush();
+	void				FlushDynamicPool();
+	void				FlushStaticPool();
 
-	void				DrawOutlineText(const char * text, const eVec2 & point, const SDL_Color & color, bool constText, bool dynamic) const;
+	void				DrawOutlineText(const char * text, const eVec2 & point, const SDL_Color & color, bool constText, bool dynamic);
 	void				DrawImage(std::shared_ptr<eImage> image, const SDL_Rect * srcRect, const SDL_Rect * destRect) const;
+	void				DrawDebugRectIso(const SDL_Color & color, const SDL_Rect & rect, bool dynamic) const;
 	void				DrawDebugRect(const SDL_Color & color, const SDL_Rect & rect, bool fill, bool dynamic) const;
 	void				DrawDebugRects(const SDL_Color & color, const std::vector<SDL_Rect> & rects, bool fill, bool dynamic) const;
 
@@ -65,7 +72,7 @@ public:
 
 private:
 
-	static const int				defaultRenderCapacity = 1024;// maximum separate items to indirectly draw from the pool
+	static const int				defaultRenderCapacity = 1024;// maximum number of items to draw using each render pool
 	std::vector<renderImage_t>		staticPool;					
 	std::vector<renderImage_t>		dynamicPool;				
 
@@ -77,7 +84,10 @@ private:
 
 // utility colors
 extern const SDL_Color clearColor;
-extern const SDL_Color black;
+extern const SDL_Color blackColor;
+extern const SDL_Color greyColor_trans;
+extern const SDL_Color greenColor;
+extern const SDL_Color redColor;
 
 //***************
 // eRenderer::eRenderer

@@ -40,6 +40,7 @@ void eAI::Think() {
 	input = &game.GetInput();
 	if (input->MousePressed(SDL_BUTTON_LEFT)) {
 		// TODO(?1/2?): funtionalize these two lines of getting mouse and camera, then converting to isometric
+		// YES: make it part of the PLAYER class' input handling, and get rid of this block of code here
 		eVec2 point = eVec2((float)input->GetMouseX() + game.GetCamera().GetAbsBounds().x, (float)input->GetMouseY() + game.GetCamera().GetAbsBounds().y);
 		eMath::IsometricToCartesian(point.x, point.y);
 		AddUserWaypoint(point);
@@ -453,6 +454,9 @@ void eAI::UpdateKnownMap() {
 	int tileResetRange;		// size of the box around the goal to set tiles to UNKNOWN_TILE
 
 	// mark the tile to help future movement decisions
+	// DEBUG: only needs to be more then **half-way** onto a new tile
+	// to set the currentTile as previousTile and VISITED_TILE,
+	// instead of completely off the tile (via a full absBounds check agains the eTile bounds)
 	checkTile = &knownMap.Index(origin);
 	if (checkTile != currentTile) {
 		previousTile = currentTile;
@@ -578,7 +582,7 @@ void eAI::DrawCollisionCircle() const {
 	int blue[3] = { 0,0,255 };
 	int * color;
 
-	if (!game.debugFlags.COLLISION_CIRCLE)
+	if (!game.debugFlags.COLLISION)
 		return;
 
 	// draws one pixel for each point on the current collision circle 
@@ -631,7 +635,7 @@ void eAI::DrawKnownMap() const {
 		if (knownMap.Index(row, column) == VISITED_TILE) {
 			screenRect.x = eMath::NearestInt(((float)(row * knownMap.CellWidth()) - game.GetCamera().GetAbsBounds().x));
 			screenRect.y = eMath::NearestInt(((float)(column * knownMap.CellHeight()) - game.GetCamera().GetAbsBounds().y));
-			game.GetRenderer().DrawDebugRect(black, screenRect, true, RENDERTYPE_DYNAMIC);
+			game.GetRenderer().DrawDebugRect(blackColor, screenRect, true, RENDERTYPE_DYNAMIC);
 		}
 		
 		column++;

@@ -3,11 +3,7 @@
 
 #include "Vector.h"
 
-// TODO: Develop this class to account for bounds rotated about an origin
-// to allow for better shape-fitting of rotated sprite animations
-// never translate the model-bounds (only the absBounds); allow rotation of the model-bounds
-// only ever get the model-bounds radius/dimensions
-// "size" could be a vector from mins to maxs (the diagonal of the box == the diameter of the circumscribed circle)
+// TODO: "size" could be a vector from mins to maxs (the diagonal of the box == the diameter of the circumscribed circle)
 
 //**********************************
 //			eBounds
@@ -35,15 +31,15 @@ public:
 
 	float			Width() const;
 	float			Height() const;
-	bool			ContainsPoint(const eVec2 & point) const;
-	bool			Overlaps(const eBounds & bounds) const;
+	bool			ContainsPoint(const eVec2 & point) const;	// FIXME: deprecated by eCollsion utility class
+	bool			Overlaps(const eBounds & bounds) const;		// FIXME: deprecated by eCollsion utility class
 //	bool			LineIntersection(const eVec2 & start, const eVec2 & end) const;
 					// intersection point is start + dir * scale
 //	bool			RayIntersection(const eVec2 & start, const eVec2 & dir, float & scale) const;
 
 private:
 
-	eVec2			bounds[2];			// mins == bounds[0] and maxs == bounds[1]
+	eVec2			bounds[2];			// mins at [0] and maxs at [1]
 };
 
 //*************
@@ -73,6 +69,7 @@ inline eBounds::eBounds(const eVec2 & point) {
 
 //*************
 // eBounds::operator[]
+// returns mins for [0] and maxs for [1] 
 // undefined behavior for index out of bounds
 //*************
 inline const eVec2 & eBounds::operator[](const int index) const {
@@ -81,6 +78,7 @@ inline const eVec2 & eBounds::operator[](const int index) const {
 
 //*************
 // eBounds::operator[]
+// returns mins for [0] and maxs for [1] 
 // undefined behavior for index out of bounds
 //*************
 inline eVec2 & eBounds::operator[](const int index) {
@@ -183,7 +181,6 @@ inline eBounds & eBounds::ExpandSelf(const float range) {
 
 //*************
 // eBounds::Width
-// FIXME: only works for non-rotated bounds
 //*************
 inline float eBounds::Width() const {
 	return bounds[1].x - bounds[0].x;
@@ -191,7 +188,6 @@ inline float eBounds::Width() const {
 
 //*************
 // eBounds::Height
-// FIXME: only works for non-rotated bounds
 //*************
 inline float eBounds::Height() const {
 	return bounds[1].y - bounds[0].y;
@@ -201,6 +197,7 @@ inline float eBounds::Height() const {
 // eBounds::ContainsPoint
 // returns true if the given point is within the bounds
 // includes touching
+// FIXME: deprecated by eCollsion utility class
 //***************
 inline bool eBounds::ContainsPoint(const eVec2 & point) const {
 	if (point.x > bounds[1].x || point.x < bounds[0].x || 
@@ -214,6 +211,7 @@ inline bool eBounds::ContainsPoint(const eVec2 & point) const {
 // eBounds::Overlaps
 // returns true if a given bounds overlaps this bounds
 // includes touching
+// FIXME: deprecated by eCollsion utility class
 //***************
 inline bool eBounds::Overlaps(const eBounds & that) const {
 	if (that.bounds[1].x < bounds[0].x || that.bounds[1].y < bounds[0].y ||

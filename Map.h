@@ -1,16 +1,12 @@
 #ifndef EVIL_MAP_H
 #define EVIL_MAP_H
 
-#include "Definitions.h"
-#include "Vector.h"
 #include "SpatialIndexGrid.h"
-#include "Bounds.h"
-#include "Image.h"
-#include "Tile.h"
+#include "GridCell.h"
 
 template<class type, int rows, int columns>
 class eSpatialIndexGrid;
-typedef eSpatialIndexGrid<eTile, MAX_MAP_ROWS, MAX_MAP_COLUMNS> tile_map_t;
+typedef eSpatialIndexGrid<eGridCell, MAX_MAP_ROWS, MAX_MAP_COLUMNS> tile_map_t;
 
 typedef enum {
 	TRAVERSABLE_MAP,
@@ -27,7 +23,7 @@ public:
 	void					Draw();
 	void					BuildTiles(const int configuration);
 	void					ToggleTile(const eVec2 & point);
-	const tile_map_t &		TileMap() const;
+	tile_map_t &			TileMap();
 
 private:
 
@@ -37,7 +33,7 @@ private:
 //**************
 // eMap::TileMap
 //**************
-inline const tile_map_t & eMap::TileMap() const {
+inline tile_map_t & eMap::TileMap() {
 	return tileMap;
 }
 

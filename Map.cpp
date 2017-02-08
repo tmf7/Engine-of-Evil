@@ -24,12 +24,6 @@ bool eMap::Init () {
 // Populates a matrix for future collision and redraw
 //**************
 void eMap::BuildTiles(const int configuration) {
-	int row, column;
-	int type;
-	eTile * tile;
-
-	static const eTile * tileMapEnd = &tileMap.Index(tileMap.Rows() - 1, tileMap.Columns() - 1);
-
 /*
 // TODO: if very large random numbers are needed ( ie greater than RAND_MAX 32,767 )
 #include <random>
@@ -38,10 +32,13 @@ void eMap::BuildTiles(const int configuration) {
 	std::uniform_int_distribution<int> uniform_dist(0, NUM_ELEMENTS);
 	int r = uniform_dist(engine) % NUM_ELEMENTS;
 */
-	row = 0;
-	column = 0;
-//	for (auto && derp : tileMap) {		// TODO: get rid of tileMapEnd ???
-	for (tile = &tileMap.Index(0, 0); tile <= tileMapEnd; tile++) {
+	srand(SDL_GetTicks());
+	int row = 0;
+	int column = 0;
+
+	for (auto && cell : tileMap) {
+
+		int type;
 		switch (configuration) {
 			case RANDOM_MAP: {
 				type = rand() % eTileImpl::NumTileTypes();
@@ -62,10 +59,6 @@ void eMap::BuildTiles(const int configuration) {
 			break;
 			}
 		}
-		// FIXME/TODO: tileMap.CellWidth/CellHeight may not be representative of a tile's actual/visual size
-		// ALSO: the final procedural generation should be allow tiles to interlock, but also some to float free
-		// this currently locks each cell-sized tile into individual cells
-		// AND draws the map using that breakdown as well
 		eVec2 tileOrigin = eVec2((float)(row * tileMap.CellWidth()), (float)(column * tileMap.CellHeight()));
 		eMath::CartesianToIsometric(tileOrigin.x, tileOrigin.y);
 		tileOrigin.y -= 16;	// tileset specific offset
@@ -73,7 +66,9 @@ void eMap::BuildTiles(const int configuration) {
 		tileOrigin.x -= 32;	// logical-to-screen isometric coordinate calculation hack
 							// FIXME/BUG/TODO: make this flexibly based on the tile image sizes (image frames read in)
 							// AND the cartesian size of a logical tile base
-		*tile = eTile(tileOrigin, type, 0);	// DEBUG: test layer == 0
+
+		// TODO: add one eTile per cell for now, but start layering them according to procedure/file-load
+		cell.Tiles().push_back(eTile(tileOrigin, type, 0));	// DEBUG: test layer == 0
 		column++;
 		if (column >= tileMap.Columns()) {
 			column = 0;
@@ -84,13 +79,13 @@ void eMap::BuildTiles(const int configuration) {
 //**************
 // eMap::ToggleTile
 // toggles the tile type at tileMap[r][c] closest to the given point
-// TODO (map editor): add functionality to drag-and-drop any-size tiles (with optional snap-to-grid)
+// TODO: stop using this, its more of a debug test for cursor location than a proper map editor
 //**************
 void eMap::ToggleTile(const eVec2 & point) {
 	if (!IsValid(point, true))
 		return;
 
-	eTile & tile = tileMap.Index(point);
+	auto & tile = tileMap.Index(point).Tiles()[0];		// DEBUG: assumes only one tile exists for toggling in a eGridCell (not always true)
 	int tileType = tile.Type();
 
 	tileType++;
@@ -113,7 +108,7 @@ bool eMap::IsValid(const eVec2 & point, bool ignoreCollision) const {
 	if	( !tileMap.IsValid(point) )
 		return false;
 
-	if ( !ignoreCollision && eTileImpl::IsCollidableHack(tileMap.Index(point).Type()) )
+	if ( !ignoreCollision && eTileImpl::IsCollidableHack(tileMap.Index(point).Tiles()[0].Type()) )
 		return false;
 
 	return true;
@@ -137,6 +132,7 @@ void eMap::Think() {
 
 	if (input->MousePressed(SDL_BUTTON_RIGHT)) { 
 		// TODO(?2/2?): funtionalize these two lines of getting mouse and camera, then converting to isometric
+		// YES: make it part of the PLAYER class' input handling, and get rid of this block of code here
 		eVec2 tilePoint = eVec2((float)input->GetMouseX() + game.GetCamera().GetAbsBounds().x, (float)input->GetMouseY() + game.GetCamera().GetAbsBounds().y);
 		eMath::IsometricToCartesian(tilePoint.x, tilePoint.y);
 		ToggleTile(tilePoint);
@@ -145,8 +141,8 @@ void eMap::Think() {
 
 //***************
 // eMap::Draw
-// TODO: dim for visited and bright for entity is within its sightRange (see AI::CheckFogOfWar(...))
-// TODO: repeat draw order for all other layers (algorithm currently assumes a single layer)
+// staggered isometric draw order
+// of tiles visible to the camera
 //***************
 void eMap::Draw() {
 	// DEBUG: these constants assume a cell is square, and that its isometric projection
@@ -155,6 +151,8 @@ void eMap::Draw() {
 	static const float invIsoCellWidth = 1.0f / (float)(tileMap.CellWidth() << 1);
 	static const float invIsoCellHeight = 1.0f / (float)(tileMap.CellHeight() >> 1);
 
+	// FIXME: + 5 because the tiles draw staggered and not tip-to-tip so each width is halved
+	// so its + 2 in both directions at least, then another + 1 to accound for any variation
 	int maxHorizCells = (int)(game.GetRenderer().ViewArea().w * invIsoCellWidth) + 5;
 	int maxVertCells = (int)(game.GetRenderer().ViewArea().h * invIsoCellHeight) + 5;
 
@@ -172,15 +170,9 @@ void eMap::Draw() {
 	bool oddLine = false;
 	for (int vertCount = 0; vertCount < maxVertCells; vertCount++) {
 		for (int horizCount = 0; horizCount < maxHorizCells; horizCount++) {
-			if (row < tileMap.Rows() && row >= 0 && column < tileMap.Columns() && column >= 0) {
-				eTile & tile = tileMap.Index(row, column);
-				eVec2 screenPoint = eVec2(
-					eMath::NearestFloat(tile.Origin().x - game.GetCamera().GetAbsBounds().x),
-					eMath::NearestFloat(tile.Origin().y - game.GetCamera().GetAbsBounds().y)
-					);
-				const SDL_Rect & srcRect = tile.ImageFrame();
-				SDL_Rect dstRect = { (int)screenPoint.x, (int)screenPoint.y, srcRect.w, srcRect.h };
-				game.GetRenderer().AddToRenderPool(renderImage_t{ tileSet->Source(), &srcRect, dstRect, tile.GetLayer() }, RENDERTYPE_DYNAMIC);
+			if (tileMap.IsValid(row, column)) {
+				auto & cell = tileMap.Index(row, column);
+				cell.Draw();
 			} 
 			row++; column--;
 		}
@@ -189,19 +181,6 @@ void eMap::Draw() {
 		row = startRow;
 		column = startCol;
 	}
-
-	// TODO: draw the screen area using a staggered approach
-	// get the top left point of the visible window
-	// convert from ISO to CART
-	// grab the tileMap tile using that point
-	// (potentially decrease the row by 1 to start at a wider point, be sure to Validate() it though)
-
-	// query and draw tiles "diagonally" until the isometric cell width has exceeded the current window width
-	// IE: from the start [r][c] go to [r++][c--]
-
-	// once a line is complete, go back to start [r][c], trigger the ODD row bool, then start drawing from [r][c++]
-	// repeat the movement across the screen width
-	// once this ODD line is complete, go back to the "new" start, reset the ODD row bool, then start drawing from [r++][c]
 }
 
 

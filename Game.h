@@ -15,12 +15,15 @@
 class eGame {
 public:
 
-	struct{ // TODO: change these names to DEBUG_NAME_HERE
+	struct {
 		bool	GOAL_WAYPOINTS		= true;
 		bool	TRAIL_WAYPOINTS		= true;
-		bool	COLLISION_CIRCLE	= true;
+		bool	COLLISION			= true;
 		bool	KNOWN_MAP_DRAW		= true;
 		bool	KNOWN_MAP_CLEAR		= true;
+		bool	FRAMERATE			= true;
+		bool	A_STAR_PATH			= true;
+		bool	GRID_OCCUPANCY		= true;
 	} debugFlags;
 
 	enum ErrorCode {
@@ -34,38 +37,52 @@ public:
 		INIT_SUCCESS = -1
 	};
 
-						eGame();
+								eGame();
 
-	ErrorCode			Init();
-	void				Shutdown(ErrorCode error);
-	bool				Run();
+	ErrorCode					Init();
+	void						Shutdown(ErrorCode error);
+	bool						Run();
 
-	eInput &			GetInput();
-	eRenderer &			GetRenderer();
-	eImageManager &			GetImageManager();
-	eImageTilerManager &	GetImageTilerManager();
-	eCamera &			GetCamera();
-	eMap &				GetMap();
-	eEntity *			GetEntity(int entityID);
+	eInput &					GetInput();
+	eRenderer &					GetRenderer();
+	eImageManager &				GetImageManager();
+	eImageTilerManager &		GetImageTilerManager();
+	eCamera &					GetCamera();
+	eMap &						GetMap();
+	std::shared_ptr<eEntity>	GetEntity(int entityID);
+
+	// frame-rate metrics
+	void						SetFixedFPS(const Uint32 newFPS);
+	Uint32						GetFixedFPS() const;
+	Uint32						GetFixedTime() const;
+	Uint32						GetDynamicFPS() const;
+	Uint32						GetDeltaTime() const;
+	void						DrawFPS();
 
 private:
 
-	eEntity *			entities[MAX_ENTITIES];
-	eInput				input;
-	eMap				map;
-	eRenderer			renderer;
-	eImageManager		imageManager;
-	eImageTilerManager	imageTilerManager;
-	eCamera				camera;
-	int					numEntities;
+	void						FreeAssets();
 
-	void				FreeAssets();
+private:
+
+	std::vector<std::shared_ptr<eEntity>>	entities;
+	eHashIndex								entityHash;
+
+	eInput						input;
+	eMap						map;
+	eRenderer					renderer;
+	eImageManager				imageManager;
+	eImageTilerManager			imageTilerManager;
+	eCamera						camera;
+
+	const Uint32				defaultFPS = 60;
+	Uint32						fixedFPS;			// constant framerate
+	Uint32						frameTime;			// constant framerate governing time interval (depends on FixedFPS)
+	Uint32						deltaTime;			// actual time a frame takes to execute
 };
 
 extern Uint32	globalIDPool;						// globally unique identifier: each resource gets, regardless of copying, moving, or type
 extern eGame	game;								// one instance used by all objects
-extern eAI		boss;								// FIXME: temporary solution to using dynamic memory to create object instances
-													// then downcast them to their base class (then type check when extracting/using)
 
 //*****************
 // VerifyRead 
@@ -84,7 +101,9 @@ inline bool VerifyRead(std::ifstream & read) {
 //****************
 // eGame::eGame
 //****************
-inline eGame::eGame() : numEntities(0) {
+inline eGame::eGame() {
+	entities.reserve(MAX_ENTITIES);
+	SetFixedFPS(defaultFPS);
 }
 
 //****************
@@ -131,10 +150,49 @@ inline eMap & eGame::GetMap() {
 
 //****************
 // eGame::GetEntity
-// entityID >= 0 && entityID <= numEntities only
+// DEBUG: ASSERT (entityID >= 0 && entityID <= numEntities)
 //****************
-inline eEntity * eGame::GetEntity(int entityID) {
+inline std::shared_ptr<eEntity> eGame::GetEntity(int entityID) {
 	return entities[entityID];
+}
+
+//****************
+// eGame::SetFixedFPS
+//****************
+inline void eGame::SetFixedFPS(const Uint32 newFPS) {
+	fixedFPS = newFPS;
+	frameTime = 1000 / fixedFPS;
+}
+
+//****************
+// eGame::GetFixedFPS
+//****************
+inline Uint32 eGame::GetFixedFPS() const {
+	return fixedFPS;
+}
+
+//****************
+// eGame::GetFixedTime
+//****************
+inline Uint32 eGame::GetFixedTime() const {
+	return frameTime;
+}
+
+//****************
+// eGame::GetDynamicFPS
+//****************
+inline Uint32 eGame::GetDynamicFPS() const {
+	if (deltaTime)
+		return 1000 / deltaTime;
+	else
+		return fixedFPS;
+}
+
+//****************
+// eGame::GetDeltaTime
+//****************
+inline Uint32 eGame::GetDeltaTime() const {
+	return deltaTime;
 }
 
 #endif /* EVIL_GAME_H */

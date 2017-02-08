@@ -4,7 +4,6 @@
 #include "SDL.h"			// for SDL_sqrtf
 #include "Math.h"
 
-#define DEG2RAD(angle)	( angle * ((float)(M_PI)/180.0f) )
 #define ROTATION_INCREMENT 1.0f
 
 // handles vectors, quaternions, and their operations

@@ -6,6 +6,7 @@
 #include "SDL_image.h"
 #include <cstring>			// memset
 #include <memory>			// std::unique_ptr, std::shared_ptr, std::weak_ptr
+#include <string>
 #include <ios>
 #include <fstream>
 #include <random>

@@ -3,16 +3,22 @@
 
 #include <math.h>
 
+#define RAD2DEG(radians) ( radians * (180.0f/((float)M_PI)) )
+#define DEG2RAD(degrees) ( degrees * ((float)(M_PI)/180.0f) )
+
 //***********************************
 //			eMath
 // general math functionality
 //***********************************
 class eMath {
 public:
-	static float NearestFloat(float x);
-	static int NearestInt(float x);
-	static void IsometricToCartesian(float & x, float & y);
-	static void CartesianToIsometric(float & x, float & y);
+	static float		NearestFloat(float x);
+	static int			NearestInt(float x);
+	static void			IsometricToCartesian(float & x, float & y);
+	static void			CartesianToIsometric(float & x, float & y);
+	static float		Maximize(float a, float b);
+	static float		Minimize(float a, float b);
+	static float		GetAngle(float x, float y);
 };
 
 //************
@@ -43,7 +49,7 @@ inline void eMath::IsometricToCartesian(float & x, float & y) {
 
 //************
 // eMath::CartesianToIsometric
-// // rotates input coordinates 45 degrees clockwise 
+// rotates input coordinates 45 degrees clockwise 
 // DEBUG: assumes the input coordinates are cartesian
 //************
 inline void eMath::CartesianToIsometric(float & x, float & y) {
@@ -51,6 +57,40 @@ inline void eMath::CartesianToIsometric(float & x, float & y) {
 	float cartY = y;
 	x = cartX - cartY;
 	y = (cartX + cartY) * 0.5f;
+}
+
+//***************
+// eMath::Maximize
+//***************
+inline float eMath::Maximize(float a, float b) {
+	return a > b ? a : b;
+}
+
+//***************
+// eMath::Minimize
+//***************
+inline float eMath::Minimize(float a, float b) {
+	return a < b ? a : b;
+}
+
+//*****************
+// GetAngle
+// returns the angle in degrees from the given components
+// DEBUG: assumes components are part of a normalized vector
+//*****************
+inline float eMath::GetAngle(float x, float y) {
+	float angle = 0.0f;
+	if (x == 0.0f && y > 0.0f) {
+		return 90.0f;
+	} else if (x == 0.0f && y < 0.0f) {
+		return 270.0f;
+	} else {
+		float tan = y / x;
+		angle = RAD2DEG(atanf(tan));
+		if (x < 0)
+			angle += 180.0f;
+	}
+	return angle;
 }
 
 #endif /* EVIL_MATH_H */

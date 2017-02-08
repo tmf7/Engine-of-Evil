@@ -32,6 +32,7 @@ private:
 	std::shared_ptr<eImage>	currentImage;
 	int						firstFrame;
 	int						lastFrame;
+
 	int						frameDelay;
 	int						currentFrame;
 	int						delayCounter;
@@ -40,8 +41,8 @@ private:
 	SDL_Rect				spriteFrameHack;		// FIXME: hack for single-frame non-animated sprite (images themselves dont use frames, they just wrap a texture)
 
 	// experimental
-	int						drawOrigin;
-	std::string				name;
+	int						drawOrigin;				// TODO: this will be the world-coordinate where drawing begins (must sync with collisionModel origin, even if offset)
+	std::string				name;					// overall name of the sprite relative to its owner "melee_32_sprite"
 };
 
 //************

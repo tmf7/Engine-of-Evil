@@ -1,7 +1,7 @@
 #ifndef EVIL_TILE_H
 #define EVIL_TILE_H
 
-#include "Vector.h"
+#include "CollisionModel.h"
 #include "ImageTiler.h"
 
 // Flyweight tile design
@@ -21,7 +21,7 @@ private:
 public:
 
 	static const int	invalidTileType = -1;
-	static const int	maxTileTypes = 32;	// TODO: make this much larger, and use std::vector::reserve accordingly
+	static const int	maxTileTypes = 256;
 
 public:
 						eTileImpl();
@@ -37,13 +37,15 @@ public:
 	
 private:
 	
-	int					type;				// index of the tileSet eImageTiler used
+	int					type;				// index of the eImageTiler tileSet used
 	std::string			name;				// name of the sequence (or single tile image) in the tileSet
 	bool				collisionHack;		// FIXME: temporary solution to set entire CELL of spatial index grid to TRAVERSABLE/COLLISION
 };
 
 extern eTileImpl					tileTypes[eTileImpl::maxTileTypes];
-extern std::shared_ptr<eImageTiler>	tileSet;				// TODO: allow this to be an array of tilesets (eImageTilers) to mix and match
+// typedef std::shared_ptr<eImageTiler>	TileSet_t;
+// extern std::vector<TileSet_t> tileSets;
+extern std::shared_ptr<eImageTiler>	tileSet;				// TODO: make this an array of tilesets (eImageTilers) to mix and match
 extern int							numTileTypes;
 
 //************
@@ -64,7 +66,8 @@ inline bool eTileImpl::IsCollidableHack(int type) {
 // eTileImpl::eTileImpl
 //************
 inline eTileImpl::eTileImpl() 
-	: type(invalidTileType), collisionHack(false) {
+	: type(invalidTileType), 
+	  collisionHack(false) {
 }
 
 //************
@@ -83,10 +86,8 @@ inline const std::string & eTileImpl::Name() const {
 }
 
 //***********************************************
-//
 //				eTile 
-//		for localized tile data
-//
+// localized tile data
 //***********************************************
 class eTile {
 public:
@@ -97,39 +98,43 @@ public:
 	int					Type() const;
 	void				SetType(int newType);
 	const std::string &	Name() const;
-	const eVec2 &		Origin() const;
-	void				SetOrigin(const float x, const float y);
-	void				SetOrigin(const eVec2 & point);
+	const eVec2 &		GetDrawOrigin() const;
+	void				SetDrawOrigin(const eVec2 & point);
 
 	Uint8				GetLayer() const;
 	void				SetLayer(const int newLayer);
+
+	eCollisionModel &	Collider();
 
 	bool				IsCollidableHack() const;	
 
 private:
 
 	eTileImpl *			impl;			// general tile type data
-//	eBounds				localCollisionBox;
-	eVec2				origin;			// raw top-left x,y in map at large; does not account for camera position
-//	unsigned int		GUID;			// the unique memory index in Tile map[][]
-//	bool				visited;		// for fog of war queries
-	Uint8				layer;			// layers draw in order back to front
+	eCollisionModel		collider;		// contains position and size of collision bounds
+	eVec2				drawOrigin;		// top-left x,y in world coordinates (does not account for camera position)
+	Uint8				layer;			// layers are draw in order of lowest to highest
 };
 
+
 //************
 // eTile::eTile
+// TODO: Initialize the collider based on procedural/file data
 //************
 inline eTile::eTile()
-	: origin(vec2_zero), impl(nullptr) {
+	: drawOrigin(vec2_zero), 
+	  impl(nullptr) {
 }
 
 //************
 // eTile::eTile
+// TODO: Initialize the collider based on procedural/file data
 //************
-inline eTile::eTile(const eVec2 & origin, const int type, const int layer) 
-	: origin(origin), impl(&tileTypes[type]), layer(layer) {
+inline eTile::eTile(const eVec2 & drawOrigin, const int type, const int layer)
+	: drawOrigin(drawOrigin),
+	  impl(&tileTypes[type]), 
+	  layer(layer) {
 }
-
 
 //************
 // eTile::ImageFrame
@@ -141,7 +146,8 @@ inline eTile::eTile(const eVec2 & origin, const int type, const int layer)
 // currentFrame = currentFrame.Next();
 //************
 inline const SDL_Rect & eTile::ImageFrame() const {
-	return tileSet->GetFrame(impl->type).Frame();
+	return tileSet->GetFrame(impl->type).Frame();		// FIXME(?): should this just be a wrapper to an eTileImpl call?
+														// perhaps not, as each tile of a type may be at a different animation frame (maybe)
 }
 
 //************
@@ -169,22 +175,15 @@ inline const std::string & eTile::Name() const {
 //************
 // eTile::Origin
 //************
-inline const eVec2 & eTile::Origin() const {
-	return origin;
+inline const eVec2 & eTile::GetDrawOrigin() const {
+	return drawOrigin;
 }
 
 //************
 // eTile::SetOrigin
 //************
-inline void eTile::SetOrigin(const float x, const float y) {
-	origin.Set(x, y);
-}
-
-//************
-// eTile::SetOrigin
-//************
-inline void eTile::SetOrigin(const eVec2 & point) {
-	origin = point;
+inline void eTile::SetDrawOrigin(const eVec2 & point) {
+	drawOrigin = point;
 }
 
 //************
@@ -199,6 +198,13 @@ inline Uint8 eTile::GetLayer() const {
 //************
 inline void eTile::SetLayer(const int newLayer) {
 	layer = newLayer;
+}
+
+//************
+// eTile::Collider
+//************
+inline eCollisionModel & eTile::Collider() {
+	return collider;
 }
 
 //************

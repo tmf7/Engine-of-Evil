@@ -106,7 +106,7 @@ private:
 //***************
 inline eAI::eAI() {
 	sightRange	= 128.0f;
-	goalRange	= speed;
+	goalRange	= velocity.Length();
 	maxSteps	= 5;
 }
 
@@ -121,7 +121,6 @@ inline const byte_map_t & eAI::KnownMap() const {
 // eAI::StopMoving
 //******************
 inline void eAI::StopMoving() {
-//	forward.vector.Zero();
 	wallSide = nullptr;
 	velocity.Zero();
 	moving = false;
