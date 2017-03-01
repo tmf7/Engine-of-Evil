@@ -20,11 +20,12 @@ typedef struct Collision_s {
 class eCollision {
 public:
 
-	static void				GetAreaContents(const eVec2 & centerPoint, std::vector<eCollisionModel *> & areaContents);
+	static eVec2			GetCollisionNormal(const eCollisionModel & self, const eCollisionModel & other);
+	static void				GetAreaCells(const eBounds & area, std::vector<eGridCell *> & areaCells);
 	static eBounds			GetBroadPhaseBounds(const eCollisionModel & self);
 	static bool				AABBAABBTest(const eBounds & a, const eBounds & b);
-	static float			MovingAABBAABBTest(const eCollisionModel & a, const eCollisionModel & b, eVec2 & collisionNormal);
-	static bool				ForwardCollisionTest(const eCollisionModel & self, const std::vector<eCollisionModel *> & areaContents, std::vector<Collision_t> & collisions);
+	static Collision_t		MovingAABBAABBTest(const eCollisionModel & self, eCollisionModel & other);
+	static bool				ForwardCollisionTest(const eCollisionModel & self, const std::vector<eGridCell *> & areaCells, std::vector<Collision_t> & collisions);
 };
 
 #endif /* EVIL_COLLISION_H */

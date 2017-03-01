@@ -4,7 +4,7 @@
 #include "Definitions.h"
 #include "Bounds.h"
 
-class eTile;
+class eGridCell;
 
 // DOOM: Entity has a physicsObject, which has a clipModel, which has a bounds and origin and 
 // and because idCamera is a idEntity, that has those too
@@ -25,43 +25,40 @@ class eTile;
 class eCollisionModel {
 public:
 
-							eCollisionModel();
-							~eCollisionModel();
+								eCollisionModel(const eVec2 & origin, const eVec2 & velocity, const eBounds & bounds);
+								~eCollisionModel();
 
-	void					SetOrigin(const eVec2 & point);	
-	const eVec2 &			Origin() const;
-	void					UpdateOrigin();
-	const eBounds &			Bounds() const;	
-	const eVec2 &			Velocity() const;
-
-private:
-
-	eBounds					localBounds;			// using local coordinates
-	eBounds					absBounds;				// using world coordinates		
-
-	// FIXME(?): absBounds' center is already the origin, though to query it means to perform a calulation each time instead of caching it
-	// and using the origin to translate the localBounds to equal the absBounds ignores the use of eBounds::TranslateSelf(velocity * deltaTime)
-	// so the question becomes: when do I use localBounds really? I dont. it can all be replaced with worldBounds or absBounds or just bounds
-
-	eVec2					origin;					// using world coordinates
-	eVec2					oldOrigin;				// for use with collision response
-	eVec2					velocity;				// DEBUG: never normalized, only rotated and scaled
-	std::vector<eTile *>	areas;					// currently occupied tileMap indexes (between 1 and 4)
+	void						SetOrigin(const eVec2 & point);	
+	const eVec2 &				Origin() const;
+	void						UpdateOrigin();
+	const eBounds &				LocalBounds() const;	
+	const eBounds &				AbsBounds() const;
+	const eVec2 &				Velocity() const;
 
 private:
 
-	void					ClearAreas();
-	void					UpdateAreas();
+	eBounds						localBounds;			// using model coordinates
+	eBounds						absBounds;				// using world coordinates		
+	eVec2						origin;					// using world coordinates
+	eVec2						oldOrigin;				// for use with collision response
+	eVec2						velocity;				// DEBUG: never normalized, only rotated and scaled
+	std::vector<eGridCell *>	areas;					// currently occupied tileMap indexes (between 1 and 4)
+
+private:
+
+	void						ClearAreas();
+	void						UpdateAreas();
 };
 
 //*************
 // eCollisionModel::eCollisionModel
-// TODO: pass in initialization arguments for origin and localBounds
+// TODO: pass in initialization arguments for origin and AABB size
 // because collisionModels for eTiles will have velocity == vec2_zero; (for example)
 //************
-inline eCollisionModel::eCollisionModel() {
-	velocity = vec2_oneZero * 10.0f;
-	UpdateAreas();
+inline eCollisionModel::eCollisionModel(const eVec2 & origin, const eVec2 & velocity, const eBounds & bounds)
+	: velocity (velocity),
+	  localBounds(bounds) {
+	SetOrigin(origin);
 }
 
 //*************
@@ -76,7 +73,7 @@ inline eCollisionModel::~eCollisionModel() {
 //*************
 inline void eCollisionModel::UpdateOrigin() {
 	oldOrigin = origin;
-	origin += velocity;
+	origin += velocity;// * game.GetFixedTime();	// FIXME: defined outside this header
 	absBounds = localBounds + origin;
 	UpdateAreas();
 }
@@ -98,10 +95,20 @@ inline const eVec2 & eCollisionModel::Origin() const {
 	return origin;
 }
 
+
 //*************
-// eCollisionModel::Bounds
+// eCollisionModel::LocalBounds
+// model coordinate axis-aligned bounding box
+// with center at 0,0
 //*************
-inline const eBounds & eCollisionModel::Bounds() const {
+inline const eBounds & eCollisionModel::LocalBounds() const {
+	return localBounds;
+}
+//*************
+// eCollisionModel::AbsBounds
+// globally positioned axis-aligned bounding box
+//*************
+inline const eBounds & eCollisionModel::AbsBounds() const {
 	return absBounds;
 }
 

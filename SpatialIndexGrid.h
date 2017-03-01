@@ -2,6 +2,7 @@
 #define EVIL_SPATIAL_INDEX_GRID_H
 
 class eVec2;
+class eBounds;
 
 //*************************************************
 //				eSpatial Index Grid

@@ -15,3 +15,4 @@ void eGridCell::Draw() const {
 		game.GetRenderer().AddToRenderPool(renderImage_t{ tileSet->Source(), &srcRect, dstRect, tile.GetLayer() }, RENDERTYPE_DYNAMIC);
 	}
 }
+

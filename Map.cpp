@@ -11,19 +11,15 @@ bool eMap::Init () {
 	if (!eTileImpl::InitTileTypes("graphics/grass_and_water.tls"))
 		return false;
 
-	// map dimensions
-	tileMap.SetCellWidth(32);
-	tileMap.SetCellHeight(32);
-	BuildTiles(RANDOM_MAP);
+	BuildMap(RANDOM_MAP);
 	return true;
 }
 
 //**************
-// eMap::BuildTiles
-// Procedure for initial map layout
-// Populates a matrix for future collision and redraw
+// eMap::BuildMap
+// Populates the map's spatial matrix for future collision and redraw
 //**************
-void eMap::BuildTiles(const int configuration) {
+void eMap::BuildMap(const int configuration) {
 /*
 // TODO: if very large random numbers are needed ( ie greater than RAND_MAX 32,767 )
 #include <random>
@@ -32,6 +28,13 @@ void eMap::BuildTiles(const int configuration) {
 	std::uniform_int_distribution<int> uniform_dist(0, NUM_ELEMENTS);
 	int r = uniform_dist(engine) % NUM_ELEMENTS;
 */
+	// TODO(?): make these file-loadable values
+	static const int cellWidth = 32;
+	static const int cellHeight = 32;
+
+	tileMap.SetCellWidth(cellWidth);
+	tileMap.SetCellHeight(cellHeight);
+
 	srand(SDL_GetTicks());
 	int row = 0;
 	int column = 0;
@@ -59,16 +62,21 @@ void eMap::BuildTiles(const int configuration) {
 			break;
 			}
 		}
-		eVec2 tileOrigin = eVec2((float)(row * tileMap.CellWidth()), (float)(column * tileMap.CellHeight()));
-		eMath::CartesianToIsometric(tileOrigin.x, tileOrigin.y);
-		tileOrigin.y -= 16;	// tileset specific offset
+
+		eVec2 cellMins = eVec2((float)(row * cellWidth), (float)(column * cellHeight));
+		cell.SetAbsBounds( eBounds(cellMins, cellMins + eVec2((float)cellWidth, (float)cellHeight)) );
+
+		// tile coordinates
+		eMath::CartesianToIsometric(cellMins.x, cellMins.y);
+		cellMins.y -= 16;	// tileset specific offset
 							// FIXME/TODO: allow for tileset master image drawing offset if its a bit wonky source
-		tileOrigin.x -= 32;	// logical-to-screen isometric coordinate calculation hack
+		cellMins.x -= 32;	// logical-to-screen isometric coordinate calculation hack
 							// FIXME/BUG/TODO: make this flexibly based on the tile image sizes (image frames read in)
 							// AND the cartesian size of a logical tile base
 
 		// TODO: add one eTile per cell for now, but start layering them according to procedure/file-load
-		cell.Tiles().push_back(eTile(tileOrigin, type, 0));	// DEBUG: test layer == 0
+		// DEBUG: currently one cell-aligned tile per cell, hence the reuse of cellMins
+		cell.Tiles().push_back(eTile(cellMins, type, 0));	// DEBUG: test layer == 0
 		column++;
 		if (column >= tileMap.Columns()) {
 			column = 0;
@@ -124,11 +132,11 @@ void eMap::Think() {
 
 	input = &game.GetInput();
 	if (input->KeyPressed(SDL_SCANCODE_0))
-		BuildTiles(TRAVERSABLE_MAP);
+		BuildMap(TRAVERSABLE_MAP);
 	else if (input->KeyPressed(SDL_SCANCODE_1))
-		BuildTiles(COLLISION_MAP);
+		BuildMap(COLLISION_MAP);
 	else if (input->KeyPressed(SDL_SCANCODE_2))
-		BuildTiles(RANDOM_MAP);	
+		BuildMap(RANDOM_MAP);	
 
 	if (input->MousePressed(SDL_BUTTON_RIGHT)) { 
 		// TODO(?2/2?): funtionalize these two lines of getting mouse and camera, then converting to isometric

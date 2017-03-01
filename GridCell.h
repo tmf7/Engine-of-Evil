@@ -18,10 +18,16 @@ public:
 	std::vector<eTile> &				Tiles();
 	std::vector<eCollisionModel *> &	Contents();
 
+	const eBounds &						AbsBounds() const;
+	const eBounds &						AbsBounds();
+	void								SetAbsBounds(const eBounds & bounds);
+
 private:
 
 	std::vector<eTile>					tiles;		// the tiles this cell is responsible for drawing
 	std::vector<eCollisionModel *>		contents;	// colliders that overlap this eGridCell (including its eTile's colliders, and others')
+
+	eBounds								absBounds;	// using world-coordinates
 
 	// pathfinding
 	eGridCell *							parent;		// originating cell to set the path back from a goal
@@ -68,6 +74,30 @@ inline const std::vector<eTile> & eGridCell::Tiles() const {
 //************
 inline std::vector<eCollisionModel *> & eGridCell::Contents() {
 	return contents;
+}
+
+//******************
+// eGridCell::AbsBounds
+// DEBUG: convenience function for broad-phase collision tests
+//******************
+inline const eBounds & eGridCell::AbsBounds() const {
+	return absBounds;
+}
+
+//******************
+// eGridCell::AbsBounds
+// DEBUG: convenience function for broad-phase collision tests
+//******************
+inline const eBounds & eGridCell::AbsBounds() {
+	return absBounds;
+}
+
+//******************
+// eGridCell::SetAbsBounds
+// DEBUG: convenience function for broad-phase collision tests
+//******************
+inline void eGridCell::SetAbsBounds(const eBounds & bounds) {
+	absBounds = bounds;
 }
 
 #endif /* EVIL_GRIDCELL_H */

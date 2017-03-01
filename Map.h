@@ -21,7 +21,7 @@ public:
 	bool					IsValid(const eVec2 & point, bool ignoreCollision = false) const;
 	void					Think();
 	void					Draw();
-	void					BuildTiles(const int configuration);
+	void					BuildMap(const int configuration);
 	void					ToggleTile(const eVec2 & point);
 	tile_map_t &			TileMap();
 
