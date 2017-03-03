@@ -3,8 +3,6 @@
 
 #include "Vector.h"
 
-// TODO: "size" could be a vector from mins to maxs (the diagonal of the box == the diameter of the circumscribed circle)
-
 //**********************************
 //			eBounds
 // 2D Axis-Aligned bounding box
@@ -31,11 +29,6 @@ public:
 
 	float			Width() const;
 	float			Height() const;
-	bool			ContainsPoint(const eVec2 & point) const;	// FIXME: deprecated by eCollsion utility class
-	bool			Overlaps(const eBounds & bounds) const;		// FIXME: deprecated by eCollsion utility class
-//	bool			LineIntersection(const eVec2 & start, const eVec2 & end) const;
-					// intersection point is start + dir * scale
-//	bool			RayIntersection(const eVec2 & start, const eVec2 & dir, float & scale) const;
 
 private:
 
@@ -191,34 +184,6 @@ inline float eBounds::Width() const {
 //*************
 inline float eBounds::Height() const {
 	return bounds[1].y - bounds[0].y;
-}
-
-//***************
-// eBounds::ContainsPoint
-// returns true if the given point is within the bounds
-// includes touching
-// FIXME: deprecated by eCollsion utility class
-//***************
-inline bool eBounds::ContainsPoint(const eVec2 & point) const {
-	if (point.x > bounds[1].x || point.x < bounds[0].x || 
-		point.y > bounds[1].y || point.y < bounds[0].y)
-		return false;
-
-	return true;
-}
-
-//***************
-// eBounds::Overlaps
-// returns true if a given bounds overlaps this bounds
-// includes touching
-// FIXME: deprecated by eCollsion utility class
-//***************
-inline bool eBounds::Overlaps(const eBounds & that) const {
-	if (that.bounds[1].x < bounds[0].x || that.bounds[1].y < bounds[0].y ||
-		that.bounds[0].x > bounds[1].x || that.bounds[0].y > bounds[1].y)
-		return false;
-
-	return true;
 }
 
 #endif  /* EVIL_BOUNDS_H */

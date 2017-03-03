@@ -1,7 +1,6 @@
 #include "Game.h"
 
 //byte_t memoryPool[ONE_GIGABYTE];
-Uint32 globalIDPool = 0;
 eGame game;
 
 //****************
@@ -130,7 +129,7 @@ bool eGame::Run() {
 	if (debugFlags.FRAMERATE)
 		DrawFPS();
 
-	renderer.FlushStaticPool();
+//	renderer.FlushStaticPool();			// DEBUG: not currently used
 	renderer.Show();
 
 	// frame-rate governing delay

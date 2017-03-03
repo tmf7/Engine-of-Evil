@@ -6,34 +6,34 @@
 
 class eGridCell;
 
-// DOOM: Entity has a physicsObject, which has a clipModel, which has a bounds and origin and 
-// and because idCamera is a idEntity, that has those too
-
 //*********************************************
 //			eCollisionModel
 // used for movement and collision detection
 
 // TODO: make the renderImage_t more versitle (and less expensive?) such that each eEntity already has a renderImage_t
-// being updated, and a SHARED_POINTER of which is sent to the renderpool (maybe???)
+// being updated, and a SHARED_POINTER of which is sent to the renderpool
 // ...each renderImage_t would have a bounds (or cliprect?) and origin (like eCollisionModel) such that they'd
-// have to be ****synchronized WELL*** to produce accurate collision and visual movement
-// ....or.....make the renderImage_t depend on the eCollisionModel directly....like...give it one....?
-// so there'd only be one origin and bounds to worry about....EXCEPT sprite images start drawing from the top-left (THAT origin) not center.
+// have to be ****synchronized WELL*** to produce accurate collision and visual movement 
+// (SDL_Rect alone would cause too many rounding errors)
 // NOTE: that wouldn't change the debug draws at all (they'd still be an overlay)
 // NOTE: would it affect non-constText? a pointer to a renderimage that exists only for a moment....yup, should be fine using shared_ptr
 //*********************************************
 class eCollisionModel {
 public:
 
+								eCollisionModel();
 								eCollisionModel(const eVec2 & origin, const eVec2 & velocity, const eBounds & bounds);
 								~eCollisionModel();
 
 	void						SetOrigin(const eVec2 & point);	
 	const eVec2 &				Origin() const;
 	void						UpdateOrigin();
-	const eBounds &				LocalBounds() const;	
+	eVec2						GetOriginDelta() const;
+	eBounds &					LocalBounds();
+	eBounds &					AbsBounds();
+	const eBounds &				LocalBounds() const;
 	const eBounds &				AbsBounds() const;
-	const eVec2 &				Velocity() const;
+	eVec2 &						Velocity();
 
 private:
 
@@ -52,12 +52,19 @@ private:
 
 //*************
 // eCollisionModel::eCollisionModel
+//************
+inline eCollisionModel::eCollisionModel() {
+}
+
+//*************
+// eCollisionModel::eCollisionModel
 // TODO: pass in initialization arguments for origin and AABB size
 // because collisionModels for eTiles will have velocity == vec2_zero; (for example)
 //************
 inline eCollisionModel::eCollisionModel(const eVec2 & origin, const eVec2 & velocity, const eBounds & bounds)
 	: velocity (velocity),
-	  localBounds(bounds) {
+	  localBounds(bounds),
+	  origin(vec2_zero) {
 	SetOrigin(origin);
 }
 
@@ -82,7 +89,7 @@ inline void eCollisionModel::UpdateOrigin() {
 // eCollisionModel::SetOrigin
 //*************
 inline void eCollisionModel::SetOrigin(const eVec2 & point) {
-	oldOrigin = point;
+	oldOrigin = origin;
 	origin = point;
 	absBounds = localBounds + origin;
 	UpdateAreas();
@@ -95,6 +102,29 @@ inline const eVec2 & eCollisionModel::Origin() const {
 	return origin;
 }
 
+//*************
+// eCollisionModel::GetOriginDelta
+//*************
+inline eVec2 eCollisionModel::GetOriginDelta() const {
+	return origin - oldOrigin;
+}
+
+
+//*************
+// eCollisionModel::LocalBounds
+// model coordinate axis-aligned bounding box
+// with center at 0,0
+//*************
+inline eBounds & eCollisionModel::LocalBounds() {
+	return localBounds;
+}
+//*************
+// eCollisionModel::AbsBounds
+// globally positioned axis-aligned bounding box
+//*************
+inline eBounds & eCollisionModel::AbsBounds() {
+	return absBounds;
+}
 
 //*************
 // eCollisionModel::LocalBounds
@@ -115,7 +145,7 @@ inline const eBounds & eCollisionModel::AbsBounds() const {
 //*************
 // eCollisionModel::Velocity
 //*************
-inline const eVec2 & eCollisionModel::Velocity() const {
+inline eVec2 & eCollisionModel::Velocity() {
 	return velocity;
 }
 

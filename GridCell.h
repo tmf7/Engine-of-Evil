@@ -13,7 +13,7 @@ class eGridCell {
 public:
 										eGridCell();
 
-	void								Draw() const;
+	void								Draw();
 	const std::vector<eTile> &			Tiles() const;
 	std::vector<eTile> &				Tiles();
 	std::vector<eCollisionModel *> &	Contents();
@@ -38,9 +38,6 @@ private:
 	int									gridCol;	// index within tileMap
 	bool								inOpenSet;	// expidites PathFind openSet searches
 	bool								inClosedSet;// expidites PathFind closedSet searches
-
-//	unsigned int						GUID;			// the unique memory index in Tile map[][] (maybe)
-//	bool								visited;		// for fog of war queries
 };
 
 //************

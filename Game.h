@@ -81,7 +81,6 @@ private:
 	Uint32						deltaTime;			// actual time a frame takes to execute
 };
 
-extern Uint32	globalIDPool;						// globally unique identifier: each resource gets, regardless of copying, moving, or type
 extern eGame	game;								// one instance used by all objects
 
 //*****************

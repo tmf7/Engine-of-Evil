@@ -1,8 +1,8 @@
-#include "Entity.h"
 #include "Game.h"
 
 //***************
 // eEntity::Spawn
+// TODO: generalize this to account for eCamera initilization (speed, size, etc)
 //***************
 bool eEntity::Spawn() {
 
@@ -20,27 +20,53 @@ bool eEntity::Spawn() {
 	// that dictates transitions between tilers and intra-tiler-sequences (similar to Button.h)
 	sprite.SetImage(spriteImage);		// TODO: change this to a sprite.Init(...) maybe and return false if it fails
 
-	localBounds.ExpandSelf(8);			// FIXME: 16 x 16 square with (0, 0) at its center, 
-										// this is the current collision box
-										// but its also used to position the sprite, move away from this methodology
-										// becuase a hit box may be smaller than the sprite... give the sprite an origin? YES.
-
-	SetOrigin(eVec2(8.0f, 8.0f));		// TODO: call a GetSpawnPoint() to use a list of procedurally/file-defined spawn points
+	collisionModel.LocalBounds().ExpandSelf(8);			// FIXME: 16 x 16 square with (0, 0) at its center, 
+	collisionModel.SetOrigin(eVec2(8.0f, 8.0f));		// TODO: call a GetSpawnPoint() to use a list of procedurally/file-defined spawn points
+	imageOffset = - collisionModel.Origin();			// DEBUG: test offset
+	UpdateRenderImageOrigin();
+	UpdateRenderImageDisplay();
 	return true;
 }
 
 //***************
 // eEntity::Draw
-// draw the sprite at its current animation frame
 //***************
 void eEntity::Draw() {
-	eVec2 drawPoint = absBounds[0];
-	eMath::CartesianToIsometric(drawPoint.x, drawPoint.y);
-	drawPoint -= game.GetCamera().absBounds[0];
-	drawPoint.SnapInt();
-	
-	const SDL_Rect & srcRect = sprite.GetFrameHack();
-	SDL_Rect dstRect = { (int)drawPoint.x, (int)drawPoint.y, srcRect.w, srcRect.h };
-	game.GetRenderer().AddToRenderPool(renderImage_t{ sprite.GetImage(), &srcRect, dstRect, 1 }, RENDERTYPE_DYNAMIC);	// DEBUG: test layer == 1	
+	auto & cameraBounds = game.GetCamera().CollisionModel().AbsBounds();
+	eBounds dstBounds = eBounds(renderImage.origin, renderImage.origin + eVec2((float)renderImage.srcRect->w, (float)renderImage.srcRect->h));
+
+	if (eCollision::AABBAABBTest(cameraBounds, dstBounds)) {	
+		eMath::CartesianToIsometric(dstBounds[0].x, dstBounds[0].y);
+		dstBounds.TranslateSelf(-game.GetCamera().CollisionModel().AbsBounds()[0]);
+		dstBounds[0].SnapInt();
+//		dstBounds[1].SnapInt();		// DEBUG: unnecessary given renderImage.srcRect dimensions
+
+		renderImage.dstRect = { (int)dstBounds[0].x, (int)dstBounds[0].y, renderImage.srcRect->w, renderImage.srcRect->h };
+		game.GetRenderer().AddToRenderPool(&renderImage, RENDERTYPE_DYNAMIC);
+	}
+}
+
+//*************
+// eEntity::UpdateRenderImageOrigin
+//*************
+void eEntity::UpdateRenderImageOrigin() {
+	renderImage.origin = collisionModel.Origin() + imageOffset;
+}
+
+//*************
+// eEntity::UpdateRenderImageDisplay
+// TODO: uses the eSprite to set the animation image and frame data
+//*************
+void eEntity::UpdateRenderImageDisplay() {
+	renderImage.image = sprite.GetImage();
+	renderImage.srcRect = &sprite.GetFrameHack();
+	renderImage.SetLayer(1);		// DEBUG: test layer == 1
+}
+
+//*************
+// eEntity::GetRenderImage
+//*************
+renderImage_t * eEntity::GetRenderImage() {
+	return &renderImage;
 }
 

@@ -1,7 +1,4 @@
-#include "Collision.h"
-#include "CollisionModel.h"
 #include "Game.h"
-#include <unordered_map>	// DEBUG: TEST
 		
 //***************
 // ForwardCollisionTest
@@ -12,7 +9,7 @@
 // collisions vector is sorted from nearest to farthest
 // DEBUG: collisions.size() will most often be near zero
 //***************
-bool eCollision::ForwardCollisionTest(const eCollisionModel & self, const std::vector<eGridCell *> & areaCells, std::vector<Collision_t> & collisions) {
+bool eCollision::ForwardCollisionTest(eCollisionModel & self, const std::vector<eGridCell *> & areaCells, std::vector<Collision_t> & collisions) {
 	static std::unordered_map<eCollisionModel *, eCollisionModel *> alreadyTested;
 
 	eBounds broadPhaseBounds = GetBroadPhaseBounds(self);
@@ -58,7 +55,7 @@ bool eCollision::ForwardCollisionTest(const eCollisionModel & self, const std::v
 // DEBUG: make the areaCells function-static to avoid excessive dynamic allocation
 //***************
 void eCollision::GetAreaCells(const eBounds & area, std::vector<eGridCell *> & areaCells) {
-	auto tileMap = game.GetMap().TileMap();
+	auto & tileMap = game.GetMap().TileMap();
 	int startRow, startCol;
 	int endRow, endCol;
 	tileMap.Index(area[0], startRow, startCol);
@@ -79,7 +76,7 @@ void eCollision::GetAreaCells(const eBounds & area, std::vector<eGridCell *> & a
 // the swept area of a moving eBounds
 // based on the eCollisionModel velocity
 //***************
-eBounds eCollision::GetBroadPhaseBounds(const eCollisionModel & self) {
+eBounds eCollision::GetBroadPhaseBounds(eCollisionModel & self) {
 	eBounds bpBounds;
 	if (self.Velocity().x > 0.0f) {
 		bpBounds[0][0] = self.AbsBounds()[0][0];
@@ -97,6 +94,19 @@ eBounds eCollision::GetBroadPhaseBounds(const eCollisionModel & self) {
 		bpBounds[1][1] = self.AbsBounds()[1][1] - self.Velocity().y;
 	}
 	return bpBounds;
+}
+
+//***************
+// eCollision::AABBContainsPoint
+// returns true if the given point is within the bounds
+// (includes touching)
+//***************
+bool eCollision::AABBContainsPoint(const eBounds & bounds, const eVec2 & point) {
+	if (point.x > bounds[1].x || point.x < bounds[0].x ||
+		point.y > bounds[1].y || point.y < bounds[0].y) {
+		return false;
+	}
+	return true;
 }
 
 //***************
@@ -119,7 +129,7 @@ bool eCollision::AABBAABBTest(const eBounds & self, const eBounds & other) {
 // and a pointer to other for convenience
 // DEBUG: includes touching at the very end of self.velocity
 //***************
-Collision_t eCollision::MovingAABBAABBTest(const eCollisionModel & self, eCollisionModel & other) {
+Collision_t eCollision::MovingAABBAABBTest(eCollisionModel & self, eCollisionModel & other) {
 	static const float NO_COLLISION = 2.0f;
 
 	// started in collision
@@ -160,7 +170,7 @@ Collision_t eCollision::MovingAABBAABBTest(const eCollisionModel & self, eCollis
 // returns a vector based on self.velocity
 // and relative position to other
 //***************
-eVec2 eCollision::GetCollisionNormal(const eCollisionModel & self, const eCollisionModel & other) {
+eVec2 eCollision::GetCollisionNormal(eCollisionModel & self, const eCollisionModel & other) {
 	eVec2 selfMin = self.AbsBounds()[0];
 	eVec2 selfMax = self.AbsBounds()[1];
 	eVec2 otherMin = other.AbsBounds()[0];

@@ -35,3 +35,20 @@ bool eTileImpl::InitTileTypes(const char * tilerFilename) {
 	}	
 	return true;
 }
+
+//************
+// eTile::eTile
+// TODO: Initialize the collider based on procedural/file data
+//************
+eTile::eTile(const eVec2 & imageOrigin, const int type, const int layer)
+	: impl(&tileTypes[type]),
+	collisionModel(imageOrigin, vec2_zero, eBounds(vec2_zero, vec2_zero)) {
+	renderImage.image = tileSet->Source();
+	renderImage.srcRect = &tileSet->GetFrame(impl->type).Frame();
+	renderImage.origin = imageOrigin;
+	renderImage.SetLayer(layer);
+
+	// DEBUG: collisionModel currently aligns with the renderImage size
+	collisionModel.AbsBounds()[0].Set(imageOrigin.x, imageOrigin.y);
+	collisionModel.AbsBounds()[1].Set(imageOrigin.x + renderImage.srcRect->w, imageOrigin.y + renderImage.srcRect->h);
+}

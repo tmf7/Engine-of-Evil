@@ -3,6 +3,7 @@
 
 #include "CollisionModel.h"
 #include "ImageTiler.h"
+#include "Renderer.h"
 
 // Flyweight tile design
 
@@ -88,67 +89,34 @@ inline const std::string & eTileImpl::Name() const {
 //***********************************************
 //				eTile 
 // localized tile data
+// TODO: have eTile inherit from eEntity to take advantage
+// of the collisionModel and renderImage functionality and avoid code duplication
 //***********************************************
 class eTile {
 public:
-						eTile();
 						eTile(const eVec2 & origin, const int type, const int layer);
 	
-	const SDL_Rect &	ImageFrame() const;
 	int					Type() const;
 	void				SetType(int newType);
 	const std::string &	Name() const;
-	const eVec2 &		GetDrawOrigin() const;
-	void				SetDrawOrigin(const eVec2 & point);
 
-	Uint8				GetLayer() const;
+	renderImage_t *		GetRenderImage();
+	void				UpdateRenderImageDisplay();
+	void				SetRenderImageOrigin(const eVec2 & origin);
+
+	Uint32				GetLayer() const;
 	void				SetLayer(const int newLayer);
 
-	eCollisionModel &	Collider();
+	eCollisionModel &	CollisionModel();
 
 	bool				IsCollidableHack() const;	
 
 private:
 
-	eTileImpl *			impl;			// general tile type data
-	eCollisionModel		collider;		// contains position and size of collision bounds
-	eVec2				drawOrigin;		// top-left x,y in world coordinates (does not account for camera position)
-	Uint8				layer;			// layers are draw in order of lowest to highest
+	eTileImpl *			impl;				// general tile type data
+	eCollisionModel		collisionModel;		// contains position and size of collision bounds
+	renderImage_t		renderImage;		// data relevant to the renderer
 };
-
-
-//************
-// eTile::eTile
-// TODO: Initialize the collider based on procedural/file data
-//************
-inline eTile::eTile()
-	: drawOrigin(vec2_zero), 
-	  impl(nullptr) {
-}
-
-//************
-// eTile::eTile
-// TODO: Initialize the collider based on procedural/file data
-//************
-inline eTile::eTile(const eVec2 & drawOrigin, const int type, const int layer)
-	: drawOrigin(drawOrigin),
-	  impl(&tileTypes[type]), 
-	  layer(layer) {
-}
-
-//************
-// eTile::ImageFrame
-// TODO: currently assumes a tile is not animated
-// but re-code for:
-// eImageFrame result;
-// tileSet->GetFirstFrame(impl->Name(), result);
-// to utilize and advance an animated tile through
-// currentFrame = currentFrame.Next();
-//************
-inline const SDL_Rect & eTile::ImageFrame() const {
-	return tileSet->GetFrame(impl->type).Frame();		// FIXME(?): should this just be a wrapper to an eTileImpl call?
-														// perhaps not, as each tile of a type may be at a different animation frame (maybe)
-}
 
 //************
 // eTile::Type
@@ -173,38 +141,52 @@ inline const std::string & eTile::Name() const {
 }
 
 //************
-// eTile::Origin
+// eTile::GetRenderImage
+// FIXME: very similar to eEntity::UpdateRenderImageDisplay
 //************
-inline const eVec2 & eTile::GetDrawOrigin() const {
-	return drawOrigin;
+inline renderImage_t * eTile::GetRenderImage() {
+	return &renderImage;
 }
 
 //************
-// eTile::SetOrigin
+// eTile::UpdateRenderImageDisplay
+// FIXME: very similar to eEntity::UpdateRenderImageDisplay
+// for animating sprites/tiles, use override virtual functions
+// or call a virtual function within eEntity::UpdateRenderImageDispaly
+// for an animator that decides what to do (or something)
+// OR give the eTile a eSprite proper (...== an animator)
 //************
-inline void eTile::SetDrawOrigin(const eVec2 & point) {
-	drawOrigin = point;
+inline void eTile::UpdateRenderImageDisplay() {
+	//	eImageFrame * currentFrame = &tileSet->GetFirstFrame(impl->Name());
+	//	currentFrame = currentFrame->Next();
 }
 
 //************
-// eTile::Layer
+// eTile::SetRenderImageOrigin
 //************
-inline Uint8 eTile::GetLayer() const {
-	return layer;
+inline void eTile::SetRenderImageOrigin(const eVec2 & origin) {
+	renderImage.origin = origin;
+}
+
+//************
+// eTile::GetLayer
+//************
+inline Uint32 eTile::GetLayer() const {
+	return renderImage.GetLayer();
 }
 
 //************
 // eTile::SetLayer
 //************
 inline void eTile::SetLayer(const int newLayer) {
-	layer = newLayer;
+	renderImage.SetLayer(newLayer);
 }
 
 //************
 // eTile::Collider
 //************
-inline eCollisionModel & eTile::Collider() {
-	return collider;
+inline eCollisionModel & eTile::CollisionModel() {
+	return collisionModel;
 }
 
 //************

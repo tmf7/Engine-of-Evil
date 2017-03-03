@@ -43,7 +43,6 @@ bool eImageManager::Init() {
 	auto hasher = std::hash<std::string>{};
 	imageFilenameHash.Add(hasher("error_image"), imageList.size());
 	imageList.push_back(std::make_shared<eImage>(error_texture, "invalid_file", imageList.size()));	// error image
-	globalIDPool++;
 	return true;
 }
 
@@ -191,7 +190,6 @@ bool eImageManager::LoadImage(const char * filename, SDL_TextureAccess accessTyp
 	imageFilenameHash.Add(hasher(filename), imageList.size());
 	result = std::make_shared<eImage>(texture, filename, imageList.size());
 	imageList.push_back(result);
-	globalIDPool++;
 	return true;
 }
 
@@ -225,7 +223,6 @@ bool eImageManager::LoadConstantText(TTF_Font * font, const char * text, const S
 	imageFilenameHash.Add(hasher(text), imageList.size());
 	result = std::make_shared<eImage>(renderedText, text, imageList.size());
 	imageList.push_back(result);
-	globalIDPool++;
 	return true;
 }
 

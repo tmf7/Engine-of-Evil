@@ -30,7 +30,6 @@ bool eImageTilerManager::Init() {
 	// register the error_imageTiler as the first element of tilerList
 	tilerFilenameHash.Add(hasher(error_name), tilerList.size());
 	tilerList.push_back(std::make_shared<eImageTiler>(error_image, std::move(frameList), std::move(sequenceNames), std::move(sequenceHash), "invalid_file", tilerList.size()));
-	globalIDPool++;
 	return true;
 }
 
@@ -210,7 +209,6 @@ bool eImageTilerManager::LoadTiler(const char * filename, std::shared_ptr<eImage
 	tilerFilenameHash.Add(hasher(filename), tilerList.size());
 	result = std::make_shared<eImageTiler>(source, std::move(frameList), std::move(sequenceNames), std::move(sequenceHash), filename, tilerList.size());
 	tilerList.push_back(result);
-	globalIDPool++;
 	return true;
 }
 

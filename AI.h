@@ -55,6 +55,7 @@ private:
 	movementType_t		moveState;
 	pathfindingType_t	pathingState;
 
+	float				speedHack;				// DEBUG: eCollisionModel integration test using old unit-velocity * speed (magnitude) logic
 	float				collisionRadius;		// circular collision radius for prediction when using line of sight
 	float				goalRange;				// acceptable range to consider the goal waypoint reached
 	float				sightRange;				// range of drawable visibility (fog of war)
@@ -97,7 +98,7 @@ private:
 	// debugging
 	void				DrawGoalWaypoints();
 	void				DrawTrailWaypoints();
-	void				DrawCollisionCircle() const;
+	void				DrawCollisionCircle();
 	void				DrawKnownMap() const;
 };
 
@@ -106,7 +107,8 @@ private:
 //***************
 inline eAI::eAI() {
 	sightRange	= 128.0f;
-	goalRange	= velocity.Length();
+	goalRange	= collisionModel.Velocity().Length();
+	speedHack = goalRange;
 	maxSteps	= 5;
 }
 
@@ -122,7 +124,7 @@ inline const byte_map_t & eAI::KnownMap() const {
 //******************
 inline void eAI::StopMoving() {
 	wallSide = nullptr;
-	velocity.Zero();
+	collisionModel.Velocity().Zero();
 	moving = false;
 }
 

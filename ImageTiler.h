@@ -58,6 +58,7 @@ public:
 	int							GetNumFrames() const;
 	int							GetNumSequences() const;
 	const std::string &			GetFilename() const;
+	int							GetTilerManagerIndex() const;
 
 private:
 
@@ -66,7 +67,7 @@ private:
 	std::shared_ptr<eImage>		source;				// overall image to sub-divide
 	std::vector<eImageFrame>	frameList;			// subsections of image to focus on
 	std::string					filename;			// source file loaded from
-	int							id;					// index within eImageTilerManager::tilerList
+	int							tilerManagerIndex;	// index within eImageTilerManager::tilerList
 };
 
 //**************
@@ -78,7 +79,7 @@ inline eImageTiler::eImageTiler(std::shared_ptr<eImage> image, std::vector<eImag
 	  sequenceNames(std::move(sequenceNames)),
 	  sequenceHash(std::move(sequenceHash)),
 	  filename(filename),
-	  id(id) {
+	  tilerManagerIndex(id) {
 }
 
 //**************
@@ -145,6 +146,13 @@ inline int eImageTiler::GetNumSequences() const {
 //**************
 inline const std::string & eImageTiler::GetFilename() const {
 	return filename;
+}
+
+//**************
+// eImageTiler::GetTilerManagerIndex
+//**************
+inline int eImageTiler::GetTilerManagerIndex() const {
+	return tilerManagerIndex;
 }
 
 #endif /* EVIL_IMAGE_TILER_H */

@@ -19,14 +19,14 @@ public:
 	int						GetWidth() const;
 	int						GetHeight() const;
 	std::string				GetFilename() const;
-	unsigned int			GetID() const;
+	int						GetImageManagerIndex() const;
 
 private:
 
 	SDL_Texture *			source;
 	SDL_Point				size;
-	std::string				filename;		// source file loaded from
-	int						id;				// index within eImageManager::images
+	std::string				filename;				// source file loaded from
+	int						imageManagerIndex;		// index within eImageManager::imageList
 };
 
 //**************
@@ -35,7 +35,7 @@ private:
 inline eImage::eImage()
 	: source(nullptr),
 	  filename("invalid_file"), 
-	  id(INVALID_ID) {
+	  imageManagerIndex(INVALID_ID) {
 	size = SDL_Point{ 0, 0 };
 }
 
@@ -46,7 +46,7 @@ inline eImage::eImage()
 inline eImage::eImage(SDL_Texture * source, const char * filename, int id)
 	: source(source), 
 	  filename(filename), 
-	  id(id) {
+	  imageManagerIndex(id) {
 	SDL_QueryTexture(source, NULL, NULL, &size.x, &size.y);
 }
 
@@ -94,10 +94,10 @@ inline std::string eImage::GetFilename() const {
 }
 
 //**************
-// eImage::GetID
+// eImage::GetImageManagerIndex
 //**************
-inline unsigned int eImage::GetID() const {
-	return id;
+inline int eImage::GetImageManagerIndex() const {
+	return imageManagerIndex;
 }
 
 #endif /* EVIL_IMAGE_H */

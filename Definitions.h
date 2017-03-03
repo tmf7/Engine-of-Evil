@@ -12,6 +12,8 @@
 #include <random>
 #include <limits>
 //#include <stdio.h>
+#include <unordered_map>
+#include <vector>
 #include "Math.h"
 
 #define BIT(a) (1<<a)

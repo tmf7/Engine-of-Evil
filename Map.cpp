@@ -141,7 +141,8 @@ void eMap::Think() {
 	if (input->MousePressed(SDL_BUTTON_RIGHT)) { 
 		// TODO(?2/2?): funtionalize these two lines of getting mouse and camera, then converting to isometric
 		// YES: make it part of the PLAYER class' input handling, and get rid of this block of code here
-		eVec2 tilePoint = eVec2((float)input->GetMouseX() + game.GetCamera().GetAbsBounds().x, (float)input->GetMouseY() + game.GetCamera().GetAbsBounds().y);
+		eVec2 tilePoint = eVec2((float)input->GetMouseX(), (float)input->GetMouseY());
+		tilePoint += game.GetCamera().CollisionModel().AbsBounds()[0];
 		eMath::IsometricToCartesian(tilePoint.x, tilePoint.y);
 		ToggleTile(tilePoint);
 	}
@@ -151,6 +152,7 @@ void eMap::Think() {
 // eMap::Draw
 // staggered isometric draw order
 // of tiles visible to the camera
+// FIXME(?): possibly do a eCollision::GetAreaCells(camera.AbsBounds.ExpandSelf(self*2)
 //***************
 void eMap::Draw() {
 	// DEBUG: these constants assume a cell is square, and that its isometric projection
@@ -164,7 +166,7 @@ void eMap::Draw() {
 	int maxHorizCells = (int)(game.GetRenderer().ViewArea().w * invIsoCellWidth) + 5;
 	int maxVertCells = (int)(game.GetRenderer().ViewArea().h * invIsoCellHeight) + 5;
 
-	eVec2 camTopLeft = eVec2(game.GetCamera().GetAbsBounds().x, game.GetCamera().GetAbsBounds().y);
+	eVec2 camTopLeft = eVec2(game.GetCamera().CollisionModel().AbsBounds()[0].x, game.GetCamera().CollisionModel().AbsBounds()[0].y);
 	eMath::IsometricToCartesian(camTopLeft.x, camTopLeft.y);
 
 	int startRow, startCol;

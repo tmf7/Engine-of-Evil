@@ -2,7 +2,6 @@
 #define EVIL_SPATIAL_INDEX_GRID_H
 
 class eVec2;
-class eBounds;
 
 //*************************************************
 //				eSpatial Index Grid
@@ -34,8 +33,8 @@ public:
 	void					SetCellHeight(const int cellHeight);
 
 	// iterator hooks
-	type *					begin() const;
-	type *					end() const;
+	type *					begin();
+	type *					end();
 	const type *			begin() const;
 	const type *			end() const;
 
@@ -236,7 +235,7 @@ inline void eSpatialIndexGrid<type, rows, columns>::SetCellHeight(const int cell
 // eSpatialIndexGrid::begin
 //******************
 template< class type, int rows, int columns>
-inline type * eSpatialIndexGrid<type, rows, columns>::begin() const {
+inline type * eSpatialIndexGrid<type, rows, columns>::begin() {
 	return &cells[0][0];
 }
 
@@ -245,7 +244,7 @@ inline type * eSpatialIndexGrid<type, rows, columns>::begin() const {
 // DEBUG: returns one-past the last element of the contiguous memory block
 //******************
 template< class type, int rows, int columns>
-inline type * eSpatialIndexGrid<type, rows, columns>::end() const {
+inline type * eSpatialIndexGrid<type, rows, columns>::end() {
 	return &cells[rows - 1][columns];
 }
 

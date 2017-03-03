@@ -10,7 +10,7 @@ bool eAI::Spawn() {
 	if (!eEntity::Spawn())
 		return false;
 
-	collisionRadius = localBounds.Radius();
+	collisionRadius = collisionModel.LocalBounds().Radius();
 	StopMoving();
 
 	// knownMap dimensions, based in initialized tileMap dimensions
@@ -18,7 +18,7 @@ bool eAI::Spawn() {
 	knownMap.SetCellHeight(game.GetMap().TileMap().CellHeight());
 	knownMap.ClearAllCells();
 
-	currentTile		= &knownMap.Index(origin);
+	currentTile		= &knownMap.Index(collisionModel.Origin());
 	previousTile	= currentTile;
 	lastTrailTile	= nullptr;
 	currentWaypoint = nullptr;
@@ -41,7 +41,8 @@ void eAI::Think() {
 	if (input->MousePressed(SDL_BUTTON_LEFT)) {
 		// TODO(?1/2?): funtionalize these two lines of getting mouse and camera, then converting to isometric
 		// YES: make it part of the PLAYER class' input handling, and get rid of this block of code here
-		eVec2 point = eVec2((float)input->GetMouseX() + game.GetCamera().GetAbsBounds().x, (float)input->GetMouseY() + game.GetCamera().GetAbsBounds().y);
+		eVec2 point = eVec2((float)input->GetMouseX(), (float)input->GetMouseY());
+		point += game.GetCamera().CollisionModel().AbsBounds()[0];
 		eMath::IsometricToCartesian(point.x, point.y);
 		AddUserWaypoint(point);
 	}
@@ -64,20 +65,20 @@ void eAI::Think() {
 
 		// drop a trail waypoint (but never in a deadend that stopped the entity last frame)
 		if (moving && !wasStopped && moveState != MOVETYPE_TRAIL && lastTrailTile != currentTile) {
-			trail.PushFront(origin);
+			trail.PushFront(collisionModel.Origin());
 			lastTrailTile = currentTile;
 		}
 
 		// check if goal is close enough to stop
-		if (origin.Compare(*currentWaypoint, goalRange)) {
+		if (collisionModel.Origin().Compare(*currentWaypoint, goalRange)) {
 			StopMoving();
 			UpdateWaypoint(true);
 		}
 
 		// finalize the move
-		if (velocity != vec2_zero) {
+		if (collisionModel.Velocity() != vec2_zero) {
 			moving = true;
-			UpdateOrigin();
+			collisionModel.UpdateOrigin();
 		}
 	}
 }
@@ -108,7 +109,7 @@ void eAI::WallFollow() {
 	bool		nearWall;
 
 	if (!moving) { 
-		forward.vector = *currentWaypoint - origin;
+		forward.vector = *currentWaypoint - collisionModel.Origin();
 		forward.vector.Normalize();
 		moving = true;
 	}
@@ -129,7 +130,7 @@ void eAI::WallFollow() {
 	nearWall = false;
 	rotationAngle = 0.0f;
 	while (rotationAngle < 360.0f) {
-		CheckVectorPath(origin + (test.vector * speed), test);
+		CheckVectorPath(collisionModel.Origin() + (test.vector * speedHack), test);
 		if (wallFollowing && nearWall && test.validSteps > 0) { 
 			forward = test;
 			CheckWalls(nullptr);
@@ -155,7 +156,7 @@ void eAI::WallFollow() {
 	if (wallSide != nullptr && (!nearWall || rotationAngle >= 360.0f))
 		StopMoving();
 	else 
-		velocity = forward.vector * speed;
+		collisionModel.Velocity() = forward.vector * speedHack;
 	// moveState may have changed, track the correct waypoint
 //	UpdateWaypoint();
 }
@@ -191,7 +192,7 @@ void eAI::CompassFollow() {
 			*currentTile = VISITED_TILE;
 	}
 
-	waypoint.vector = *currentWaypoint - origin;
+	waypoint.vector = *currentWaypoint - collisionModel.Origin();
 	waypoint.vector.Normalize();
 
 	bestWeight = 0.0f;
@@ -200,15 +201,15 @@ void eAI::CompassFollow() {
 
 		// check how clear the path is starting one step along it
 		// and head straight for the waypoint if the test.vector path crosses extremely near it
-		if (CheckVectorPath(origin + (test.vector * speed), test)) {
-			if (CheckVectorPath(origin + (waypoint.vector * speed), waypoint))
+		if (CheckVectorPath(collisionModel.Origin() + (test.vector * speedHack), test)) {
+			if (CheckVectorPath(collisionModel.Origin() + (waypoint.vector * speedHack), waypoint))
 				forward = waypoint;
 			else
 				forward = test;
 
 			// initilize the new left and right, and their validSteps that'll be used next frame
 			CheckWalls(nullptr);
-			velocity = forward.vector * speed;
+			collisionModel.Velocity() = forward.vector * speedHack;
 			return;
 		}
 
@@ -249,7 +250,7 @@ void eAI::CompassFollow() {
 		forward = best;
 		// initilize the new left and right, and their validSteps that'll be used next frame
 		CheckWalls(nullptr);
-		velocity = forward.vector * speed;
+		collisionModel.Velocity() = forward.vector * speedHack;
 	}
 	// moveState may have changed, track the correct waypoint
 	UpdateWaypoint();
@@ -306,7 +307,7 @@ bool eAI::CheckVectorPath(eVec2 from, decision_t & along) {
 			return true;
 
 		// move to check validity of next position
-		from += along.vector * speed;
+		from += along.vector * speedHack;
 	}
 
 	if (along.validSteps == 0.0f)
@@ -331,9 +332,9 @@ void eAI::CheckWalls(float * bias) {
 	left.vector.Set(-forward.vector.y, forward.vector.x);	// forward rotated 90 degrees counter-clockwise
 	right.vector.Set(forward.vector.y, -forward.vector.x);	// forward rotated 90 degrees clockwise
 
-	CheckVectorPath(origin + (forward.vector * speed), forward);
-	CheckVectorPath(origin + (left.vector * speed), left);
-	CheckVectorPath(origin + (right.vector * speed), right);
+	CheckVectorPath(collisionModel.Origin() + (forward.vector * speedHack), forward);
+	CheckVectorPath(collisionModel.Origin() + (left.vector * speedHack), left);
+	CheckVectorPath(collisionModel.Origin() + (right.vector * speedHack), right);
 
 	if (bias == nullptr)
 		return;
@@ -354,7 +355,7 @@ void eAI::CheckWalls(float * bias) {
 bool eAI::CheckFogOfWar(const eVec2 & point) const {
 	eVec2 lineOfSight;
 
-	lineOfSight = point - origin;
+	lineOfSight = point - collisionModel.Origin();
 	return lineOfSight.LengthSquared() <= sightRange;
 }
 
@@ -457,7 +458,7 @@ void eAI::UpdateKnownMap() {
 	// DEBUG: only needs to be more then **half-way** onto a new tile
 	// to set the currentTile as previousTile and VISITED_TILE,
 	// instead of completely off the tile (via a full absBounds check agains the eTile bounds)
-	checkTile = &knownMap.Index(origin);
+	checkTile = &knownMap.Index(collisionModel.Origin());
 	if (checkTile != currentTile) {
 		previousTile = currentTile;
 		*previousTile = VISITED_TILE;
@@ -473,7 +474,7 @@ void eAI::UpdateKnownMap() {
 		// that the AI displays when attempting to attain a goal (ie sometimes there's an opening that's missed in favor
 		// of maintaining the directional weight)
 		if (!goals.IsEmpty()) {
-			tileResetRange = (int)((goals.Back()->Data() - origin).Length() / (knownMap.CellWidth() * 2));
+			tileResetRange = (int)((goals.Back()->Data() - collisionModel.Origin()).Length() / (knownMap.CellWidth() * 2));
 
 			// find the knownMap row and column of the current goal waypoint
 			knownMap.Index(goals.Back()->Data(), row, column);
@@ -544,7 +545,7 @@ void eAI::DrawGoalWaypoints() {
 		return;
 
 	for (iterator = goals.Back(); iterator != nullptr; iterator = iterator->Next()) {
-		debugPoint = iterator->Data() - game.GetCamera().GetAbsBounds();
+		debugPoint = iterator->Data() - game.GetCamera().CollisionModel().AbsBounds()[0];
 		debugPoint.SnapInt();
 //		game.GetRenderer().DrawImage(debugImage, (eBounds(debugPoint).ExpandSelf(8))[0]);	// top-left corner
 	}
@@ -564,7 +565,7 @@ void eAI::DrawTrailWaypoints() {
 		return;
 
 	for(iterator = trail.Front(); iterator != nullptr; iterator = iterator->Prev()) {
-		debugPoint = iterator->Data() - game.GetCamera().GetAbsBounds();
+		debugPoint = iterator->Data() - game.GetCamera().CollisionModel().AbsBounds()[0];
 		debugPoint.SnapInt();
 //		game.GetRenderer().DrawImage(debugImage, (eBounds(debugPoint).ExpandSelf(8))[0]);	// top-left corner
 	}
@@ -574,7 +575,7 @@ void eAI::DrawTrailWaypoints() {
 // eAI::DrawCollisionCircle
 // FIXME: add this properly to the renderPool
 //******************
-void eAI::DrawCollisionCircle() const {
+void eAI::DrawCollisionCircle() {
 	eVec2 debugVector;
 	eVec2 debugPoint;
 	float rotationAngle;
@@ -594,8 +595,8 @@ void eAI::DrawCollisionCircle() const {
 	debugVector = vec2_oneZero;
 	rotationAngle = 0.0f;
 	while (rotationAngle < 360.0f) {
-		if (velocity * debugVector >= 0) {
-			debugPoint = origin + (debugVector * collisionRadius) - game.GetCamera().GetAbsBounds();
+		if (collisionModel.Velocity() * debugVector >= 0) {
+			debugPoint = collisionModel.Origin() + (debugVector * collisionRadius) - game.GetCamera().CollisionModel().AbsBounds()[0];
 			debugPoint.SnapInt();
 //			game.GetRenderer().DrawPixel(debugPoint, color[0], color[1], color[2]);
 		}
@@ -623,7 +624,7 @@ void eAI::DrawKnownMap() const {
 		return;
 
 	// initialize the area of the tileMap to query
-	knownMap.Index(game.GetCamera().GetAbsBounds(), row, column);
+	knownMap.Index(game.GetCamera().CollisionModel().AbsBounds()[0], row, column);
 	startCol = column;
 	endRow = row + maxScreenRows;
 	endCol = column + maxScreenColumns;
@@ -633,8 +634,8 @@ void eAI::DrawKnownMap() const {
 	screenRect.h = knownMap.CellHeight();
 	while (row <= endRow) {
 		if (knownMap.Index(row, column) == VISITED_TILE) {
-			screenRect.x = eMath::NearestInt(((float)(row * knownMap.CellWidth()) - game.GetCamera().GetAbsBounds().x));
-			screenRect.y = eMath::NearestInt(((float)(column * knownMap.CellHeight()) - game.GetCamera().GetAbsBounds().y));
+			screenRect.x = eMath::NearestInt(((float)(row * knownMap.CellWidth()) - game.GetCamera().CollisionModel().AbsBounds()[0].x));
+			screenRect.y = eMath::NearestInt(((float)(column * knownMap.CellHeight()) - game.GetCamera().CollisionModel().AbsBounds()[0].y));
 			game.GetRenderer().DrawDebugRect(blackColor, screenRect, true, RENDERTYPE_DYNAMIC);
 		}
 		

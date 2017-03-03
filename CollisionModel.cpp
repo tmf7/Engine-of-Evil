@@ -1,5 +1,3 @@
-#include "CollisionModel.h"
-#include "Collision.h"
 #include "Game.h"
 
 //***************
