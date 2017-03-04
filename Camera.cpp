@@ -8,7 +8,7 @@
 //***************
 void eCamera::Init() {
 	SetZoom(1);
-	CollisionModel().SetOrigin(CollisionModel().LocalBounds()[1] / 2.0f);
+	collisionModel.SetOrigin(collisionModel.LocalBounds()[1] / 2.0f);
 }
 
 //***************
@@ -21,8 +21,13 @@ void eCamera::Think() {
 	eVec2 correction;
 	float x, y;
 
-	static const int maxX = game.GetMap().TileMap().Width() > (int)CollisionModel().LocalBounds().Width() ? game.GetMap().TileMap().Width() : (int)CollisionModel().LocalBounds().Width();
-	static const int maxY = game.GetMap().TileMap().Height() > (int)CollisionModel().LocalBounds().Height() ? game.GetMap().TileMap().Height() : (int)CollisionModel().LocalBounds().Height();
+	static const int maxX = game.GetMap().TileMap().Width() > (int)collisionModel.LocalBounds().Width() 
+							? game.GetMap().TileMap().Width() 
+							: (int)collisionModel.LocalBounds().Width();
+
+	static const int maxY = game.GetMap().TileMap().Height() > (int)collisionModel.LocalBounds().Height() 
+							? game.GetMap().TileMap().Height() 
+							: (int)collisionModel.LocalBounds().Height();
 
 	input = &game.GetInput();
 
@@ -37,12 +42,12 @@ void eCamera::Think() {
 	if (input->KeyHeld(SDL_SCANCODE_SPACE)) {
 		eVec2 snapFocus = game.GetEntity(0)->CollisionModel().Origin();
 		eMath::CartesianToIsometric(snapFocus.x, snapFocus.y);
-		CollisionModel().SetOrigin(snapFocus);
+		collisionModel.SetOrigin(snapFocus);
 	} else {
 		x = camSpeed * (float)(input->KeyHeld(SDL_SCANCODE_D) - input->KeyHeld(SDL_SCANCODE_A));
 		y = camSpeed * (float)(input->KeyHeld(SDL_SCANCODE_S) - input->KeyHeld(SDL_SCANCODE_W));
-		CollisionModel().Velocity().Set(x, y);
-		CollisionModel().UpdateOrigin();
+		collisionModel.Velocity().Set(x, y);
+		collisionModel.UpdateOrigin();
 	}
 /*
 	// collision response with map edge
@@ -78,6 +83,6 @@ void eCamera::SetZoom(float level) {
 	screenBottomRight *= level;
 
 	// variable rectangle with (0, 0) at its center)
-	CollisionModel().LocalBounds() = eBounds(-screenBottomRight / 2.0f, screenBottomRight / 2.0f);
+	collisionModel.LocalBounds() = eBounds(-screenBottomRight / 2.0f, screenBottomRight / 2.0f);
 }
 

@@ -21,26 +21,26 @@ private:
 
 public:
 
-	static const int	invalidTileType = -1;
-	static const int	maxTileTypes = 256;
+	static const int		invalidTileType = -1;
+	static const int		maxTileTypes = 256;
 
 public:
-						eTileImpl();
+							eTileImpl();
 
-	int					Type() const;
-	const std::string &	Name() const;
-//	void				(*tileBehavior)();
+	int						Type() const;
+	const std::string &		Name() const;
+//	void					(*tileBehavior)();
 
-	static bool			InitTileTypes(const char * tilerFilename);
-	static int			NumTileTypes();
+	static bool				InitTileTypes(const char * tilerFilename);
+	static int				NumTileTypes();
 
-	static bool			IsCollidableHack(int type);
+	static bool				IsCollidableHack(int type);
 	
 private:
 	
-	int					type;				// index of the eImageTiler tileSet used
-	std::string			name;				// name of the sequence (or single tile image) in the tileSet
-	bool				collisionHack;		// FIXME: temporary solution to set entire CELL of spatial index grid to TRAVERSABLE/COLLISION
+	int						type;				// index of the eImageTiler tileSet used
+	std::string				name;				// name of the sequence (or single tile image) in the tileSet
+	bool					collisionHack;		// FIXME: temporary solution to set entire CELL of spatial index grid to TRAVERSABLE/COLLISION
 };
 
 extern eTileImpl					tileTypes[eTileImpl::maxTileTypes];
@@ -94,29 +94,36 @@ inline const std::string & eTileImpl::Name() const {
 //***********************************************
 class eTile {
 public:
-						eTile(const eVec2 & origin, const int type, const int layer);
+							eTile();
+
+	void					Init(const eVec2 & origin, const int type, const int layer);
 	
-	int					Type() const;
-	void				SetType(int newType);
-	const std::string &	Name() const;
+	int						Type() const;
+	void					SetType(int newType);
+	const std::string &		Name() const;
 
-	renderImage_t *		GetRenderImage();
-	void				UpdateRenderImageDisplay();
-	void				SetRenderImageOrigin(const eVec2 & origin);
+	renderImage_t *			GetRenderImage();
+	void					UpdateRenderImageDisplay();
 
-	Uint32				GetLayer() const;
-	void				SetLayer(const int newLayer);
+	Uint32					GetLayer() const;
+	void					SetLayer(const int newLayer);
 
-	eCollisionModel &	CollisionModel();
+	eCollisionModel &		CollisionModel();
 
-	bool				IsCollidableHack() const;	
+	bool					IsCollidableHack() const;	
 
 private:
 
-	eTileImpl *			impl;				// general tile type data
-	eCollisionModel		collisionModel;		// contains position and size of collision bounds
-	renderImage_t		renderImage;		// data relevant to the renderer
+	eTileImpl *				impl;				// general tile type data
+	eCollisionModel			collisionModel;		// contains position and size of collision bounds
+	renderImage_t			renderImage;		// data relevant to the renderer
 };
+
+//************
+// eTile::eTile
+//************
+inline eTile::eTile() {
+}
 
 //************
 // eTile::Type
@@ -130,6 +137,7 @@ inline int eTile::Type() const {
 //************
 inline void eTile::SetType(int newType) {
 	impl = &tileTypes[newType];
+	renderImage.srcRect = &tileSet->GetFrame(impl->type).Frame();		// FIXME(?): eTileImpl should probably do this
 }
 
 //************
@@ -159,13 +167,6 @@ inline renderImage_t * eTile::GetRenderImage() {
 inline void eTile::UpdateRenderImageDisplay() {
 	//	eImageFrame * currentFrame = &tileSet->GetFirstFrame(impl->Name());
 	//	currentFrame = currentFrame->Next();
-}
-
-//************
-// eTile::SetRenderImageOrigin
-//************
-inline void eTile::SetRenderImageOrigin(const eVec2 & origin) {
-	renderImage.origin = origin;
 }
 
 //************

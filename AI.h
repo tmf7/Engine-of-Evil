@@ -107,6 +107,7 @@ private:
 //***************
 inline eAI::eAI() {
 	sightRange	= 128.0f;
+	collisionModel.Velocity() = vec2_oneZero * 10;		// FIXME: test speed, load from file spawnArgs instead
 	goalRange	= collisionModel.Velocity().Length();
 	speedHack = goalRange;
 	maxSteps	= 5;

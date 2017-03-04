@@ -76,8 +76,10 @@ public:
 
 	void				DrawOutlineText(const char * text, eVec2 & point, const SDL_Color & color, bool constText, bool dynamic);
 	void				DrawImage(const renderImage_t * renderImage) const;
-	void				DrawDebugRectIso(const SDL_Color & color, const SDL_Rect & rect, bool dynamic) const;
-	void				DrawDebugRect(const SDL_Color & color, const SDL_Rect & rect, bool fill, bool dynamic) const;
+
+	SDL_Rect			ConvertRect(const SDL_Rect & rect) const;
+	void				DrawIsometricRect(const SDL_Color & color, const SDL_Rect & rect, bool fill, bool dynamic, bool anchorToMap) const;
+	void				DrawCartesianRect(const SDL_Color & color, const SDL_Rect & rect, bool fill, bool dynamic, bool anchorToMap) const;
 
 private:
 

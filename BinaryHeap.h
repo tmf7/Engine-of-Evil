@@ -4,23 +4,6 @@
 #include <new.h>		// std::move
 #include <utility>		// std::swap
 
-// TODO (A* search): use lazy deletion for IncreaseKey/DecreaseKey: insert the new data at the bottom and heapify,
-// AND somehow mark the old data as "visited" then just pop it when it reaches the top
-
-// TODO: two priority queues of eTiles, each eTile will have:
-// A float for its weight (for A* search) (one way of ordering a heap)
-// An int for its z-depth (for draw order heapsort) (another way of ordering, then sorting, a heap)
-
-// TODO: generalize things to be drawn in renderEntity_t structs such that a tile has one and an entity has one, and when
-// they're ready to be drawn they 
-
-// TODO (draw order): only create a heap (and heapsort) renderEntity_ts ready to be drawn and that are visible in
-// on the backbuffer (ie nothing should change about them once ready to draw [no increase/decreasekey]).
-// Further, this heap should be cleared (not the memory freed) each frame
-
-// TODO (A* search): heap can be cleared once the search is complete (not the memory freed)
-// AND after its list of best waypoints has been pushed onto a bestPath deque
-
 //********************************************
 //				eHeap
 // The template compare function a user creates 

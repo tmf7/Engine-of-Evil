@@ -98,12 +98,12 @@ inline void eSpatialIndexGrid<type, rows, columns>::Validate(eVec2 & point) cons
 	if (point.x < 0)
 		point.x = 0;
 	else if (point.x > width)
-		point.x = width;
+		point.x = (float)width;
 	
 	if (point.y < 0)
 		point.y = 0;
 	else if (point.y > height)
-		point.y = height;
+		point.y = (float)height;
 }
 
 //******************

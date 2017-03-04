@@ -32,6 +32,11 @@ bool eEntity::Spawn() {
 // eEntity::Draw
 //***************
 void eEntity::Draw() {
+
+	// FIXME: possibly move elsewhere
+	UpdateRenderImageOrigin();
+	UpdateRenderImageDisplay();
+
 	auto & cameraBounds = game.GetCamera().CollisionModel().AbsBounds();
 	eBounds dstBounds = eBounds(renderImage.origin, renderImage.origin + eVec2((float)renderImage.srcRect->w, (float)renderImage.srcRect->h));
 

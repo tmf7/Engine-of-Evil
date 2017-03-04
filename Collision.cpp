@@ -49,6 +49,74 @@ bool eCollision::ForwardCollisionTest(eCollisionModel & self, const std::vector<
 }
 
 //***************
+// eCollision::GetIsometricAreaCells
+// fills the areaCells vector with pointers to the eGridCells 
+// within the given area bounds (includes touching) after
+// converting the area from an AABB to an OBB (isometric bounding box)
+// DEBUG: make the areaCells function-static to avoid excessive dynamic allocation
+//***************
+void eCollision::GetIsometricAreaCells(const eBounds & area, std::vector<eGridCell *> & areaCells) {
+	auto & tileMap = game.GetMap().TileMap();
+	auto & camBounds = game.GetCamera().CollisionModel().AbsBounds();
+
+	auto topLeft = camBounds[0];
+	auto topRight = eVec2(camBounds[1].x, camBounds[0].y);
+	auto bottomLeft = eVec2(camBounds[0].x, camBounds[1].y);
+	auto bottomRight = camBounds[1];
+
+	eMath::IsometricToCartesian(topLeft.x, topLeft.y);
+	eMath::IsometricToCartesian(topRight.x, topRight.y);
+	eMath::IsometricToCartesian(bottomLeft.x, bottomLeft.y);
+	eMath::IsometricToCartesian(bottomRight.x, bottomRight.y);
+
+	// row, column pairs
+	std::array<std::pair<int, int>, 4> areaIndexes;
+
+	tileMap.Index(topLeft, areaIndexes[0].first, areaIndexes[0].second);
+	tileMap.Index(topRight, areaIndexes[1].first, areaIndexes[1].second);
+	tileMap.Index(bottomLeft, areaIndexes[2].first, areaIndexes[2].second);
+	tileMap.Index(bottomRight, areaIndexes[3].first, areaIndexes[3].second);
+
+	int startRow = areaIndexes[0].first;
+	int startCol = areaIndexes[0].second;
+	int limitRow = areaIndexes[3].first;
+	int limitCol = areaIndexes[3].second;
+	int row = startRow;		
+	int column = startCol;
+
+	// staggered tile query and draw order
+	bool oddLine = false;
+	for (int vertCount = 0; vertCount < maxVertCells; vertCount++) {
+		for (int horizCount = 0; horizCount < maxHorizCells; horizCount++) {
+			if (tileMap.IsValid(row, column)) {
+				areaCells.push_back(&tileMap.Index(row, column));
+			}
+			row++; column--;				// THIS
+		}
+		oddLine = !oddLine;
+		oddLine ? startCol++ : startRow++;	// AND THIS are most important to navigating the OBB edge and interior
+		row = startRow;
+		column = startCol;
+	}
+/*
+////////////////////////////////////
+	auto & tileMap = game.GetMap().TileMap();
+	int startRow, startCol;
+	int endRow, endCol;
+	tileMap.Index(area[0], startRow, startCol);
+	tileMap.Index(area[1], endRow, endCol);
+	tileMap.Validate(startRow, startCol);
+	tileMap.Validate(endRow, endCol);
+
+	for (int row = startRow; row <= endRow; row++) {
+		for (int col = startCol; col <= endCol; col++) {
+			areaCells.push_back(&tileMap.Index(row, col));
+		}
+	}
+	*/
+}
+
+//***************
 // eCollision::GetAreaCells
 // fills the areaCells vector with pointers to the eGridCells 
 // within the given area bounds (includes touching)

@@ -123,27 +123,40 @@ void eRenderer::DrawOutlineText(const char * text, eVec2 & point, const SDL_Colo
 }
 
 //***************
-// eRenderer::DrawDebugRectIso
+// eRenderer::ConvertRect
+// transfer the rect to map space
+//***************
+SDL_Rect eRenderer::ConvertRect(const SDL_Rect & rect) const {
+	eVec2 topLeft = eVec2((float)rect.x, (float)rect.y);
+	eMath::CartesianToIsometric(topLeft.x, topLeft.y);
+	return SDL_Rect{ eMath::NearestInt(topLeft.x), eMath::NearestInt(topLeft.y), rect.w, rect.h };
+}
+
+//***************
+// eRenderer::DrawIsometricMapRect
 // converts the given SDL_Rect into an isomectric box
-// dynamic == true draws to the scalableTarget, which moves with the camera
-// dynamic == false draws to the default render target
-// DEBUG: the input SDL_Rect must be in cartesian world-coordinates
+// fill draws the rect solid
+// dynamic moves and scales with the camera
+// anchorToMap transfers the rect from screen to map space
 // DEBUG: immediatly draws to the given render target
 //***************
-void eRenderer::DrawDebugRectIso(const SDL_Color & color, const SDL_Rect & rect, bool dynamic) const {
+void eRenderer::DrawIsometricRect(const SDL_Color & color, const SDL_Rect & rect, bool fill, bool dynamic, bool anchorToMap) const {
 	SDL_SetRenderDrawColor(internal_renderer, color.r, color.g, color.b, color.a);
-	std::vector<eVec2> fPoints(5);
 
-	// DEBUG: pushed in counter-clockwise line-draw order
-	// top-left, top-right, bottom-right, bottom-left, top-left (closes the rhombus)
-	fPoints[0] = eVec2((float)rect.x, (float)rect.y);
-	fPoints[1] = eVec2((float)(rect.x + rect.w), (float)rect.y);
-	fPoints[2] = eVec2((float)(rect.x + rect.w), (float)(rect.y + rect.h));
-	fPoints[3] = eVec2((float)rect.x, (float)(rect.y + rect.h));
+	SDL_Rect drawRect = anchorToMap ? ConvertRect(rect) : rect;
+	drawRect.x -= eMath::NearestInt(game.GetCamera().CollisionModel().AbsBounds()[0].x * dynamic);
+	drawRect.y -= eMath::NearestInt(game.GetCamera().CollisionModel().AbsBounds()[0].y * dynamic);
+
+	// clockwise rhombus
+	std::array<eVec2, 5> fPoints;
+	fPoints[0] = eVec2((float)drawRect.x, (float)drawRect.y);
+	fPoints[1] = eVec2((float)(drawRect.x + drawRect.w), (float)drawRect.y);
+	fPoints[2] = eVec2((float)(drawRect.x + drawRect.w), (float)(drawRect.y + drawRect.h));
+	fPoints[3] = eVec2((float)drawRect.x, (float)(drawRect.y + drawRect.h));
 	fPoints[4] = fPoints[0];
 
 	// transfer to a format SDL_RenderDrawLines can use
-	std::vector<SDL_Point> iPoints(5);
+	std::array<SDL_Point, 5> iPoints;
 	for (int i = 0; i < fPoints.size(); i++) {
 		eMath::CartesianToIsometric(fPoints[i].x, fPoints[i].y);
 		fPoints[i] -= (game.GetCamera().CollisionModel().AbsBounds()[0] * dynamic);
@@ -164,32 +177,30 @@ void eRenderer::DrawDebugRectIso(const SDL_Color & color, const SDL_Rect & rect,
 }
 
 //***************
-// eRenderer::DrawDebugRect
-// dynamic == true draws to the scalableTarget, which moves with the camera
-// dynamic == false draws to the default render target
+// eRenderer::DrawCartesianMapRect
+// fill draws the rect solid
+// dynamic moves and scales with the camera
+// anchorToMap transfers the rect from screen to map space
 // DEBUG: immediatly draws to the given render target
 //***************
-void eRenderer::DrawDebugRect(const SDL_Color & color, const SDL_Rect & rect, bool fill, bool dynamic) const {
+void eRenderer::DrawCartesianRect(const SDL_Color & color, const SDL_Rect & rect, bool fill, bool dynamic, bool anchorToMap) const {
 	SDL_SetRenderDrawColor(internal_renderer, color.r, color.g, color.b, color.a);
 
-	// map the given cartesian rectangle to isometric map coordinates
-	eVec2 topLeft = eVec2((float)rect.x, (float)rect.y);
-	eMath::CartesianToIsometric(topLeft.x, topLeft.y);
-	topLeft -= (game.GetCamera().CollisionModel().AbsBounds()[0] * dynamic);
-	SDL_Rect isoMapRect = { eMath::NearestInt(topLeft.x), eMath::NearestInt(topLeft.y), rect.w, rect.h };
+	SDL_Rect drawRect = anchorToMap ? ConvertRect(rect) : rect;
+	drawRect.x -= eMath::NearestInt(game.GetCamera().CollisionModel().AbsBounds()[0].x * dynamic);
+	drawRect.y -= eMath::NearestInt(game.GetCamera().CollisionModel().AbsBounds()[0].y * dynamic);
 
 	if (dynamic) {
 		SDL_SetRenderTarget(internal_renderer, scalableTarget);
 		SDL_RenderSetScale(internal_renderer, game.GetCamera().GetZoom(), game.GetCamera().GetZoom());
-		fill ? SDL_RenderFillRect(internal_renderer, &isoMapRect)
-			: SDL_RenderDrawRect(internal_renderer, &isoMapRect);
+		fill ? SDL_RenderFillRect(internal_renderer, &drawRect)
+			: SDL_RenderDrawRect(internal_renderer, &drawRect);
 		SDL_SetRenderTarget(internal_renderer, NULL);
 		SDL_RenderSetScale(internal_renderer, 1.0f, 1.0f);
 		SDL_RenderCopy(internal_renderer, scalableTarget, NULL, NULL);
-	}
-	else {
-		fill ? SDL_RenderFillRect(internal_renderer, &isoMapRect)
-			: SDL_RenderDrawRect(internal_renderer, &isoMapRect);
+	} else {
+		fill ? SDL_RenderFillRect(internal_renderer, &drawRect)
+			: SDL_RenderDrawRect(internal_renderer, &drawRect);
 	}
 	SDL_SetRenderDrawColor(internal_renderer, clearColor.r, clearColor.g, clearColor.b, clearColor.a);
 }
@@ -224,8 +235,8 @@ void eRenderer::FlushDynamicPool() {
 	QuickSort(	dynamicPool.data(),
 				dynamicPool.size(),
 				[](auto && a, auto && b) {
-				if (a->priority < b->priority) return -1;
-				else if (a->priority > b->priority) return 1;
+				if (a->dstRect.y < b->dstRect.y) return -1;
+				else if (a->dstRect.y > b->dstRect.y) return 1;
 				return 0;
 			});
 

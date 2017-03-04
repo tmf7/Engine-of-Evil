@@ -3,6 +3,26 @@
 //byte_t memoryPool[ONE_GIGABYTE];
 eGame game;
 
+/*
+//*************
+// (global) FileLogFn
+// output all SDL_LogXYZ messages to a log.txt file
+//************
+void FileLogFn(void * userdata, int category, SDL_LogPriority priority, const char * message) {
+	std::ofstream write("EvilErrorLog.txt");
+
+	// unable to find/create/open file
+	if (!write.good()) 
+		return;
+
+	write.seekp(0, std::ios_base::end);
+	write << message << '\n';
+
+	write.close();
+}
+SDL_LogOutputFunction FileLogFn_ptr = &FileLogFn;
+*/
+
 //****************
 // eGame::Init
 //****************
@@ -10,6 +30,9 @@ eGame::ErrorCode eGame::Init() {
 
 	if (SDL_Init(SDL_INIT_EVERYTHING) == -1)
 		return SDL_ERROR;
+
+//	SDL_LogSetAllPriority(SDL_LOG_PRIORITY_VERBOSE);	//  SDL_LOG_PRIORITY_CRITICAL // 
+//	SDL_LogSetOutputFunction(FileLogFn_ptr, NULL);	// DEGUG: SDL_LogCritical is called alot for some reason, bottleneck (DrawOutlineText, IMG_Load seem to be the reason)
 
 	if (!renderer.Init())
 		return RENDERER_ERROR;
@@ -106,8 +129,8 @@ bool eGame::Run() {
 	
 	// system updates
 	input.Update();
-	entities[0]->Think();			// TODO: loop over all entities
 	camera.Think();
+	entities[0]->Think();			// TODO: loop over all entities
 	map.Think();
 
 	// draw the dynamic/scalable gameplay
@@ -128,6 +151,55 @@ bool eGame::Run() {
 	// draw static debug information
 	if (debugFlags.FRAMERATE)
 		DrawFPS();
+
+// BEGIN FREEHILL DEBUG draw order checks
+
+	// DEBUG: testing that the entity renderImage bounds is where I think it is (no?)
+	auto & renderImage = *entities[0]->GetRenderImage();
+	eBounds dstBounds = eBounds(renderImage.origin, renderImage.origin + eVec2((float)renderImage.srcRect->w, (float)renderImage.srcRect->h));
+	SDL_Rect rendRect = { (int)dstBounds[0].x, (int)dstBounds[0].y, (int)dstBounds.Width(), (int)dstBounds.Height() };
+//	renderer.DrawCartesianRect(greenColor, rendRect, false, RENDERTYPE_DYNAMIC, false);
+
+	// DEBUG: testing that the entity collision bounds is where I think it is (no?)
+	auto & collBounds = entities[0]->CollisionModel().AbsBounds();
+	SDL_Rect collRect = { (int)collBounds[0].x, (int)collBounds[0].y, (int)collBounds.Width(), (int)collBounds.Height() };
+//	renderer.DrawCartesianRect(redColor, collRect, false, RENDERTYPE_DYNAMIC, false);
+
+	// DEBUG: testing that the camera is where it think it is (confirmed, yes)
+	auto & camBounds = camera.CollisionModel().AbsBounds();
+	SDL_Rect camRect = { (int)camBounds[0].x, (int)camBounds[0].y, (int)camBounds.Width(), (int)camBounds.Height() };
+//	renderer.DrawCartesianRect(greenColor, camRect, false, RENDERTYPE_DYNAMIC, false);
+
+	// AABBAABBTest(camBounds, dstBounds) results: figured out why the entity disappears (positions & hence overlap is bad)
+
+	// DEBUG: testing HOW the camera winds up drawing the correct gridcells
+	int scale = 25;
+	// DEBUG: scaled 2D cartesian map area
+	SDL_Rect cartMapRect = { 50, 50, map.TileMap().Width() / scale, map.TileMap().Height() / scale };
+	renderer.DrawCartesianRect(greenColor, cartMapRect, false, RENDERTYPE_STATIC, false);
+
+	// DEBUG: correct cells on the isometric map that need to be drawn
+	auto topLeft = camBounds[0];
+	auto topRight = eVec2(camBounds[1].x, camBounds[0].y);
+	auto bottomLeft = eVec2(camBounds[0].x, camBounds[1].y);
+	auto bottomRight = camBounds[1];
+
+	eMath::IsometricToCartesian(topLeft.x, topLeft.y);
+	eMath::IsometricToCartesian(topRight.x, topRight.y);
+	eMath::IsometricToCartesian(bottomLeft.x, bottomLeft.y);
+	eMath::IsometricToCartesian(bottomRight.x, bottomRight.y);
+
+	std::array<SDL_Point, 5> iPoints;
+	iPoints[0] = { eMath::NearestInt(topLeft.x) / scale + 50, eMath::NearestInt(topLeft.y) / scale + 50 };
+	iPoints[1] = { eMath::NearestInt(topRight.x) / scale + 50, eMath::NearestInt(topRight.y) / scale + 50 };
+	iPoints[2] = { eMath::NearestInt(bottomRight.x) / scale + 50, eMath::NearestInt(bottomRight.y) / scale + 50 };
+	iPoints[3] = { eMath::NearestInt(bottomLeft.x) / scale + 50, eMath::NearestInt(bottomLeft.y) / scale + 50 };
+	iPoints[4] = iPoints[0];
+	SDL_SetRenderDrawColor(renderer.GetSDLRenderer(), redColor.r, redColor.g, redColor.b, redColor.a);
+	SDL_RenderDrawLines(renderer.GetSDLRenderer(), iPoints.data(), iPoints.size());
+	SDL_SetRenderDrawColor(renderer.GetSDLRenderer(), clearColor.r, clearColor.g, clearColor.b, clearColor.a);
+
+// END FREEHILL DEBUG draw order checks
 
 //	renderer.FlushStaticPool();			// DEBUG: not currently used
 	renderer.Show();

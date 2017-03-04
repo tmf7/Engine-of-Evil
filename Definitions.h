@@ -14,6 +14,7 @@
 //#include <stdio.h>
 #include <unordered_map>
 #include <vector>
+#include <array>
 #include "Math.h"
 
 #define BIT(a) (1<<a)

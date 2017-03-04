@@ -636,7 +636,7 @@ void eAI::DrawKnownMap() const {
 		if (knownMap.Index(row, column) == VISITED_TILE) {
 			screenRect.x = eMath::NearestInt(((float)(row * knownMap.CellWidth()) - game.GetCamera().CollisionModel().AbsBounds()[0].x));
 			screenRect.y = eMath::NearestInt(((float)(column * knownMap.CellHeight()) - game.GetCamera().CollisionModel().AbsBounds()[0].y));
-			game.GetRenderer().DrawDebugRect(blackColor, screenRect, true, RENDERTYPE_DYNAMIC);
+			game.GetRenderer().DrawIsometricRect(blackColor, screenRect, true, RENDERTYPE_DYNAMIC, true);
 		}
 		
 		column++;
