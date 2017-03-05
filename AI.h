@@ -49,6 +49,12 @@ public:
 	const byte_map_t &	KnownMap() const;
 	bool				CheckFogOfWar(const eVec2 & point) const;
 
+	// debugging
+	void				DrawGoalWaypoints();
+	void				DrawTrailWaypoints();
+	void				DrawCollisionCircle();
+	void				DrawKnownMap() const;
+
 private:
 
 	byte_map_t			knownMap;				// tracks visited tiles 
@@ -94,12 +100,6 @@ private:
 	bool				CheckTrail();
 	void				UpdateKnownMap();
 	void				StopMoving();
-	
-	// debugging
-	void				DrawGoalWaypoints();
-	void				DrawTrailWaypoints();
-	void				DrawCollisionCircle();
-	void				DrawKnownMap() const;
 };
 
 //***************

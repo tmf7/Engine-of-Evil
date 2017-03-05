@@ -6,6 +6,7 @@ const SDL_Color blackColor		= { 0, 0, 0, SDL_ALPHA_OPAQUE };
 const SDL_Color greyColor_trans = { 0, 0, 0, 64 };
 const SDL_Color greenColor		= { 0, 255, 0, 255 };
 const SDL_Color redColor		= { 255, 0, 0, 255 };
+const SDL_Color blueColor		= { 0, 0, 255, 255 };
 
 //***************
 // eRenderer::Init
@@ -81,9 +82,8 @@ void eRenderer::Free() const {
 //***************
 // eRenderer::DrawOutlineText
 // Immediatly draws the given string on the screen using location and color
-// if constText == true caches the text image to accelerate redraw
-// dynamic == true draws to the scalableTarget, which moves with the camera
-// dynamic == false draws to the default render target
+// constText caches the text image to accelerate redraw
+// dynamic moves and scales with the camera
 // DEBUG: converts the input point float data to integer values
 //***************
 void eRenderer::DrawOutlineText(const char * text, eVec2 & point, const SDL_Color & color, bool constText, bool dynamic) {
@@ -107,10 +107,10 @@ void eRenderer::DrawOutlineText(const char * text, eVec2 & point, const SDL_Colo
 	}
 	
 	point -= game.GetCamera().CollisionModel().AbsBounds()[0] * dynamic;
-	SDL_Rect dstRect = {(int)point.x, (int)point.y, 0, 0 };
+	point.SnapInt();
+	SDL_Rect dstRect = { (int)point.x, (int)point.y, 0, 0 };
 	SDL_QueryTexture(renderedText, NULL, NULL, &dstRect.w, &dstRect.h);
 	if (dynamic) {
-		// TODO(?): convert point to isometric coordinates
 		SDL_SetRenderTarget(internal_renderer, scalableTarget);
 		SDL_RenderSetScale(internal_renderer, game.GetCamera().GetZoom(), game.GetCamera().GetZoom());
 		SDL_RenderCopy(internal_renderer, renderedText, nullptr, &dstRect);
@@ -123,44 +123,33 @@ void eRenderer::DrawOutlineText(const char * text, eVec2 & point, const SDL_Colo
 }
 
 //***************
-// eRenderer::ConvertRect
-// transfer the rect to map space
-//***************
-SDL_Rect eRenderer::ConvertRect(const SDL_Rect & rect) const {
-	eVec2 topLeft = eVec2((float)rect.x, (float)rect.y);
-	eMath::CartesianToIsometric(topLeft.x, topLeft.y);
-	return SDL_Rect{ eMath::NearestInt(topLeft.x), eMath::NearestInt(topLeft.y), rect.w, rect.h };
-}
-
-//***************
-// eRenderer::DrawIsometricMapRect
-// converts the given SDL_Rect into an isomectric box
+// eRenderer::DrawIsometricRect
+// converts the given rect into an isomectric box
 // fill draws the rect solid
 // dynamic moves and scales with the camera
-// anchorToMap transfers the rect from screen to map space
 // DEBUG: immediatly draws to the given render target
 //***************
-void eRenderer::DrawIsometricRect(const SDL_Color & color, const SDL_Rect & rect, bool fill, bool dynamic, bool anchorToMap) const {
+void eRenderer::DrawIsometricRect(const SDL_Color & color, eBounds rect, bool fill, bool dynamic) const {
 	SDL_SetRenderDrawColor(internal_renderer, color.r, color.g, color.b, color.a);
 
-	SDL_Rect drawRect = anchorToMap ? ConvertRect(rect) : rect;
-	drawRect.x -= eMath::NearestInt(game.GetCamera().CollisionModel().AbsBounds()[0].x * dynamic);
-	drawRect.y -= eMath::NearestInt(game.GetCamera().CollisionModel().AbsBounds()[0].y * dynamic);
-
-	// clockwise rhombus
 	std::array<eVec2, 5> fPoints;
-	fPoints[0] = eVec2((float)drawRect.x, (float)drawRect.y);
-	fPoints[1] = eVec2((float)(drawRect.x + drawRect.w), (float)drawRect.y);
-	fPoints[2] = eVec2((float)(drawRect.x + drawRect.w), (float)(drawRect.y + drawRect.h));
-	fPoints[3] = eVec2((float)drawRect.x, (float)(drawRect.y + drawRect.h));
+	fPoints[0] = rect[0];
+	fPoints[1] = eVec2(rect[1].x, rect[0].y);
+	fPoints[2] = rect[1];
+	fPoints[3] = eVec2(rect[0].x, rect[1].y);
 	fPoints[4] = fPoints[0];
 
-	// transfer to a format SDL_RenderDrawLines can use
+	// convert to isometric rhombus
+	// and translate with camera
+	// FIXME: after converting to isometric all points may also need
+	// to be translated horizontally by some as-yet unknown amount, 
+	// to account for the shift caused by the perspective change
 	std::array<SDL_Point, 5> iPoints;
 	for (int i = 0; i < fPoints.size(); i++) {
 		eMath::CartesianToIsometric(fPoints[i].x, fPoints[i].y);
-		fPoints[i] -= (game.GetCamera().CollisionModel().AbsBounds()[0] * dynamic);
-		iPoints[i] = SDL_Point{ eMath::NearestInt(fPoints[i].x), eMath::NearestInt(fPoints[i].y) };
+		fPoints[i] -= game.GetCamera().CollisionModel().AbsBounds()[0] * dynamic;
+		fPoints[i].SnapInt();
+		iPoints[i] = { (int)fPoints[i].x, (int)fPoints[i].y };
 	}
 
 	if (dynamic) {
@@ -177,18 +166,19 @@ void eRenderer::DrawIsometricRect(const SDL_Color & color, const SDL_Rect & rect
 }
 
 //***************
-// eRenderer::DrawCartesianMapRect
+// eRenderer::DrawCartesianRect
 // fill draws the rect solid
 // dynamic moves and scales with the camera
-// anchorToMap transfers the rect from screen to map space
 // DEBUG: immediatly draws to the given render target
 //***************
-void eRenderer::DrawCartesianRect(const SDL_Color & color, const SDL_Rect & rect, bool fill, bool dynamic, bool anchorToMap) const {
+void eRenderer::DrawCartesianRect(const SDL_Color & color, eBounds rect, bool fill, bool dynamic) const {
 	SDL_SetRenderDrawColor(internal_renderer, color.r, color.g, color.b, color.a);
 
-	SDL_Rect drawRect = anchorToMap ? ConvertRect(rect) : rect;
-	drawRect.x -= eMath::NearestInt(game.GetCamera().CollisionModel().AbsBounds()[0].x * dynamic);
-	drawRect.y -= eMath::NearestInt(game.GetCamera().CollisionModel().AbsBounds()[0].y * dynamic);
+	rect.TranslateSelf(-game.GetCamera().CollisionModel().AbsBounds()[0] * dynamic);
+	SDL_Rect drawRect = {	eMath::NearestInt(rect[0].x), 
+							eMath::NearestInt(rect[0].y), 
+							eMath::NearestInt(rect.Width()), 
+							eMath::NearestInt(rect.Height()) };
 
 	if (dynamic) {
 		SDL_SetRenderTarget(internal_renderer, scalableTarget);

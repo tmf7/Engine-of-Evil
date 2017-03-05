@@ -114,6 +114,113 @@ void eGame::DrawFPS() {
 	renderer.DrawOutlineText(fraps.c_str(), vec2_zero, redColor, false, RENDERTYPE_STATIC);
 }
 
+// BEGIN FREEHILL OBB calculation test
+typedef struct OBB_s {
+	eVec2 center;		// world-space center
+	eVec2 axes[2];		// unit-length locally oriented x and y axes
+	eVec2 halfSize;		// positive distance along local x and y axes
+} OBB_t;
+
+// DEBUG: edges must be perpendicular
+// and corner must be their point of intersection
+// TODO: now that a better representation is had
+// ... do an obb-obb test?
+// confirm I have the correct representation by drawing it?
+// convert an AABB to an OBB representation to do the OBBOBB test
+OBB_t GetOBB(eVec2 corner, eVec2 edges[2]) {
+	OBB_t obb;
+
+	eVec2 xAxis = -edges[1];
+	xAxis.Normalize();
+	eVec2 yAxis = -edges[0];
+	yAxis.Normalize();
+	obb.axes[0] = xAxis;
+	obb.axes[1] = yAxis;
+
+	obb.halfSize.y = edges[0].Length() / 2.0f;
+	obb.halfSize.x = edges[1].Length() / 2.0f;
+
+	eVec2 diagonal = edges[0] + edges[1];
+	float centerDist = diagonal.Length() / 2.0f;
+	diagonal.Normalize();
+	obb.center = corner + (diagonal * centerDist);
+	
+	return obb;
+}
+
+// TODO: move this to eCollision
+// test for a separating axis using 
+// the 8 faces of both OBBs
+bool OBBOBBTest(const OBB_t & a, const OBB_t & b) {
+	float ra;
+	float rb;
+	float R[2][2];
+	float AbsR[2][2];
+	const float EPSILON = 0.015625f;	// 1/64 (because binary fractions)
+
+	// DEBUG: all z-values of rotation matrix R are 0,
+	// except z-z which would be R[2][2] if R were 3x3
+	// so it is hereafter replaced with (1.0f + EPSILON)
+	const float R22 = 1.0f + EPSILON;
+
+	// compute rotation matrix spressing b in a' coordinate frame
+	for (int i = 0; i < 2; i++)
+		for (int j = 0; j < 2; j++)
+			R[i][j] = a.axes[i] * b.axes[j];
+
+	// compute translation vector
+	// and bring it into a's coordinate frame
+	eVec2 t = b.center - a.center;
+	t.Set(t * a.axes[0], t * a.axes[1]);
+
+	// compute common subexpressions. add in an epsilon term to
+	// counteract arithmetic erros when tow edges are parallel and
+	// their corss product is (near) zero
+	for (int i = 0; i < 2; i++)
+		for (int j = 0; j < 2; j++)
+			AbsR[i][j] = abs(R[i][j]) + EPSILON;
+
+	// test axes a.axes[0] and a.axes[1]
+	for (int i = 0; i < 2; i++) {
+		ra = a.halfSize[i];
+		rb = b.halfSize[0] * AbsR[i][0] + b.halfSize[1] * AbsR[i][1];
+		if (abs(t[i]) > ra + rb) return false;
+	}
+
+	// test axes b.axes[0] and b.axes[1]
+	for (int i = 0; i < 2; i++) {
+		ra = a.halfSize[0] * AbsR[0][i] + a.halfSize[1] * AbsR[1][i];
+		rb = b.halfSize[i];
+		if (abs(t[0] * R[0][i] + t[1] * R[1][i]) > ra + rb) return false;
+	}
+	
+	// test axis a.axes[0] X b.axes[2] (which is [0,0,1] for 2D)
+	ra = a.halfSize[1] * R22;
+	rb = b.halfSize[0] * AbsR[0][1] + b.halfSize[1] * AbsR[0][0];
+	if (abs(-t[1] * R22) > ra + rb) return false;
+
+	// test axis a.axes[1] X b.axes[2] (which is [0,0,1] for 2D)
+	ra = a.halfSize[0] * R22;
+	rb = b.halfSize[0] * AbsR[1][1] + b.halfSize[1] * AbsR[1][0];
+	if (abs(t[0] * R22) > ra + rb) return false;
+
+	// test axis a.axes[2] (which is [0,0,1] for 2D) X b.axes[0]
+	ra = a.halfSize[0] * AbsR[1][0] + a.halfSize[1] * AbsR[0][0];
+	rb = b.halfSize[1] * R22;
+	if (abs(t[1] * R[0][0] - t[0] * R[1][0]) > ra + rb) return false;
+
+	// test axis a.axes[2] (which is [0,0,1] for 2D) X b.axes[1]
+	ra = a.halfSize[0] * AbsR[1][1] + a.halfSize[1] * AbsR[0][1];
+	rb = b.halfSize[0] * R22;
+	if (abs(t[1] * R[0][1] - t[0] * R[1][1]) > ra + rb) return false;
+
+	// no separating axis, OBBs intersecting
+	return true;
+
+}
+
+// END FREEHILL OBB calculation test
+
 //****************
 // eGame::Run
 //****************
@@ -129,8 +236,8 @@ bool eGame::Run() {
 	
 	// system updates
 	input.Update();
-	camera.Think();
 	entities[0]->Think();			// TODO: loop over all entities
+	camera.Think();
 	map.Think();
 
 	// draw the dynamic/scalable gameplay
@@ -154,31 +261,32 @@ bool eGame::Run() {
 
 // BEGIN FREEHILL DEBUG draw order checks
 
-	// DEBUG: testing that the entity renderImage bounds is where I think it is (no?)
+	// DEBUG: entity renderImage bounds (confirmed, translated into visually isometric map position)
 	auto & renderImage = *entities[0]->GetRenderImage();
-	eBounds dstBounds = eBounds(renderImage.origin, renderImage.origin + eVec2((float)renderImage.srcRect->w, (float)renderImage.srcRect->h));
-	SDL_Rect rendRect = { (int)dstBounds[0].x, (int)dstBounds[0].y, (int)dstBounds.Width(), (int)dstBounds.Height() };
-//	renderer.DrawCartesianRect(greenColor, rendRect, false, RENDERTYPE_DYNAMIC, false);
+	auto renderOrigin = renderImage.origin;
+	eBounds dstBounds = eBounds(renderOrigin, renderOrigin + eVec2((float)renderImage.srcRect->w, (float)renderImage.srcRect->h));
+	renderer.DrawCartesianRect(greenColor, dstBounds, false, RENDERTYPE_DYNAMIC);
 
-	// DEBUG: testing that the entity collision bounds is where I think it is (no?)
-	auto & collBounds = entities[0]->CollisionModel().AbsBounds();
-	SDL_Rect collRect = { (int)collBounds[0].x, (int)collBounds[0].y, (int)collBounds.Width(), (int)collBounds.Height() };
-//	renderer.DrawCartesianRect(redColor, collRect, false, RENDERTYPE_DYNAMIC, false);
+	// DEBUG: entity collision bounds (confirmed, 2D over the othographic logical map)
+	renderer.DrawCartesianRect(redColor, entities[0]->CollisionModel().AbsBounds(), false, RENDERTYPE_DYNAMIC);
 
-	// DEBUG: testing that the camera is where it think it is (confirmed, yes)
-	auto & camBounds = camera.CollisionModel().AbsBounds();
-	SDL_Rect camRect = { (int)camBounds[0].x, (int)camBounds[0].y, (int)camBounds.Width(), (int)camBounds.Height() };
-//	renderer.DrawCartesianRect(greenColor, camRect, false, RENDERTYPE_DYNAMIC, false);
+	// DEBUG: camera bounds location (confirmed, yes)
+	renderer.DrawCartesianRect(greenColor, camera.CollisionModel().AbsBounds(), false, RENDERTYPE_DYNAMIC);
 
-	// AABBAABBTest(camBounds, dstBounds) results: figured out why the entity disappears (positions & hence overlap is bad)
+	// AABBAABBTest(camBounds, dstBounds) results: figured out why the entity disappears (VISUAL positions & hence overlap is bad)
+
+	// DEBUG: isometric rect draw (dynam/static)
+	renderer.DrawIsometricRect(redColor, entities[0]->CollisionModel().AbsBounds(), false, RENDERTYPE_DYNAMIC);
 
 	// DEBUG: testing HOW the camera winds up drawing the correct gridcells
-	int scale = 25;
+	float scale = 25.0f;
+	eVec2 offset = eVec2(50.0f, 50.0f);
 	// DEBUG: scaled 2D cartesian map area
-	SDL_Rect cartMapRect = { 50, 50, map.TileMap().Width() / scale, map.TileMap().Height() / scale };
-	renderer.DrawCartesianRect(greenColor, cartMapRect, false, RENDERTYPE_STATIC, false);
+	eBounds cartMapBounds = eBounds( offset, offset + (eVec2( map.TileMap().Width(), map.TileMap().Height()) / scale) );
+	renderer.DrawCartesianRect(greenColor, cartMapBounds, false, RENDERTYPE_STATIC);
 
-	// DEBUG: correct cells on the isometric map that need to be drawn
+	// DEBUG: correct cells area on the isometric map that need to be drawn
+	auto & camBounds = camera.CollisionModel().AbsBounds();
 	auto topLeft = camBounds[0];
 	auto topRight = eVec2(camBounds[1].x, camBounds[0].y);
 	auto bottomLeft = eVec2(camBounds[0].x, camBounds[1].y);
@@ -188,12 +296,25 @@ bool eGame::Run() {
 	eMath::IsometricToCartesian(topRight.x, topRight.y);
 	eMath::IsometricToCartesian(bottomLeft.x, bottomLeft.y);
 	eMath::IsometricToCartesian(bottomRight.x, bottomRight.y);
+	topLeft = (topLeft / scale) + offset;
+	topRight = (topRight / scale) + offset;
+	bottomLeft = (bottomLeft / scale) + offset;
+	bottomRight = (bottomRight / scale) + offset;
+
+	// DEBUG: OBB conversion and collision function testing (THEY WORK!)
+	eVec2 mapEdges[2] = {	eVec2(cartMapBounds[1].x, cartMapBounds[0].y) - cartMapBounds[0],
+							eVec2(cartMapBounds[0].x, cartMapBounds[1].y) - cartMapBounds[0]	};
+	OBB_t mapOBB = GetOBB(cartMapBounds[0], mapEdges);
+	eVec2 camEdges[2] = { topRight - topLeft, bottomLeft - topLeft };
+	OBB_t camOBB = GetOBB(topLeft, camEdges);
+	if(OBBOBBTest(mapOBB, camOBB))
+		renderer.DrawCartesianRect(blackColor, eBounds(vec2_zero, eVec2(32.0f, 32.0f)), true, RENDERTYPE_STATIC);
 
 	std::array<SDL_Point, 5> iPoints;
-	iPoints[0] = { eMath::NearestInt(topLeft.x) / scale + 50, eMath::NearestInt(topLeft.y) / scale + 50 };
-	iPoints[1] = { eMath::NearestInt(topRight.x) / scale + 50, eMath::NearestInt(topRight.y) / scale + 50 };
-	iPoints[2] = { eMath::NearestInt(bottomRight.x) / scale + 50, eMath::NearestInt(bottomRight.y) / scale + 50 };
-	iPoints[3] = { eMath::NearestInt(bottomLeft.x) / scale + 50, eMath::NearestInt(bottomLeft.y) / scale + 50 };
+	iPoints[0] = { eMath::NearestInt(topLeft.x), eMath::NearestInt(topLeft.y) };
+	iPoints[1] = { eMath::NearestInt(topRight.x), eMath::NearestInt(topRight.y) };
+	iPoints[2] = { eMath::NearestInt(bottomRight.x), eMath::NearestInt(bottomRight.y) };
+	iPoints[3] = { eMath::NearestInt(bottomLeft.x), eMath::NearestInt(bottomLeft.y) };
 	iPoints[4] = iPoints[0];
 	SDL_SetRenderDrawColor(renderer.GetSDLRenderer(), redColor.r, redColor.g, redColor.b, redColor.a);
 	SDL_RenderDrawLines(renderer.GetSDLRenderer(), iPoints.data(), iPoints.size());

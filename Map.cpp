@@ -155,10 +155,20 @@ void eMap::Think() {
 // FIXME(?): possibly do a eCollision::GetAreaCells(camera.AbsBounds.ExpandSelf(self*2)
 //***************
 void eMap::Draw() {
-//	static std::vector<eGridCell *> areaCells;
-/*
-	// get the corner cells of the camera for testing
+/*	static std::vector<eGridCell *> areaCells;
 	auto & camBounds = game.GetCamera().CollisionModel().AbsBounds();
+	eVec2 anchorToMap = camBounds[0];
+	eMath::CartesianToIsometric(anchorToMap.x, anchorToMap.y);
+	auto mapCamBounds = camBounds.Translate(anchorToMap);
+	mapCamBounds.TranslateSelf(-camBounds[0]);
+	eCollision::GetAreaCells(mapCamBounds, areaCells);
+	for (auto && cell : areaCells)
+		cell->Draw();
+
+	areaCells.clear();
+/////////////////////////////////
+
+	// get the corner cells of the camera for testing
 	auto topLeft = camBounds[0];
 	auto topRight = eVec2(camBounds[1].x, camBounds[0].y);
 	auto bottomLeft = eVec2(camBounds[0].x, camBounds[1].y);
@@ -169,21 +179,12 @@ void eMap::Draw() {
 	eMath::IsometricToCartesian(bottomLeft.x, bottomLeft.y);
 	eMath::IsometricToCartesian(bottomRight.x, bottomRight.y);
 
-	// TODO: create a eCollision::GetIsoAreaCells that rotates the GRID and does a staggered grab of
-	// cells along/within the given bounds (will be useful for areaSelection of the isometric variety)
-	// TODO: eMap::Draw arrarently is NOT the reason for the extreme framerate difference between the
-	// right (30) and left (120) sides of the map DIAGONAL (SO WHY/WHAT IS IT? profile it)
 	tileMap.Validate(topLeft); tileMap.Index(topLeft).Draw();
 	tileMap.Validate(topRight); tileMap.Index(topRight).Draw();
 	tileMap.Validate(bottomLeft); tileMap.Index(bottomLeft).Draw();
 	tileMap.Validate(bottomRight); tileMap.Index(bottomRight).Draw();
-
-//	eCollision::GetAreaCells(camBounds, areaCells);
-//	for (auto && cell : areaCells)
-//		cell->Draw();
-
-//	areaCells.clear();
-	*/
+///////////////////////////////
+*/
 	// DEBUG: these constants assume a cell is square, and that its isometric projection
 	// is twice as wide as it is tall, the invIsoCellHeight is halved to account for the
 	// staggered isometric cell alignment

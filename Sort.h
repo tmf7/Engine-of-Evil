@@ -8,6 +8,7 @@
 // only works on contiguous memory
 // lambdaCompare defines the closure type of a lambda function used for sort order
 // partitioning accounts for duplicates
+// DEBUG: compare must be of the lessThan (-1), greaterThan(1), equalTo(0) return type variety
 template <class type, class lambdaCompare>
 void QuickSort(type * data, const int numElements, lambdaCompare & compare) noexcept {
 
@@ -82,6 +83,7 @@ void QuickSort(type * data, const int numElements, lambdaCompare & compare) noex
 // global heapsort
 // only works on contiguous memory
 // lambdaCompare defines the closure type of a lambda function used for sort order
+// DEBUG: compare must be of the lessThan/greaterThan (true/false) variety
 template<class type, class lambdaCompare>
 void HeapSort(type * data, const int numElements, lambdaCompare & compare) noexcept {
 
@@ -121,6 +123,7 @@ void HeapSort(type * data, const int numElements, lambdaCompare & compare) noexc
 // lambdaCompare defines the closure type of a lambda function used for sort order
 // breaks data into sublists of naturally occuring sorted runs
 // DEBUG: can't really be noexcept given the dynamic memory allocation
+// DEBUG: compare must be of the lessThan/greaterThan (true/false) variety
 template<class type, class lambdaCompare>
 void MergeSort(type * data, const int numElements, lambdaCompare & compare) {
 	// FIXME/BUG: this will cause a stack overflow for too large of sets (eg > 100,000)
@@ -203,6 +206,7 @@ void MergeSort(type * data, const int numElements, lambdaCompare & compare) {
 	delete[] upperIndex;
 }
 
+// DEBUG: compare must be of the lessThan/greaterThan (true/false) variety
 template <class type, class lambdaCompare>
 void SelectionSort(type * data, const int numElements, lambdaCompare & compare) noexcept {
 
@@ -221,6 +225,7 @@ void SelectionSort(type * data, const int numElements, lambdaCompare & compare) 
 // than selection sort, but it may do more 
 // (potentially large) object copies/moves
 // However, both points are irrelevant with small lists
+// DEBUG: compare must be of the lessThan/greaterThan (true/false) variety
 template <class type, class lambdaCompare>
 void InsertionSort(type * data, const int numElements, lambdaCompare & compare) {
 

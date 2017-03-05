@@ -40,12 +40,9 @@ void eEntity::Draw() {
 	auto & cameraBounds = game.GetCamera().CollisionModel().AbsBounds();
 	eBounds dstBounds = eBounds(renderImage.origin, renderImage.origin + eVec2((float)renderImage.srcRect->w, (float)renderImage.srcRect->h));
 
-	if (eCollision::AABBAABBTest(cameraBounds, dstBounds)) {	
-		eMath::CartesianToIsometric(dstBounds[0].x, dstBounds[0].y);
+	if (eCollision::AABBAABBTest(cameraBounds, dstBounds)) {
 		dstBounds.TranslateSelf(-game.GetCamera().CollisionModel().AbsBounds()[0]);
 		dstBounds[0].SnapInt();
-//		dstBounds[1].SnapInt();		// DEBUG: unnecessary given renderImage.srcRect dimensions
-
 		renderImage.dstRect = { (int)dstBounds[0].x, (int)dstBounds[0].y, renderImage.srcRect->w, renderImage.srcRect->h };
 		game.GetRenderer().AddToRenderPool(&renderImage, RENDERTYPE_DYNAMIC);
 	}
@@ -56,6 +53,7 @@ void eEntity::Draw() {
 //*************
 void eEntity::UpdateRenderImageOrigin() {
 	renderImage.origin = collisionModel.Origin() + imageOffset;
+	eMath::CartesianToIsometric(renderImage.origin.x, renderImage.origin.y);
 }
 
 //*************

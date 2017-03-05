@@ -77,9 +77,8 @@ public:
 	void				DrawOutlineText(const char * text, eVec2 & point, const SDL_Color & color, bool constText, bool dynamic);
 	void				DrawImage(const renderImage_t * renderImage) const;
 
-	SDL_Rect			ConvertRect(const SDL_Rect & rect) const;
-	void				DrawIsometricRect(const SDL_Color & color, const SDL_Rect & rect, bool fill, bool dynamic, bool anchorToMap) const;
-	void				DrawCartesianRect(const SDL_Color & color, const SDL_Rect & rect, bool fill, bool dynamic, bool anchorToMap) const;
+	void				DrawIsometricRect(const SDL_Color & color, eBounds rect, bool fill, bool dynamic) const;
+	void				DrawCartesianRect(const SDL_Color & color, eBounds rect, bool fill, bool dynamic) const;
 
 private:
 
@@ -99,6 +98,7 @@ extern const SDL_Color blackColor;
 extern const SDL_Color greyColor_trans;
 extern const SDL_Color greenColor;
 extern const SDL_Color redColor;
+extern const SDL_Color blueColor;
 
 //***************
 // eRenderer::eRenderer

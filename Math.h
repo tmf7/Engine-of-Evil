@@ -15,7 +15,9 @@ public:
 	static float		NearestFloat(float x);
 	static int			NearestInt(float x);
 	static void			IsometricToCartesian(float & x, float & y);
+	static void			IsometricToCartesian(int & x, int & y);
 	static void			CartesianToIsometric(float & x, float & y);
+	static void			CartesianToIsometric(int & x, int & y);
 	static float		Maximize(float a, float b);
 	static float		Minimize(float a, float b);
 	static float		GetAngle(float x, float y);
@@ -48,6 +50,18 @@ inline void eMath::IsometricToCartesian(float & x, float & y) {
 }
 
 //************
+// eMath::IsometricToCartesian
+// rotates input coordinates 45 degrees counter-clockwise
+// DEBUG: assumes the input coordinates are isometric
+//************
+inline void eMath::IsometricToCartesian(int & x, int & y) {
+	float isoX = (float)x;
+	float isoY = (float)y;
+	x = NearestInt((2.0f * isoY + isoX) * 0.5f);
+	y = NearestInt((2.0f * isoY - isoX) * 0.5f);
+}
+
+//************
 // eMath::CartesianToIsometric
 // rotates input coordinates 45 degrees clockwise 
 // DEBUG: assumes the input coordinates are cartesian
@@ -57,6 +71,18 @@ inline void eMath::CartesianToIsometric(float & x, float & y) {
 	float cartY = y;
 	x = cartX - cartY;
 	y = (cartX + cartY) * 0.5f;
+}
+
+//************
+// eMath::CartesianToIsometric
+// rotates input coordinates 45 degrees clockwise 
+// DEBUG: assumes the input coordinates are cartesian
+//************
+inline void eMath::CartesianToIsometric(int & x, int & y) {
+	int cartX = x;
+	int cartY = y;
+	x = cartX - cartY;
+	y = NearestInt((float)(cartX + cartY) * 0.5f);
 }
 
 //***************

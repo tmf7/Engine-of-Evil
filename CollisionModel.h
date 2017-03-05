@@ -82,7 +82,12 @@ inline void eCollisionModel::UpdateOrigin() {
 	oldOrigin = origin;
 	origin += velocity;// * game.GetFixedTime();	// FIXME: defined outside this header
 	absBounds = localBounds + origin;
-	UpdateAreas();
+//	UpdateAreas();	// DEBUG: testing if this is causing the odd framerate map-diagonal slowdown, YUP! THIS IS IT.
+					// SOLUTION: at some point perhaps too much needs to be verified? wrong positioning?
+					// eCamera has a collisionModel that is updating areas....ugh
+					// TODO(?): use a flag to prevent certain objects from participating in collision checks (like DOOM's TH_PHYSICS)
+					// TODO: nail down the camera movement to visual representation (AND COLLISION WITH VISIBLE ENTITY POSITIONS)
+					// KEY == VISUAL (not logical, like normal collision is)
 }
 
 //*************
@@ -92,7 +97,8 @@ inline void eCollisionModel::SetOrigin(const eVec2 & point) {
 	oldOrigin = origin;
 	origin = point;
 	absBounds = localBounds + origin;
-	UpdateAreas();
+//	UpdateAreas();		// DEBUG: testing if this is causing the odd framerate map-diagonal slowdown, YUP! THIS IS IT.
+						// SOLUTION: at some point perhaps too much needs to be verified? wrong positioning?
 }
 
 //*************

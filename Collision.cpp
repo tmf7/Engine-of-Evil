@@ -54,9 +54,10 @@ bool eCollision::ForwardCollisionTest(eCollisionModel & self, const std::vector<
 // within the given area bounds (includes touching) after
 // converting the area from an AABB to an OBB (isometric bounding box)
 // DEBUG: make the areaCells function-static to avoid excessive dynamic allocation
+// TOOD: this will be useful for areaSelection of the isometric variety, if not eMap::Draw
 //***************
 void eCollision::GetIsometricAreaCells(const eBounds & area, std::vector<eGridCell *> & areaCells) {
-	auto & tileMap = game.GetMap().TileMap();
+/*	auto & tileMap = game.GetMap().TileMap();
 	auto & camBounds = game.GetCamera().CollisionModel().AbsBounds();
 
 	auto topLeft = camBounds[0];
@@ -98,7 +99,7 @@ void eCollision::GetIsometricAreaCells(const eBounds & area, std::vector<eGridCe
 		row = startRow;
 		column = startCol;
 	}
-/*
+
 ////////////////////////////////////
 	auto & tileMap = game.GetMap().TileMap();
 	int startRow, startCol;
@@ -128,12 +129,13 @@ void eCollision::GetAreaCells(const eBounds & area, std::vector<eGridCell *> & a
 	int endRow, endCol;
 	tileMap.Index(area[0], startRow, startCol);
 	tileMap.Index(area[1], endRow, endCol);
-	tileMap.Validate(startRow, startCol);
-	tileMap.Validate(endRow, endCol);
+//	tileMap.Validate(startRow, startCol);		// FIXME: either do this or the loop if-statement (this is generally faster, but may break the logic)
+//	tileMap.Validate(endRow, endCol);
 
 	for (int row = startRow; row <= endRow; row++) {
 		for (int col = startCol; col <= endCol; col++) {
-			areaCells.push_back(&tileMap.Index(row, col));
+			if (tileMap.IsValid(row, col))
+				areaCells.push_back(&tileMap.Index(row, col));
 		}
 	}
 }

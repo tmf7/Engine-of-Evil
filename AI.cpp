@@ -607,14 +607,9 @@ void eAI::DrawCollisionCircle() {
 
 //******************
 // eAI::DrawKnownMap
-// FIXME: add this properly to the renderPool
+// FIXME: this VISIBLE cell logic doesn't work for the isometric camera view
 //******************
 void eAI::DrawKnownMap() const {
-	SDL_Rect screenRect;
-	eVec2 screenPoint;
-	int row, column;
-	int endRow, startCol, endCol;
-
 	// maximum number of tiles to draw on the current window (max 1 boarder tile beyond in all directions)
 	// TODO: allow this value to change in the event that cell size changes
 	static const int maxScreenRows = (int)(game.GetRenderer().ViewArea().w / knownMap.CellWidth()) + 2;
@@ -623,20 +618,20 @@ void eAI::DrawKnownMap() const {
 	if (!game.debugFlags.KNOWN_MAP_DRAW)
 		return;
 
-	// initialize the area of the tileMap to query
+	// initialize the area of the knownMap to query
+	int row, column;
 	knownMap.Index(game.GetCamera().CollisionModel().AbsBounds()[0], row, column);
-	startCol = column;
-	endRow = row + maxScreenRows;
-	endCol = column + maxScreenColumns;
+	int startCol = column;
+	int endRow = row + maxScreenRows;
+	int endCol = column + maxScreenColumns;
 	knownMap.Validate(endRow, endCol);
 
-	screenRect.w = knownMap.CellWidth();
-	screenRect.h = knownMap.CellHeight();
+	auto & tileMap = game.GetMap().TileMap();
 	while (row <= endRow) {
 		if (knownMap.Index(row, column) == VISITED_TILE) {
-			screenRect.x = eMath::NearestInt(((float)(row * knownMap.CellWidth()) - game.GetCamera().CollisionModel().AbsBounds()[0].x));
-			screenRect.y = eMath::NearestInt(((float)(column * knownMap.CellHeight()) - game.GetCamera().CollisionModel().AbsBounds()[0].y));
-			game.GetRenderer().DrawIsometricRect(blackColor, screenRect, true, RENDERTYPE_DYNAMIC, true);
+			auto cellBounds = tileMap.Index(row, column).AbsBounds();
+			cellBounds.TranslateSelf(-game.GetCamera().CollisionModel().AbsBounds()[0]);
+			game.GetRenderer().DrawIsometricRect(blackColor, cellBounds, true, RENDERTYPE_DYNAMIC);
 		}
 		
 		column++;
