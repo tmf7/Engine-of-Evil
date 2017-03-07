@@ -54,6 +54,8 @@ extern eVec2 vec2_oneZero;
 // eVec2::eVec2
 //******************
 inline eVec2::eVec2() {
+	x = 0.0f;
+	y = 0.0f;
 }
 
 //******************
@@ -326,6 +328,9 @@ extern eVec3 vec3_oneZero;
 // eVec3::eVec3
 //******************
 inline eVec3::eVec3() {
+	x = 0.0f;
+	y = 0.0f;
+	z = 0.0f;
 }
 
 //******************

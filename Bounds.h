@@ -131,6 +131,13 @@ inline float eBounds::Radius() const {
 			total += b1 * b1;
 	}
 	return SDL_sqrtf(total);
+
+	// TODO: alternatively (test equivalence)
+	// (performance) may be slower due to the extra function call overhead
+	// same for eVec3
+//	eVec2 center = (bounds[0] + bounds[1]) * 0.5f;
+//	eVec2 extents = bounds[1] - center;
+//	return extents.Length();
 }
 
 //*************

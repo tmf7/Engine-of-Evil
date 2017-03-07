@@ -22,28 +22,25 @@ typedef struct renderImage_s {
 	SDL_Rect					dstRect;		// SDL consumable cliprect, where on the screen (adjusted for camera position)
 	eVec2						origin;			// top-left corner of image using world coordinates (not adjusted to account for camera)
 												// DEBUG: dimensions relative to srcRect will affect scaling
-	Uint32						priority;		// lower priority draws first
+	float						priority;		// combination of layer and origin.y **during AddToRenderPool**, lower priority draws first
+	Uint32						layer;			// the primary draw sorting criteria
 //	eEntity *					owner;			// who's using this renderimage, for secondary renderPool sort if priority causes flicker
 
 	renderImage_s()
 		: image(nullptr),
 		  srcRect(nullptr),
-		  priority(MAX_LAYER << 16) {};
+		  layer(MAX_LAYER) {};
 	
 	renderImage_s(std::shared_ptr<eImage> & image, const SDL_Rect * srcRect, const eVec2 & origin, const Uint8 layer)
 		: image(image),
 		  srcRect(srcRect), 
 		  origin(origin),
-		  priority(layer << 16) {};	// DEBUG: most-significant 2 bytes are layer
-									// least-significant 2 bytes are renderPool push order
+		  layer(layer) {};		// DEBUG: used to be priority, where most-significant 2 bytes are layer
+								// least-significant 2 bytes are renderPool push order, ie in AddToRenderPool(...)
+								// renderImage->priority |= targetPool->size();
 
-	void SetLayer(const int layer) {
-		priority = layer << 16;
-	}
-
-	Uint32 GetLayer() const {
-		return priority >> 16;
-	}
+	void SetLayer(const int layer) { this->layer = layer; }
+	Uint32 GetLayer() const { return layer; }
 } renderImage_t;
 
 //**************************************************

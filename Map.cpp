@@ -184,7 +184,7 @@ void eMap::Draw() {
 	tileMap.Validate(bottomLeft); tileMap.Index(bottomLeft).Draw();
 	tileMap.Validate(bottomRight); tileMap.Index(bottomRight).Draw();
 ///////////////////////////////
-*/
+
 	// DEBUG: these constants assume a cell is square, and that its isometric projection
 	// is twice as wide as it is tall, the invIsoCellHeight is halved to account for the
 	// staggered isometric cell alignment
@@ -225,7 +225,7 @@ void eMap::Draw() {
 		row = startRow;
 		column = startCol;
 	}
-	
+*/	
 }
 
 

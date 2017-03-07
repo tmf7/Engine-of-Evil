@@ -41,9 +41,9 @@ void eEntity::Draw() {
 	eBounds dstBounds = eBounds(renderImage.origin, renderImage.origin + eVec2((float)renderImage.srcRect->w, (float)renderImage.srcRect->h));
 
 	if (eCollision::AABBAABBTest(cameraBounds, dstBounds)) {
-		dstBounds.TranslateSelf(-game.GetCamera().CollisionModel().AbsBounds()[0]);
-		dstBounds[0].SnapInt();
-		renderImage.dstRect = { (int)dstBounds[0].x, (int)dstBounds[0].y, renderImage.srcRect->w, renderImage.srcRect->h };
+		eVec2 drawPoint = renderImage.origin - game.GetCamera().CollisionModel().AbsBounds()[0];
+		drawPoint.SnapInt();
+		renderImage.dstRect = { (int)drawPoint.x, (int)drawPoint.y, renderImage.srcRect->w, renderImage.srcRect->h };
 		game.GetRenderer().AddToRenderPool(&renderImage, RENDERTYPE_DYNAMIC);
 	}
 }

@@ -206,18 +206,16 @@ void eRenderer::DrawImage(const renderImage_t * renderImage) const {
 // eRenderer::AddToRenderPool
 // dynamic == false is used for overlays and/or HUD guis
 // dynamic == true is used for scaling and translating groups of images together based on camera properties
-// DEBUG: most-significant 2 bytes of priority were set using the layer during construction,
-// the the least-significant 2 bytes are now set according to the order the renderImage was added to the renderPool
 //***************
 void eRenderer::AddToRenderPool(renderImage_t * renderImage, bool dynamic) {
 	std::vector<renderImage_t *> * targetPool = dynamic ? &dynamicPool : &staticPool;
-	renderImage->priority |= targetPool->size();
+	renderImage->priority = (float)(renderImage->layer << 16) + renderImage->origin.y;	// DEBUG: layer dominates, origin.y tiebreaker
 	targetPool->push_back(renderImage);
 }
 
 //***************
 // eRenderer::FlushDynamicPool
-// FIXME/BUG(!): ensure entities never occupy the same layer/depth as world tiles 
+// FIXME: ensure entities never occupy the same layer/depth as world tiles 
 // (otherwise the unstable quicksort will put them at RANDOM draw orders relative to the same layer/depth tiles)
 //***************
 void eRenderer::FlushDynamicPool() {
@@ -225,9 +223,9 @@ void eRenderer::FlushDynamicPool() {
 	QuickSort(	dynamicPool.data(),
 				dynamicPool.size(),
 				[](auto && a, auto && b) {
-				if (a->dstRect.y < b->dstRect.y) return -1;
-				else if (a->dstRect.y > b->dstRect.y) return 1;
-				return 0;
+					if (a->priority < b->priority) return -1;
+					else if (a->priority > b->priority) return 1;
+					return 0;
 			});
 
 	// set the render target, and scale according to camera zoom
@@ -255,10 +253,10 @@ void eRenderer::FlushDynamicPool() {
 //***************
 void eRenderer::FlushStaticPool() {
 	// sort the staticPool for the default render target
-	QuickSort(staticPool.data(),
-			  staticPool.size(), 
-			  [](auto && a, auto && b) { 
-					if (a->priority < b->priority) return -1; 
+	QuickSort(	staticPool.data(),
+				staticPool.size(), 
+				[](auto && a, auto && b) { 
+					if (a->priority < b->priority) return -1;
 					else if (a->priority > b->priority) return 1;
 					return 0; 
 			});

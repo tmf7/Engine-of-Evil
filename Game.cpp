@@ -115,6 +115,89 @@ void eGame::DrawFPS() {
 }
 
 // BEGIN FREEHILL OBB calculation test
+
+// DEBUG: additional functionality for eBounds to facilitate
+// transforming to OBB (eBox)
+// DEBUG: points is filled in a clockwise winding order from topleft 
+void ToPoints(const eBounds & bounds, eVec2 points[4]) {
+	for (int i = 0; i < 4; i++) {
+		points[i][0] = bounds[(i^(i>>1))&1][0];
+		points[i][1] = bounds[(i>>1)&1][1];
+	}
+}
+
+// DEBUG: testing arbitrary rotation about an arbitrary origin
+void RotatePoint(eVec2 & point, const float degrees, const eVec2 & origin) {
+	const float cosAngle = SDL_cosf(DEG2RAD(degrees));
+	const float sinAngle = SDL_sinf(DEG2RAD(degrees));
+	const eVec2 R[2] = { eVec2(cosAngle, sinAngle),
+						 eVec2(-sinAngle, cosAngle) };
+
+	// move to the world origin
+	eVec2 localPoint = point - origin;
+	point = origin + eVec2(	R[0].x * localPoint.x + R[1].x * localPoint.y,
+							R[0].y * localPoint.x + R[1].y * localPoint.y	);
+}
+
+
+// produce a fitted AABB from a list of random points 
+// DEBUG: in this test case the four corners of an OBB
+// but this method works with any set of points any size
+eBounds GetAABBFromPoints(std::array<eVec2, 4> & points) {
+	static const std::array<eVec2, 2> axes = { eVec2(1.0f, 0.0f), eVec2(0.0f, 1.0f) };
+	eVec2 mins;
+	eVec2 maxs;
+
+	// find the max and min projection coordinate along each axis
+	for (int i = 0; i < 2; i++) {
+		float minproj = FLT_MAX;
+		float maxproj = -FLT_MAX;
+		for (int j = 0; j < points.size(); j++) {
+			float proj = points[j] * axes[i];
+			if (proj < minproj) {
+				minproj = proj;
+				mins[i] = points[j][i];
+			}
+			if (proj > maxproj) {
+				maxproj = proj;
+				maxs[i] = points[j][i];
+			}
+		}
+	}
+	return eBounds(mins, maxs);
+}
+
+// Transform AABB a by the matrix R_CCW and origin translation,
+// find maximum extents, and return the resulting AABB
+// DEBUG: must use local-space bounds for accurate size and position
+eBounds GetAABBFromIsometricRotation(const eBounds & bounds, const eVec2 & origin) {
+	// 45 degrees CCW about z-axis
+	static const float cos45 = SDL_sqrtf(2) * 0.5f;
+	static const eVec2 R_CCW[2] = {	eVec2(cos45, cos45),
+									eVec2(-cos45, cos45)};
+
+	eVec2 center, extents;
+	eVec2 rotatedCenter, rotatedExtents;
+	center = (bounds[0] + bounds[1]) * 0.5f;
+	extents = bounds[1] - center;
+
+	for (int i = 0; i < 2; i++) {
+		rotatedExtents[i] = abs(extents[0] * R_CCW[0][i]) +
+							abs(extents[1] * R_CCW[1][i]);
+
+		// FIXME: if using local-space then bounds center is 0,0 and will remain so
+		// therefore this step is overkill
+		rotatedCenter[i] = origin[i];
+		rotatedCenter[i] +=	(center[0] * R_CCW[0][i]) +
+							(center[1] * R_CCW[1][i]);
+	}
+
+	eBounds aabb;
+	aabb[0] = rotatedCenter - rotatedExtents;
+	aabb[1] = rotatedCenter + rotatedExtents;
+	return aabb;
+}
+
 typedef struct OBB_s {
 	eVec2 center;		// world-space center
 	eVec2 axes[2];		// unit-length locally oriented x and y axes
@@ -123,11 +206,8 @@ typedef struct OBB_s {
 
 // DEBUG: edges must be perpendicular
 // and corner must be their point of intersection
-// TODO: now that a better representation is had
-// ... do an obb-obb test?
-// confirm I have the correct representation by drawing it?
-// convert an AABB to an OBB representation to do the OBBOBB test
-OBB_t GetOBB(eVec2 corner, eVec2 edges[2]) {
+// TODO: this should be a constructor
+OBB_t GetOBBFromEdges(const eVec2 & corner, const eVec2 * edges) {
 	OBB_t obb;
 
 	eVec2 xAxis = -edges[1];
@@ -145,6 +225,17 @@ OBB_t GetOBB(eVec2 corner, eVec2 edges[2]) {
 	diagonal.Normalize();
 	obb.center = corner + (diagonal * centerDist);
 	
+	return obb;
+}
+
+// converts AABB to OBB
+// TODO: this should be a constructor
+OBB_t GetOBBFromAABB(const eBounds & bounds) {
+	OBB_t obb;
+	obb.center = (bounds[0] + bounds[1]) * 0.5f;
+	obb.halfSize = bounds[1] - obb.center;
+	obb.axes[0] = eVec2(1.0f, 0.0f);
+	obb.axes[1] = eVec2(0.0f, 1.0f);
 	return obb;
 }
 
@@ -216,7 +307,6 @@ bool OBBOBBTest(const OBB_t & a, const OBB_t & b) {
 
 	// no separating axis, OBBs intersecting
 	return true;
-
 }
 
 // END FREEHILL OBB calculation test
@@ -242,7 +332,42 @@ bool eGame::Run() {
 
 	// draw the dynamic/scalable gameplay
 	renderer.Clear();
-	map.Draw();
+//	map.Draw();
+// BEGIN FREEHILL DEBUG map area draw test
+	// DEBUG: correct cells area on the isometric map that need to be drawn
+	auto & absBounds = camera.CollisionModel().AbsBounds();
+	auto & localBounds = camera.CollisionModel().LocalBounds();
+	std::array<eVec2, 4> obbPoints;
+	ToPoints(absBounds, obbPoints.data());
+	auto origin = absBounds.Center();
+	eMath::IsometricToCartesian(origin.x, origin.y);
+//	RotatePoint(origin, 45, vec2_zero);
+	for (int i = 0; i < obbPoints.size(); i++) {			// FIXME(performance): the next camOBB point means this only happens once	
+//		eMath::IsometricToCartesian(obbPoints[i].x, obbPoints[i].y);
+		RotatePoint(obbPoints[i], 45.0f, origin);			// FIXME: this needs a better rotation origin
+	}
+
+	eVec2 camEdges[2] = { obbPoints[1] - obbPoints[0], obbPoints[3] - obbPoints[0] };
+	OBB_t camOBB = GetOBBFromEdges(obbPoints[0], camEdges);		// FIXME(performance): save this with eCamera and just translate it parallel
+
+//	eBounds fitAABB = GetAABBFromIsometricRotation(localBounds, camOBB.center);
+	eBounds fitAABB = GetAABBFromPoints(obbPoints);
+	static std::vector<eGridCell *> areaCells;
+	eCollision::GetAreaCells(fitAABB, areaCells);			// FIXME(performance): if the camera doesn't move, then areaCells won't change
+															// use that temporal coherency to avoid re-getting the cells
+															// and/or use spatial coherency (assuming a SetOrigin didn't happen)
+															// to only add/prune the new/old cells because most will be the same
+	for (auto && cell : areaCells) {		
+		OBB_t cellOBB = GetOBBFromAABB(cell->AbsBounds());	// FIXME(performance): this could be stored INSTEAD of cell.AbsBounds 
+															// because only ForwardCollisionTest uses that for broadphaseing
+															// so AABBFromOBB for that may be better
+		if (OBBOBBTest(cellOBB, camOBB)) {
+			cell->Draw();
+		}
+	}
+	areaCells.clear();
+// END FREEHILL DEBUG draw order 
+
 	entities[0]->Draw();
 	renderer.FlushDynamicPool();
 
@@ -258,69 +383,6 @@ bool eGame::Run() {
 	// draw static debug information
 	if (debugFlags.FRAMERATE)
 		DrawFPS();
-
-// BEGIN FREEHILL DEBUG draw order checks
-
-	// DEBUG: entity renderImage bounds (confirmed, translated into visually isometric map position)
-	auto & renderImage = *entities[0]->GetRenderImage();
-	auto renderOrigin = renderImage.origin;
-	eBounds dstBounds = eBounds(renderOrigin, renderOrigin + eVec2((float)renderImage.srcRect->w, (float)renderImage.srcRect->h));
-	renderer.DrawCartesianRect(greenColor, dstBounds, false, RENDERTYPE_DYNAMIC);
-
-	// DEBUG: entity collision bounds (confirmed, 2D over the othographic logical map)
-	renderer.DrawCartesianRect(redColor, entities[0]->CollisionModel().AbsBounds(), false, RENDERTYPE_DYNAMIC);
-
-	// DEBUG: camera bounds location (confirmed, yes)
-	renderer.DrawCartesianRect(greenColor, camera.CollisionModel().AbsBounds(), false, RENDERTYPE_DYNAMIC);
-
-	// AABBAABBTest(camBounds, dstBounds) results: figured out why the entity disappears (VISUAL positions & hence overlap is bad)
-
-	// DEBUG: isometric rect draw (dynam/static)
-	renderer.DrawIsometricRect(redColor, entities[0]->CollisionModel().AbsBounds(), false, RENDERTYPE_DYNAMIC);
-
-	// DEBUG: testing HOW the camera winds up drawing the correct gridcells
-	float scale = 25.0f;
-	eVec2 offset = eVec2(50.0f, 50.0f);
-	// DEBUG: scaled 2D cartesian map area
-	eBounds cartMapBounds = eBounds( offset, offset + (eVec2( map.TileMap().Width(), map.TileMap().Height()) / scale) );
-	renderer.DrawCartesianRect(greenColor, cartMapBounds, false, RENDERTYPE_STATIC);
-
-	// DEBUG: correct cells area on the isometric map that need to be drawn
-	auto & camBounds = camera.CollisionModel().AbsBounds();
-	auto topLeft = camBounds[0];
-	auto topRight = eVec2(camBounds[1].x, camBounds[0].y);
-	auto bottomLeft = eVec2(camBounds[0].x, camBounds[1].y);
-	auto bottomRight = camBounds[1];
-
-	eMath::IsometricToCartesian(topLeft.x, topLeft.y);
-	eMath::IsometricToCartesian(topRight.x, topRight.y);
-	eMath::IsometricToCartesian(bottomLeft.x, bottomLeft.y);
-	eMath::IsometricToCartesian(bottomRight.x, bottomRight.y);
-	topLeft = (topLeft / scale) + offset;
-	topRight = (topRight / scale) + offset;
-	bottomLeft = (bottomLeft / scale) + offset;
-	bottomRight = (bottomRight / scale) + offset;
-
-	// DEBUG: OBB conversion and collision function testing (THEY WORK!)
-	eVec2 mapEdges[2] = {	eVec2(cartMapBounds[1].x, cartMapBounds[0].y) - cartMapBounds[0],
-							eVec2(cartMapBounds[0].x, cartMapBounds[1].y) - cartMapBounds[0]	};
-	OBB_t mapOBB = GetOBB(cartMapBounds[0], mapEdges);
-	eVec2 camEdges[2] = { topRight - topLeft, bottomLeft - topLeft };
-	OBB_t camOBB = GetOBB(topLeft, camEdges);
-	if(OBBOBBTest(mapOBB, camOBB))
-		renderer.DrawCartesianRect(blackColor, eBounds(vec2_zero, eVec2(32.0f, 32.0f)), true, RENDERTYPE_STATIC);
-
-	std::array<SDL_Point, 5> iPoints;
-	iPoints[0] = { eMath::NearestInt(topLeft.x), eMath::NearestInt(topLeft.y) };
-	iPoints[1] = { eMath::NearestInt(topRight.x), eMath::NearestInt(topRight.y) };
-	iPoints[2] = { eMath::NearestInt(bottomRight.x), eMath::NearestInt(bottomRight.y) };
-	iPoints[3] = { eMath::NearestInt(bottomLeft.x), eMath::NearestInt(bottomLeft.y) };
-	iPoints[4] = iPoints[0];
-	SDL_SetRenderDrawColor(renderer.GetSDLRenderer(), redColor.r, redColor.g, redColor.b, redColor.a);
-	SDL_RenderDrawLines(renderer.GetSDLRenderer(), iPoints.data(), iPoints.size());
-	SDL_SetRenderDrawColor(renderer.GetSDLRenderer(), clearColor.r, clearColor.g, clearColor.b, clearColor.a);
-
-// END FREEHILL DEBUG draw order checks
 
 //	renderer.FlushStaticPool();			// DEBUG: not currently used
 	renderer.Show();
