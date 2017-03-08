@@ -14,8 +14,6 @@ typedef enum {
 } eRenderType_t;
 
 // renderImage_t
-// TODO: only pass an eEntity's renderImage_t if it's bounds overlap the camera bounds
-// THEN adjust to camera position
 typedef struct renderImage_s {
 	std::shared_ptr<eImage>		image;			// source image (ie texture wrapper)
 	const SDL_Rect *			srcRect;		// what part of the source image to draw (nullptr for all of it)
@@ -24,7 +22,8 @@ typedef struct renderImage_s {
 												// DEBUG: dimensions relative to srcRect will affect scaling
 	float						priority;		// combination of layer and origin.y **during AddToRenderPool**, lower priority draws first
 	Uint32						layer;			// the primary draw sorting criteria
-//	eEntity *					owner;			// who's using this renderimage, for secondary renderPool sort if priority causes flicker
+
+//	eEntity *					owner;			// entity using this renderimage, for secondary renderPool sort if priority causes flicker
 
 	renderImage_s()
 		: image(nullptr),

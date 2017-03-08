@@ -47,7 +47,8 @@ void eCamera::Think() {
 		x = camSpeed * (float)(input->KeyHeld(SDL_SCANCODE_D) - input->KeyHeld(SDL_SCANCODE_A));
 		y = camSpeed * (float)(input->KeyHeld(SDL_SCANCODE_S) - input->KeyHeld(SDL_SCANCODE_W));
 		collisionModel.Velocity().Set(x, y);
-		collisionModel.UpdateOrigin();
+		if (collisionModel.Velocity() != vec2_zero)
+			collisionModel.UpdateOrigin();
 	}
 /*
 	// collision response with map edge

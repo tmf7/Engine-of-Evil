@@ -19,6 +19,8 @@ void eCollisionModel::ClearAreas() {
 // adds collisionModel references to the tileMap
 // and adds cell references to the collisonModel
 // DEBUG: called whenever the collisionModel moves
+// FIXME(performance): this is a heavily used function and should be optimized
+// cell.contents as a hashmap doens't help too much for small contents.size
 //***************
 void eCollisionModel::UpdateAreas() {
 	ClearAreas();

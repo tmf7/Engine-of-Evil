@@ -29,8 +29,8 @@ void eMap::BuildMap(const int configuration) {
 	int r = uniform_dist(engine) % NUM_ELEMENTS;
 */
 	// TODO(?): make these file-loadable values
-	static const int cellWidth = 32;
-	static const int cellHeight = 32;
+	const int cellWidth = 32;
+	const int cellHeight = 32;
 
 	tileMap.SetCellWidth(cellWidth);
 	tileMap.SetCellHeight(cellHeight);
@@ -69,7 +69,8 @@ void eMap::BuildMap(const int configuration) {
 		eMath::CartesianToIsometric(cellMins.x, cellMins.y);
 		cellMins.y -= 16;	// tileset specific offset
 							// FIXME/TODO: allow for tileset master image drawing offset if its a bit wonky source
-		cellMins.x -= 32;	// logical-to-screen isometric coordinate calculation hack
+		cellMins.x -= 32;	// logical-to-screen isometric coordinate calculation hack, 
+							// because the image is still a rectangle, not a rhombus, but CartesianToIsometric shifts x to the right
 							// FIXME/BUG/TODO: make this flexibly based on the tile image sizes (image frames read in)
 							// AND the cartesian size of a logical tile base
 
@@ -150,70 +151,39 @@ void eMap::Think() {
 
 //***************
 // eMap::Draw
-// staggered isometric draw order
-// of tiles visible to the camera
-// FIXME(?): possibly do a eCollision::GetAreaCells(camera.AbsBounds.ExpandSelf(self*2)
 //***************
 void eMap::Draw() {
-/*	static std::vector<eGridCell *> areaCells;
+	// use the corner cells of the camera to designate the draw area
 	auto & camBounds = game.GetCamera().CollisionModel().AbsBounds();
-	eVec2 anchorToMap = camBounds[0];
-	eMath::CartesianToIsometric(anchorToMap.x, anchorToMap.y);
-	auto mapCamBounds = camBounds.Translate(anchorToMap);
-	mapCamBounds.TranslateSelf(-camBounds[0]);
-	eCollision::GetAreaCells(mapCamBounds, areaCells);
-	for (auto && cell : areaCells)
-		cell->Draw();
-
-	areaCells.clear();
-/////////////////////////////////
-
-	// get the corner cells of the camera for testing
-	auto topLeft = camBounds[0];
-	auto topRight = eVec2(camBounds[1].x, camBounds[0].y);
-	auto bottomLeft = eVec2(camBounds[0].x, camBounds[1].y);
-	auto bottomRight = camBounds[1];
-
-	eMath::IsometricToCartesian(topLeft.x, topLeft.y);
-	eMath::IsometricToCartesian(topRight.x, topRight.y);
-	eMath::IsometricToCartesian(bottomLeft.x, bottomLeft.y);
-	eMath::IsometricToCartesian(bottomRight.x, bottomRight.y);
-
-	tileMap.Validate(topLeft); tileMap.Index(topLeft).Draw();
-	tileMap.Validate(topRight); tileMap.Index(topRight).Draw();
-	tileMap.Validate(bottomLeft); tileMap.Index(bottomLeft).Draw();
-	tileMap.Validate(bottomRight); tileMap.Index(bottomRight).Draw();
-///////////////////////////////
-
-	// DEBUG: these constants assume a cell is square, and that its isometric projection
-	// is twice as wide as it is tall, the invIsoCellHeight is halved to account for the
-	// staggered isometric cell alignment
-	static const float invIsoCellWidth = 1.0f / (float)(tileMap.CellWidth() << 1);
-	static const float invIsoCellHeight = 1.0f / (float)(tileMap.CellHeight() >> 1);
-
-	// FIXME: + 5 because the tiles draw staggered and not tip-to-tip so each width is halved
-	// so its + 2 in both directions at least, then another + 1 to account for any variation
-	int maxHorizCells = (int)(game.GetRenderer().ViewArea().w * invIsoCellWidth) + 5;
-	int maxVertCells = (int)(game.GetRenderer().ViewArea().h * invIsoCellHeight) + 5;
-
-	auto && camBounds = game.GetCamera().CollisionModel().AbsBounds();
-//	int maxHorizCells = (int)(camBounds.Width() * invIsoCellWidth * 1.5f);
-//	int maxVertCells = (int)(camBounds.Height() * invIsoCellHeight * 3.0f);
-
-	eVec2 camTopLeft = camBounds[0];
-	eMath::IsometricToCartesian(camTopLeft.x, camTopLeft.y);
+	std::array<eVec2, 4> corners;
+	camBounds.ToPoints(corners.data());
+	for (int i = 0; i < 4; i++)
+		eMath::IsometricToCartesian(corners[i].x, corners[i].y);
 
 	int startRow, startCol;
-	int row, column;
-	tileMap.Index(camTopLeft, startRow, startCol);		// DEBUG: this tile has isometric coordinates
-	startRow -= 2;										// DEBUG: ensure enough rows cover the screen area
-	row = startRow;
-	column = startCol;
+	int endRow, endCol;
+	int finalRow, finalCol;
+	tileMap.Index(corners[0], startRow, startCol);
+	tileMap.Index(corners[1], endRow, endCol);
+	tileMap.Index(corners[2], finalRow, finalCol);
 
-	// staggered tile query and draw order
+	// DEBUG: magic numbers here based loosely on the way the camera area covers cells.
+	// alternatively camBounds could be expanded by 128.0f prior to rotation, but that grabs too many cells
+	// more horizontal cells
+	startRow -= 2;	
+	endRow += 1;	
+	
+	// more vertical cells
+	finalCol += 3;	
+	finalRow += 3;
+
+	// staggered cell draw order
+	// cells' tiles already have isometric coordinates
+	int row = startRow;
+	int column = startCol;
 	bool oddLine = false;
-	for (int vertCount = 0; vertCount < maxVertCells; vertCount++) {
-		for (int horizCount = 0; horizCount < maxHorizCells; horizCount++) {
+	while (endRow <= finalRow || endCol <= finalCol) {	// shifting down the screen
+		while(row <= endRow && column >= 0) {			// shifting across the screen
 			if (tileMap.IsValid(row, column)) {
 				auto & cell = tileMap.Index(row, column);
 				cell.Draw();
@@ -222,10 +192,10 @@ void eMap::Draw() {
 		}
 		oddLine = !oddLine;
 		oddLine ? startCol++ : startRow++;
+		oddLine ? endCol++ : endRow++;
 		row = startRow;
 		column = startCol;
 	}
-*/	
 }
 
 

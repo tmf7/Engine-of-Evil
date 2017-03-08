@@ -21,6 +21,7 @@ public:
 	const std::array<eTile, maxTiles> &	Tiles() const;
 	std::array<eTile, maxTiles> &		Tiles();
 	std::vector<eCollisionModel *> &	Contents();
+	std::unordered_map<eCollisionModel *, eCollisionModel *> & ContentsTest();
 
 	const eBounds &						AbsBounds() const;
 	const eBounds &						AbsBounds();
@@ -29,6 +30,7 @@ public:
 private:
 
 	std::array<eTile, maxTiles>			tiles;		// the tiles this cell is responsible for drawing
+	std::unordered_map<eCollisionModel *, eCollisionModel *> contentsTest;	// FIXME/BUG: potentially accelerating UpdateAreas with O(1) search
 	std::vector<eCollisionModel *>		contents;	// colliders that overlap this eGridCell (including its eTile's colliders, and others')
 
 	eBounds								absBounds;	// using world-coordinates
@@ -75,6 +77,13 @@ inline const std::array<eTile, eGridCell::maxTiles> & eGridCell::Tiles() const {
 //************
 inline std::vector<eCollisionModel *> & eGridCell::Contents() {
 	return contents;
+}
+
+//************
+// eGridCell::ContentsTest
+//************
+inline std::unordered_map<eCollisionModel *, eCollisionModel *> & eGridCell::ContentsTest() {
+	return contentsTest;
 }
 
 //******************

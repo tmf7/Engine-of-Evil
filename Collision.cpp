@@ -1,7 +1,87 @@
 #include "Game.h"
+
+//***************
+// eCollision::OBBOBBTest
+// test for a separating axis using 
+// the 8 faces of both OBBs
+//***************
+bool eCollision::OBBOBBTest(const eBox & a, const eBox & b) {
+	float ra;
+	float rb;
+	float R[2][2];
+	float AbsR[2][2];
+	static const float EPSILON = 0.015625f;	// 1/64 (because binary fractions)
+
+	// DEBUG: all z-values of rotation matrix R are 0,
+	// except z-z which would be R[2][2] if R were 3x3
+	// so it is hereafter replaced with (1.0f + EPSILON)
+	static const float R22 = 1.0f + EPSILON;
+
+	const auto & aAxes = a.Axes();
+	const auto & aExtents = a.Extents();
+	const auto & aCenter = a.Center();
+
+	const auto & bAxes = b.Axes();
+	const auto & bExtents = b.Extents();
+	const auto & bCenter = b.Center();
+
+	// compute rotation matrix spressing b in a' coordinate frame
+	for (int i = 0; i < 2; i++)
+		for (int j = 0; j < 2; j++)
+			R[i][j] = a.Axes()[i] * bAxes[j];
+
+	// compute translation vector
+	// and bring it into a's coordinate frame
+	eVec2 t = bCenter - aCenter;
+	t.Set(t * aAxes[0], t * aAxes[1]);
+
+	// compute common subexpressions. add in an epsilon term to
+	// counteract arithmetic erros when tow edges are parallel and
+	// their corss product is (near) zero
+	for (int i = 0; i < 2; i++)
+		for (int j = 0; j < 2; j++)
+			AbsR[i][j] = abs(R[i][j]) + EPSILON;
+
+	// test axes a.axes[0] and a.axes[1]
+	for (int i = 0; i < 2; i++) {
+		ra = aExtents[i];
+		rb = bExtents[0] * AbsR[i][0] + bExtents[1] * AbsR[i][1];
+		if (abs(t[i]) > ra + rb) return false;
+	}
+
+	// test axes b.axes[0] and b.axes[1]
+	for (int i = 0; i < 2; i++) {
+		ra = aExtents[0] * AbsR[0][i] + aExtents[1] * AbsR[1][i];
+		rb = bExtents[i];
+		if (abs(t[0] * R[0][i] + t[1] * R[1][i]) > ra + rb) return false;
+	}
+	
+	// test axis a.axes[0] X b.axes[2] (which is [0,0,1] for 2D)
+	ra = aExtents[1] * R22;
+	rb = bExtents[0] * AbsR[0][1] + bExtents[1] * AbsR[0][0];
+	if (abs(-t[1] * R22) > ra + rb) return false;
+
+	// test axis a.axes[1] X b.axes[2] (which is [0,0,1] for 2D)
+	ra = aExtents[0] * R22;
+	rb = bExtents[0] * AbsR[1][1] + bExtents[1] * AbsR[1][0];
+	if (abs(t[0] * R22) > ra + rb) return false;
+
+	// test axis a.axes[2] (which is [0,0,1] for 2D) X b.axes[0]
+	ra = aExtents[0] * AbsR[1][0] + aExtents[1] * AbsR[0][0];
+	rb = bExtents[1] * R22;
+	if (abs(t[1] * R[0][0] - t[0] * R[1][0]) > ra + rb) return false;
+
+	// test axis a.axes[2] (which is [0,0,1] for 2D) X b.axes[1]
+	ra = aExtents[0] * AbsR[1][1] + aExtents[1] * AbsR[0][1];
+	rb = bExtents[0] * R22;
+	if (abs(t[1] * R[0][1] - t[0] * R[1][1]) > ra + rb) return false;
+
+	// no separating axis, OBBs intersecting
+	return true;
+}
 		
 //***************
-// ForwardCollisionTest
+// eCollision::ForwardCollisionTest
 // proactive pre-collision check
 // fills collisions vector with any of areaCells' contents
 // that self collides with along its current velocity
@@ -49,75 +129,6 @@ bool eCollision::ForwardCollisionTest(eCollisionModel & self, const std::vector<
 }
 
 //***************
-// eCollision::GetIsometricAreaCells
-// fills the areaCells vector with pointers to the eGridCells 
-// within the given area bounds (includes touching) after
-// converting the area from an AABB to an OBB (isometric bounding box)
-// DEBUG: make the areaCells function-static to avoid excessive dynamic allocation
-// TOOD: this will be useful for areaSelection of the isometric variety, if not eMap::Draw
-//***************
-void eCollision::GetIsometricAreaCells(const eBounds & area, std::vector<eGridCell *> & areaCells) {
-/*	auto & tileMap = game.GetMap().TileMap();
-	auto & camBounds = game.GetCamera().CollisionModel().AbsBounds();
-
-	auto topLeft = camBounds[0];
-	auto topRight = eVec2(camBounds[1].x, camBounds[0].y);
-	auto bottomLeft = eVec2(camBounds[0].x, camBounds[1].y);
-	auto bottomRight = camBounds[1];
-
-	eMath::IsometricToCartesian(topLeft.x, topLeft.y);
-	eMath::IsometricToCartesian(topRight.x, topRight.y);
-	eMath::IsometricToCartesian(bottomLeft.x, bottomLeft.y);
-	eMath::IsometricToCartesian(bottomRight.x, bottomRight.y);
-
-	// row, column pairs
-	std::array<std::pair<int, int>, 4> areaIndexes;
-
-	tileMap.Index(topLeft, areaIndexes[0].first, areaIndexes[0].second);
-	tileMap.Index(topRight, areaIndexes[1].first, areaIndexes[1].second);
-	tileMap.Index(bottomLeft, areaIndexes[2].first, areaIndexes[2].second);
-	tileMap.Index(bottomRight, areaIndexes[3].first, areaIndexes[3].second);
-
-	int startRow = areaIndexes[0].first;
-	int startCol = areaIndexes[0].second;
-	int limitRow = areaIndexes[3].first;
-	int limitCol = areaIndexes[3].second;
-	int row = startRow;		
-	int column = startCol;
-
-	// staggered tile query and draw order
-	bool oddLine = false;
-	for (int vertCount = 0; vertCount < maxVertCells; vertCount++) {
-		for (int horizCount = 0; horizCount < maxHorizCells; horizCount++) {
-			if (tileMap.IsValid(row, column)) {
-				areaCells.push_back(&tileMap.Index(row, column));
-			}
-			row++; column--;				// THIS
-		}
-		oddLine = !oddLine;
-		oddLine ? startCol++ : startRow++;	// AND THIS are most important to navigating the OBB edge and interior
-		row = startRow;
-		column = startCol;
-	}
-
-////////////////////////////////////
-	auto & tileMap = game.GetMap().TileMap();
-	int startRow, startCol;
-	int endRow, endCol;
-	tileMap.Index(area[0], startRow, startCol);
-	tileMap.Index(area[1], endRow, endCol);
-	tileMap.Validate(startRow, startCol);
-	tileMap.Validate(endRow, endCol);
-
-	for (int row = startRow; row <= endRow; row++) {
-		for (int col = startCol; col <= endCol; col++) {
-			areaCells.push_back(&tileMap.Index(row, col));
-		}
-	}
-	*/
-}
-
-//***************
 // eCollision::GetAreaCells
 // fills the areaCells vector with pointers to the eGridCells 
 // within the given area bounds (includes touching)
@@ -129,13 +140,12 @@ void eCollision::GetAreaCells(const eBounds & area, std::vector<eGridCell *> & a
 	int endRow, endCol;
 	tileMap.Index(area[0], startRow, startCol);
 	tileMap.Index(area[1], endRow, endCol);
-//	tileMap.Validate(startRow, startCol);		// FIXME: either do this or the loop if-statement (this is generally faster, but may break the logic)
-//	tileMap.Validate(endRow, endCol);
+	tileMap.Validate(startRow, startCol);
+	tileMap.Validate(endRow, endCol);
 
 	for (int row = startRow; row <= endRow; row++) {
 		for (int col = startCol; col <= endCol; col++) {
-			if (tileMap.IsValid(row, col))
-				areaCells.push_back(&tileMap.Index(row, col));
+			areaCells.push_back(&tileMap.Index(row, col));
 		}
 	}
 }

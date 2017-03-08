@@ -20,8 +20,8 @@ typedef struct Collision_s {
 class eCollision {
 public:
 
+	static bool				OBBOBBTest(const eBox & a, const eBox & b);
 	static eVec2			GetCollisionNormal(eCollisionModel & self, const eCollisionModel & other);
-	static void				GetIsometricAreaCells(const eBounds & area, std::vector<eGridCell *> & areaCells);
 	static void				GetAreaCells(const eBounds & area, std::vector<eGridCell *> & areaCells);
 	static eBounds			GetBroadPhaseBounds(eCollisionModel & self);
 	static bool				AABBContainsPoint(const eBounds & bounds, const eVec2 & point);

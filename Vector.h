@@ -24,7 +24,8 @@ public:
 	void		Zero();
 	float		Normalize();
 	float		Length() const;
-	float		LengthSquared() const;											
+	float		LengthSquared() const;
+	void		Rotate(float degrees, const eVec2 & origin);
 
 	float		operator[](const int index) const;
 	float &		operator[](const int index);
@@ -49,6 +50,7 @@ public:
 
 extern eVec2 vec2_zero;
 extern eVec2 vec2_oneZero;
+extern eVec2 vec2_zeroOne;
 
 //******************
 // eVec2::eVec2

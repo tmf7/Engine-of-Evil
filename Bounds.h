@@ -21,14 +21,17 @@ public:
 	eBounds			Translate(const eVec2 & translation) const;		
 	eBounds &		TranslateSelf(const eVec2 & translation);		
 	eBounds			Expand(const float range) const;				
-	eBounds &		ExpandSelf(const float range);					
+	eBounds &		ExpandSelf(const float range);
 
 	void			Zero();											
 	eVec2			Center() const;									
 	float			Radius() const;									
-
 	float			Width() const;
 	float			Height() const;
+
+	void			FromIsometricRotation(const eVec2 & origin);
+	void			FromPoints(const eVec2 * points, const int numPoints);
+	void			ToPoints(eVec2 points[4]) const;
 
 private:
 
@@ -191,6 +194,17 @@ inline float eBounds::Width() const {
 //*************
 inline float eBounds::Height() const {
 	return bounds[1].y - bounds[0].y;
+}
+
+//*************
+// eBounds::ToPoints
+// points is filled in a clockwise winding order from topleft 
+//*************
+inline void eBounds::ToPoints(eVec2 points[4]) const {
+	for (int i = 0; i < 4; i++) {
+		points[i][0] = bounds[(i ^ (i >> 1)) & 1][0];
+		points[i][1] = bounds[(i >> 1) & 1][1];
+	}
 }
 
 #endif  /* EVIL_BOUNDS_H */

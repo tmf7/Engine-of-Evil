@@ -3,20 +3,13 @@
 
 #include "Definitions.h"
 #include "Bounds.h"
+#include "Box.h"
 
 class eGridCell;
 
 //*********************************************
 //			eCollisionModel
 // used for movement and collision detection
-
-// TODO: make the renderImage_t more versitle (and less expensive?) such that each eEntity already has a renderImage_t
-// being updated, and a SHARED_POINTER of which is sent to the renderpool
-// ...each renderImage_t would have a bounds (or cliprect?) and origin (like eCollisionModel) such that they'd
-// have to be ****synchronized WELL*** to produce accurate collision and visual movement 
-// (SDL_Rect alone would cause too many rounding errors)
-// NOTE: that wouldn't change the debug draws at all (they'd still be an overlay)
-// NOTE: would it affect non-constText? a pointer to a renderimage that exists only for a moment....yup, should be fine using shared_ptr
 //*********************************************
 class eCollisionModel {
 public:
@@ -34,6 +27,8 @@ public:
 	const eBounds &				LocalBounds() const;
 	const eBounds &				AbsBounds() const;
 	eVec2 &						Velocity();
+	bool						IsActive() const;
+	void						SetActive(bool active);
 
 private:
 
@@ -43,6 +38,9 @@ private:
 	eVec2						oldOrigin;				// for use with collision response
 	eVec2						velocity;				// DEBUG: never normalized, only rotated and scaled
 	std::vector<eGridCell *>	areas;					// currently occupied tileMap indexes (between 1 and 4)
+	bool						active;					// whether this participates in dynamic or kinematic collision detection
+
+//	eEntity *					owner;					// entity using this collision model
 
 private:
 
@@ -82,12 +80,8 @@ inline void eCollisionModel::UpdateOrigin() {
 	oldOrigin = origin;
 	origin += velocity;// * game.GetFixedTime();	// FIXME: defined outside this header
 	absBounds = localBounds + origin;
-//	UpdateAreas();	// DEBUG: testing if this is causing the odd framerate map-diagonal slowdown, YUP! THIS IS IT.
-					// SOLUTION: at some point perhaps too much needs to be verified? wrong positioning?
-					// eCamera has a collisionModel that is updating areas....ugh
-					// TODO(?): use a flag to prevent certain objects from participating in collision checks (like DOOM's TH_PHYSICS)
-					// TODO: nail down the camera movement to visual representation (AND COLLISION WITH VISIBLE ENTITY POSITIONS)
-					// KEY == VISUAL (not logical, like normal collision is)
+	if (active)
+		UpdateAreas();
 }
 
 //*************
@@ -97,8 +91,8 @@ inline void eCollisionModel::SetOrigin(const eVec2 & point) {
 	oldOrigin = origin;
 	origin = point;
 	absBounds = localBounds + origin;
-//	UpdateAreas();		// DEBUG: testing if this is causing the odd framerate map-diagonal slowdown, YUP! THIS IS IT.
-						// SOLUTION: at some point perhaps too much needs to be verified? wrong positioning?
+	if (active)
+		UpdateAreas();
 }
 
 //*************
@@ -114,7 +108,6 @@ inline const eVec2 & eCollisionModel::Origin() const {
 inline eVec2 eCollisionModel::GetOriginDelta() const {
 	return origin - oldOrigin;
 }
-
 
 //*************
 // eCollisionModel::LocalBounds
@@ -153,6 +146,20 @@ inline const eBounds & eCollisionModel::AbsBounds() const {
 //*************
 inline eVec2 & eCollisionModel::Velocity() {
 	return velocity;
+}
+
+//*************
+// eCollisionModel::IsActive
+//*************
+inline bool eCollisionModel::IsActive() const {
+	return active;
+}
+
+//*************
+// eCollisionModel::SetActive
+//*************
+inline void eCollisionModel::SetActive(bool active) {
+	this->active = active;
 }
 
 #endif /* EVIL_COLLISION_MODEL_H */
