@@ -96,7 +96,7 @@ class eTile {
 public:
 							eTile();
 
-	void					Init(const eVec2 & origin, const int type, const int layer);
+	void					Init(eGridCell * owner, const eBounds & absBounds, const eVec2 & imageOffset, const int type, const int layer);
 	
 	int						Type() const;
 	void					SetType(int newType);
@@ -108,12 +108,14 @@ public:
 	Uint32					GetLayer() const;
 	void					SetLayer(const int newLayer);
 
+	eGridCell *				GetOwner();
 	eCollisionModel &		CollisionModel();
 
 	bool					IsCollidableHack() const;	
 
 private:
 
+	eGridCell *				owner;				// responsible for drawing this tile
 	eTileImpl *				impl;				// general tile type data
 	eCollisionModel			collisionModel;		// contains position and size of collision bounds
 	renderImage_t			renderImage;		// data relevant to the renderer
@@ -184,7 +186,14 @@ inline void eTile::SetLayer(const int newLayer) {
 }
 
 //************
-// eTile::Collider
+// eTile::Onwer
+//************
+inline eGridCell * eTile::GetOwner() {
+	return owner;
+}
+
+//************
+// eTile::CollisionModel
 //************
 inline eCollisionModel & eTile::CollisionModel() {
 	return collisionModel;

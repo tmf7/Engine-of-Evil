@@ -40,7 +40,8 @@ private:
 	std::vector<eGridCell *>	areas;					// currently occupied tileMap indexes (between 1 and 4)
 	bool						active;					// whether this participates in dynamic or kinematic collision detection
 
-//	eEntity *					owner;					// entity using this collision model
+//	eEntity *					owner;					// entity using this collision model, 
+														// FIXME(~): not all users are eEntity, eg eCamera and eTile
 
 private:
 
@@ -97,6 +98,8 @@ inline void eCollisionModel::SetOrigin(const eVec2 & point) {
 
 //*************
 // eCollisionModel::Origin
+// world-position of the collision center
+// DEBUG: equivalent to absBouds.Center()
 //*************
 inline const eVec2 & eCollisionModel::Origin() const {
 	return origin;

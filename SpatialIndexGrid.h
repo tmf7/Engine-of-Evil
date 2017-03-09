@@ -21,6 +21,8 @@ public:
 	void					Validate(int & row, int & column) const;
 
 //	void					Index(type * const indexPtr, int & row, int & column) const;
+	type &					IndexValidated(const eVec2 & point);
+	const type &			IndexValidated(const eVec2 & point) const;
 	void					Index(const eVec2 & point, int & row, int & column) const;
 	type &					Index(const eVec2 & point);
 	const type &			Index(const eVec2 & point) const;
@@ -50,6 +52,8 @@ private:
 	type					cells[rows][columns];
 	int						cellWidth;
 	int						cellHeight;
+	float					invCellWidth;
+	float					invCellHeight;
 };
 
 //******************
@@ -57,7 +61,10 @@ private:
 //******************
 template< class type, int rows, int columns >
 inline eSpatialIndexGrid<type, rows, columns>::eSpatialIndexGrid() 
-	: cellWidth(1), cellHeight(1) {
+	: cellWidth(1), 
+	  cellHeight(1),
+	  invCellWidth(1.0f),
+	  invCellHeight(1.0f) {
 }
 
 //**************
@@ -140,14 +147,40 @@ inline void eSpatialIndexGrid<type, rows, columns>::Index(type * const indexPtr,
 */
 
 //******************
+// eSpatialIndexGrid::IndexValidated
+// returns the valid cell closest to the given point
+//******************
+template< class type, int rows, int columns>
+inline const type & eSpatialIndexGrid<type, rows, columns>::IndexValidated(const eVec2 & point) const {
+	int row;
+	int column;
+	Index(point, row, column);
+	Validate(row, column);
+	return Index(row, column);
+}
+
+//******************
+// eSpatialIndexGrid::IndexValidated
+// returns the valid cell closest to the given point
+//******************
+template< class type, int rows, int columns>
+inline type & eSpatialIndexGrid<type, rows, columns>::IndexValidated(const eVec2 & point) {
+	int row;
+	int column;
+	Index(point, row, column);
+	Validate(row, column);
+	return Index(row, column);
+}
+
+//******************
 // eSpatialIndexGrid::Index
 // sets the reference row and column to the cell the point lies within
 // user should to eSpatialIndexGrid::Validate(row, column) as needed
 //******************
 template< class type, int rows, int columns>
 inline void eSpatialIndexGrid<type, rows, columns>::Index(const eVec2 & point, int & row, int & column)  const {
-	row = (int)(point.x / cellWidth);		
-	column = (int)(point.y / cellHeight);
+	row = (int)(point.x * invCellWidth);		
+	column = (int)(point.y * invCellHeight);
 }
 
 //******************
@@ -220,6 +253,7 @@ inline int eSpatialIndexGrid<type, rows, columns>::CellHeight() const {
 template< class type, int rows, int columns>
 inline void eSpatialIndexGrid<type, rows, columns>::SetCellWidth(const int cellWidth) {
 	this->cellWidth = cellWidth > 0 ? cellWidth : 1;
+	invCellWidth = 1.0f / (float)this->cellWidth;
 }
 
 //******************
@@ -229,6 +263,7 @@ inline void eSpatialIndexGrid<type, rows, columns>::SetCellWidth(const int cellW
 template< class type, int rows, int columns>
 inline void eSpatialIndexGrid<type, rows, columns>::SetCellHeight(const int cellHeight) {
 	this->cellHeight = cellHeight > 0 ? cellHeight : 1;
+	invCellHeight = 1.0f / (float)this->cellHeight;
 }
 
 //******************

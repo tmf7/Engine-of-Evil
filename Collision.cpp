@@ -100,7 +100,8 @@ bool eCollision::ForwardCollisionTest(eCollisionModel & self, const std::vector<
 	// only test against contents if self may collide with the cell
 	for (auto && cell : areaCells) {
 		if (AABBAABBTest(broadPhaseBounds, cell->AbsBounds())) {
-			for (auto && collider : cell->Contents()) {
+			for (auto && kvPair : cell->Contents()) {
+				auto & collider = kvPair.second;
 
 				// don't test the same collider twice
 				if (alreadyTested.find(collider) != alreadyTested.end())
@@ -118,6 +119,7 @@ bool eCollision::ForwardCollisionTest(eCollisionModel & self, const std::vector<
 		}
 	}
 	alreadyTested.clear();
+
 	QuickSort(	collisions.data(), 
 				collisions.size(), 
 				[](auto && a, auto && b) {

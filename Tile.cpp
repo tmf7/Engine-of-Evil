@@ -38,17 +38,29 @@ bool eTileImpl::InitTileTypes(const char * tilerFilename) {
 
 //************
 // eTile::Init
+// owner is responsible for handling all this eTile's functions (eg drawing its renderImage)
+// absBounds is used for collision
+// imageOffset is the tileSet image-specific offset required to position the eTile draw correctly
+// type is the identifier from the tileSet eImageTiler
+// layer is the draw order depth
 // TODO: Initialize the collider based on procedural/file data
 //************
-void eTile::Init(const eVec2 & imageOrigin, const int type, const int layer) {
+void eTile::Init(eGridCell * owner, const eBounds & absBounds, const eVec2 & imageOffset, const int type, const int layer) {
+	this->owner = owner;
 	impl = &tileTypes[type];
 	renderImage.image = tileSet->Source();
 	renderImage.srcRect = &tileSet->GetFrame(impl->type).Frame();
-	renderImage.origin = imageOrigin;
+
+	renderImage.origin = absBounds[0];
+	eMath::CartesianToIsometric(renderImage.origin.x, renderImage.origin.y);
+	renderImage.origin += imageOffset;
 	renderImage.SetLayer(layer);
 
-	// DEBUG: collisionModel currently aligns with the renderImage size
-	collisionModel.AbsBounds()[0] = imageOrigin;
-	collisionModel.AbsBounds()[1].Set(imageOrigin.x + (float)renderImage.srcRect->w, imageOrigin.y + (float)renderImage.srcRect->h);
+	collisionModel.SetActive(true);
+	auto & localBounds = collisionModel.LocalBounds();
+	eVec2 extents = eVec2(absBounds.Width() * 0.5f, absBounds.Height() * 0.5f);
+	localBounds[0] = -extents;
+	localBounds[1] = extents;
+	collisionModel.SetOrigin(absBounds.Center());
 	collisionModel.Velocity() = vec2_zero;
 }

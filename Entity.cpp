@@ -20,9 +20,12 @@ bool eEntity::Spawn() {
 	// that dictates transitions between tilers and intra-tiler-sequences (similar to Button.h)
 	sprite.SetImage(spriteImage);		// TODO: change this to a sprite.Init(...) maybe and return false if it fails
 
+	collisionModel.SetActive(true);
 	collisionModel.LocalBounds().ExpandSelf(8);			// FIXME: 16 x 16 square with (0, 0) at its center, 
 	collisionModel.SetOrigin(eVec2(8.0f, 8.0f));		// TODO: call a GetSpawnPoint() to use a list of procedurally/file-defined spawn points
-	imageOffset = - collisionModel.Origin();			// DEBUG: test offset
+	collisionModel.Velocity() = vec2_zero;
+
+//	imageOffset = 0.0f;
 	UpdateRenderImageOrigin();
 	UpdateRenderImageDisplay();
 	return true;
@@ -33,7 +36,7 @@ bool eEntity::Spawn() {
 //***************
 void eEntity::Draw() {
 
-	// FIXME: possibly move elsewhere
+	// FIXME: possibly move these two calls elsewhere
 	UpdateRenderImageOrigin();
 	UpdateRenderImageDisplay();
 
@@ -52,7 +55,7 @@ void eEntity::Draw() {
 // eEntity::UpdateRenderImageOrigin
 //*************
 void eEntity::UpdateRenderImageOrigin() {
-	renderImage.origin = collisionModel.Origin() + imageOffset;
+	renderImage.origin = collisionModel.AbsBounds()[0];// + imageOffset;
 	eMath::CartesianToIsometric(renderImage.origin.x, renderImage.origin.y);
 }
 

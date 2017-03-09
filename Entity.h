@@ -30,7 +30,7 @@ protected:
 	renderImage_t				renderImage;		// data relevant to the renderer
 	eSprite						sprite;	
 	eCollisionModel				collisionModel;
-	eVec2						imageOffset;		// difference between renderImage and collisionModel centers
+//	eVec2						imageOffset;		// force renderImage and collisionModel to misalign
 };
 
 //**************

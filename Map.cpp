@@ -65,19 +65,18 @@ void eMap::BuildMap(const int configuration) {
 		eVec2 cellMins = eVec2((float)(row * cellWidth), (float)(column * cellHeight));
 		cell.SetAbsBounds( eBounds(cellMins, cellMins + eVec2((float)cellWidth, (float)cellHeight)) );
 
-		// tile coordinates
-		eMath::CartesianToIsometric(cellMins.x, cellMins.y);
-		cellMins.y -= 16;	// tileset specific offset
-							// FIXME/TODO: allow for tileset master image drawing offset if its a bit wonky source
-		cellMins.x -= 32;	// logical-to-screen isometric coordinate calculation hack, 
-							// because the image is still a rectangle, not a rhombus, but CartesianToIsometric shifts x to the right
-							// FIXME/BUG/TODO: make this flexibly based on the tile image sizes (image frames read in)
-							// AND the cartesian size of a logical tile base
+		eVec2 tileOffset = eVec2(-32.0f, -16.0f);
+		//-16.0f is a tileset specific offset
+		// FIXME/TODO: allow for tileset master image drawing offset if its a bit wonky source
+		// -32.0f is a logical-to-screen isometric coordinate calculation hack, 
+		// because the image is still a rectangle, not a rhombus, but CartesianToIsometric shifts X coordinate to the right
+		// FIXME/BUG/TODO: make this flexibly based on the tile image sizes (image frames read in)
+		// AND the cartesian size of a logical tile base
 
 		// TODO: add one eTile per cell for now, but start layering them according to procedure/file-load
-		// DEBUG: currently one cell-aligned tile per cell, hence the reuse of cellMins
-		// FIXME: Init multiple tiles for a cell (eg: if a building is at a random location have one cell be responsible for drawing it)
-		cell.Tiles().back().Init(cellMins, type, 0);	// DEBUG: test layer == 0
+		// FIXME/TODO: collisionModel currently aligns with the CELL exactly because tiles currently visually align with cells,
+		// however make the eTile::Init absBounds be procedure/file-load based
+		cell.Tiles().back().Init(&cell, cell.AbsBounds(), tileOffset, type, 0);	// DEBUG: test layer == 0
 		column++;
 		if (column >= tileMap.Columns()) {
 			column = 0;

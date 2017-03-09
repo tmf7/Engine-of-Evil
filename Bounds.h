@@ -16,7 +16,12 @@ public:
 	const eVec2 &	operator[](const int index) const;
 	eVec2 &			operator[](const int index);
 	eBounds			operator+(const eVec2 & translation) const;				
-	eBounds &		operator+=(const eVec2 & translation);						
+	eBounds &		operator+=(const eVec2 & translation);
+	bool			operator==(const eBounds & a) const;
+	bool			operator!=(const eBounds & a) const;
+	
+	bool			Compare(const eBounds & a) const;
+	bool			Compare(const eBounds & a, const float epsilon) const;
 
 	eBounds			Translate(const eVec2 & translation) const;		
 	eBounds &		TranslateSelf(const eVec2 & translation);		
@@ -97,6 +102,34 @@ inline eBounds & eBounds::operator+=(const eVec2 & translation) {
 	bounds[0] += translation;
 	bounds[1] += translation;
 	return *this;
+}
+
+//*************
+// eBounds::Compare
+//*************
+inline bool eBounds::Compare(const eBounds & a) const {
+	return (bounds[0].Compare(a.bounds[0]) && bounds[1].Compare(a.bounds[1]));
+}
+
+//*************
+// eBounds::Compare
+//*************
+inline bool eBounds::Compare(const eBounds & a, const float epsilon) const {
+	return (bounds[0].Compare(a.bounds[0], epsilon) && bounds[1].Compare(a.bounds[1], epsilon));
+}
+
+//*************
+// eBounds::operator==
+//*************
+inline bool eBounds::operator==(const eBounds & a) const {
+	return Compare(a);
+}
+
+//*************
+// eBounds::operator!=
+//*************
+inline bool eBounds::operator!=(const eBounds & a) const {
+	return !Compare(a);
 }
 
 //*************

@@ -18,8 +18,9 @@ typedef struct renderImage_s {
 	std::shared_ptr<eImage>		image;			// source image (ie texture wrapper)
 	const SDL_Rect *			srcRect;		// what part of the source image to draw (nullptr for all of it)
 	SDL_Rect					dstRect;		// SDL consumable cliprect, where on the screen (adjusted for camera position)
-	eVec2						origin;			// top-left corner of image using world coordinates (not adjusted to account for camera)
 												// DEBUG: dimensions relative to srcRect will affect scaling
+												// DEBUG: do not manually set dstRect, it is calculated from srcRect and origin
+	eVec2						origin;			// top-left corner of image using world coordinates (not adjusted to account for camera)
 	float						priority;		// combination of layer and origin.y **during AddToRenderPool**, lower priority draws first
 	Uint32						layer;			// the primary draw sorting criteria
 
