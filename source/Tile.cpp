@@ -3,16 +3,16 @@
 
 // FIXME: these should be class static
 int									numTileTypes = 0;
-std::shared_ptr<eImageTiler>		tileSet;
+std::shared_ptr<eAnimation>			tileSet;
 eTileImpl							tileTypes[eTileImpl::maxTileTypes];
 
 //************
 // eTileImpl::InitTileTypes
 // returns false on failure to init, true otherwise
 //************
-bool eTileImpl::InitTileTypes(const char * tilerFilename) {
+bool eTileImpl::InitTileTypes(const char * animationFilename) {
 	// load the tile file
-	if (!game.GetImageTilerManager().LoadTiler(tilerFilename, tileSet))
+	if (!game.GetAnimationManager().LoadAnimation(animationFilename, tileSet))
 		return false;
 
 	numTileTypes = tileSet->GetNumSequences();
@@ -29,7 +29,7 @@ bool eTileImpl::InitTileTypes(const char * tilerFilename) {
 			return false;
 
 		// TODO: script this somewhere, possibly in another file type
-		// that stores the .tls file to load the imageTiler
+		// that stores the .tls file to load the eAnimation
 		// and then parallel data for things like collision and such
 		tileTypes[i].collisionHack = tileTypes[i].type == 0 ? false : true;
 	}	
@@ -41,7 +41,7 @@ bool eTileImpl::InitTileTypes(const char * tilerFilename) {
 // owner is responsible for handling all this eTile's functions (eg drawing its renderImage)
 // absBounds is used for collision
 // imageOffset is the tileSet image-specific offset required to position the eTile draw correctly
-// type is the identifier from the tileSet eImageTiler
+// type is the identifier from the tileSet eAnimation
 // layer is the draw order depth
 // TODO: Initialize the collider based on procedural/file data
 //************

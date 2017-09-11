@@ -251,6 +251,7 @@ Collision_t eCollision::MovingAABBAABBTest(eCollisionModel & self, eCollisionMod
 // eCollision::GetCollisionNormal
 // returns a vector based on self.velocity
 // and relative position to other
+// FIXME: calculate velocity based on oldOrigin in the event of zero physics velocity, yet instant origin movement
 //***************
 eVec2 eCollision::GetCollisionNormal(eCollisionModel & self, const eCollisionModel & other) {
 	eVec2 selfMin = self.AbsBounds()[0];

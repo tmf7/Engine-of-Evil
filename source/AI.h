@@ -45,6 +45,7 @@ public:
 	virtual bool		Spawn() override;
 	virtual void		Think() override;
 	virtual void		Draw() override;
+	virtual void		DebugDraw() override;
 	void				AddUserWaypoint(const eVec2 & waypoint);
 	const byte_map_t &	KnownMap() const;
 	bool				CheckFogOfWar(const eVec2 & point) const;

@@ -1,7 +1,7 @@
 #ifndef EVIL_SPRITE_H
 #define EVIL_SPRITE_H
 
-#include "ImageTiler.h"
+#include "Animation.h"
 
 // TODO: handle sprite sheets that have multiple different frame sizes (even in a single animation)
 // that use alpha values instead of color keys
@@ -25,10 +25,10 @@ public:
 
 private:
 
-//	typedef std::shared_ptr<eImageTiler> Tiler_t;
-//	std::vector<Tiler_t>	animations;		// all source images and their associated sub-frames (clip-rects) to fully animate this "character"
+//	typedef std::shared_ptr<eAnimation> Animation_t;
+//	std::vector<Animation_t>	animations;		// all source images and their associated sub-frames (clip-rects) to fully animate this "character"
 
-	// TODO: first, last, current may be deprecated due to the circular-link list that ImageTiler provieds for animation sequences
+	// TODO: first, last, current may be deprecated due to the circular-link list that Animation provides for animation sequences
 	std::shared_ptr<eImage>	currentImage;
 	int						firstFrame;
 	int						lastFrame;

@@ -129,7 +129,7 @@ void eRenderer::DrawOutlineText(const char * text, eVec2 & point, const SDL_Colo
 // dynamic moves and scales with the camera
 // DEBUG: immediatly draws to the given render target
 //***************
-void eRenderer::DrawIsometricRect(const SDL_Color & color, eBounds rect, bool fill, bool dynamic) const {
+void eRenderer::DrawIsometricRect(const SDL_Color & color, eBounds rect, bool dynamic) const {
 	SDL_SetRenderDrawColor(internal_renderer, color.r, color.g, color.b, color.a);
 
 	std::array<eVec2, 5> fPoints;

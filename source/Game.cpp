@@ -31,8 +31,8 @@ eGame::ErrorCode eGame::Init() {
 	if (SDL_Init(SDL_INIT_EVERYTHING) == -1)
 		return SDL_ERROR;
 
-//	SDL_LogSetAllPriority(SDL_LOG_PRIORITY_VERBOSE);	//  SDL_LOG_PRIORITY_CRITICAL // 
-//	SDL_LogSetOutputFunction(FileLogFn_ptr, NULL);	// DEGUG: SDL_LogCritical is called alot for some reason, bottleneck (DrawOutlineText, IMG_Load seem to be the reason)
+//	SDL_LogSetAllPriority(SDL_LOG_PRIORITY_VERBOSE);	// SDL_LOG_PRIORITY_CRITICAL // 
+//	SDL_LogSetOutputFunction(FileLogFn_ptr, NULL);		// DEGUG: SDL_LogCritical is called alot for some reason, bottleneck (DrawOutlineText, IMG_Load seem to be the reason)
 
 	if (!renderer.Init())
 		return RENDERER_ERROR;
@@ -40,8 +40,8 @@ eGame::ErrorCode eGame::Init() {
 	if (!imageManager.Init())
 		return IMAGE_MANAGER_ERROR;
 
-	if (!imageTilerManager.Init())
-		return TILER_MANAGER_ERROR;
+	if (!animationManager.Init())
+		return ANIMATION_MANAGER_ERROR;
 
 	if (!map.Init())
 		return MAP_ERROR;
@@ -79,8 +79,8 @@ void eGame::Shutdown(eGame::ErrorCode error) {
 			case IMAGE_MANAGER_ERROR:
 				SDL_strlcpy(message, "IMAGE MANAGER INIT FAILURE", 64);
 				break;
-			case TILER_MANAGER_ERROR:
-				SDL_strlcpy(message, "TILER MANAGER INIT FAILURE", 64);
+			case ANIMATION_MANAGER_ERROR:
+				SDL_strlcpy(message, "ANIMATION MANAGER INIT FAILURE", 64);
 				break;
 			case MAP_ERROR:
 				SDL_strlcpy(message, "MAP INIT FAILURE", 64);
@@ -141,8 +141,9 @@ bool eGame::Run() {
 
 	// TODO: write and call these DYNAMIC geometry debug draw calls
 	// draw all debug information as an overlay
+	// TODO(?): use a visitor or observer pattern to execute all DebugDraws with one call
 	//	map.DebugDraw();				// draw the collision bounds of collidable tiles
-	//	entities[0].DebugDraw();		// loop over all entities for their collision bounds, and grid occupancy
+		entities[0]->DebugDraw();		// loop over all entities for their collision bounds, and grid occupancy
 										// ALSO: only draw goal/trail_waypoints and known_map for a SINGLE currently SELECTED entity
 
 	// TODO: the HUD would be a static/non-scalable overlay...which should draw with the player...
@@ -156,7 +157,8 @@ bool eGame::Run() {
 	renderer.Show();
 
 	// frame-rate governing delay
-	deltaTime = SDL_GetTicks() - startTime;
+	globalTime = SDL_GetTicks();
+	deltaTime = globalTime - startTime;
 
 	// DEBUG: breakpoint handling
 	if (deltaTime > 1000)

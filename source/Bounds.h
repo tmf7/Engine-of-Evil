@@ -15,7 +15,7 @@ public:
 
 	const eVec2 &	operator[](const int index) const;
 	eVec2 &			operator[](const int index);
-	eBounds			operator+(const eVec2 & translation) const;				
+	eBounds			operator+(const eVec2 & translation) const;
 	eBounds &		operator+=(const eVec2 & translation);
 	bool			operator==(const eBounds & a) const;
 	bool			operator!=(const eBounds & a) const;
@@ -93,6 +93,7 @@ inline eVec2 & eBounds::operator[](const int index) {
 inline eBounds eBounds::operator+(const eVec2 & translation) const {
 	return eBounds(bounds[0] + translation, bounds[1] + translation);
 }
+
 
 //*************
 // eBounds::operator+=
@@ -241,5 +242,3 @@ inline void eBounds::ToPoints(eVec2 points[4]) const {
 }
 
 #endif  /* EVIL_BOUNDS_H */
-
-

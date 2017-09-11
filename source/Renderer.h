@@ -74,7 +74,7 @@ public:
 	void				DrawOutlineText(const char * text, eVec2 & point, const SDL_Color & color, bool constText, bool dynamic);
 	void				DrawImage(const renderImage_t * renderImage) const;
 
-	void				DrawIsometricRect(const SDL_Color & color, eBounds rect, bool fill, bool dynamic) const;
+	void				DrawIsometricRect(const SDL_Color & color, eBounds rect, bool dynamic) const;
 	void				DrawCartesianRect(const SDL_Color & color, eBounds rect, bool fill, bool dynamic) const;
 
 private:

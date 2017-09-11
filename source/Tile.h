@@ -2,7 +2,7 @@
 #define EVIL_TILE_H
 
 #include "CollisionModel.h"
-#include "ImageTiler.h"
+#include "Animation.h"
 #include "Renderer.h"
 
 // Flyweight tile design
@@ -31,22 +31,22 @@ public:
 	const std::string &		Name() const;
 //	void					(*tileBehavior)();
 
-	static bool				InitTileTypes(const char * tilerFilename);
+	static bool				InitTileTypes(const char * animationFilename);
 	static int				NumTileTypes();
 
 	static bool				IsCollidableHack(int type);
 	
 private:
 	
-	int						type;				// index of the eImageTiler tileSet used
+	int						type;				// index of the eAnimation tileSet used
 	std::string				name;				// name of the sequence (or single tile image) in the tileSet
 	bool					collisionHack;		// FIXME: temporary solution to set entire CELL of spatial index grid to TRAVERSABLE/COLLISION
 };
 
 extern eTileImpl					tileTypes[eTileImpl::maxTileTypes];
-// typedef std::shared_ptr<eImageTiler>	TileSet_t;
+// typedef std::shared_ptr<eAnimation>	TileSet_t;
 // extern std::vector<TileSet_t> tileSets;
-extern std::shared_ptr<eImageTiler>	tileSet;				// TODO: make this an array of tilesets (eImageTilers) to mix and match
+extern std::shared_ptr<eAnimation>	tileSet;				// TODO: make this an array of tilesets (eAnimations) to mix and match...or just indexes into disparate tiled images!
 extern int							numTileTypes;
 
 //************
@@ -167,7 +167,7 @@ inline renderImage_t * eTile::GetRenderImage() {
 // OR give the eTile a eSprite proper (...== an animator)
 //************
 inline void eTile::UpdateRenderImageDisplay() {
-	//	eImageFrame * currentFrame = &tileSet->GetFirstFrame(impl->Name());
+	//	eAnimationFrame * currentFrame = &tileSet->GetFirstFrame(impl->Name());
 	//	currentFrame = currentFrame->Next();
 }
 

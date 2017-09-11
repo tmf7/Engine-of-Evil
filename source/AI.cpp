@@ -533,21 +533,38 @@ void eAI::Draw() {
 }
 
 //******************
+// eAI::DebugDraw
+// FIXME: this is a test
+//******************
+void eAI::DebugDraw() {
+	DrawGoalWaypoints();
+	DrawKnownMap();
+}
+
+//******************
 // eAI::DrawGoalWaypoints
 //******************
 void eAI::DrawGoalWaypoints() {
 	eNode<eVec2> * iterator;
 	eVec2 debugPoint;
 
-	static const std::shared_ptr<eImage>  debugImage = sprite.GetImage();
+//	static std::shared_ptr<eImage> goalSprite = nullptr;
+//	if (goalSprite == nullptr)
+//		game.GetImageManager().LoadImage("graphics/hero.bmp", SDL_TEXTUREACCESS_STATIC, goalSprite);
+//		game.GetAnimationManager().GetAnimation
 
 	if (!game.debugFlags.GOAL_WAYPOINTS)
 		return;
 
+// TODO: draw a sprite (ie: a new entity on the entity list), NOT draw a debug iso-rectangle
+	auto & cameraBounds = game.GetCamera().CollisionModel().AbsBounds();
 	for (iterator = goals.Back(); iterator != nullptr; iterator = iterator->Next()) {
-		debugPoint = iterator->Data() - game.GetCamera().CollisionModel().AbsBounds()[0];
+		debugPoint = iterator->Data();// - cameraBounds[0];
 		debugPoint.SnapInt();
-//		game.GetRenderer().DrawImage(debugImage, (eBounds(debugPoint).ExpandSelf(8))[0]);	// top-left corner
+
+		eBounds dstBounds = eBounds(debugPoint).ExpandSelf(8);
+//		if (eCollision::AABBAABBTest(cameraBounds, dstBounds))	// FIXME: this check doesn't account for a moving camera???
+			game.GetRenderer().DrawIsometricRect(redColor, dstBounds, true);		// FIXME: make this a sprite image draw
 	}
 }
 
@@ -607,37 +624,19 @@ void eAI::DrawCollisionCircle() {
 
 //******************
 // eAI::DrawKnownMap
-// FIXME: this VISIBLE cell logic doesn't work for the isometric camera view
+// TODO: check layers, and draw debug images over visited (and visible) tiles instead of entire cells.
 //******************
 void eAI::DrawKnownMap() const {
-	// maximum number of tiles to draw on the current window (max 1 boarder tile beyond in all directions)
-	// TODO: allow this value to change in the event that cell size changes
-	static const int maxScreenRows = (int)(game.GetRenderer().ViewArea().w / knownMap.CellWidth()) + 2;
-	static const int maxScreenColumns = (int)(game.GetRenderer().ViewArea().h / knownMap.CellHeight()) + 2;
-	
-	if (!game.debugFlags.KNOWN_MAP_DRAW)
-		return;
-
-	// initialize the area of the knownMap to query
-	int row, column;
-	knownMap.Index(game.GetCamera().CollisionModel().AbsBounds()[0], row, column);
-	int startCol = column;
-	int endRow = row + maxScreenRows;
-	int endCol = column + maxScreenColumns;
-	knownMap.Validate(endRow, endCol);
-
 	auto & tileMap = game.GetMap().TileMap();
-	while (row <= endRow) {
-		if (knownMap.Index(row, column) == VISITED_TILE) {
-			auto cellBounds = tileMap.Index(row, column).AbsBounds();
-			cellBounds.TranslateSelf(-game.GetCamera().CollisionModel().AbsBounds()[0]);
-			game.GetRenderer().DrawIsometricRect(blackColor, cellBounds, true, RENDERTYPE_DYNAMIC);
-		}
-		
-		column++;
-		if (column > endCol) {
-			column = startCol;
-			row++;
+	auto & visibleCells = game.GetMap().VisibleCells();
+	for (auto & visibleCell : visibleCells) {
+		if (knownMap.Index(visibleCell.first, visibleCell.second) == VISITED_TILE) {
+				auto cellBounds = tileMap.Index(visibleCell.first, visibleCell.second).AbsBounds();
+
+				// TODO: spawn an eEntity to think and draw via the main eGame loop
+				// then destroy the eEntity when the knownMap clears (and don't draw it if the debug visiblity is off)				
+				game.GetRenderer().DrawIsometricRect(blackColor, cellBounds, RENDERTYPE_DYNAMIC);
 		}
 	}
+
 }

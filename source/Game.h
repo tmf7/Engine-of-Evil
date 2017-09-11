@@ -4,7 +4,7 @@
 #include "Definitions.h"
 #include "Renderer.h"
 #include "ImageManager.h"
-#include "ImageTilerManager.h"
+#include "AnimationManager.h"
 #include "Vector.h"
 #include "Map.h"
 #include "Entity.h"
@@ -31,7 +31,7 @@ public:
 		INPUT_ERROR,
 		RENDERER_ERROR,
 		IMAGE_MANAGER_ERROR,
-		TILER_MANAGER_ERROR,
+		ANIMATION_MANAGER_ERROR,
 		MAP_ERROR,
 		ENTITY_ERROR,
 		INIT_SUCCESS = -1
@@ -46,7 +46,7 @@ public:
 	eInput &					GetInput();
 	eRenderer &					GetRenderer();
 	eImageManager &				GetImageManager();
-	eImageTilerManager &		GetImageTilerManager();
+	eAnimationManager &			GetAnimationManager();
 	eCamera &					GetCamera();
 	eMap &						GetMap();
 	std::shared_ptr<eEntity>	GetEntity(int entityID);
@@ -57,6 +57,7 @@ public:
 	Uint32						GetFixedTime() const;
 	Uint32						GetDynamicFPS() const;
 	Uint32						GetDeltaTime() const;
+	Uint32						GetGlobalTime() const;
 	void						DrawFPS();
 
 private:
@@ -72,13 +73,14 @@ private:
 	eMap						map;
 	eRenderer					renderer;
 	eImageManager				imageManager;
-	eImageTilerManager			imageTilerManager;
+	eAnimationManager			animationManager;
 	eCamera						camera;
 
 	const Uint32				defaultFPS = 60;
 	Uint32						fixedFPS;			// constant framerate
 	Uint32						frameTime;			// constant framerate governing time interval (depends on FixedFPS)
 	Uint32						deltaTime;			// actual time a frame takes to execute
+	Uint32						globalTime;			// time elapsed since execution began
 };
 
 extern eGame	game;								// one instance used by all objects
@@ -120,17 +122,17 @@ inline eRenderer & eGame::GetRenderer() {
 }
 
 //*****************
-// eEditor::GetImageManager
+// eGame::GetImageManager
 //*****************
 inline eImageManager & eGame::GetImageManager() {
 	return imageManager;
 }
 
 //*****************
-// eEditor::GetImageTilerManager
+// eGame::GetAnimationManager
 //*****************
-inline eImageTilerManager & eGame::GetImageTilerManager() {
-	return imageTilerManager;
+inline eAnimationManager & eGame::GetAnimationManager() {
+	return animationManager;
 }
 
 //****************
@@ -192,6 +194,13 @@ inline Uint32 eGame::GetDynamicFPS() const {
 //****************
 inline Uint32 eGame::GetDeltaTime() const {
 	return deltaTime;
+}
+
+//****************
+// eGame::GetGlobalTime
+//****************
+inline Uint32 eGame::GetGlobalTime() const {
+	return globalTime;
 }
 
 #endif /* EVIL_GAME_H */

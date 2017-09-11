@@ -33,7 +33,11 @@ public:
 private:
 
 	eBounds						localBounds;			// using model coordinates
-	eBounds						absBounds;				// using world coordinates		
+	eBounds						absBounds;				// using world coordinates	
+	
+//	std::shared_ptr<eCollider>	absBounds;		// TODO: test abstracted collider types...
+//												// TODO: how many colliders can an eEntity be associated with...collision world...disconnected from entities?! (owners)
+	
 	eVec2						origin;					// using world coordinates
 	eVec2						oldOrigin;				// for use with collision response
 	eVec2						velocity;				// DEBUG: never normalized, only rotated and scaled
@@ -41,7 +45,8 @@ private:
 	bool						active;					// whether this participates in dynamic or kinematic collision detection
 
 //	eEntity *					owner;					// entity using this collision model, 
-														// FIXME(~): not all users are eEntity, eg eCamera and eTile
+														// FIXME(~): not all users are eEntity, eg eCamera and eTile (they don't need collision models, maybe? certainly not eTile)
+														// or just make a base eGameObject interface that everyone inherits from.~
 
 private:
 
@@ -81,6 +86,10 @@ inline void eCollisionModel::UpdateOrigin() {
 	oldOrigin = origin;
 	origin += velocity;// * game.GetFixedTime();	// FIXME: defined outside this header
 	absBounds = localBounds + origin;
+
+//	TODO: if getting rid of localBounds (to just calculate it when needed based on origin and absBounds)
+//	absBounds += (origin - oldOrigin);		// FIXME: or translation = velocity * deltaTime; (then apply one translation to origin and absBounds)
+// TODO: OR, get rid of velocity as well, and defer that to a physics/rigidbody class (let eAI use a *placeholder* velocity in the meantime)
 	if (active)
 		UpdateAreas();
 }

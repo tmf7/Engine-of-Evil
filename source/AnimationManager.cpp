@@ -1,15 +1,15 @@
-#include "ImageTilerManager.h"
+#include "AnimationManager.h"
 #include "Game.h"
 
 //***************
-// eImageTilerManager::Init
+// eAnimationManager::Init
 //***************
-bool eImageTilerManager::Init() {
+bool eAnimationManager::Init() {
 	// prepare the hashindex
-	tilerFilenameHash.ClearAndResize(MAX_IMAGES);
+	animationFilenameHash.ClearAndResize(MAX_IMAGES);
 
 	// get the error_image, a bright red texture the size of the current render target
-	// to use as the error_imageTiler source
+	// to use as the error_animation source
 	std::shared_ptr<eImage> error_image;
 	game.GetImageManager().GetImage(0, error_image);
 
@@ -18,33 +18,33 @@ bool eImageTilerManager::Init() {
 	auto hasher = std::hash<std::string>{};
 	std::vector<std::string> sequenceNames;
 	eHashIndex sequenceHash;
-	std::vector<eImageFrame> frameList;
+	std::vector<eAnimationFrame> frameList;
 	sequenceNames.reserve(1);
 	frameList.reserve(1);
 	sequenceHash.ClearAndResize(1);
-	std::string error_name = "error_imageTiler";
+	std::string error_name = "error_animation";
 	sequenceNames.push_back(error_name);
 	sequenceHash.Add(hasher(error_name), 0);
-	frameList.push_back(eImageFrame( SDL_Rect{ 0, 0, error_image->GetWidth(), error_image->GetHeight() } , frameList.data()));
+	frameList.push_back(eAnimationFrame( SDL_Rect{ 0, 0, error_image->GetWidth(), error_image->GetHeight() } , frameList.data()));
 
-	// register the error_imageTiler as the first element of tilerList
-	tilerFilenameHash.Add(hasher(error_name), tilerList.size());
-	tilerList.push_back(std::make_shared<eImageTiler>(error_image, std::move(frameList), std::move(sequenceNames), std::move(sequenceHash), "invalid_file", tilerList.size()));
+	// register the error_animation as the first element of animationList
+	animationFilenameHash.Add(hasher(error_name), animationList.size());
+	animationList.push_back(std::make_shared<eAnimation>(error_image, std::move(frameList), std::move(sequenceNames), std::move(sequenceHash), "invalid_file", animationList.size()));
 	return true;
 }
 
 //***************
-// eImageTilerManager::BatchLoad
-// loads a batch of imageTiler resources
-// user can optionally call imageTilerManager.Clear()
-// prior to this to facilitate starting with a fresh set of imageTilers
-// TODO: allow selective unloading of tilers (eg: std::shared_ptr already does reference counting
+// eAnimationManager::BatchLoad
+// loads a batch of eAnimation resources
+// user can optionally call animationManager.Clear()
+// prior to this to facilitate starting with a fresh set of eAnimations
+// TODO: allow selective unloading of animations (eg: std::shared_ptr already does reference counting
 // take those numbers and add/subtract according to the next level's filename batch)
 //***************
-bool eImageTilerManager::BatchLoad(const char * tilerBatchLoadFile) {
-	std::shared_ptr<eImageTiler> result;	// DEBUG: not acually used, but necessary for LoadTiler
+bool eAnimationManager::BatchLoad(const char * animationBatchLoadFile) {
+	std::shared_ptr<eAnimation> result;	// DEBUG: not acually used, but necessary for LoadAnimation
 	char filename[MAX_ESTRING_LENGTH];
-	std::ifstream	read(tilerBatchLoadFile);
+	std::ifstream	read(animationBatchLoadFile);
 
 	// unable to find/open file
 	if(!read.good())
@@ -56,7 +56,7 @@ bool eImageTilerManager::BatchLoad(const char * tilerBatchLoadFile) {
 		if (!VerifyRead(read))
 			return false;
 
-		LoadTiler(filename, result);
+		LoadAnimation(filename, result);
 		read.ignore(std::numeric_limits<std::streamsize>::max(), '\n'); // skip the rest of the line
 	}
 	read.close();
@@ -64,67 +64,67 @@ bool eImageTilerManager::BatchLoad(const char * tilerBatchLoadFile) {
 }
 
 //***************
-// eImageTilerManager::GetTiler
+// eAnimationManager::GetAnimation
 // fill the result with an eImage * if it exists
 // if filename is null or the eImage doesn't exist
 // then it result fills with an error eImage * (solid red)
 //***************
-bool eImageTilerManager::GetTiler(const char * filename, std::shared_ptr<eImageTiler> & result) {
+bool eAnimationManager::GetAnimation(const char * filename, std::shared_ptr<eAnimation> & result) {
 	if (!filename) {
-		result = tilerList[0]; // error imageTiler
+		result = animationList[0]; // error eAnimation
 		return false;
 	}
 
 	// search for pre-existing texture
 	auto hasher = std::hash<std::string>{};
 	int hashkey = hasher(filename);
-	for (int i = tilerFilenameHash.First(hashkey); i != -1; i = tilerFilenameHash.Next(i)) {
-		if (tilerList[i]->GetFilename() == filename) {
-			result = tilerList[i];
+	for (int i = animationFilenameHash.First(hashkey); i != -1; i = animationFilenameHash.Next(i)) {
+		if (animationList[i]->GetFilename() == filename) {
+			result = animationList[i];
 			return true;
 		}
 	}
-	result = tilerList[0]; // error imageTiler
+	result = animationList[0]; // error eAnimation
 	return false;
 }
 
 //***************
-// eImageTilerManager::GetTiler
-// fill the result with an eImageTiler pointer if it exists
+// eAnimationManager::GetAnimation
+// fill the result with an eAnimation pointer if it exists
 // if guid is negative or beyond the number of loaded images
-// then it result fills with an error eImageTiler pointer (solid red)
+// then it result fills with an error eAnimation pointer (solid red)
 //***************
-bool eImageTilerManager::GetTiler(int tilerID, std::shared_ptr<eImageTiler> & result) {
-	if (tilerID < 0 && tilerID > tilerList.size()) {		// DEBUG: tilerID will never be larger than max signed int
-		result = tilerList[0]; // error imageTiler
+bool eAnimationManager::GetAnimation(int animationID, std::shared_ptr<eAnimation> & result) {
+	if (animationID < 0 && animationID > animationList.size()) {		// DEBUG: animationID will never be larger than max signed int
+		result = animationList[0]; // error eAnimation
 		return false;
 	}
-	result = tilerList[tilerID];
+	result = animationList[animationID];
 	return true;
 }
 
 //***************
-// eImageTilerManager::LoadTiler
+// eAnimationManager::LoadAnimation
 // sets result to an existing or
-// loaded eImageTiler pointer
+// loaded eAnimation pointer
 //***************
-bool eImageTilerManager::LoadTiler(const char * filename, std::shared_ptr<eImageTiler> & result) {
-	// check if the imageTiler already exists 
+bool eAnimationManager::LoadAnimation(const char * filename, std::shared_ptr<eAnimation> & result) {
+	// check if the eAnimation already exists 
 	// and set result to that if it does
-	if (GetTiler(filename, result))
+	if (GetAnimation(filename, result))
 		return true;
 
 	char buffer[MAX_ESTRING_LENGTH];
 	std::vector<std::string> sequenceNames;
 	eHashIndex sequenceHash;
-	std::vector<eImageFrame> frameList;
+	std::vector<eAnimationFrame> frameList;
 	std::shared_ptr<eImage> source = nullptr;
 	auto hasher = std::hash<std::string>{};
 
 	std::ifstream	read(filename);
 	// unable to find/open file
 	if (!read.good()) {
-		result = tilerList[0];		// error imageTiler
+		result = animationList[0];		// error eAnimation
 		return false;
 	}
 
@@ -132,13 +132,13 @@ bool eImageTilerManager::LoadTiler(const char * filename, std::shared_ptr<eImage
 	memset(buffer, 0, sizeof(buffer));
 	read.getline(buffer, sizeof(buffer), '\n');
 	if(!VerifyRead(read)) {
-		result = tilerList[0];	// error imageTiler
+		result = animationList[0];	// error eAnimation
 		return false;
 	}
 
 	// get a pointer to the source image (or try to load it if it doesn't exist yet)
 	if (!game.GetImageManager().LoadImage(buffer, SDL_TEXTUREACCESS_STATIC, source)) {
-		result = tilerList[0];	// error imageTiler
+		result = animationList[0];	// error eAnimation
 		return false;
 	}
 
@@ -152,7 +152,7 @@ bool eImageTilerManager::LoadTiler(const char * filename, std::shared_ptr<eImage
 			default: break;
 		}
 		if (!VerifyRead(read)) {
-			result = tilerList[0];	// error imageTiler
+			result = animationList[0];	// error eAnimation
 			return false;
 		}
 	}
@@ -165,18 +165,18 @@ bool eImageTilerManager::LoadTiler(const char * filename, std::shared_ptr<eImage
 		memset(buffer, 0, sizeof(buffer));
 		read.getline(buffer, sizeof(buffer), '{');
 		if (!VerifyRead(read)) {
-			result = tilerList[0];	// error imageTiler
+			result = animationList[0];	// error eAnimation
 			return false;
 		}
 
 		// add the sequence name and index to the hash
 		sequenceNames.push_back(buffer);
 		sequenceHash.Add(hasher(buffer), frameList.size());
-		eImageFrame * firstFrame = frameList.data() + frameList.size();		// used to close sequence loops
+		eAnimationFrame * firstFrame = frameList.data() + frameList.size();		// used to close sequence loops
 
 		// read and link one frame at at time
 		// until the sequence-closing delimeter
-		eImageFrame * nextFrame = nullptr;
+		eAnimationFrame * nextFrame = nullptr;
 		while (read.peek() != '}' && nextFrame != firstFrame) {
 			SDL_Rect frame;
 			for (int targetData = 0; targetData < 4; targetData++) {
@@ -189,7 +189,7 @@ bool eImageTilerManager::LoadTiler(const char * filename, std::shared_ptr<eImage
 				}
 		
 				if (!VerifyRead(read)) {
-					result = tilerList[0];	// error imageTiler
+					result = animationList[0];	// error eAnimation
 					return false;
 				}
 			}
@@ -199,28 +199,28 @@ bool eImageTilerManager::LoadTiler(const char * filename, std::shared_ptr<eImage
 			nextFrame = (read.peek() != '}' && frameList.size() + 1 < frameList.capacity())
 						? frameList.data() + frameList.size() + 1
 						: firstFrame;
-			frameList.push_back(eImageFrame(frame, nextFrame));
+			frameList.push_back(eAnimationFrame(frame, nextFrame));
 		}
 		read.ignore(std::numeric_limits<std::streamsize>::max(), '\n'); // skip the rest of the sequence line
 	}
 	read.close();
 
-	// register the requested imageTiler
-	tilerFilenameHash.Add(hasher(filename), tilerList.size());
-	result = std::make_shared<eImageTiler>(source, std::move(frameList), std::move(sequenceNames), std::move(sequenceHash), filename, tilerList.size());
-	tilerList.push_back(result);
+	// register the requested eAnimation
+	animationFilenameHash.Add(hasher(filename), animationList.size());
+	result = std::make_shared<eAnimation>(source, std::move(frameList), std::move(sequenceNames), std::move(sequenceHash), filename, animationList.size());
+	animationList.push_back(result);
 	return true;
 }
 
 //***************
-// eImageTilerManager::Clear
+// eAnimationManager::Clear
 // clears all pointers to the current set 
-// of resource tilers, which allows them
+// of resource eAnimations, which allows them
 // to be deleted once no object is using them,
 // allows for new resource images to load
 // without using excessive memory
 //***************
-void eImageTilerManager::Clear() {
-	tilerList.clear();
-	tilerFilenameHash.Clear();
+void eAnimationManager::Clear() {
+	animationList.clear();
+	animationFilenameHash.Clear();
 }

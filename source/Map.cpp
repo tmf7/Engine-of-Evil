@@ -152,48 +152,62 @@ void eMap::Think() {
 // eMap::Draw
 //***************
 void eMap::Draw() {
-	// use the corner cells of the camera to designate the draw area
-	auto & camBounds = game.GetCamera().CollisionModel().AbsBounds();
-	std::array<eVec2, 4> corners;
-	camBounds.ToPoints(corners.data());
-	for (int i = 0; i < 4; i++)
-		eMath::IsometricToCartesian(corners[i].x, corners[i].y);
+	static auto & cameraCollider = game.GetCamera().CollisionModel();
 
-	int startRow, startCol;
-	int endRow, endCol;
-	int finalRow, finalCol;
-	tileMap.Index(corners[0], startRow, startCol);
-	tileMap.Index(corners[1], endRow, endCol);
-	tileMap.Index(corners[2], finalRow, finalCol);
+	// only redraw the map if the camera has moved, or its the start of the game
+	// FIXME: change this logic when animated tiles are coded
+	if (cameraCollider.GetOriginDelta().LengthSquared() > FLT_EPSILON || game.GetGlobalTime() < 5000) {
+		visibleCells.clear();
 
-	// DEBUG: magic numbers here based loosely on the way the camera area covers cells.
-	// alternatively camBounds could be expanded by 128.0f prior to rotation, but that grabs too many cells
-	// more horizontal cells
-	startRow -= 2;	
-	endRow += 1;	
+		// use the corner cells of the camera to designate the draw area
+		auto & camBounds = cameraCollider.AbsBounds();
+		std::array<eVec2, 4> corners;
+		camBounds.ToPoints(corners.data());
+		for (int i = 0; i < 4; i++)
+			eMath::IsometricToCartesian(corners[i].x, corners[i].y);
+
+		int startRow, startCol;
+		int endRow, endCol;
+		int finalRow, finalCol;
+		tileMap.Index(corners[0], startRow, startCol);
+		tileMap.Index(corners[1], endRow, endCol);
+		tileMap.Index(corners[2], finalRow, finalCol);
+
+		// DEBUG: magic numbers here based loosely on the way the camera area covers cells.
+		// alternatively camBounds could be expanded by 128.0f prior to rotation, but that grabs too many cells
+		// more horizontal cells
+		startRow -= 2;	
+		endRow += 1;	
 	
-	// more vertical cells
-	finalCol += 3;	
-	finalRow += 3;
+		// more vertical cells
+		finalCol += 3;	
+		finalRow += 3;
 
-	// staggered cell draw order
-	// cells' tiles already have isometric coordinates
-	int row = startRow;
-	int column = startCol;
-	bool oddLine = false;
-	while (endRow <= finalRow || endCol <= finalCol) {	// shifting down the screen
-		while(row <= endRow && column >= 0) {			// shifting across the screen
-			if (tileMap.IsValid(row, column)) {
-				auto & cell = tileMap.Index(row, column);
-				cell.Draw();
-			} 
-			row++; column--;
+		// staggered cell draw order
+		// cells' tiles already have isometric coordinates
+		int row = startRow;
+		int column = startCol;
+		bool oddLine = false;
+		while (endRow <= finalRow || endCol <= finalCol) {	// shifting down the screen
+			while(row <= endRow && column >= 0) {			// shifting across the screen
+				if (tileMap.IsValid(row, column)) {
+					auto & cell = tileMap.Index(row, column);
+					cell.Draw();
+					visibleCells.push_back({row, column});
+				} 
+				row++; column--;
+			}
+			oddLine = !oddLine;
+			oddLine ? startCol++ : startRow++;
+			oddLine ? endCol++ : endRow++;
+			row = startRow;
+			column = startCol;
 		}
-		oddLine = !oddLine;
-		oddLine ? startCol++ : startRow++;
-		oddLine ? endCol++ : endRow++;
-		row = startRow;
-		column = startCol;
+	} else {
+		for (auto & visibleCell : visibleCells) {
+			auto & cell = tileMap.Index(visibleCell.first, visibleCell.second);
+			cell.Draw();
+		}
 	}
 }
 
