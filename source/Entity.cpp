@@ -19,13 +19,13 @@ typedef struct SpawnArgs_s {
 // TODO: spawnArgs: collider type, collider dimensions, collider offset, collider mask (separate initialization on its own!)
 // TODO: spawnArgs: sprite image file, sprite layer, order in layer, initial animation frame
 //***************
-bool eEntity::Spawn(const char * entityFilename, eVec2 & worldPosition) {
+bool eEntity::Spawn(/*const char * entityFilename, eVec2 & worldPosition*/) {
 
-	SpawnArgs_t test = { "graphics/hero.bmp", MAX_LAYER , vec2_zero, vec2_oneZero, 10.0f, eVec2(10.0f, 10.0f), vec2_zero, 2 };
+	SpawnArgs_t test = { "graphics/hero.png", MAX_LAYER , vec2_zero, vec2_oneZero, 10.0f, eVec2(10.0f, 10.0f), vec2_zero, 2 };
 	test.spriteFilename;	
 
 	std::shared_ptr<eImage> spriteImage;
-	if (!game.GetImageManager().LoadImage("graphics/hero.bmp", SDL_TEXTUREACCESS_STATIC, spriteImage))
+	if (!game.GetImageManager().LoadImage("graphics/hero.png", SDL_TEXTUREACCESS_STATIC, spriteImage))
 		return false;
 
 	// TODO: call sprite.Init("animationBatchLoadFilename.sprite");
@@ -73,7 +73,7 @@ void eEntity::Draw() {
 // UpdateRenderImageOrigin ensures only the visuals are isometric
 //*************
 void eEntity::UpdateRenderImageOrigin() {
-	renderImage.origin = collisionModel.AbsBounds()[0];// + imageOffset;
+	renderImage.origin = collisionModel.AbsBounds()[0] + eVec2(-138.0f, -75.0f);// + imageOffset;		// FIXME: imageOffset for sprite and collisionModel needed
 	eMath::CartesianToIsometric(renderImage.origin.x, renderImage.origin.y);
 }
 

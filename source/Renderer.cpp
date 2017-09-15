@@ -4,9 +4,12 @@
 const SDL_Color clearColor		= { 128, 128, 128, SDL_ALPHA_OPAQUE };
 const SDL_Color blackColor		= { 0, 0, 0, SDL_ALPHA_OPAQUE };
 const SDL_Color greyColor_trans = { 0, 0, 0, 64 };
-const SDL_Color greenColor		= { 0, 255, 0, 255 };
-const SDL_Color redColor		= { 255, 0, 0, 255 };
-const SDL_Color blueColor		= { 0, 0, 255, 255 };
+const SDL_Color greenColor		= { 0, 255, 0, SDL_ALPHA_OPAQUE };
+const SDL_Color redColor		= { 255, 0, 0, SDL_ALPHA_OPAQUE };
+const SDL_Color blueColor		= { 0, 0, 255, SDL_ALPHA_OPAQUE };
+const SDL_Color pinkColor		= { 255, 0, 255, SDL_ALPHA_OPAQUE };
+const SDL_Color lightBlueColor	= { 0, 255, 255, SDL_ALPHA_OPAQUE };
+const SDL_Color yellowColor		= { 255, 255, 0, SDL_ALPHA_OPAQUE };
 
 //***************
 // eRenderer::Init

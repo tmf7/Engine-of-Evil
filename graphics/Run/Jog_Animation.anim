@@ -1,0 +1,34 @@
+graphics/characters/heroine/jog/Jog_0(14,60,111).png	# texture source filename (aka texture name)
+jog_right						# animation/image name
+0	22.5						# the effective movement angles to use this animation
+0	0	0	60	111			# frame number, x , y , w , h
+1	61	0	60	111
+2	et cetera
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+0,1,2,3,4,5,6,7,8,9,10,11,12,13				# order to run frames for a smooth animation cycle
+
+graphics/characters/heroine/jog/Jog_1(14,58,115).png
+graphics/characters/heroine/jog/Jog_2(14,58,117).png
+graphics/characters/heroine/jog/Jog_3(14,64,118).png
+graphics/characters/heroine/jog/Jog_4(14,67,118).png
+graphics/characters/heroine/jog/Jog_5(14,73,118).png
+graphics/characters/heroine/jog/Jog_6(14,79,116).png
+graphics/characters/heroine/jog/Jog_7(14,82,113).png
+graphics/characters/heroine/jog/Jog_8(14,82,110).png
+graphics/characters/heroine/jog/Jog_9(14,81,108).png
+graphics/characters/heroine/jog/Jog_10(14,78,106).png
+graphics/characters/heroine/jog/Jog_11(14,72,104).png
+graphics/characters/heroine/jog/Jog_12(14,67,103).png
+graphics/characters/heroine/jog/Jog_13(14,64,102).png
+graphics/characters/heroine/jog/Jog_14(14,60,105).png
+graphics/characters/heroine/jog/Jog_15(14,57,107).png

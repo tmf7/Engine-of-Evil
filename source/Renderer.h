@@ -96,6 +96,9 @@ extern const SDL_Color greyColor_trans;
 extern const SDL_Color greenColor;
 extern const SDL_Color redColor;
 extern const SDL_Color blueColor;
+extern const SDL_Color pinkColor;
+extern const SDL_Color lightBlueColor;
+extern const SDL_Color yellowColor;
 
 //***************
 // eRenderer::eRenderer

@@ -15,7 +15,7 @@ class eEntity {
 public:
 								eEntity();
 
-	virtual bool				Spawn(const char * entityFilename, eVec2 & worldPosition);
+	virtual bool				Spawn(/*const char * entityFilename, eVec2 & worldPosition*/);
 	virtual void				Think() = 0;
 	virtual void				Draw();
 	virtual void				DebugDraw() = 0;

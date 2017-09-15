@@ -70,6 +70,7 @@ void eMap::BuildMap(const int configuration) {
 		// FIXME/TODO: allow for tileset master image drawing offset if its a bit wonky source
 		// -32.0f is a logical-to-screen isometric coordinate calculation hack, 
 		// because the image is still a rectangle, not a rhombus, but CartesianToIsometric shifts X coordinate to the right
+		// FIXME/TODO: (-0.5f * tile image width, instead of const -32.0f because each image puts the isometric tip at the image's top midpoint)
 		// FIXME/BUG/TODO: make this flexibly based on the tile image sizes (image frames read in)
 		// AND the cartesian size of a logical tile base
 

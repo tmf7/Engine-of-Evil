@@ -522,23 +522,20 @@ void eAI::UpdateKnownMap() {
 
 //***************
 // eAI::Draw
-// TODO(?): make this draw independent of eEntity::Draw()
+// TODO: make this draw independent of eEntity::Draw()
 //***************
 void eAI::Draw() {
-//	DrawKnownMap();	
-//	DrawTrailWaypoints();
-//	DrawGoalWaypoints();
 	eEntity::Draw();
-//	DrawCollisionCircle();
 }
 
 //******************
 // eAI::DebugDraw
-// FIXME: this is a test
 //******************
 void eAI::DebugDraw() {
 	DrawGoalWaypoints();
 	DrawKnownMap();
+	DrawCollisionCircle();
+	DrawTrailWaypoints();
 }
 
 //******************
@@ -546,51 +543,42 @@ void eAI::DebugDraw() {
 //******************
 void eAI::DrawGoalWaypoints() {
 	eNode<eVec2> * iterator;
-	eVec2 debugPoint;
-
-//	static std::shared_ptr<eImage> goalSprite = nullptr;
-//	if (goalSprite == nullptr)
-//		game.GetImageManager().LoadImage("graphics/hero.bmp", SDL_TEXTUREACCESS_STATIC, goalSprite);
-//		game.GetAnimationManager().GetAnimation
+	eVec2 goalPoint;
 
 	if (!game.debugFlags.GOAL_WAYPOINTS)
 		return;
 
-// TODO: draw a sprite (ie: a new entity on the entity list), NOT draw a debug iso-rectangle
 	auto & cameraBounds = game.GetCamera().CollisionModel().AbsBounds();
 	for (iterator = goals.Back(); iterator != nullptr; iterator = iterator->Next()) {
-		debugPoint = iterator->Data();// - cameraBounds[0];
-		debugPoint.SnapInt();
-
-		eBounds dstBounds = eBounds(debugPoint).ExpandSelf(8);
-//		if (eCollision::AABBAABBTest(cameraBounds, dstBounds))	// FIXME: this check doesn't account for a moving camera???
-			game.GetRenderer().DrawIsometricRect(redColor, dstBounds, true);		// FIXME: make this a sprite image draw
+		goalPoint = iterator->Data();
+		goalPoint.SnapInt();
+		eBounds goalBounds = eBounds(goalPoint).ExpandSelf(8);
+		game.GetRenderer().DrawIsometricRect(redColor, goalBounds, true);
 	}
 }
 
 //******************
 // eAI::DrawTrailWaypoints
-// FIXME: add this properly to the renderPool
 //******************
 void eAI::DrawTrailWaypoints() {
 	eNode<eVec2> * iterator;
-	eVec2 debugPoint;
-	
-	static const std::shared_ptr<eImage> debugImage = sprite.GetImage();
+	eVec2 trailPoint;
 
 	if (!game.debugFlags.TRAIL_WAYPOINTS)
 		return;
 
 	for(iterator = trail.Front(); iterator != nullptr; iterator = iterator->Prev()) {
-		debugPoint = iterator->Data() - game.GetCamera().CollisionModel().AbsBounds()[0];
-		debugPoint.SnapInt();
-//		game.GetRenderer().DrawImage(debugImage, (eBounds(debugPoint).ExpandSelf(8))[0]);	// top-left corner
+		trailPoint = iterator->Data();
+		trailPoint.SnapInt();
+		eBounds trailBounds = eBounds(trailPoint).ExpandSelf(4);
+		game.GetRenderer().DrawIsometricRect(greenColor, trailBounds, RENDERTYPE_DYNAMIC);
 	}
 }
 
 //******************
 // eAI::DrawCollisionCircle
-// FIXME: add this properly to the renderPool
+// draws the forward sweep angle checked for collision prediction in any-angle pathfinding
+// FIXME: draw a partial circle in eRenderer instead
 //******************
 void eAI::DrawCollisionCircle() {
 	eVec2 debugVector;
@@ -615,6 +603,7 @@ void eAI::DrawCollisionCircle() {
 		if (collisionModel.Velocity() * debugVector >= 0) {
 			debugPoint = collisionModel.Origin() + (debugVector * collisionRadius) - game.GetCamera().CollisionModel().AbsBounds()[0];
 			debugPoint.SnapInt();
+			game.GetRenderer().DrawIsometricRect(yellowColor, collisionModel.AbsBounds(), RENDERTYPE_DYNAMIC);	// DEBUG: just test the iso-collision bounds for now
 //			game.GetRenderer().DrawPixel(debugPoint, color[0], color[1], color[2]);
 		}
 		debugVector = rotateCounterClockwiseZ * debugVector;
@@ -624,7 +613,7 @@ void eAI::DrawCollisionCircle() {
 
 //******************
 // eAI::DrawKnownMap
-// TODO: check layers, and draw debug images over visited (and visible) tiles instead of entire cells.
+// TODO: check collision/draw layers, and draw debug rects over visited (and visible) tiles instead of entire cells.
 //******************
 void eAI::DrawKnownMap() const {
 	auto & tileMap = game.GetMap().TileMap();
@@ -632,10 +621,7 @@ void eAI::DrawKnownMap() const {
 	for (auto & visibleCell : visibleCells) {
 		if (knownMap.Index(visibleCell.first, visibleCell.second) == VISITED_TILE) {
 				auto cellBounds = tileMap.Index(visibleCell.first, visibleCell.second).AbsBounds();
-
-				// TODO: spawn an eEntity to think and draw via the main eGame loop
-				// then destroy the eEntity when the knownMap clears (and don't draw it if the debug visiblity is off)				
-				game.GetRenderer().DrawIsometricRect(blackColor, cellBounds, RENDERTYPE_DYNAMIC);
+				game.GetRenderer().DrawIsometricRect(pinkColor, cellBounds, RENDERTYPE_DYNAMIC);
 		}
 	}
 
