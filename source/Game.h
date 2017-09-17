@@ -4,7 +4,7 @@
 #include "Definitions.h"
 #include "Renderer.h"
 #include "ImageManager.h"
-#include "AnimationManager.h"
+//#include "AnimationManager.h"
 #include "Vector.h"
 #include "Map.h"
 #include "Entity.h"
@@ -46,7 +46,7 @@ public:
 	eInput &					GetInput();
 	eRenderer &					GetRenderer();
 	eImageManager &				GetImageManager();
-	eAnimationManager &			GetAnimationManager();
+//	eAnimationManager &			GetAnimationManager();
 	eCamera &					GetCamera();
 	eMap &						GetMap();
 	std::shared_ptr<eEntity>	GetEntity(int entityID);
@@ -73,7 +73,7 @@ private:
 	eMap						map;
 	eRenderer					renderer;
 	eImageManager				imageManager;
-	eAnimationManager			animationManager;
+//	eAnimationManager			animationManager;
 	eCamera						camera;
 
 	const Uint32				defaultFPS = 60;
@@ -128,12 +128,14 @@ inline eImageManager & eGame::GetImageManager() {
 	return imageManager;
 }
 
+/*
 //*****************
 // eGame::GetAnimationManager
 //*****************
 inline eAnimationManager & eGame::GetAnimationManager() {
 	return animationManager;
 }
+*/
 
 //****************
 // eGame::GetCamera

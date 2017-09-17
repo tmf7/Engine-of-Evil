@@ -1,7 +1,8 @@
 #ifndef EVIL_SPRITE_H
 #define EVIL_SPRITE_H
 
-#include "Animation.h"
+//#include "Animation.h"
+#include "Image.h"
 
 // TODO: handle sprite sheets that have multiple different frame sizes (even in a single animation)
 // that use alpha values instead of color keys

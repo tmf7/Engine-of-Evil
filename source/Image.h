@@ -11,22 +11,28 @@
 class eImage {
 public:
 							eImage();
-							eImage(SDL_Texture * source, const char * filename, int id);
-							~eImage();
+							eImage(SDL_Texture * source, const char * sourceFilename, int id);
+	virtual					~eImage();
 
 	bool					IsValid() const;
 	SDL_Texture *			Source() const;
 	int						GetWidth() const;
 	int						GetHeight() const;
-	std::string				GetFilename() const;
+	std::string				GetSourceFilename() const;
 	int						GetImageManagerIndex() const;
+	
+	void					SetSubframes(std::vector<SDL_Rect> && frames);
+	const SDL_Rect &		GetSubframe(int subframeIndex) const;
+	bool					HasSubframes() const;
 
 private:
 
 	SDL_Texture *			source;
 	SDL_Point				size;
-	std::string				filename;				// source file loaded from
+	std::string				sourceFilename;
 	int						imageManagerIndex;		// index within eImageManager::imageList
+
+	std::vector<SDL_Rect>	subframes;				// sub-sections of image to focus on, if any
 };
 
 //**************
@@ -34,7 +40,7 @@ private:
 //**************
 inline eImage::eImage()
 	: source(nullptr),
-	  filename("invalid_file"), 
+	  sourceFilename("invalid_file"), 
 	  imageManagerIndex(INVALID_ID) {
 	size = SDL_Point{ 0, 0 };
 }
@@ -43,9 +49,9 @@ inline eImage::eImage()
 // eImage::eImage
 // frame is the size of the texture
 //**************
-inline eImage::eImage(SDL_Texture * source, const char * filename, int id)
+inline eImage::eImage(SDL_Texture * source, const char * sourceFilename, int id)
 	: source(source), 
-	  filename(filename), 
+	  sourceFilename(sourceFilename), 
 	  imageManagerIndex(id) {
 	SDL_QueryTexture(source, NULL, NULL, &size.x, &size.y);
 }
@@ -89,8 +95,8 @@ inline int eImage::GetHeight() const {
 //**************
 // eImage::GetFilename
 //**************
-inline std::string eImage::GetFilename() const {
-	return filename;
+inline std::string eImage::GetSourceFilename() const {
+	return sourceFilename;
 }
 
 //**************
@@ -98,6 +104,27 @@ inline std::string eImage::GetFilename() const {
 //**************
 inline int eImage::GetImageManagerIndex() const {
 	return imageManagerIndex;
+}
+
+//**************
+// eImage::SetSubframes
+//**************
+inline void eImage::SetSubframes(std::vector<SDL_Rect> && frames) {
+	subframes = std::move(frames);
+}
+
+//**************
+// eImage::GetSubframe
+//**************
+inline const SDL_Rect & eImage::GetSubframe(int subframeIndex) const {
+	return subframes.at(subframeIndex);
+}
+
+//**************
+// eImage::HasSubframes
+//**************
+inline bool eImage::HasSubframes() const {
+	return !subframes.empty();
 }
 
 #endif /* EVIL_IMAGE_H */

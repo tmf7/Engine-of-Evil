@@ -15,11 +15,13 @@ class eImageManager {
 public:
 
 	bool			Init();
-	bool			BatchLoad(const char * imageBatchLoadFile);
+	bool			BatchLoadImages(const char * imageBatchFile);
 	bool			GetImage(const char * filename, std::shared_ptr<eImage> & result);
 	bool			GetImage(int imageID, std::shared_ptr<eImage> & result);
 	bool			LoadImage(const char * filename, SDL_TextureAccess accessType, std::shared_ptr<eImage> & result);
 	bool			LoadConstantText(TTF_Font * font, const char * text, const SDL_Color & color, std::shared_ptr<eImage> & result);
+	bool			LoadImageSubframes(const char * filename);
+	bool			BatchLoadSubframes(const char * subframeBatchFile);
 	int				GetNumImages() const;
 	void			Clear();
 

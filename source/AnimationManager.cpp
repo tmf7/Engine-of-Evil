@@ -41,8 +41,8 @@ bool eAnimationManager::Init() {
 // TODO: allow selective unloading of animations (eg: std::shared_ptr already does reference counting
 // take those numbers and add/subtract according to the next level's filename batch)
 //***************
-bool eAnimationManager::BatchLoad(const char * animationBatchLoadFile) {
-	std::shared_ptr<eAnimation> result;	// DEBUG: not acually used, but necessary for LoadAnimation
+bool eAnimationManager::BatchLoad(const char * animationBatchLoadFile, std::vector<std::shared_ptr<eAnimation>> & result) {
+	std::shared_ptr<eAnimation> loaded;
 	char filename[MAX_ESTRING_LENGTH];
 	std::ifstream	read(animationBatchLoadFile);
 
@@ -56,7 +56,9 @@ bool eAnimationManager::BatchLoad(const char * animationBatchLoadFile) {
 		if (!VerifyRead(read))
 			return false;
 
-		LoadAnimation(filename, result);
+		if (!LoadAnimation(filename, loaded))
+			return false;
+		result.push_back(loaded);		
 		read.ignore(std::numeric_limits<std::streamsize>::max(), '\n'); // skip the rest of the line
 	}
 	read.close();

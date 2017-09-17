@@ -2,7 +2,7 @@
 #define EVIL_TILE_H
 
 #include "CollisionModel.h"
-#include "Animation.h"
+//#include "Animation.h"
 #include "Renderer.h"
 
 // Flyweight tile design
@@ -28,32 +28,27 @@ public:
 							eTileImpl();
 
 	int						Type() const;
-	const std::string &		Name() const;
 //	void					(*tileBehavior)();
 
-	static bool				InitTileTypes(const char * animationFilename);
+	static bool				LoadTileset(const char * tilesetFilename, bool appendNew = false);
 	static int				NumTileTypes();
 
 	static bool				IsCollidableHack(int type);
 	
 private:
 	
-	int						type;				// index of the eAnimation tileSet used
-	std::string				name;				// name of the sequence (or single tile image) in the tileSet
+	int						type;				// index within the tileSet
 	bool					collisionHack;		// FIXME: temporary solution to set entire CELL of spatial index grid to TRAVERSABLE/COLLISION
 };
 
-extern eTileImpl					tileTypes[eTileImpl::maxTileTypes];
-// typedef std::shared_ptr<eAnimation>	TileSet_t;
-// extern std::vector<TileSet_t> tileSets;
-extern std::shared_ptr<eAnimation>	tileSet;				// TODO: make this an array of tilesets (eAnimations) to mix and match...or just indexes into disparate tiled images!
-extern int							numTileTypes;
+extern std::vector<std::pair<int, int>>			tileSet;			// first == index within eImageManager::imageList; second == eImage subframe index;
+extern eTileImpl								tileTypes[eTileImpl::maxTileTypes];
 
 //************
 // eTileImpl::NumTileTypes
 //************
 inline int eTileImpl::NumTileTypes() {
-	return numTileTypes;
+	return tileSet.size();
 }
 
 //************
@@ -78,18 +73,10 @@ inline int eTileImpl::Type() const {
 	return type;
 }
 
-//************
-// eTileImpl::Name
-// DEBUG (from .tls file): "water" or "grass, etc
-//************
-inline const std::string & eTileImpl::Name() const {
-	return name;
-}
-
 //***********************************************
 //				eTile 
 // localized tile data
-// TODO: have eTile inherit from eEntity to take advantage
+// TODO(?): have eTile inherit from eEntity to take advantage
 // of the collisionModel and renderImage functionality and avoid code duplication
 //***********************************************
 class eTile {
@@ -100,7 +87,6 @@ public:
 	
 	int						Type() const;
 	void					SetType(int newType);
-	const std::string &		Name() const;
 
 	renderImage_t *			GetRenderImage();
 	void					UpdateRenderImageDisplay();
@@ -117,7 +103,7 @@ private:
 
 	eGridCell *				owner;				// responsible for drawing this tile
 	eTileImpl *				impl;				// general tile type data
-	eCollisionModel			collisionModel;		// contains position and size of collision bounds
+	eCollisionModel			collisionModel;		// contains position and size of collision bounds	// FIXME: put in eTileImpl, and just give the origin here
 	renderImage_t			renderImage;		// data relevant to the renderer
 };
 
@@ -132,22 +118,6 @@ inline eTile::eTile() {
 //************
 inline int eTile::Type() const {
 	return impl->type;
-}
-
-//************
-// eTile::SetType
-//************
-inline void eTile::SetType(int newType) {
-	impl = &tileTypes[newType];
-	renderImage.srcRect = &tileSet->GetFrame(impl->type).Frame();		// FIXME(?): eTileImpl should probably do this
-}
-
-//************
-// eTile::Name
-// DEBUG (format): "graphics/tiles.bmp_brick"
-//************
-inline const std::string & eTile::Name() const {
-	return impl->Name();
 }
 
 //************

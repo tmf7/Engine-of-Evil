@@ -47,17 +47,21 @@ bool eImageManager::Init() {
 }
 
 //***************
-// eImageManager::BatchLoad
+// eImageManager::BatchLoadImages
 // loads a batch of image resources
 // user can optionally call imageManager.Clear()
 // prior to this to facilitate starting with a fresh set of images
 // TODO: allow selective unloading of images (eg: std::shared_ptr already does reference counting
 // take those numbers and add/subtract according to the next level's filename batch)
+// DEBUG (bimg file format):
+// imageFilename\n
+// imageFilename\n
+// (repeat)
 //***************
-bool eImageManager::BatchLoad(const char * imageBatchLoadFile) {
-	std::shared_ptr<eImage> result;	// DEBUG: not acually used, but necessary for LoadImage
+bool eImageManager::BatchLoadImages(const char * imageBatchFile) {
+	std::shared_ptr<eImage> tempResult;	// DEBUG: not acually used, but necessary for LoadImage
 	char filename[MAX_ESTRING_LENGTH];
-	std::ifstream	read(imageBatchLoadFile);
+	std::ifstream	read(imageBatchFile);
 
 	// unable to find/open file
 	if(!read.good())
@@ -73,7 +77,7 @@ bool eImageManager::BatchLoad(const char * imageBatchLoadFile) {
 			read.close();
 			return false;
 		}
-		LoadImage(filename, SDL_TEXTUREACCESS_STATIC, result);
+		LoadImage(filename, SDL_TEXTUREACCESS_STATIC, tempResult);
 		read.ignore(std::numeric_limits<std::streamsize>::max(), '\n'); // skip the rest of the line
 	}
 	read.close();
@@ -96,7 +100,7 @@ bool eImageManager::GetImage(const char * filename, std::shared_ptr<eImage> & re
 	auto hasher = std::hash<std::string>{};
 	int hashkey = hasher(filename);
 	for (int i = imageFilenameHash.First(hashkey); i != -1; i = imageFilenameHash.Next(i)) {
-		if (imageList[i]->GetFilename() == filename) {
+		if (imageList[i]->GetSourceFilename() == filename) {
 			result = imageList[i];
 			return true;
 		}
@@ -225,6 +229,103 @@ bool eImageManager::LoadConstantText(TTF_Font * font, const char * text, const S
 	imageList.push_back(result);
 	return true;
 }
+
+// BEGIN FREEHILL DEBUG image subframe test
+//***************
+// eImageManager::BatchLoadSubframes
+// DEBUG (.bsub file format):
+// imageSubframeFilename\n
+// imageSubframeFilename\n
+// (repeat)
+//***************
+bool eImageManager::BatchLoadSubframes(const char * subframeBatchFile) {
+	char filename[MAX_ESTRING_LENGTH];
+	std::ifstream	read(subframeBatchFile);
+
+	// unable to find/open file
+	if(!read.good())
+		return false;
+
+	read.ignore(std::numeric_limits<std::streamsize>::max(), '\n'); // skip the first line of the file
+	while (!read.eof()) {
+		read >> filename;
+		if (!VerifyRead(read))
+			return false;
+
+		if (!LoadImageSubframes(filename))
+			return false;		
+		read.ignore(std::numeric_limits<std::streamsize>::max(), '\n'); // skip the rest of the line
+	}
+	read.close();
+	return true;
+}
+
+//***************
+// eImageManager::LoadImageSubframes
+// sets target to a loaded eImage pointer with updated subframe data
+// DEBUG (.sub file format):
+// imageFilename\n
+// number of subframes to expect\n
+// x y w h # frame number 0 for reference\n
+// x y w h # this is ignored 1 this is ignored\n
+// x y w h # ditto 2 ditto\n
+// (repeat)
+//***************
+bool eImageManager::LoadImageSubframes(const char * subframeFilename) {
+	// check if the eImage is already loaded and split
+	std::shared_ptr<eImage> target = nullptr;
+	if (GetImage(subframeFilename, target) && target->HasSubframes())
+		return true;
+
+	char buffer[MAX_ESTRING_LENGTH];
+	std::vector<SDL_Rect> frameList;
+
+	std::ifstream	read(subframeFilename);
+	// unable to find/open file
+	if (!read.good()) 
+		return false;
+
+	// read the source image name
+	memset(buffer, 0, sizeof(buffer));
+	read.getline(buffer, sizeof(buffer), '\n');
+	if(!VerifyRead(read))
+		return false;
+
+	// get a pointer to the source image (or try to load it if it doesn't exist yet)
+	if ((target == nullptr || target == imageList[0]) && !game.GetImageManager().LoadImage(buffer, SDL_TEXTUREACCESS_STATIC, target))
+		return false;
+
+	// read how many frames are about to be loaded
+	// to minimize dynamic allocations
+	int numFrames = 0;
+	read >> numFrames;
+	if (!VerifyRead(read))
+		return false;
+	frameList.reserve(numFrames);
+
+	while (!read.eof()) {
+		// one subframe per line
+		SDL_Rect frame;
+		for (int targetData = 0; targetData < 4; targetData++) {
+			switch (targetData) {
+				case 0: read >> frame.x; break;
+				case 1: read >> frame.y; break;
+				case 2: read >> frame.w; break;
+				case 3: read >> frame.h; break;
+				default: break;
+			}
+		
+			if (!VerifyRead(read))
+				return false;
+		}
+		frameList.push_back(std::move(frame));
+		read.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+	}
+	read.close();
+	target->SetSubframes(std::move(frameList));
+	return true;
+}
+// END FREEHILL DEBUG image subframe test
 
 //***************
 // eImageManager::Clear

@@ -1,38 +1,79 @@
 #include "Tile.h"
 #include "Game.h"
 
-// FIXME: these should be class static
-int									numTileTypes = 0;
-std::shared_ptr<eAnimation>			tileSet;
-eTileImpl							tileTypes[eTileImpl::maxTileTypes];
+// FIXME: these should be class static, not global
+// first == index within eImageManager::imageList; second == eImage subframe index;
+std::vector<std::pair<int, int>>		tileSet;
+eTileImpl								tileTypes[eTileImpl::maxTileTypes];
 
 //************
-// eTileImpl::InitTileTypes
-// returns false on failure to init, true otherwise
+// eTileImpl::LoadTileset
+// returns false on failure to load, true otherwise
+// pairs image file ids and subframe indexes therein
+// DEBUG (.tls file format):
+// number of tiles\n
+// imageFilename : subframeIndex collisionHack subframeIndex collisionHack # comment\n
+// imageFilename : subframeIndex collisionHack subframeIndex collisionHack # comment\n
+// (repeat)
 //************
-bool eTileImpl::InitTileTypes(const char * animationFilename) {
-	// load the tile file
-	if (!game.GetAnimationManager().LoadAnimation(animationFilename, tileSet))
+bool eTileImpl::LoadTileset(const char * tilesetFilename, bool appendNew) {
+	if (!appendNew)
+		tileSet.clear();
+
+	char buffer[MAX_ESTRING_LENGTH];
+	std::ifstream	read(tilesetFilename);
+	// unable to find/open file
+	if (!read.good())
 		return false;
 
-	numTileTypes = tileSet->GetNumSequences();
-	if (!numTileTypes)
+	// read how many tiles are about to be loaded
+	// to minimize dynamic allocations
+	size_t numTiles = 0;
+	read >> numTiles;
+	if (!VerifyRead(read))
 		return false;
+	tileSet.reserve(tileSet.size() + numTiles);
+	read.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
 
-	// configure the tileTypes array according to each sequence in tileSet
-	for (int i = 0; i < numTileTypes; i++) {
-		std::string name = tileSet->GetSequenceName(i);
-		tileTypes[i].name = name;
-		tileTypes[i].type = tileSet->GetFirstIndex(name);
-
-		if (tileTypes[i].type == invalidTileType)
+	while (!read.eof()) {
+		// read a source image name up to ':'
+		memset(buffer, 0, sizeof(buffer));
+		read.getline(buffer, sizeof(buffer), ':');
+		if(!VerifyRead(read)) 
 			return false;
 
-		// TODO: script this somewhere, possibly in another file type
-		// that stores the .tls file to load the eAnimation
-		// and then parallel data for things like collision and such
-		tileTypes[i].collisionHack = tileTypes[i].type == 0 ? false : true;
-	}	
+		// get a pointer to a source image (or try to load it if it doesn't exist yet)
+		std::shared_ptr<eImage> sourceImage = nullptr;
+		if (!game.GetImageManager().LoadImage(buffer, SDL_TEXTUREACCESS_STATIC, sourceImage)) 
+			return false;
+
+		int imageID = sourceImage->GetImageManagerIndex();
+
+		// get all subframe indexes for the eImage (separated by spaces), everything after '#' is ignored
+		while (read.peek() != '#') {
+			int subframeIndex;
+			bool collisionHack;
+
+			read >> subframeIndex;
+				if (!VerifyRead(read))
+					return false;
+
+			read >> collisionHack;
+				if (!VerifyRead(read))
+					return false;
+
+			tileSet.push_back(std::pair<int, int> { imageID, subframeIndex });
+			int type = tileSet.size() - 1;
+			tileTypes[type].type = type;
+			tileTypes[type].collisionHack = collisionHack;
+		}
+		read.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+	}
+	read.close();
+
+	if (tileSet.empty())
+		return false;
+
 	return true;
 }
 
@@ -48,8 +89,8 @@ bool eTileImpl::InitTileTypes(const char * animationFilename) {
 void eTile::Init(eGridCell * owner, const eBounds & absBounds, const eVec2 & imageOffset, const int type, const int layer) {
 	this->owner = owner;
 	impl = &tileTypes[type];
-	renderImage.image = tileSet->Source();
-	renderImage.srcRect = &tileSet->GetFrame(impl->type).Frame();
+	game.GetImageManager().GetImage(tileSet.at(type).first, renderImage.image);		// which image
+	renderImage.srcRect = &renderImage.image->GetSubframe(tileSet.at(type).second);	// which part of that image
 
 	renderImage.origin = absBounds[0];
 	eMath::CartesianToIsometric(renderImage.origin.x, renderImage.origin.y);
@@ -63,4 +104,14 @@ void eTile::Init(eGridCell * owner, const eBounds & absBounds, const eVec2 & ima
 	localBounds[1] = extents;
 	collisionModel.SetOrigin(absBounds.Center());
 	collisionModel.Velocity() = vec2_zero;
+}
+
+//************
+// eTile::SetType
+// FIXME: doesn't verify the index
+//************
+void eTile::SetType(int newType) {
+	impl = &tileTypes[newType];
+	game.GetImageManager().GetImage(tileSet.at(newType).first, renderImage.image);		// which image
+	renderImage.srcRect = &renderImage.image->GetSubframe(tileSet.at(newType).second);	// which part of that image
 }

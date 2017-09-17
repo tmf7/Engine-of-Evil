@@ -28,7 +28,7 @@ bool eEntity::Spawn(/*const char * entityFilename, eVec2 & worldPosition*/) {
 	if (!game.GetImageManager().LoadImage("graphics/hero.png", SDL_TEXTUREACCESS_STATIC, spriteImage))
 		return false;
 
-	// TODO: call sprite.Init("animationBatchLoadFilename.sprite");
+	// TODO: call sprite.Init("filename.sprite");
 	// where all the eAnimations have ALREADY been eAnimationManager::BatchLoad(filename)
 	// and the sprite just eAnimationManager.GetAnimation a bunch of times according to the sprite's file
 	// AND potentially loads various control varibles from the sprite's file as well (maybe)

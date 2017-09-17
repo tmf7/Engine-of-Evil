@@ -1,14 +1,16 @@
 #include "Map.h"
 #include "Game.h"
 #include "AI.h"
+#include "MapFile.h"
 
 //**************
 // eMap::Init
 //**************
 bool eMap::Init () {
-	// TODO: initialize multiple tile sheets (somewhat like sprites do)
-//	if (!eTileImpl::InitTileTypes("graphics/tiles.png", "graphics/tiles_format.def"))
-	if (!eTileImpl::InitTileTypes("graphics/grass_and_water.tls"))
+	if (!game.GetImageManager().LoadImageSubframes("graphics/grass_and_water.sub"))
+		return false;
+
+	if (!eTileImpl::LoadTileset("graphics/evilMaster.tls"))
 		return false;
 
 	BuildMap(RANDOM_MAP);

@@ -15,7 +15,7 @@ class eAnimationManager {
 public:
 
 	bool			Init();
-	bool			BatchLoad(const char * animationBatchLoadFile);
+	bool			BatchLoad(const char * animationBatchLoadFile, std::vector<std::shared_ptr<eAnimation>> & result);
 	bool			GetAnimation(const char * filename, std::shared_ptr<eAnimation> & result);
 	bool			GetAnimation(int animationID, std::shared_ptr<eAnimation> & result);
 	bool			LoadAnimation(const char * filename, std::shared_ptr<eAnimation> & result);

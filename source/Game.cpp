@@ -40,8 +40,8 @@ eGame::ErrorCode eGame::Init() {
 	if (!imageManager.Init())
 		return IMAGE_MANAGER_ERROR;
 
-	if (!animationManager.Init())
-		return ANIMATION_MANAGER_ERROR;
+//	if (!animationManager.Init())
+//		return ANIMATION_MANAGER_ERROR;
 
 	if (!map.Init())
 		return MAP_ERROR;
