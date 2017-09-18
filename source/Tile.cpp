@@ -101,7 +101,7 @@ eTile::eTile(eGridCell * owner, const eBounds & absBounds, const eVec2 & imageOf
 
 	renderImage.origin = absBounds[0];
 	eMath::CartesianToIsometric(renderImage.origin.x, renderImage.origin.y);
-	renderImage.origin += imageOffset;
+	renderImage.origin += imageOffset;												// FIXME: make this part of the subframe data for an image (maybe)
 	renderImage.SetLayer(layer);
 
 	collisionModel.SetActive(true);

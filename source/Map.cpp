@@ -48,8 +48,9 @@ bool eMap::LoadMap(const char * mapFilename) {
 	const int cellHeight = 32;
 	tileMap.SetCellWidth(cellWidth);
 	tileMap.SetCellHeight(cellHeight);
-	const eVec2 tileOffset = eVec2(-32.0f, -16.0f);	// FIXME(!): these values are specific to each image (and potentially each subframe)
-
+	eVec2 tileOffset1 = eVec2(-32.0f, -16.0f);	// FIXME(!): these values are specific to each image (and potentially each subframe)
+	eVec2 tileOffset2 = eVec2(-32.0f, -160.0f);	// FIXME: note that the row and column reading/loading are transposed to match
+												// the Tiled map editor application output
 	int row = 0;
 	int column = 0;
 	int layer = 0;
@@ -71,20 +72,20 @@ bool eMap::LoadMap(const char * mapFilename) {
 		if (tileType > INVALID_ID) {
 			auto & cell = tileMap.Index(row, column);
 			eVec2 cellMins = eVec2((float)(row * cellWidth), (float)(column * cellHeight));
-			cell.SetAbsBounds( eBounds(cellMins, cellMins + eVec2((float)cellWidth, (float)cellHeight)) );
-			cell.Tiles().push_back(eTile(&cell, cell.AbsBounds(), tileOffset, tileType, layer));
+			cell.SetAbsBounds( eBounds(cellMins, cellMins + eVec2((float)cellWidth, (float)cellHeight)) );			
+			cell.Tiles().push_back(eTile(&cell, cell.AbsBounds(), tileType < 24 ? tileOffset1 : tileOffset2, tileType, layer));
 		}
 
 		if (read.peek() == '\n') {
 			read.ignore(1, '\n');
-			column = 0;
-			row++;
+			row = 0;
+			column++;
 		} else if (read.peek() == ',') {
 			read.ignore(1, ',');
-			column++;
-			if (column >= tileMap.Columns()) {
-				column = 0;
-				row++;
+			row++;
+			if (row >= tileMap.Rows()) {
+				row = 0;
+				column++;
 			}
 		}
 
@@ -201,8 +202,12 @@ bool eMap::IsValid(const eVec2 & point, bool ignoreCollision) const {
 	if	( !tileMap.IsValid(point) )
 		return false;
 
-	if ( !ignoreCollision && eTileImpl::IsCollidableHack(tileMap.Index(point).Tiles()[0].Type()) )
-		return false;
+	if ( !ignoreCollision ) {
+		for (auto & tile : tileMap.Index(point).Tiles()) {
+			if (eTileImpl::IsCollidableHack(tile.Type()))
+				return false;
+		}
+	}
 
 	return true;
 }

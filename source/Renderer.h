@@ -21,7 +21,7 @@ typedef struct renderImage_s {
 												// DEBUG: dimensions relative to srcRect will affect scaling
 												// DEBUG: do not manually set dstRect, it is calculated from srcRect and origin
 	eVec2						origin;			// top-left corner of image using world coordinates (not adjusted to account for camera)
-	float						priority;		// combination of layer and origin.y **during AddToRenderPool**, lower priority draws first
+	float						priority;		// combination of layer and meta-z coordinate **during AddToRenderPool**, lower priority draws first
 	Uint32						layer;			// the primary draw sorting criteria
 
 //	eEntity *					owner;			// entity using this renderimage, for secondary renderPool sort if priority causes flicker
@@ -35,9 +35,7 @@ typedef struct renderImage_s {
 		: image(image),
 		  srcRect(srcRect), 
 		  origin(origin),
-		  layer(layer) {};		// DEBUG: used to be priority, where most-significant 2 bytes are layer
-								// least-significant 2 bytes are renderPool push order, ie in AddToRenderPool(...)
-								// renderImage->priority |= targetPool->size();
+		  layer(layer) {};
 
 	void SetLayer(const int layer) { this->layer = layer; }
 	Uint32 GetLayer() const { return layer; }

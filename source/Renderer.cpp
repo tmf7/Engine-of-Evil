@@ -19,8 +19,8 @@ bool eRenderer::Init() {
 	window = SDL_CreateWindow(	"Evil", 
 								SDL_WINDOWPOS_UNDEFINED, 
 								SDL_WINDOWPOS_UNDEFINED, 
+								1500, 
 								800, 
-								600, 
 								SDL_WINDOW_SHOWN | SDL_WINDOW_OPENGL);
 
 	if (!window)
@@ -212,7 +212,7 @@ void eRenderer::DrawImage(const renderImage_t * renderImage) const {
 //***************
 void eRenderer::AddToRenderPool(renderImage_t * renderImage, bool dynamic) {
 	std::vector<renderImage_t *> * targetPool = dynamic ? &dynamicPool : &staticPool;
-	renderImage->priority = (float)(renderImage->layer << 16) + renderImage->origin.y;	// DEBUG: layer dominates, origin.y tiebreaker
+	renderImage->priority = (float)(renderImage->layer << 16) + (renderImage->origin.y + renderImage->srcRect->h);	// DEBUG: layer dominates, meta-z tiebreaker
 	targetPool->push_back(renderImage);
 }
 
