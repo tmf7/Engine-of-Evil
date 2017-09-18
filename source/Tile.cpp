@@ -12,9 +12,14 @@ eTileImpl								tileTypes[eTileImpl::maxTileTypes];
 // pairs image file ids and subframe indexes therein
 // DEBUG (.tls file format):
 // number of tiles\n
-// imageFilename : subframeIndex collisionHack subframeIndex collisionHack # comment\n
-// imageFilename : subframeIndex collisionHack subframeIndex collisionHack # comment\n
-// (repeat)
+// imageFilename\n
+// subframeIndex collisionHack # master tile index comment\n
+// (repeat tile property definitions for this file)
+// # (end of tileset definition comment)\n
+// imageFilename\n
+// subframeIndex collisionHack # master tile index comment\n
+// # (end of tileset definition comment)\n
+// (repeat image and corresponding tile definition pattern)
 //************
 bool eTileImpl::LoadTileset(const char * tilesetFilename, bool appendNew) {
 	if (!appendNew)
@@ -36,10 +41,10 @@ bool eTileImpl::LoadTileset(const char * tilesetFilename, bool appendNew) {
 	read.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
 
 	while (!read.eof()) {
-		// read a source image name up to ':'
+		// read a source image name
 		memset(buffer, 0, sizeof(buffer));
-		read.getline(buffer, sizeof(buffer), ':');
-		if(!VerifyRead(read)) 
+		read.getline(buffer, sizeof(buffer), '\n');
+		if(!VerifyRead(read))
 			return false;
 
 		// get a pointer to a source image (or try to load it if it doesn't exist yet)
@@ -62,10 +67,12 @@ bool eTileImpl::LoadTileset(const char * tilesetFilename, bool appendNew) {
 				if (!VerifyRead(read))
 					return false;
 
-			tileSet.push_back(std::pair<int, int> { imageID, subframeIndex });
+			tileSet.push_back(std::pair<int, int> { imageID, subframeIndex });		// FIXME: verify the subframe exists, 
+																					// otherwise push an error image handle into this tileSet index
 			int type = tileSet.size() - 1;
 			tileTypes[type].type = type;
 			tileTypes[type].collisionHack = collisionHack;
+			read.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
 		}
 		read.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
 	}
@@ -78,7 +85,7 @@ bool eTileImpl::LoadTileset(const char * tilesetFilename, bool appendNew) {
 }
 
 //************
-// eTile::Init
+// eTile::eTile
 // owner is responsible for handling all this eTile's functions (eg drawing its renderImage)
 // absBounds is used for collision
 // imageOffset is the tileSet image-specific offset required to position the eTile draw correctly
@@ -86,7 +93,7 @@ bool eTileImpl::LoadTileset(const char * tilesetFilename, bool appendNew) {
 // layer is the draw order depth
 // TODO: Initialize the collider based on procedural/file data
 //************
-void eTile::Init(eGridCell * owner, const eBounds & absBounds, const eVec2 & imageOffset, const int type, const int layer) {
+eTile::eTile(eGridCell * owner, const eBounds & absBounds, const eVec2 & imageOffset, const int type, const int layer) {
 	this->owner = owner;
 	impl = &tileTypes[type];
 	game.GetImageManager().GetImage(tileSet.at(type).first, renderImage.image);		// which image

@@ -67,16 +67,11 @@ bool eImageManager::BatchLoadImages(const char * imageBatchFile) {
 	if(!read.good())
 		return false;
 
-	read.ignore(std::numeric_limits<std::streamsize>::max(), '\n'); // skip the first line of the file
 	while (!read.eof()) {
 		read >> filename;
-
-		// unrecoverable read error or improperly formatted file
-		if (read.bad() || read.fail()) {
-			read.clear();
-			read.close();
+		if (!VerifyRead(read))
 			return false;
-		}
+
 		LoadImage(filename, SDL_TEXTUREACCESS_STATIC, tempResult);
 		read.ignore(std::numeric_limits<std::streamsize>::max(), '\n'); // skip the rest of the line
 	}
@@ -230,12 +225,11 @@ bool eImageManager::LoadConstantText(TTF_Font * font, const char * text, const S
 	return true;
 }
 
-// BEGIN FREEHILL DEBUG image subframe test
 //***************
 // eImageManager::BatchLoadSubframes
 // DEBUG (.bsub file format):
-// imageSubframeFilename\n
-// imageSubframeFilename\n
+// imageSubframeFilename.sub\n
+// imageSubframeFilename.sub\n
 // (repeat)
 //***************
 bool eImageManager::BatchLoadSubframes(const char * subframeBatchFile) {
@@ -246,7 +240,6 @@ bool eImageManager::BatchLoadSubframes(const char * subframeBatchFile) {
 	if(!read.good())
 		return false;
 
-	read.ignore(std::numeric_limits<std::streamsize>::max(), '\n'); // skip the first line of the file
 	while (!read.eof()) {
 		read >> filename;
 		if (!VerifyRead(read))
@@ -325,7 +318,6 @@ bool eImageManager::LoadImageSubframes(const char * subframeFilename) {
 	target->SetSubframes(std::move(frameList));
 	return true;
 }
-// END FREEHILL DEBUG image subframe test
 
 //***************
 // eImageManager::Clear

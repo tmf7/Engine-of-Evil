@@ -23,6 +23,7 @@ public:
 	bool						IsValid(const eVec2 & point, bool ignoreCollision = false) const;
 	void						Think();
 	void						Draw();
+	bool						LoadMap(const char * mapFilename);
 	void						BuildMap(const int configuration);
 	void						ToggleTile(const eVec2 & point);
 	tile_map_t &				TileMap();

@@ -10,16 +10,12 @@ class eCollisionModel;
 // pathfinding, collision, and tile drawing
 //***************************************
 class eGridCell {
-private:
-
-	static constexpr const int			maxTiles = 1;
-
 public:
 										eGridCell();
 
 	void								Draw();
-	const std::array<eTile, maxTiles> &	Tiles() const;
-	std::array<eTile, maxTiles> &		Tiles();
+	const std::vector<eTile> &			Tiles() const;
+	std::vector<eTile> &				Tiles();
 
 
 	std::unordered_map<eCollisionModel *, eCollisionModel *> & Contents();
@@ -33,7 +29,7 @@ private:
 	// colliders that overlap this eGridCell (including its eTile's colliders, and others')
 	std::unordered_map<eCollisionModel *, eCollisionModel *> contents;	
 
-	std::array<eTile, maxTiles>			tiles;		// the tiles this cell is responsible for drawing
+	std::vector<eTile>					tiles;		// the tiles this cell is responsible for drawing
 	eBounds								absBounds;	// using world-coordinates
 
 	// pathfinding
@@ -62,14 +58,14 @@ inline eGridCell::eGridCell()
 //************
 // eGridCell::Tiles
 //************
-inline std::array<eTile, eGridCell::maxTiles> & eGridCell::Tiles() {
+inline std::vector<eTile> & eGridCell::Tiles() {
 	return tiles;
 }
 
 //************
 // eGridCell::Tiles
 //************
-inline const std::array<eTile, eGridCell::maxTiles> & eGridCell::Tiles() const {
+inline const std::vector<eTile> & eGridCell::Tiles() const {
 	return tiles;
 }
 

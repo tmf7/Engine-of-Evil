@@ -81,9 +81,7 @@ inline int eTileImpl::Type() const {
 //***********************************************
 class eTile {
 public:
-							eTile();
-
-	void					Init(eGridCell * owner, const eBounds & absBounds, const eVec2 & imageOffset, const int type, const int layer);
+							eTile(eGridCell * owner, const eBounds & absBounds, const eVec2 & imageOffset, const int type, const int layer);
 	
 	int						Type() const;
 	void					SetType(int newType);
@@ -106,12 +104,6 @@ private:
 	eCollisionModel			collisionModel;		// contains position and size of collision bounds	// FIXME: put in eTileImpl, and just give the origin here
 	renderImage_t			renderImage;		// data relevant to the renderer
 };
-
-//************
-// eTile::eTile
-//************
-inline eTile::eTile() {
-}
 
 //************
 // eTile::Type

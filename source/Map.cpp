@@ -7,19 +7,100 @@
 // eMap::Init
 //**************
 bool eMap::Init () {
-	if (!game.GetImageManager().LoadImageSubframes("graphics/grass_and_water.sub"))
+	if (!game.GetImageManager().BatchLoadSubframes("graphics/evilMaster.bsub"))
 		return false;
 
 	if (!eTileImpl::LoadTileset("graphics/evilMaster.tls"))
 		return false;
 
-	BuildMap(RANDOM_MAP);
+	if (!LoadMap("graphics/evilTestMap.map"))
+		return false;
+
+//	BuildMap(RANDOM_MAP);
 	return true;
 }
+
+// BEGIN FREEHILL mapfile read test
+//**************
+// eMap::LoadMap
+// Populates tileMap's matrix for future collision and redraw
+// using a file
+// DEBUG (.map file format):
+// master-tileSet-index, master-tileSet-index, ...\n
+// master-tileSet-index, master-tileSet-index, ...\n
+// (repeat, each \n indicates a new row in the eMap::tileMap matrix)
+// # end of layer 1 comment\n
+// master-tileSet-index, master-tileSet-index, ...\n
+// master-tileSet-index, master-tileSet-index, ...\n
+// (repeat, each \n indicates a new row in the eMap::tileMap matrix)
+// # end of layer 2 comment\n
+// (repeat, note that -1 as a master-tileSet-index indicates a placeholder, ie a tileMap index to skip for that layer)
+//**************
+bool eMap::LoadMap(const char * mapFilename) {
+	std::ifstream	read(mapFilename);
+	// unable to find/open file
+	if (!read.good()) 
+		return false;
+
+	// TODO: make these part of the map file
+	// note the cells are square because the base logic is orthogonal, not isometric
+	const int cellWidth = 32;
+	const int cellHeight = 32;
+	tileMap.SetCellWidth(cellWidth);
+	tileMap.SetCellHeight(cellHeight);
+	const eVec2 tileOffset = eVec2(-32.0f, -16.0f);	// FIXME(!): these values are specific to each image (and potentially each subframe)
+
+	int row = 0;
+	int column = 0;
+	int layer = 0;
+
+	while (!read.eof()) {
+		int tileType = INVALID_ID;
+
+		if (read.peek() == '#') {
+			read.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+			row = 0;
+			column = 0;
+			++layer;
+		} else {
+			read >> tileType;
+		}
+		if (!VerifyRead(read))
+			return false;
+		
+		if (tileType > INVALID_ID) {
+			auto & cell = tileMap.Index(row, column);
+			eVec2 cellMins = eVec2((float)(row * cellWidth), (float)(column * cellHeight));
+			cell.SetAbsBounds( eBounds(cellMins, cellMins + eVec2((float)cellWidth, (float)cellHeight)) );
+			cell.Tiles().push_back(eTile(&cell, cell.AbsBounds(), tileOffset, tileType, layer));
+		}
+
+		if (read.peek() == '\n') {
+			read.ignore(1, '\n');
+			column = 0;
+			row++;
+		} else if (read.peek() == ',') {
+			read.ignore(1, ',');
+			column++;
+			if (column >= tileMap.Columns()) {
+				column = 0;
+				row++;
+			}
+		}
+
+		// TODO: remove this, it's just a backup in case of an excessive .map file
+		if (!tileMap.IsValid(row, column))
+			return false;
+	}
+	read.close();
+	return true;
+}
+// END FREEHILL mapfile read test
 
 //**************
 // eMap::BuildMap
 // Populates the map's spatial matrix for future collision and redraw
+// "procedurally"
 //**************
 void eMap::BuildMap(const int configuration) {
 /*
@@ -79,7 +160,8 @@ void eMap::BuildMap(const int configuration) {
 		// TODO: add one eTile per cell for now, but start layering them according to procedure/file-load
 		// FIXME/TODO: collisionModel currently aligns with the CELL exactly because tiles currently visually align with cells,
 		// however make the eTile::Init absBounds be procedure/file-load based
-		cell.Tiles().back().Init(&cell, cell.AbsBounds(), tileOffset, type, 0);	// DEBUG: test layer == 0
+		cell.Tiles().clear();
+		cell.Tiles().push_back(eTile(&cell, cell.AbsBounds(), tileOffset, type, 0));	// DEBUG: test layer == 0
 		column++;
 		if (column >= tileMap.Columns()) {
 			column = 0;
