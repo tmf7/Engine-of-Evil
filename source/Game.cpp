@@ -146,6 +146,17 @@ bool eGame::Run() {
 		entities[0]->DebugDraw();		// loop over all entities for their collision bounds, and grid occupancy
 										// ALSO: only draw goal/trail_waypoints and known_map for a SINGLE currently SELECTED entity
 
+// BEGIN FREEHILL cursor tile highlight test
+		eVec2 tilePoint = eVec2((float)input.GetMouseX(), (float)input.GetMouseY());
+		tilePoint += game.GetCamera().CollisionModel().AbsBounds()[0];
+		eMath::IsometricToCartesian(tilePoint.x, tilePoint.y);
+		auto & tileMap = map.TileMap();
+		if (tileMap.IsValid(tilePoint)) {
+			auto & tileBounds = tileMap.Index(tilePoint).AbsBounds();
+			game.GetRenderer().DrawIsometricRect(yellowColor, tileBounds, RENDERTYPE_DYNAMIC);
+		}
+// END FREEHILL cursor tile highlight test
+
 	// TODO: the HUD would be a static/non-scalable overlay...which should draw with the player...
 	// BUT THAT'S FINE because FlushStaticPool gets called last, whew!
 

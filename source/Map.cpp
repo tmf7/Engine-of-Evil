@@ -1,7 +1,6 @@
 #include "Map.h"
 #include "Game.h"
 #include "AI.h"
-#include "MapFile.h"
 
 //**************
 // eMap::Init
@@ -13,7 +12,7 @@ bool eMap::Init () {
 	if (!eTileImpl::LoadTileset("graphics/evilMaster.tls"))
 		return false;
 
-	if (!LoadMap("graphics/evilTestMap.map"))
+	if (!LoadMap("graphics/EvilTown.map"))
 		return false;
 
 //	BuildMap(RANDOM_MAP);
@@ -26,15 +25,12 @@ bool eMap::Init () {
 // Populates tileMap's matrix for future collision and redraw
 // using a file
 // DEBUG (.map file format):
-// master-tileSet-index, master-tileSet-index, ...\n
-// master-tileSet-index, master-tileSet-index, ...\n
-// (repeat, each \n indicates a new row in the eMap::tileMap matrix)
+// master-tileSet-index, master-tileSet-index, ... master-tileSet-index\n
 // # end of layer 1 comment\n
-// master-tileSet-index, master-tileSet-index, ...\n
-// master-tileSet-index, master-tileSet-index, ...\n
-// (repeat, each \n indicates a new row in the eMap::tileMap matrix)
+// master-tileSet-index, master-tileSet-index, ... master-tileSet-index\n
 // # end of layer 2 comment\n
-// (repeat, note that -1 as a master-tileSet-index indicates a placeholder, ie a tileMap index to skip for that layer)
+// (repeat, note that 0 as a master-tileSet-index indicates a placeholder, ie a tileMap index to skip for that layer)
+// (and therefore ALL values should be reduced by 1 before setting an eTileImpl::type
 //**************
 bool eMap::LoadMap(const char * mapFilename) {
 	std::ifstream	read(mapFilename);
@@ -48,9 +44,11 @@ bool eMap::LoadMap(const char * mapFilename) {
 	const int cellHeight = 32;
 	tileMap.SetCellWidth(cellWidth);
 	tileMap.SetCellHeight(cellHeight);
-	eVec2 tileOffset1 = eVec2(-32.0f, -16.0f);	// FIXME(!): these values are specific to each image (and potentially each subframe)
+
+	eVec2 tileOffset1 = eVec2(-32.0f, -32.0f);	// FIXME(!): these values are specific to each image (and potentially each subframe)
 	eVec2 tileOffset2 = eVec2(-32.0f, -160.0f);	// FIXME: note that the row and column reading/loading are transposed to match
-												// the Tiled map editor application output
+	eVec2 tileOffset3 = eVec2(-32.0f, -96.0f);	// the Tiled map editor application output
+
 	int row = 0;
 	int column = 0;
 	int layer = 0;
@@ -69,11 +67,22 @@ bool eMap::LoadMap(const char * mapFilename) {
 		if (!VerifyRead(read))
 			return false;
 		
+		--tileType;			// DEBUG: .map format is easier to read with 0's instead of -1's so all values are bumped up by 1 when writing it
 		if (tileType > INVALID_ID) {
 			auto & cell = tileMap.Index(row, column);
 			eVec2 cellMins = eVec2((float)(row * cellWidth), (float)(column * cellHeight));
-			cell.SetAbsBounds( eBounds(cellMins, cellMins + eVec2((float)cellWidth, (float)cellHeight)) );			
-			cell.Tiles().push_back(eTile(&cell, cell.AbsBounds(), tileType < 24 ? tileOffset1 : tileOffset2, tileType, layer));
+			cell.SetAbsBounds( eBounds(cellMins, cellMins + eVec2((float)cellWidth, (float)cellHeight)) );	
+
+			// FIXME(!): the tileOffset/imageOffset should depend on the image file and coordinate conversion properties (calculated on the fly here)
+			eVec2 tileOffsetHack;
+			if (tileType < 24)
+				tileOffsetHack = tileOffset1;
+			else if (tileType > 23 && tileType < 84)
+				tileOffsetHack = tileOffset2;
+			else
+				tileOffsetHack = tileOffset3;
+		
+			cell.Tiles().push_back(eTile(&cell, cell.AbsBounds(), tileOffsetHack, tileType, layer));
 		}
 
 		if (read.peek() == '\n') {
@@ -179,7 +188,7 @@ void eMap::ToggleTile(const eVec2 & point) {
 	if (!IsValid(point, true))
 		return;
 
-	auto & tile = tileMap.Index(point).Tiles()[0];		// DEBUG: assumes only one tile exists for toggling in a eGridCell (not always true)
+	auto & tile = tileMap.Index(point).Tiles()[0];		// FIXME: assumes only one tile exists for toggling in a eGridCell (not always true)
 	int tileType = tile.Type();
 
 	tileType++;

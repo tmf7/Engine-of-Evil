@@ -581,16 +581,17 @@ void eAI::DrawTrailWaypoints() {
 // FIXME: draw a partial circle in eRenderer instead
 //******************
 void eAI::DrawCollisionCircle() {
+/*
 	eVec2 debugVector;
 	eVec2 debugPoint;
 	float rotationAngle;
 	int pink[3] = { 255, 0, 255 };
 	int blue[3] = { 0,0,255 };
 	int * color;
-
+*/
 	if (!game.debugFlags.COLLISION)
 		return;
-
+/*
 	// draws one pixel for each point on the current collision circle 
 	if (moveState == MOVETYPE_GOAL)
 		color = pink;
@@ -603,12 +604,16 @@ void eAI::DrawCollisionCircle() {
 		if (collisionModel.Velocity() * debugVector >= 0) {
 			debugPoint = collisionModel.Origin() + (debugVector * collisionRadius) - game.GetCamera().CollisionModel().AbsBounds()[0];
 			debugPoint.SnapInt();
-			game.GetRenderer().DrawIsometricRect(yellowColor, collisionModel.AbsBounds(), RENDERTYPE_DYNAMIC);	// DEBUG: just test the iso-collision bounds for now
+*/
+			// DEBUG: just test the iso-collision bounds for now
+			game.GetRenderer().DrawIsometricRect(yellowColor, collisionModel.AbsBounds(), RENDERTYPE_DYNAMIC);
 //			game.GetRenderer().DrawPixel(debugPoint, color[0], color[1], color[2]);
+/*
 		}
 		debugVector = rotateCounterClockwiseZ * debugVector;
 		rotationAngle += ROTATION_INCREMENT;
 	}
+*/
 }
 
 //******************

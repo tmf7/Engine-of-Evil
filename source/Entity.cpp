@@ -38,7 +38,7 @@ bool eEntity::Spawn(/*const char * entityFilename, eVec2 & worldPosition*/) {
 
 	collisionModel.SetActive(true);
 	collisionModel.LocalBounds().ExpandSelf(8);			// FIXME: 16 x 16 square with (0, 0) at its center, 
-	collisionModel.SetOrigin(eVec2(8.0f, 8.0f));
+	collisionModel.SetOrigin(eVec2(192.0f, 192.0f));
 	collisionModel.Velocity() = vec2_zero;
 
 //	imageOffset = 0.0f;
