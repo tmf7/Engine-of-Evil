@@ -81,7 +81,7 @@ inline int eTileImpl::Type() const {
 //***********************************************
 class eTile {
 public:
-							eTile(eGridCell * owner, const eBounds & absBounds, const eVec2 & imageOffset, const int type, const int layer);
+							eTile(eGridCell * owner, const eVec2 & origin, const int type, const int layer);
 	
 	int						Type() const;
 	void					SetType(int newType);
@@ -148,7 +148,7 @@ inline void eTile::SetLayer(const int newLayer) {
 }
 
 //************
-// eTile::Onwer
+// eTile::Owner
 //************
 inline eGridCell * eTile::GetOwner() {
 	return owner;

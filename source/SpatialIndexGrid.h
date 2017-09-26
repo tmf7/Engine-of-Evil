@@ -6,7 +6,7 @@ class eVec2;
 //*************************************************
 //				eSpatial Index Grid
 //  Maps points in 2D space to elements of a 2D array
-//  by divinding the space into a regular grid of cells.
+//  by dividing the space into a regular grid of cells.
 //  This class uses stack memory.
 //*************************************************
 template< class type, int rows, int columns>
@@ -175,7 +175,7 @@ inline type & eSpatialIndexGrid<type, rows, columns>::IndexValidated(const eVec2
 //******************
 // eSpatialIndexGrid::Index
 // sets the reference row and column to the cell the point lies within
-// user should to eSpatialIndexGrid::Validate(row, column) as needed
+// user should do eSpatialIndexGrid::Validate(row, column) as needed
 //******************
 template< class type, int rows, int columns>
 inline void eSpatialIndexGrid<type, rows, columns>::Index(const eVec2 & point, int & row, int & column)  const {

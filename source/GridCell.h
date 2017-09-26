@@ -14,8 +14,10 @@ public:
 										eGridCell();
 
 	void								Draw();
-	const std::vector<eTile> &			Tiles() const;
-	std::vector<eTile> &				Tiles();
+	const std::vector<eTile> &			TilesOwned() const;
+	std::vector<eTile> &				TilesOwned();
+	const std::vector<eTile*> &			TilesToDraw() const;
+	std::vector<eTile*> &				TilesToDraw();
 
 
 	std::unordered_map<eCollisionModel *, eCollisionModel *> & Contents();
@@ -26,10 +28,10 @@ public:
 
 private:
 
-	// colliders that overlap this eGridCell (including its eTile's colliders, and others')
-	std::unordered_map<eCollisionModel *, eCollisionModel *> contents;	
+	std::unordered_map<eCollisionModel *, eCollisionModel *> contents;	// all colliders that overlap this
 
-	std::vector<eTile>					tiles;		// the tiles this cell is responsible for drawing
+	std::vector<eTile *>				tilesToDraw;// what to draw
+	std::vector<eTile>					tilesOwned;	// which eTiles' lifetimes are managed
 	eBounds								absBounds;	// using world-coordinates
 
 	// pathfinding
@@ -56,17 +58,31 @@ inline eGridCell::eGridCell()
 }
 
 //************
-// eGridCell::Tiles
+// eGridCell::TilesOwned
 //************
-inline std::vector<eTile> & eGridCell::Tiles() {
-	return tiles;
+inline std::vector<eTile> & eGridCell::TilesOwned() {
+	return tilesOwned;
 }
 
 //************
-// eGridCell::Tiles
+// eGridCell::TilesOwned
 //************
-inline const std::vector<eTile> & eGridCell::Tiles() const {
-	return tiles;
+inline const std::vector<eTile> & eGridCell::TilesOwned() const {
+	return tilesOwned;
+}
+
+//************
+// eGridCell::TilesToDraw
+//************
+inline std::vector<eTile *> & eGridCell::TilesToDraw() {
+	return tilesToDraw;
+}
+
+//************
+// eGridCell::TilesOwned
+//************
+inline const std::vector<eTile *> & eGridCell::TilesToDraw() const {
+	return tilesToDraw;
 }
 
 //************

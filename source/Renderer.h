@@ -17,19 +17,21 @@ typedef enum {
 typedef struct renderImage_s {
 	std::shared_ptr<eImage>		image;			// source image (ie texture wrapper)
 	const SDL_Rect *			srcRect;		// what part of the source image to draw (nullptr for all of it)
-	SDL_Rect					dstRect;		// SDL consumable cliprect, where on the screen (adjusted for camera position)
+	SDL_Rect					dstRect;		// SDL consumable cliprect, where on the screen (adjusted with camera position)
 												// DEBUG: dimensions relative to srcRect will affect scaling
-												// DEBUG: do not manually set dstRect, it is calculated from srcRect and origin
-	eVec2						origin;			// top-left corner of image using world coordinates (not adjusted to account for camera)
+												// DEBUG: only calculate dstRect from srcRect and origin
+	eVec2						origin;			// top-left corner of image using world coordinates (not adjusted with camera position)
 	float						priority;		// combination of layer and meta-z coordinate **during AddToRenderPool**, lower priority draws first
 	Uint32						layer;			// the primary draw sorting criteria
+	Uint32						lastDrawTime;	// prevent multiple attempts to draw this twice in one frame
 
 //	eEntity *					owner;			// entity using this renderimage, for secondary renderPool sort if priority causes flicker
 
 	renderImage_s()
 		: image(nullptr),
 		  srcRect(nullptr),
-		  layer(MAX_LAYER) {};
+		  layer(MAX_LAYER),
+		  lastDrawTime(0) {};
 	
 	renderImage_s(std::shared_ptr<eImage> & image, const SDL_Rect * srcRect, const eVec2 & origin, const Uint8 layer)
 		: image(image),
@@ -37,8 +39,9 @@ typedef struct renderImage_s {
 		  origin(origin),
 		  layer(layer) {};
 
-	void SetLayer(const int layer) { this->layer = layer; }
-	Uint32 GetLayer() const { return layer; }
+	void	SetDrawnTime(Uint32 drawTime)	{ lastDrawTime = drawTime; }
+	void	SetLayer(const int layer)		{ this->layer = layer; }
+	Uint32	GetLayer() const				{ return layer; }
 } renderImage_t;
 
 //**************************************************
@@ -70,7 +73,7 @@ public:
 	void				FlushStaticPool();
 
 	void				DrawOutlineText(const char * text, eVec2 & point, const SDL_Color & color, bool constText, bool dynamic);
-	void				DrawImage(const renderImage_t * renderImage) const;
+	void				DrawImage(renderImage_t * renderImage) const;
 
 	void				DrawIsometricRect(const SDL_Color & color, eBounds rect, bool dynamic) const;
 	void				DrawCartesianRect(const SDL_Color & color, eBounds rect, bool fill, bool dynamic) const;

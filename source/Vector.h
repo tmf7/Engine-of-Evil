@@ -23,6 +23,7 @@ public:
 	void		Set(const float x, const float y);
 	void		Zero();
 	float		Normalize();
+	eVec2		Normalized();
 	float		Length() const;
 	float		LengthSquared() const;
 	void		Rotate(float degrees, const eVec2 & origin);
@@ -177,6 +178,25 @@ inline float eVec2::Normalize() {
 	x *= invLength;
 	y *= invLength;
 	return invLength * sqrLength;
+}
+
+//******************
+// eVec2::Normalized
+// scales a copy of x,y to unit length vector
+//******************
+inline eVec2 eVec2::Normalized() {
+	float sqrLength;
+	float invLength;
+
+	sqrLength = x * x + y * y;
+	sqrLength = SDL_sqrtf(sqrLength);
+
+	if (sqrLength == 0)
+		invLength = 0;
+	else
+		invLength = 1.0f / sqrLength;
+
+	return eVec2(x * invLength, y * invLength);
 }
 
 //******************

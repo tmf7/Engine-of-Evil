@@ -55,6 +55,8 @@ eGame::ErrorCode eGame::Init() {
 
 // DEBUG: testing global static memory allocation, works (taskmanager shows 1GB in use for evil.exe; takes about 2 seconds to memset 1GB though, slow startup, ran quick after)
 //	memset(memoryPool, 0xff, sizeof(byte_t) * ONE_GIGABYTE);
+	
+	gameTime = SDL_GetTicks();
 
 	return INIT_SUCCESS;
 }
@@ -147,9 +149,7 @@ bool eGame::Run() {
 										// ALSO: only draw goal/trail_waypoints and known_map for a SINGLE currently SELECTED entity
 
 // BEGIN FREEHILL cursor tile highlight test
-		eVec2 tilePoint = eVec2((float)input.GetMouseX(), (float)input.GetMouseY());
-		tilePoint += game.GetCamera().CollisionModel().AbsBounds()[0];
-		eMath::IsometricToCartesian(tilePoint.x, tilePoint.y);
+		eVec2 tilePoint = map.GetMouseWorldPosition();
 		auto & tileMap = map.TileMap();
 		if (tileMap.IsValid(tilePoint)) {
 			auto & tileBounds = tileMap.Index(tilePoint).AbsBounds();
@@ -168,8 +168,8 @@ bool eGame::Run() {
 	renderer.Show();
 
 	// frame-rate governing delay
-	globalTime = SDL_GetTicks();
-	deltaTime = globalTime - startTime;
+	gameTime = SDL_GetTicks();
+	deltaTime = gameTime - startTime;
 
 	// DEBUG: breakpoint handling
 	if (deltaTime > 1000)

@@ -57,7 +57,7 @@ public:
 	Uint32						GetFixedTime() const;
 	Uint32						GetDynamicFPS() const;
 	Uint32						GetDeltaTime() const;
-	Uint32						GetGlobalTime() const;
+	Uint32						GetGameTime() const;
 	void						DrawFPS();
 
 private:
@@ -80,7 +80,7 @@ private:
 	Uint32						fixedFPS;			// constant framerate
 	Uint32						frameTime;			// constant framerate governing time interval (depends on FixedFPS)
 	Uint32						deltaTime;			// actual time a frame takes to execute
-	Uint32						globalTime;			// time elapsed since execution began
+	Uint32						gameTime;			// time elapsed since execution began (updated at the end of each frame)
 };
 
 extern eGame	game;								// one instance used by all objects
@@ -199,10 +199,10 @@ inline Uint32 eGame::GetDeltaTime() const {
 }
 
 //****************
-// eGame::GetGlobalTime
+// eGame::GetGameTime
 //****************
-inline Uint32 eGame::GetGlobalTime() const {
-	return globalTime;
+inline Uint32 eGame::GetGameTime() const {
+	return gameTime;
 }
 
 #endif /* EVIL_GAME_H */

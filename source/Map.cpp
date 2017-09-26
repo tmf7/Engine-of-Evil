@@ -6,16 +6,8 @@
 // eMap::Init
 //**************
 bool eMap::Init () {
-	if (!game.GetImageManager().BatchLoadSubframes("graphics/evilMaster.bsub"))
-		return false;
-
-	if (!eTileImpl::LoadTileset("graphics/evilMaster.tls"))
-		return false;
-
 	if (!LoadMap("graphics/EvilTown.map"))
 		return false;
-
-//	BuildMap(RANDOM_MAP);
 	return true;
 }
 
@@ -25,12 +17,18 @@ bool eMap::Init () {
 // Populates tileMap's matrix for future collision and redraw
 // using a file
 // DEBUG (.map file format):
+// # first line comment\n
+// numColumns numRows cellWidth cellHeight\n
+// # third line comment\n
+// batchSubframeFilenameForTileset.bsub\n
+// # fifth line comment\n
+// tileSetFilename.tls\n
 // master-tileSet-index, master-tileSet-index, ... master-tileSet-index\n
 // # end of layer 1 comment\n
 // master-tileSet-index, master-tileSet-index, ... master-tileSet-index\n
 // # end of layer 2 comment\n
 // (repeat, note that 0 as a master-tileSet-index indicates a placeholder, ie a tileMap index to skip for that layer)
-// (and therefore ALL values should be reduced by 1 before setting an eTileImpl::type
+// (also note that ALL read values are reduced by 1 before loading into an eTileImpl::type here)
 //**************
 bool eMap::LoadMap(const char * mapFilename) {
 	std::ifstream	read(mapFilename);
@@ -38,19 +36,54 @@ bool eMap::LoadMap(const char * mapFilename) {
 	if (!read.good()) 
 		return false;
 
-	// TODO: make these part of the map file
-	// note the cells are square because the base logic is orthogonal, not isometric
-	const int cellWidth = 32;
-	const int cellHeight = 32;
-	tileMap.SetCellWidth(cellWidth);
-	tileMap.SetCellHeight(cellHeight);
-
-	eVec2 tileOffset1 = eVec2(-32.0f, -32.0f);	// FIXME(!): these values are specific to each image (and potentially each subframe)
-	eVec2 tileOffset2 = eVec2(-32.0f, -160.0f);	// FIXME: note that the row and column reading/loading are transposed to match
-	eVec2 tileOffset3 = eVec2(-32.0f, -96.0f);	// the Tiled map editor application output
-
+	char buffer[MAX_ESTRING_LENGTH];
+	int numColumns = 0;
+	int numRows = 0;
+	int cellWidth = 0;
+	int cellHeight = 0;
 	int row = 0;
 	int column = 0;
+
+	read.ignore(std::numeric_limits<std::streamsize>::max(), '\n');		// skip the first line comment
+	read >> numColumns;
+	read >> numRows;
+	read >> cellWidth;
+	read >> cellHeight;
+	read.ignore(std::numeric_limits<std::streamsize>::max(), '\n');		// skip the rest of the line
+	if (!VerifyRead(read))
+		return false;
+
+	// initialize each tileMap cell absBounds for image and collisionModel cell-occupancy tests
+	tileMap.SetCellWidth(cellWidth);
+	tileMap.SetCellHeight(cellHeight);
+	for (column = 0; column < numColumns; ++column) {
+		for (row = 0; row < numRows; ++row) {
+			auto & cell = tileMap.Index(row, column);
+			eVec2 cellMins = eVec2((float)(row * cellWidth), (float)(column * cellHeight));
+			cell.SetAbsBounds( eBounds(cellMins, cellMins + eVec2((float)cellWidth, (float)cellHeight)) );
+		}
+	}
+
+	read.ignore(std::numeric_limits<std::streamsize>::max(), '\n');		// skip the third line comment
+	memset(buffer, 0, sizeof(buffer));
+	read.getline(buffer, sizeof(buffer), '\n');
+	if (!VerifyRead(read))
+		return false;
+
+	if (!game.GetImageManager().BatchLoadSubframes(buffer))
+		return false;
+
+	read.ignore(std::numeric_limits<std::streamsize>::max(), '\n');		// skip the fifth line comment
+	memset(buffer, 0, sizeof(buffer));
+	read.getline(buffer, sizeof(buffer), '\n');
+	if (!VerifyRead(read))
+		return false;
+
+	if (!eTileImpl::LoadTileset(buffer))
+		return false;
+
+	row = 0;
+	column = 0;
 	int layer = 0;
 
 	while (!read.eof()) {
@@ -67,22 +100,11 @@ bool eMap::LoadMap(const char * mapFilename) {
 		if (!VerifyRead(read))
 			return false;
 		
-		--tileType;			// DEBUG: .map format is easier to read with 0's instead of -1's so all values are bumped up by 1 when writing it
+		--tileType;			// DEBUG: .map format is easier to read with 0's instead of -1's so all values are incremented by 1 when writing it
 		if (tileType > INVALID_ID) {
 			auto & cell = tileMap.Index(row, column);
-			eVec2 cellMins = eVec2((float)(row * cellWidth), (float)(column * cellHeight));
-			cell.SetAbsBounds( eBounds(cellMins, cellMins + eVec2((float)cellWidth, (float)cellHeight)) );	
-
-			// FIXME(!): the tileOffset/imageOffset should depend on the image file and coordinate conversion properties (calculated on the fly here)
-			eVec2 tileOffsetHack;
-			if (tileType < 24)
-				tileOffsetHack = tileOffset1;
-			else if (tileType > 23 && tileType < 84)
-				tileOffsetHack = tileOffset2;
-			else
-				tileOffsetHack = tileOffset3;
-		
-			cell.Tiles().push_back(eTile(&cell, cell.AbsBounds(), tileOffsetHack, tileType, layer));
+			auto & origin = cell.AbsBounds()[0];
+			cell.TilesOwned().push_back(eTile(&cell, origin, tileType, layer));
 		}
 
 		if (read.peek() == '\n') {
@@ -170,8 +192,8 @@ void eMap::BuildMap(const int configuration) {
 		// TODO: add one eTile per cell for now, but start layering them according to procedure/file-load
 		// FIXME/TODO: collisionModel currently aligns with the CELL exactly because tiles currently visually align with cells,
 		// however make the eTile::Init absBounds be procedure/file-load based
-		cell.Tiles().clear();
-		cell.Tiles().push_back(eTile(&cell, cell.AbsBounds(), tileOffset, type, 0));	// DEBUG: test layer == 0
+		cell.TilesOwned().clear();
+		cell.TilesOwned().push_back(eTile(&cell, tileOffset, type, 0));	// DEBUG: test layer == 0
 		column++;
 		if (column >= tileMap.Columns()) {
 			column = 0;
@@ -188,13 +210,24 @@ void eMap::ToggleTile(const eVec2 & point) {
 	if (!IsValid(point, true))
 		return;
 
-	auto & tile = tileMap.Index(point).Tiles()[0];		// FIXME: assumes only one tile exists for toggling in a eGridCell (not always true)
+	auto & tile = tileMap.Index(point).TilesOwned()[0];		// FIXME: assumes only one tile exists for toggling in a eGridCell (not always true)
 	int tileType = tile.Type();
 
 	tileType++;
 	if (tileType >= eTileImpl::NumTileTypes())
 		tileType = 0;
 	tile.SetType(tileType);
+}
+
+//**************
+// eMap::GetMouseWorldPosition
+//**************
+eVec2 eMap::GetMouseWorldPosition() const {
+	auto & input = game.GetInput();
+	eVec2 mouseWorldPoint = eVec2((float)input.GetMouseX(), (float)input.GetMouseY());
+	mouseWorldPoint += game.GetCamera().CollisionModel().AbsBounds()[0];
+	eMath::IsometricToCartesian(mouseWorldPoint.x, mouseWorldPoint.y);
+	return mouseWorldPoint;
 }
 
 //**************
@@ -212,7 +245,7 @@ bool eMap::IsValid(const eVec2 & point, bool ignoreCollision) const {
 		return false;
 
 	if ( !ignoreCollision ) {
-		for (auto & tile : tileMap.Index(point).Tiles()) {
+		for (auto & tile : tileMap.Index(point).TilesOwned()) {
 			if (eTileImpl::IsCollidableHack(tile.Type()))
 				return false;
 		}
@@ -227,24 +260,16 @@ bool eMap::IsValid(const eVec2 & point, bool ignoreCollision) const {
 // independent of eMap (and eMap shouldn't really have a ::Think())
 //***************
 void eMap::Think() {
-	eInput * input;
-
-	input = &game.GetInput();
-	if (input->KeyPressed(SDL_SCANCODE_0))
+	auto & input = game.GetInput();
+	if (input.KeyPressed(SDL_SCANCODE_0))
 		BuildMap(TRAVERSABLE_MAP);
-	else if (input->KeyPressed(SDL_SCANCODE_1))
+	else if (input.KeyPressed(SDL_SCANCODE_1))
 		BuildMap(COLLISION_MAP);
-	else if (input->KeyPressed(SDL_SCANCODE_2))
+	else if (input.KeyPressed(SDL_SCANCODE_2))
 		BuildMap(RANDOM_MAP);	
 
-	if (input->MousePressed(SDL_BUTTON_RIGHT)) { 
-		// TODO(?2/2?): funtionalize these two lines of getting mouse and camera, then converting to isometric
-		// YES: make it part of the PLAYER class' input handling, and get rid of this block of code here
-		eVec2 tilePoint = eVec2((float)input->GetMouseX(), (float)input->GetMouseY());
-		tilePoint += game.GetCamera().CollisionModel().AbsBounds()[0];
-		eMath::IsometricToCartesian(tilePoint.x, tilePoint.y);
-		ToggleTile(tilePoint);
-	}
+	if (input.MousePressed(SDL_BUTTON_RIGHT))
+		ToggleTile(GetMouseWorldPosition());
 }
 
 //***************
@@ -255,7 +280,7 @@ void eMap::Draw() {
 
 	// only redraw the map if the camera has moved, or its the start of the game
 	// FIXME: change this logic when animated tiles are coded
-	if (cameraCollider.GetOriginDelta().LengthSquared() > FLT_EPSILON || game.GetGlobalTime() < 5000) {
+	if (cameraCollider.GetOriginDelta().LengthSquared() > FLT_EPSILON || game.GetGameTime() < 5000) {
 		visibleCells.clear();
 
 		// use the corner cells of the camera to designate the draw area

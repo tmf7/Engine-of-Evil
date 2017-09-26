@@ -26,6 +26,7 @@ public:
 	bool						LoadMap(const char * mapFilename);
 	void						BuildMap(const int configuration);
 	void						ToggleTile(const eVec2 & point);
+	eVec2						GetMouseWorldPosition() const;
 	tile_map_t &				TileMap();
 	const pairVector_t &		VisibleCells();
 

@@ -86,31 +86,85 @@ bool eTileImpl::LoadTileset(const char * tilesetFilename, bool appendNew) {
 
 //************
 // eTile::eTile
-// owner is responsible for handling all this eTile's functions (eg drawing its renderImage)
-// absBounds is used for collision
-// imageOffset is the tileSet image-specific offset required to position the eTile draw correctly
-// type is the identifier from the tileSet eAnimation
+// owner is the originating eGridCell responsible for this eTile's lifetime
+// origin is the top-left corner of the image position in world-coordinates (on an orthographic 2D grid)
+// type is the index within the master tileSet vector
 // layer is the draw order depth
-// TODO: Initialize the collider based on procedural/file data
+// TODO: Initialize the collisionModel based on file data
 //************
-eTile::eTile(eGridCell * owner, const eBounds & absBounds, const eVec2 & imageOffset, const int type, const int layer) {
+eTile::eTile(eGridCell * owner, const eVec2 & origin, const int type, const int layer) {
 	this->owner = owner;
 	impl = &tileTypes[type];
+	renderImage.SetLayer(layer);
 	game.GetImageManager().GetImage(tileSet.at(type).first, renderImage.image);		// which image
 	renderImage.srcRect = &renderImage.image->GetSubframe(tileSet.at(type).second);	// which part of that image
 
-	renderImage.origin = absBounds[0];
+	renderImage.origin = origin;
 	eMath::CartesianToIsometric(renderImage.origin.x, renderImage.origin.y);
-	renderImage.origin += imageOffset;												// FIXME: make this part of the subframe data for an image (maybe)
-	renderImage.SetLayer(layer);
+
+	// orthogonal images converted to isometric need to be shifted based on their size to properly align with their origin cell
+	// DEBUG: every tile is aligned with at least one cell no matter its size (ie: no freely-aligned tile-image origins)
+	float imageWidth = (float)renderImage.srcRect->w;
+	float imageHeight = (float)renderImage.srcRect->h;
+	eVec2 conversionOffset = -eVec2(imageWidth * 0.5f, (2.0f * imageHeight - imageWidth) * 0.5f);
+	renderImage.origin += conversionOffset;
+	// compute the visual limits of the tile over the visually isometric tileMap
+	std::array<eVec2, 4> visualWorldPoints;
+	visualWorldPoints[0] = renderImage.origin;
+	visualWorldPoints[1] = renderImage.origin + eVec2((float)renderImage.srcRect->w, 0.0f);
+	visualWorldPoints[2] = renderImage.origin + eVec2((float)renderImage.srcRect->w, (float)renderImage.srcRect->h);
+	visualWorldPoints[3] = renderImage.origin + eVec2(0.0f, (float)renderImage.srcRect->h);
+
+	int rowMin = INT_MAX;
+	int rowMax = INT_MIN;
+	int colMin = INT_MAX;
+	int colMax = INT_MIN;
+	int row = 0;
+	int column = 0;
+	auto & tileMap = game.GetMap().TileMap();
+
+	// convert the image's clip rectangle to orthographic world-space, 
+	// and there determine the range of cells it may overlap
+	for (auto & point : visualWorldPoints) {
+		eMath::IsometricToCartesian(point.x, point.y);
+		tileMap.Index(point, row, column);
+		if (game.GetMap().TileMap().IsValid(row, column)) {
+			if (row < rowMin)
+				rowMin = row;
+			if (row > rowMax)
+				rowMax = row;
+			if (column < colMin)
+				colMin = column;
+			if (column > colMax)
+				colMax = column;
+		}
+	}
+
+	eVec2 tileOBBPoints[3] = { visualWorldPoints[0], 
+							   visualWorldPoints[1], 
+							   visualWorldPoints[3] };
+	eBox tileOBB{tileOBBPoints};
+
+	// assign tile drawing responsibility to all eGridCell's overlapped
+	for (row = rowMin; row <= rowMax; ++row) {
+		for (column = colMin; column <= colMax; ++column) {
+			auto & cell = tileMap.Index(row, column);
+			eBox cellOBB = eBox(cell.AbsBounds());
+			if (eCollision::OBBOBBTest(cellOBB, tileOBB))
+				cell.TilesToDraw().push_back(this);
+		}
+	}
+
+	// FIXME(!) not all eTile types will be solid/collidable (dont waste the processing),
+	// but maintain the ability to define a collisionModel for those that are ( ie new eCollisionModel() )
 
 	collisionModel.SetActive(true);
-	auto & localBounds = collisionModel.LocalBounds();
-	eVec2 extents = eVec2(absBounds.Width() * 0.5f, absBounds.Height() * 0.5f);
-	localBounds[0] = -extents;
-	localBounds[1] = extents;
-	collisionModel.SetOrigin(absBounds.Center());
-	collisionModel.Velocity() = vec2_zero;
+//	auto & localBounds = collisionModel.LocalBounds();
+//	eVec2 extents = eVec2(absBounds.Width() * 0.5f, absBounds.Height() * 0.5f);
+//	localBounds[0] = -extents;
+//	localBounds[1] = extents;
+//	collisionModel.SetOrigin(absBounds.Center());
+//	collisionModel.Velocity() = vec2_zero;
 }
 
 //************

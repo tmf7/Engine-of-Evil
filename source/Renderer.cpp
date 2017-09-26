@@ -144,9 +144,6 @@ void eRenderer::DrawIsometricRect(const SDL_Color & color, eBounds rect, bool dy
 
 	// convert to isometric rhombus
 	// and translate with camera
-	// FIXME: after converting to isometric all points may also need
-	// to be translated horizontally by some as-yet unknown amount, 
-	// to account for the shift caused by the perspective change
 	std::array<SDL_Point, 5> iPoints;
 	for (int i = 0; i < fPoints.size(); i++) {
 		eMath::CartesianToIsometric(fPoints[i].x, fPoints[i].y);
@@ -201,7 +198,11 @@ void eRenderer::DrawCartesianRect(const SDL_Color & color, eBounds rect, bool fi
 //***************
 // eRenderer::DrawImage
 //***************
-void eRenderer::DrawImage(const renderImage_t * renderImage) const {
+void eRenderer::DrawImage(renderImage_t * renderImage) const {
+	auto & cameraAdjustment = game.GetCamera().CollisionModel().AbsBounds()[0];
+	eVec2 drawPoint = renderImage->origin - cameraAdjustment;
+	drawPoint.SnapInt();
+	renderImage->dstRect = { (int)drawPoint.x, (int)drawPoint.y, renderImage->srcRect->w, renderImage->srcRect->h };
 	SDL_RenderCopy(internal_renderer, renderImage->image->Source(), renderImage->srcRect, &renderImage->dstRect);
 }
 
@@ -211,15 +212,18 @@ void eRenderer::DrawImage(const renderImage_t * renderImage) const {
 // dynamic == true is used for scaling and translating groups of images together based on camera properties
 //***************
 void eRenderer::AddToRenderPool(renderImage_t * renderImage, bool dynamic) {
+	const auto & gameTime = game.GetGameTime();
+	if (renderImage->lastDrawTime == gameTime)
+		return;
+	renderImage->SetDrawnTime(gameTime);
 	std::vector<renderImage_t *> * targetPool = dynamic ? &dynamicPool : &staticPool;
-	renderImage->priority = (float)(renderImage->layer << 16) + (renderImage->origin.y + renderImage->srcRect->h);	// DEBUG: layer dominates, meta-z tiebreaker
+	renderImage->priority = (float)(renderImage->layer << 16) + (renderImage->origin.y + renderImage->srcRect->h);	// DEBUG: layer dominates, meta-z tie-breaker
 	targetPool->push_back(renderImage);
 }
 
 //***************
 // eRenderer::FlushDynamicPool
-// FIXME: ensure entities never occupy the same layer/depth as world tiles 
-// (otherwise the unstable quicksort will put them at RANDOM draw orders relative to the same layer/depth tiles)
+// DEBUG: this unstable quicksort may put renderImages at random draw orders if they have equal priority
 //***************
 void eRenderer::FlushDynamicPool() {
 	// sort the dynamicPool for the scalableTarget
@@ -251,8 +255,7 @@ void eRenderer::FlushDynamicPool() {
 
 //***************
 // eRenderer::FlushStaticPool
-// FIXME/BUG(!): ensure entities never occupy the same layer/depth as world tiles 
-// (otherwise the unstable quicksort will put them at RANDOM draw orders relative to the same layer/depth tiles)
+// DEBUG: this unstable quicksort may put renderImages at random draw orders if they have equal priority
 //***************
 void eRenderer::FlushStaticPool() {
 	// sort the staticPool for the default render target

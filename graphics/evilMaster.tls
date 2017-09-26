@@ -1,4 +1,4 @@
-84
+155
 graphics/grass_and_water.png
 0 0	# 0
 1 0	# 1
@@ -145,3 +145,20 @@ graphics/castle_walls.png
 54 1	# 138
 55 1	# 139
 # (end of tileset 3)
+graphics/dungeon_floor.png
+0 0	# 140
+1 0	# 141
+2 0	# 142
+3 0	# 143
+4 0	# 144
+5 0	# 145
+6 0	# 146
+7 0	# 147
+8 0	# 148
+9 0	# 149
+10 0	# 150
+11 0	# 151
+12 1	# 152
+13 1	# 153
+14 1	# 154
+# (end of tileset 4)

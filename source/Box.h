@@ -12,6 +12,7 @@ public:
 					eBox();
 	explicit		eBox(const eVec2 & center, const eVec2 & extents, const eVec2 axis[2]);
 	explicit		eBox(const eVec2 & point);
+	explicit		eBox(const eVec2 points[3]);
 	explicit		eBox(const eBounds & bounds);
 	explicit		eBox(const eVec2 & corner, const eVec2 edges[2]);
 
@@ -75,29 +76,6 @@ inline eBox::eBox(const eBounds & bounds) {
 	extents = bounds[1] - center;
 	axes[0] = vec2_oneZero;
 	axes[1] = vec2_zeroOne;
-}
-
-//*************
-// eBox::eBox
-// DEBUG: edges must be perpendicular
-// and corner must be their point of intersection
-//*************
-inline eBox::eBox(const eVec2 & corner, const eVec2 edges[2]) {
-
-	eVec2 xAxis = -edges[1];
-	xAxis.Normalize();
-	eVec2 yAxis = -edges[0];
-	yAxis.Normalize();
-	axes[0] = xAxis;
-	axes[1] = yAxis;
-
-	extents.y = edges[0].Length() / 2.0f;
-	extents.x = edges[1].Length() / 2.0f;
-
-	eVec2 diagonal = edges[0] + edges[1];
-	float centerDist = diagonal.Length() / 2.0f;
-	diagonal.Normalize();
-	center = corner + (diagonal * centerDist);
 }
 
 //*************
