@@ -73,10 +73,7 @@ inline eSpatialIndexGrid<type, rows, columns>::eSpatialIndexGrid()
 //**************
 template< class type, int rows, int columns>
 inline bool eSpatialIndexGrid<type, rows, columns>::IsValid(const eVec2 & point) const {
-	if (point.x >= 0 && point.x <= Width() - 1 && point.y >= 0 && point.y <= Height() - 1)
-		return true;
-
-	return false;
+	return (point.x >= 0 && point.x <= Width() - 1 && point.y >= 0 && point.y <= Height() - 1);
 }
 
 //**************
@@ -85,10 +82,7 @@ inline bool eSpatialIndexGrid<type, rows, columns>::IsValid(const eVec2 & point)
 //**************
 template< class type, int rows, int columns>
 inline bool eSpatialIndexGrid<type, rows, columns>::IsValid(const int row, const int column) const {
-	if (row >= 0 && row < rows && column >= 0 && column < columns)
-		return true;
-
-	return false;
+	return (row >= 0 && row < rows && column >= 0 && column < columns);
 }
 
 //******************

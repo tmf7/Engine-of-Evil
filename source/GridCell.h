@@ -14,10 +14,11 @@ public:
 										eGridCell();
 
 	void								Draw();
+	void								AddTileOwned(eTile && tile);
 	const std::vector<eTile> &			TilesOwned() const;
 	std::vector<eTile> &				TilesOwned();
-	const std::vector<eTile*> &			TilesToDraw() const;
-	std::vector<eTile*> &				TilesToDraw();
+	const std::vector<eTile *> &		TilesToDraw() const;
+	std::vector<eTile *> &				TilesToDraw();
 
 
 	std::unordered_map<eCollisionModel *, eCollisionModel *> & Contents();

@@ -61,6 +61,7 @@ bool eMap::LoadMap(const char * mapFilename) {
 			auto & cell = tileMap.Index(row, column);
 			eVec2 cellMins = eVec2((float)(row * cellWidth), (float)(column * cellHeight));
 			cell.SetAbsBounds( eBounds(cellMins, cellMins + eVec2((float)cellWidth, (float)cellHeight)) );
+			cell.TilesOwned().reserve(4);	// BUGFIX: assures the tilesOwned vector data doesn't move and invalidate tilesToDraw
 		}
 	}
 
@@ -104,7 +105,7 @@ bool eMap::LoadMap(const char * mapFilename) {
 		if (tileType > INVALID_ID) {
 			auto & cell = tileMap.Index(row, column);
 			auto & origin = cell.AbsBounds()[0];
-			cell.TilesOwned().push_back(eTile(&cell, origin, tileType, layer));
+			cell.AddTileOwned(eTile(&cell, origin, tileType, layer));
 		}
 
 		if (read.peek() == '\n') {

@@ -85,6 +85,9 @@ public:
 	
 	int						Type() const;
 	void					SetType(int newType);
+	
+	void					AssignToGrid();
+	void					RemoveFromGrid() const;
 
 	renderImage_t *			GetRenderImage();
 	void					UpdateRenderImageDisplay();

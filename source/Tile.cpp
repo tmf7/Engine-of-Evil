@@ -91,73 +91,24 @@ bool eTileImpl::LoadTileset(const char * tilesetFilename, bool appendNew) {
 // type is the index within the master tileSet vector
 // layer is the draw order depth
 // TODO: Initialize the collisionModel based on file data
+// DEBUG: every tile is aligned with at least one cell no matter its size (ie: no freely-aligned tile-image origins)
 //************
 eTile::eTile(eGridCell * owner, const eVec2 & origin, const int type, const int layer) {
 	this->owner = owner;
-	impl = &tileTypes[type];
+	SetType(type);
 	renderImage.SetLayer(layer);
-	game.GetImageManager().GetImage(tileSet.at(type).first, renderImage.image);		// which image
-	renderImage.srcRect = &renderImage.image->GetSubframe(tileSet.at(type).second);	// which part of that image
-
 	renderImage.origin = origin;
 	eMath::CartesianToIsometric(renderImage.origin.x, renderImage.origin.y);
 
-	// orthogonal images converted to isometric need to be shifted based on their size to properly align with their origin cell
-	// DEBUG: every tile is aligned with at least one cell no matter its size (ie: no freely-aligned tile-image origins)
+	// orthogonal images converted to isometric need to be shifted
+	// based on their size to properly align with their owner cell
 	float imageWidth = (float)renderImage.srcRect->w;
 	float imageHeight = (float)renderImage.srcRect->h;
 	eVec2 conversionOffset = -eVec2(imageWidth * 0.5f, (2.0f * imageHeight - imageWidth) * 0.5f);
 	renderImage.origin += conversionOffset;
-	// compute the visual limits of the tile over the visually isometric tileMap
-	std::array<eVec2, 4> visualWorldPoints;
-	visualWorldPoints[0] = renderImage.origin;
-	visualWorldPoints[1] = renderImage.origin + eVec2((float)renderImage.srcRect->w, 0.0f);
-	visualWorldPoints[2] = renderImage.origin + eVec2((float)renderImage.srcRect->w, (float)renderImage.srcRect->h);
-	visualWorldPoints[3] = renderImage.origin + eVec2(0.0f, (float)renderImage.srcRect->h);
-
-	int rowMin = INT_MAX;
-	int rowMax = INT_MIN;
-	int colMin = INT_MAX;
-	int colMax = INT_MIN;
-	int row = 0;
-	int column = 0;
-	auto & tileMap = game.GetMap().TileMap();
-
-	// convert the image's clip rectangle to orthographic world-space, 
-	// and there determine the range of cells it may overlap
-	for (auto & point : visualWorldPoints) {
-		eMath::IsometricToCartesian(point.x, point.y);
-		tileMap.Index(point, row, column);
-		if (game.GetMap().TileMap().IsValid(row, column)) {
-			if (row < rowMin)
-				rowMin = row;
-			if (row > rowMax)
-				rowMax = row;
-			if (column < colMin)
-				colMin = column;
-			if (column > colMax)
-				colMax = column;
-		}
-	}
-
-	eVec2 tileOBBPoints[3] = { visualWorldPoints[0], 
-							   visualWorldPoints[1], 
-							   visualWorldPoints[3] };
-	eBox tileOBB{tileOBBPoints};
-
-	// assign tile drawing responsibility to all eGridCell's overlapped
-	for (row = rowMin; row <= rowMax; ++row) {
-		for (column = colMin; column <= colMax; ++column) {
-			auto & cell = tileMap.Index(row, column);
-			eBox cellOBB = eBox(cell.AbsBounds());
-			if (eCollision::OBBOBBTest(cellOBB, tileOBB))
-				cell.TilesToDraw().push_back(this);
-		}
-	}
 
 	// FIXME(!) not all eTile types will be solid/collidable (dont waste the processing),
 	// but maintain the ability to define a collisionModel for those that are ( ie new eCollisionModel() )
-
 	collisionModel.SetActive(true);
 //	auto & localBounds = collisionModel.LocalBounds();
 //	eVec2 extents = eVec2(absBounds.Width() * 0.5f, absBounds.Height() * 0.5f);
@@ -175,4 +126,43 @@ void eTile::SetType(int newType) {
 	impl = &tileTypes[newType];
 	game.GetImageManager().GetImage(tileSet.at(newType).first, renderImage.image);		// which image
 	renderImage.srcRect = &renderImage.image->GetSubframe(tileSet.at(newType).second);	// which part of that image
+}
+
+//************
+// eTile::AssignToGrid
+// assign tile drawing responsibility to eGridCells visually overlapped by the renderImage.image's corners
+// TODO: if the eTile::type changes, then so should the eGridCells responsible for drawing this
+// because the image shape/size may change
+// DEBUG: ensures no tile suddenly dissappears when scrolling the camera
+// for a single tileMap layer this results in each eGridCell::tileToDraw::size of:
+// 4 : 6 : 8, for center : edge : corner on average
+// more layers increases sizes (eg: 3 layers is about 4-6 : 11 : 20, depending on map design)
+//************
+void eTile::AssignToGrid() {
+	std::array<eVec2, 4> visualWorldPoints;
+	visualWorldPoints[0] = renderImage.origin;
+	visualWorldPoints[1] = renderImage.origin + eVec2((float)renderImage.srcRect->w, 0.0f);
+	visualWorldPoints[2] = renderImage.origin + eVec2((float)renderImage.srcRect->w, (float)renderImage.srcRect->h);
+	visualWorldPoints[3] = renderImage.origin + eVec2(0.0f, (float)renderImage.srcRect->h);
+
+	// clip rectangle to orthographic world-space for proper grid alignment
+	auto & tileMap = game.GetMap().TileMap();
+	int row;
+	int column;
+	for (auto & point : visualWorldPoints) {
+		eMath::IsometricToCartesian(point.x, point.y);
+		auto & cell = tileMap.IndexValidated(point);
+		auto & searchTiles = cell.TilesToDraw();
+		if (std::find(searchTiles.begin(), searchTiles.end(), this) == searchTiles.end())
+			searchTiles.push_back(this);
+	}
+}
+
+//************
+// eTile::RemoveFromGrid
+// remove all responsibility of drawing this tile from the tileMap
+//************
+void eTile::RemoveFromGrid() const {
+	// TODO: implement because if a tileType changes different eGridCells may draw it
+	// otherwise loading a new map just clears the tileMap anyway without using this fn
 }
