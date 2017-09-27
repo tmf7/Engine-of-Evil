@@ -216,7 +216,7 @@ void eMap::ToggleTile(const eVec2 & point) {
 	tileType++;
 	if (tileType >= eTileImpl::NumTileTypes())
 		tileType = 0;
-	tile.SetType(tileType);
+//	tile.SetType(tileType);		// FIXME: the origin passed in should be the non-adjusted ortho-2D coordinates (not visual iso coords of renderImage.origin)
 }
 
 //**************
@@ -335,5 +335,12 @@ void eMap::Draw() {
 	}
 }
 
-
-
+//***************
+// eMap::DebugDraw
+//***************
+void eMap::DebugDraw() { 
+	for (auto & visibleCell : visibleCells) {
+		auto & cell = tileMap.Index(visibleCell.first, visibleCell.second);
+		cell.DebugDraw();
+	}
+}

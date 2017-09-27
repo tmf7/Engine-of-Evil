@@ -39,6 +39,7 @@ private:
 	
 	int						type;				// index within the tileSet
 	bool					collisionHack;		// FIXME: temporary solution to set entire CELL of spatial index grid to TRAVERSABLE/COLLISION
+	eBounds					collisionHack2;		// FIXME: make this a generic collider type (ie eBounds, eBox, or yet to implement eCircle and eLine/ePolyline)
 };
 
 extern std::vector<std::pair<int, int>>			tileSet;			// first == index within eImageManager::imageList; second == eImage subframe index;
@@ -84,7 +85,7 @@ public:
 							eTile(eGridCell * owner, const eVec2 & origin, const int type, const int layer);
 	
 	int						Type() const;
-	void					SetType(int newType);
+	void					SetType(int newType, const eVec2 & originHack);
 	
 	void					AssignToGrid();
 	void					RemoveFromGrid() const;
@@ -104,7 +105,7 @@ private:
 
 	eGridCell *				owner;				// responsible for drawing this tile
 	eTileImpl *				impl;				// general tile type data
-	eCollisionModel			collisionModel;		// contains position and size of collision bounds	// FIXME: put in eTileImpl, and just give the origin here
+	eCollisionModel			collisionModel;		// contains position and size of collision bounds	// FIXME(?): put in eTileImpl, and just give the origin here
 	renderImage_t			renderImage;		// data relevant to the renderer
 };
 

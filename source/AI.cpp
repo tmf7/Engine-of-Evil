@@ -33,20 +33,27 @@ bool eAI::Spawn() {
 // selects and updates a pathfinding type (eg: waypoint+obstacle avoid, A* optimal path, wall follow, Area awareness, raw compass?, etc)
 //***************
 void eAI::Think() {
-	eInput * input;
 	bool wasStopped;
 
 // BEGIN FREEHILL DEBUG AI/player control
-	input = &game.GetInput();
-	if (input->MousePressed(SDL_BUTTON_LEFT))
+	auto & input = game.GetInput();
+	static bool moveToggle = false;
+	if (input.MousePressed(SDL_BUTTON_LEFT))
 		AddUserWaypoint(game.GetMap().GetMouseWorldPosition());
 
-	if (input->KeyPressed(SDL_SCANCODE_C)) {
-		pathingState = PATHTYPE_COMPASS;
-		moveState = MOVETYPE_GOAL;
-	} else if (input->KeyPressed(SDL_SCANCODE_W)) {
-		pathingState = PATHTYPE_WALL;				
-		moveState = MOVETYPE_GOAL;
+	if (input.KeyPressed(SDL_SCANCODE_M)) {
+		pathingState = moveToggle ? PATHTYPE_COMPASS : PATHTYPE_WALL;
+		moveState = moveToggle ? MOVETYPE_GOAL : MOVETYPE_GOAL;
+		moveToggle = !moveToggle;
+	} 
+
+	float xMove = speedHack * (float)(input.KeyHeld(SDL_SCANCODE_RIGHT) - input.KeyHeld(SDL_SCANCODE_LEFT));
+	float yMove = speedHack * (float)(input.KeyHeld(SDL_SCANCODE_DOWN) - input.KeyHeld(SDL_SCANCODE_UP));
+	if (SDL_fabs(xMove) > 0.0f || SDL_fabs(yMove) > 0.0f) {
+		eMath::IsometricToCartesian(xMove, yMove);
+		collisionModel.Velocity().Set(xMove, yMove);
+		if (collisionModel.Velocity() != vec2_zero)
+			collisionModel.UpdateOrigin();
 	}
 // END FREEHILL DEBUG AI/player control
 

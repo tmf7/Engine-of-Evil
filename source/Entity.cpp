@@ -70,8 +70,9 @@ void eEntity::Draw() {
 // UpdateRenderImageOrigin ensures only the visuals are isometric
 //*************
 void eEntity::UpdateRenderImageOrigin() {
-	renderImage.origin = collisionModel.AbsBounds()[0] + eVec2(-138.0f, -75.0f);// + imageOffset;		// FIXME: imageOffset for sprite and collisionModel needed
+	renderImage.origin = collisionModel.AbsBounds()[0];
 	eMath::CartesianToIsometric(renderImage.origin.x, renderImage.origin.y);
+	renderImage.origin += eVec2(-66.0f, -104.0f);// + imageOffset;		// FIXME: displacement from collisionModel origin...ish? (32 - width, 32 - height)
 }
 
 //*************

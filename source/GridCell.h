@@ -14,6 +14,7 @@ public:
 										eGridCell();
 
 	void								Draw();
+	void								DebugDraw();
 	void								AddTileOwned(eTile && tile);
 	const std::vector<eTile> &			TilesOwned() const;
 	std::vector<eTile> &				TilesOwned();

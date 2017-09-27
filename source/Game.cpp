@@ -144,9 +144,9 @@ bool eGame::Run() {
 	// TODO: write and call these DYNAMIC geometry debug draw calls
 	// draw all debug information as an overlay
 	// TODO(?): use a visitor or observer pattern to execute all DebugDraws with one call
-	//	map.DebugDraw();				// draw the collision bounds of collidable tiles
 		entities[0]->DebugDraw();		// loop over all entities for their collision bounds, and grid occupancy
 										// ALSO: only draw goal/trail_waypoints and known_map for a SINGLE currently SELECTED entity
+		map.DebugDraw();				// draw the collision bounds of collidable tiles
 
 // BEGIN FREEHILL cursor tile highlight test
 		eVec2 tilePoint = map.GetMouseWorldPosition();

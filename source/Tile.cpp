@@ -56,7 +56,7 @@ bool eTileImpl::LoadTileset(const char * tilesetFilename, bool appendNew) {
 		// get all subframe indexes for the eImage (separated by spaces), everything after '#' is ignored
 		while (read.peek() != '#') {
 			int subframeIndex;
-			bool collisionHack;
+			int collisionHack;
 
 			read >> subframeIndex;
 				if (!VerifyRead(read))
@@ -70,7 +70,19 @@ bool eTileImpl::LoadTileset(const char * tilesetFilename, bool appendNew) {
 																					// otherwise push an error image handle into this tileSet index
 			int type = tileSet.size() - 1;
 			tileTypes[type].type = type;
-			tileTypes[type].collisionHack = collisionHack;
+			tileTypes[type].collisionHack = collisionHack > 1 ? false : (bool)collisionHack;	// FIXME: double hack to test one imported AABB collisionModel
+
+// FREEHILL BEGIN AABB (eBounds) collisionModel import test (1/2)
+			if (collisionHack > 1) {
+				float aabbWidth, aabbHeight, aabbXOffset, aabbYOffset;
+				read >> aabbWidth;
+				read >> aabbHeight;
+				read >> aabbXOffset;		// TODO: not used yet (as imageOffset?)
+				read >> aabbYOffset;		// TODO: not used yet (as imageOffset?)
+				tileTypes[type].collisionHack2 = eBounds(vec2_zero, eVec2(aabbWidth, aabbHeight));	// generic local bounds, converted to absBounds per tile
+			}
+// FREEHILL END AABB (eBounds) collisionModel import test (1/2)
+
 			read.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
 		}
 		read.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
@@ -97,13 +109,13 @@ eTile::eTile(eGridCell * owner, const eVec2 & origin, const int type, const int 
 	renderImage.SetLayer(layer);
 	renderImage.origin = origin;
 	eMath::CartesianToIsometric(renderImage.origin.x, renderImage.origin.y);
-	SetType(type);
+	SetType(type, origin);
 }
 
 //************
 // eTile::SetType
 //************
-void eTile::SetType(int newType) {
+void eTile::SetType(int newType, const eVec2 & originHack) {
 	const float isoCellWidthAdjustment = (float)game.GetMap().TileMap().IsometricCellWidth() * 0.5f;
 	const float isoCellHeightAdjustment = (float)game.GetMap().TileMap().IsometricCellHeight();
 	float imageWidth = 0;
@@ -122,12 +134,19 @@ void eTile::SetType(int newType) {
 	game.GetImageManager().GetImage(tileSet.at(newType).first, renderImage.image);		// which image (tile atlas)
 	renderImage.srcRect = &renderImage.image->GetSubframe(tileSet.at(newType).second);	// which part of that image
 
-
 	// visual alignment with isometric owner cell
 	imageWidth = (float)renderImage.srcRect->w;
 	imageHeight = (float)renderImage.srcRect->h;
 	conversionOffset = eVec2(-isoCellWidthAdjustment, isoCellHeightAdjustment - imageHeight);
 	renderImage.origin += conversionOffset;
+
+// FREEHILL BEGIN AABB (eBounds) collisionModel import test (2/2)
+	if (impl->type == 155) {					// the test tree image
+		collisionModel.SetActive(false);		// TODO: dont update grid areas yet
+		collisionModel.LocalBounds() = impl->collisionHack2;
+		collisionModel.SetOrigin(originHack);		// FIXME: renderImage.origin is wrong, it should be position in ortho-space, then drawn in iso-space
+	}
+// FREEHILL END AABB (eBounds) collisionModel import test (2/2)
 }
 
 //************
