@@ -20,7 +20,7 @@ void eCamera::Think() {
 	eInput * input;
 	eVec2 correction;
 	float x, y;
-
+/*
 	static const int maxX = game.GetMap().TileMap().Width() > (int)collisionModel.LocalBounds().Width() 
 							? game.GetMap().TileMap().Width() 
 							: (int)collisionModel.LocalBounds().Width();
@@ -28,7 +28,7 @@ void eCamera::Think() {
 	static const int maxY = game.GetMap().TileMap().Height() > (int)collisionModel.LocalBounds().Height() 
 							? game.GetMap().TileMap().Height() 
 							: (int)collisionModel.LocalBounds().Height();
-
+*/
 	input = &game.GetInput();
 
 	// TODO/FIXME (much later): zoom in/out adversly affects drawing coordinates

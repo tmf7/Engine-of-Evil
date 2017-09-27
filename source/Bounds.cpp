@@ -35,7 +35,7 @@ void eBounds::FromPoints(const eVec2 * points, const int numPoints) {
 // DEBUG: must use local-space bounds for accurate size and position
 //*************
 void eBounds::FromIsometricRotation(const eVec2 & origin) {
-	// 45 degrees CCW about z-axis
+	// 45 degrees CCW about z-axis (not strictly a foreshortening rotation about 2 axes like a normal isometric projection)
 	static const float cos45 = SDL_sqrtf(2) * 0.5f;
 	static const eVec2 R_CCW[2] = {	eVec2(cos45, cos45),
 									eVec2(-cos45, cos45)};

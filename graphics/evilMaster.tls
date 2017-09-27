@@ -1,4 +1,4 @@
-155
+156
 graphics/grass_and_water.png
 0 0	# 0
 1 0	# 1
@@ -162,3 +162,6 @@ graphics/dungeon_floor.png
 13 1	# 153
 14 1	# 154
 # (end of tileset 4)
+graphics/tree_test_tile.png
+0 1	# 155
+# (end of tileset 5 lonely tile collision test)

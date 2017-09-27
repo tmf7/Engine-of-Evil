@@ -2,8 +2,7 @@
 #include "Game.h"
 
 // FIXME: these should be class static, not global
-// first == index within eImageManager::imageList; second == eImage subframe index;
-std::vector<std::pair<int, int>>		tileSet;
+std::vector<std::pair<int, int>>		tileSet;		// first == index within eImageManager::imageList; second == eImage subframe index;
 eTileImpl								tileTypes[eTileImpl::maxTileTypes];
 
 //************
@@ -95,44 +94,46 @@ bool eTileImpl::LoadTileset(const char * tilesetFilename, bool appendNew) {
 //************
 eTile::eTile(eGridCell * owner, const eVec2 & origin, const int type, const int layer) {
 	this->owner = owner;
-	SetType(type);
 	renderImage.SetLayer(layer);
 	renderImage.origin = origin;
 	eMath::CartesianToIsometric(renderImage.origin.x, renderImage.origin.y);
-
-	// orthogonal images converted to isometric need to be shifted
-	// based on their size to properly align with their owner cell
-	float imageWidth = (float)renderImage.srcRect->w;
-	float imageHeight = (float)renderImage.srcRect->h;
-	eVec2 conversionOffset = -eVec2(imageWidth * 0.5f, (2.0f * imageHeight - imageWidth) * 0.5f);
-	renderImage.origin += conversionOffset;
-
-	// FIXME(!) not all eTile types will be solid/collidable (dont waste the processing),
-	// but maintain the ability to define a collisionModel for those that are ( ie new eCollisionModel() )
-	collisionModel.SetActive(true);
-//	auto & localBounds = collisionModel.LocalBounds();
-//	eVec2 extents = eVec2(absBounds.Width() * 0.5f, absBounds.Height() * 0.5f);
-//	localBounds[0] = -extents;
-//	localBounds[1] = extents;
-//	collisionModel.SetOrigin(absBounds.Center());
-//	collisionModel.Velocity() = vec2_zero;
+	SetType(type);
 }
 
 //************
 // eTile::SetType
-// FIXME: doesn't verify the index
 //************
 void eTile::SetType(int newType) {
-	impl = &tileTypes[newType];
-	game.GetImageManager().GetImage(tileSet.at(newType).first, renderImage.image);		// which image
+	const float isoCellWidthAdjustment = (float)game.GetMap().TileMap().IsometricCellWidth() * 0.5f;
+	const float isoCellHeightAdjustment = (float)game.GetMap().TileMap().IsometricCellHeight();
+	float imageWidth = 0;
+	float imageHeight = 0;
+	eVec2 conversionOffset = vec2_zero;
+
+	// type change, so reset the old offset
+	if (renderImage.image != nullptr) {
+		imageWidth = (float)renderImage.srcRect->w;
+		imageHeight = (float)renderImage.srcRect->h;
+		conversionOffset = eVec2(isoCellWidthAdjustment, imageHeight - isoCellHeightAdjustment);
+		renderImage.origin += conversionOffset;
+	}
+
+	impl = &tileTypes[newType];															// FIXME: doesn't verify the array index
+	game.GetImageManager().GetImage(tileSet.at(newType).first, renderImage.image);		// which image (tile atlas)
 	renderImage.srcRect = &renderImage.image->GetSubframe(tileSet.at(newType).second);	// which part of that image
+
+
+	// visual alignment with isometric owner cell
+	imageWidth = (float)renderImage.srcRect->w;
+	imageHeight = (float)renderImage.srcRect->h;
+	conversionOffset = eVec2(-isoCellWidthAdjustment, isoCellHeightAdjustment - imageHeight);
+	renderImage.origin += conversionOffset;
 }
 
 //************
 // eTile::AssignToGrid
 // assign tile drawing responsibility to eGridCells visually overlapped by the renderImage.image's corners
-// TODO: if the eTile::type changes, then so should the eGridCells responsible for drawing this
-// because the image shape/size may change
+// TODO: if the eTile::type changes, then so should the eGridCells responsible for drawing *this
 // DEBUG: ensures no tile suddenly dissappears when scrolling the camera
 // for a single tileMap layer this results in each eGridCell::tileToDraw::size of:
 // 4 : 6 : 8, for center : edge : corner on average

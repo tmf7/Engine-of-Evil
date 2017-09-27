@@ -41,6 +41,7 @@ bool eMap::LoadMap(const char * mapFilename) {
 	int numRows = 0;
 	int cellWidth = 0;
 	int cellHeight = 0;
+	int numLayers = 0;
 	int row = 0;
 	int column = 0;
 
@@ -49,19 +50,19 @@ bool eMap::LoadMap(const char * mapFilename) {
 	read >> numRows;
 	read >> cellWidth;
 	read >> cellHeight;
+	read >> numLayers;
 	read.ignore(std::numeric_limits<std::streamsize>::max(), '\n');		// skip the rest of the line
 	if (!VerifyRead(read))
 		return false;
 
 	// initialize each tileMap cell absBounds for image and collisionModel cell-occupancy tests
-	tileMap.SetCellWidth(cellWidth);
-	tileMap.SetCellHeight(cellHeight);
+	tileMap.SetCellSize(cellWidth, cellHeight);
 	for (column = 0; column < numColumns; ++column) {
 		for (row = 0; row < numRows; ++row) {
 			auto & cell = tileMap.Index(row, column);
 			eVec2 cellMins = eVec2((float)(row * cellWidth), (float)(column * cellHeight));
 			cell.SetAbsBounds( eBounds(cellMins, cellMins + eVec2((float)cellWidth, (float)cellHeight)) );
-			cell.TilesOwned().reserve(4);	// BUGFIX: assures the tilesOwned vector data doesn't move and invalidate tilesToDraw
+			cell.TilesOwned().reserve(numLayers);	// BUGFIX: assures the tilesOwned vector data doesn't reallocate/move and invalidate tilesToDraw
 		}
 	}
 
@@ -147,9 +148,7 @@ void eMap::BuildMap(const int configuration) {
 	// TODO(?): make these file-loadable values
 	const int cellWidth = 32;
 	const int cellHeight = 32;
-
-	tileMap.SetCellWidth(cellWidth);
-	tileMap.SetCellHeight(cellHeight);
+	tileMap.SetCellSize(cellWidth, cellHeight);
 
 	srand(SDL_GetTicks());
 	int row = 0;
@@ -277,7 +276,7 @@ void eMap::Think() {
 // eMap::Draw
 //***************
 void eMap::Draw() {
-	static auto & cameraCollider = game.GetCamera().CollisionModel();
+	auto & cameraCollider = game.GetCamera().CollisionModel();
 
 	// only redraw the map if the camera has moved, or its the start of the game
 	// FIXME: change this logic when animated tiles are coded

@@ -29,10 +29,11 @@ public:
 	type &					Index(const int row, const int column);
 	const type	&			Index(const int row, const int column) const;
 
+	int						IsometricCellWidth() const;
+	int						IsometricCellHeight() const;
 	int						CellWidth() const;
 	int						CellHeight() const;
-	void					SetCellWidth(const int cellWidth);
-	void					SetCellHeight(const int cellHeight);
+	void					SetCellSize(const int cellWidth, const int cellHeight);
 
 	// iterator hooks
 	type *					begin();
@@ -52,6 +53,8 @@ private:
 	type					cells[rows][columns];
 	int						cellWidth;
 	int						cellHeight;
+	int						isoCellWidth;				// to visually adjust images
+	int						isoCellHeight;				// to visually adjust images
 	float					invCellWidth;
 	float					invCellHeight;
 };
@@ -225,6 +228,22 @@ inline const type & eSpatialIndexGrid<type, rows, columns>::Index(const int row,
 }
 
 //******************
+// eSpatialIndexGrid::IsometricCellWidth
+//******************
+template< class type, int rows, int columns>
+inline int eSpatialIndexGrid<type, rows, columns>::IsometricCellWidth() const {
+	return isoCellWidth;
+}
+
+//******************
+// eSpatialIndexGrid::IsometricCellHeight
+//******************
+template< class type, int rows, int columns>
+inline int eSpatialIndexGrid<type, rows, columns>::IsometricCellHeight() const {
+	return isoCellHeight;
+}
+
+//******************
 // eSpatialIndexGrid::CellWidth
 //******************
 template< class type, int rows, int columns>
@@ -242,22 +261,16 @@ inline int eSpatialIndexGrid<type, rows, columns>::CellHeight() const {
 
 //******************
 // eSpatialIndexGrid::SetCellWidth
-// minimum width is 1
+// minimum width and height are 1
 //******************
 template< class type, int rows, int columns>
-inline void eSpatialIndexGrid<type, rows, columns>::SetCellWidth(const int cellWidth) {
+inline void eSpatialIndexGrid<type, rows, columns>::SetCellSize(const int cellWidth, const int cellHeight) {
 	this->cellWidth = cellWidth > 0 ? cellWidth : 1;
-	invCellWidth = 1.0f / (float)this->cellWidth;
-}
-
-//******************
-// eSpatialIndexGrid::SetCellHeight
-// minimum width is 1
-//******************
-template< class type, int rows, int columns>
-inline void eSpatialIndexGrid<type, rows, columns>::SetCellHeight(const int cellHeight) {
 	this->cellHeight = cellHeight > 0 ? cellHeight : 1;
+	invCellWidth = 1.0f / (float)this->cellWidth;
 	invCellHeight = 1.0f / (float)this->cellHeight;
+	isoCellWidth = cellWidth + cellHeight;
+	isoCellHeight = isoCellWidth >> 1;
 }
 
 //******************

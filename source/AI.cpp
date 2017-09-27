@@ -14,8 +14,8 @@ bool eAI::Spawn() {
 	StopMoving();
 
 	// knownMap dimensions, based in initialized tileMap dimensions
-	knownMap.SetCellWidth(game.GetMap().TileMap().CellWidth());
-	knownMap.SetCellHeight(game.GetMap().TileMap().CellHeight());
+	knownMap.SetCellSize( game.GetMap().TileMap().CellWidth(),
+						  game.GetMap().TileMap().CellHeight() );
 	knownMap.ClearAllCells();
 
 	currentTile		= &knownMap.Index(collisionModel.Origin());
