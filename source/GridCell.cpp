@@ -32,9 +32,9 @@ void eGridCell::DebugDraw() {
 			game.GetRenderer().DrawIsometricRect(pinkColor, tile.CollisionModel().AbsBounds(), true);
 			auto & ai = game.GetEntity(0);
 			if (eCollision::AABBAABBTest(tile.CollisionModel().AbsBounds(), ai->CollisionModel().AbsBounds()))
-				game.GetRenderer().DrawOutlineText("HIT", eVec2(100.0f, 100.0f), redColor, false, RENDERTYPE_STATIC);
+				game.GetRenderer().DrawOutlineText("HIT", eVec2(100.0f, 100.0f), redColor, true, RENDERTYPE_STATIC);
 			else 
-				game.GetRenderer().DrawOutlineText("MISS", eVec2(100.0f, 100.0f), lightBlueColor, false, RENDERTYPE_STATIC);
+				game.GetRenderer().DrawOutlineText("MISS", eVec2(100.0f, 100.0f), lightBlueColor, true, RENDERTYPE_STATIC);
 		}
 	}
 }

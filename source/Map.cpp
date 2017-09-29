@@ -18,9 +18,9 @@ bool eMap::Init () {
 // using a file
 // DEBUG (.map file format):
 // # first line comment\n
-// numColumns numRows cellWidth cellHeight\n
-// # third line comment\n
-// batchSubframeFilenameForTileset.bsub\n
+// numColumns numRows cellWidth cellHeight numLayers\n
+///////////////// # third line comment\n
+///////////////// batchSubframeFilenameForTileset.bsub\n
 // # fifth line comment\n
 // tileSetFilename.tls\n
 // master-tileSet-index, master-tileSet-index, ... master-tileSet-index\n
@@ -65,15 +65,6 @@ bool eMap::LoadMap(const char * mapFilename) {
 			cell.TilesOwned().reserve(numLayers);	// BUGFIX: assures the tilesOwned vector data doesn't reallocate/move and invalidate tilesToDraw
 		}
 	}
-
-	read.ignore(std::numeric_limits<std::streamsize>::max(), '\n');		// skip the third line comment
-	memset(buffer, 0, sizeof(buffer));
-	read.getline(buffer, sizeof(buffer), '\n');
-	if (!VerifyRead(read))
-		return false;
-
-	if (!game.GetImageManager().BatchLoadSubframes(buffer))
-		return false;
 
 	read.ignore(std::numeric_limits<std::streamsize>::max(), '\n');		// skip the fifth line comment
 	memset(buffer, 0, sizeof(buffer));

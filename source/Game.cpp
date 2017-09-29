@@ -146,9 +146,9 @@ bool eGame::Run() {
 	// TODO(?): use a visitor or observer pattern to execute all DebugDraws with one call
 		entities[0]->DebugDraw();		// loop over all entities for their collision bounds, and grid occupancy
 										// ALSO: only draw goal/trail_waypoints and known_map for a SINGLE currently SELECTED entity
-		map.DebugDraw();				// draw the collision bounds of collidable tiles
 
 // BEGIN FREEHILL cursor tile highlight test
+		// FIXME: put this somewhere else (like eMap::Draw)
 		eVec2 tilePoint = map.GetMouseWorldPosition();
 		auto & tileMap = map.TileMap();
 		if (tileMap.IsValid(tilePoint)) {
@@ -156,6 +156,11 @@ bool eGame::Run() {
 			game.GetRenderer().DrawIsometricRect(yellowColor, tileBounds, RENDERTYPE_DYNAMIC);
 		}
 // END FREEHILL cursor tile highlight test
+
+		// DEBUG: there is a RENDERTYPE_STATIC call for test in here, hence its code position
+		// TODO(!): modify eRenderer shape and text drawing to be on secondary textures to be referenced via renderImages
+		// and added to the static/dynamic-renderPools for more flexible debug (or otherwise) drawing (ie just one ::Draw call here)
+		map.DebugDraw();				// draw the collision bounds of collidable tiles
 
 	// TODO: the HUD would be a static/non-scalable overlay...which should draw with the player...
 	// BUT THAT'S FINE because FlushStaticPool gets called last, whew!

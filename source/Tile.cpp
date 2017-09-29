@@ -30,6 +30,37 @@ bool eTileImpl::LoadTileset(const char * tilesetFilename, bool appendNew) {
 	if (!read.good())
 		return false;
 
+	read.ignore(std::numeric_limits<std::streamsize>::max(), '\n');		// skip the first line comment
+	memset(buffer, 0, sizeof(buffer));
+	read.getline(buffer, sizeof(buffer), '\n');
+	if (!VerifyRead(read))
+		return false;
+
+	if (!game.GetImageManager().BatchLoadSubframes(buffer))
+		return false;
+
+	read.ignore(std::numeric_limits<std::streamsize>::max(), '\n');		// skip the third line comment
+	memset(buffer, 0, sizeof(buffer));
+	read.getline(buffer, sizeof(buffer), ':');
+	if (!VerifyRead(read))
+		return false;
+	
+	std::string collisionShape{buffer};
+	std::vector<eBounds> defaultAABBList;
+	std::vector<eBox> defaultOBBList;			// FIXME(!): START HERE 9/28/2017 TF (current quasi-issue of an easily indexable list of collider shapes)
+												// SOLUTION: just focus on eBounds for now and comment out the rest
+												// FIXME: also finish re-coding .map and .tls file reading to account for their reformats
+	if (collisionShape == TO_STRING(eBounds)) {
+	} else if (collisionShape == TO_STRING(eBox)) {
+	} 
+/*	
+	TODO: implement other collision shapes and give them a common eShape/eCollider interface
+	else if (collisionShape == TO_STRING(eCircle)) {
+	} else if (collisionShape == TO_STRING(eLine)) {
+	} else if (collisionShape == TO_STRING(ePolyLine)) {
+	}
+*/
+
 	// read how many tiles are about to be loaded
 	// to minimize dynamic allocations
 	size_t numTiles = 0;
