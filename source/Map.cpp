@@ -11,7 +11,6 @@ bool eMap::Init () {
 	return true;
 }
 
-// BEGIN FREEHILL mapfile read test
 //**************
 // eMap::LoadMap
 // Populates tileMap's matrix for future collision and redraw
@@ -19,9 +18,7 @@ bool eMap::Init () {
 // DEBUG (.map file format):
 // # first line comment\n
 // numColumns numRows cellWidth cellHeight numLayers\n
-///////////////// # third line comment\n
-///////////////// batchSubframeFilenameForTileset.bsub\n
-// # fifth line comment\n
+// # third line comment\n
 // tileSetFilename.tls\n
 // master-tileSet-index, master-tileSet-index, ... master-tileSet-index\n
 // # end of layer 1 comment\n
@@ -66,7 +63,7 @@ bool eMap::LoadMap(const char * mapFilename) {
 		}
 	}
 
-	read.ignore(std::numeric_limits<std::streamsize>::max(), '\n');		// skip the fifth line comment
+	read.ignore(std::numeric_limits<std::streamsize>::max(), '\n');		// skip the third line comment
 	memset(buffer, 0, sizeof(buffer));
 	read.getline(buffer, sizeof(buffer), '\n');
 	if (!VerifyRead(read))
@@ -78,7 +75,6 @@ bool eMap::LoadMap(const char * mapFilename) {
 	row = 0;
 	column = 0;
 	int layer = 0;
-
 	while (!read.eof()) {
 		int tileType = INVALID_ID;
 
@@ -120,78 +116,7 @@ bool eMap::LoadMap(const char * mapFilename) {
 	read.close();
 	return true;
 }
-// END FREEHILL mapfile read test
 
-//**************
-// eMap::BuildMap
-// Populates the map's spatial matrix for future collision and redraw
-// "procedurally"
-//**************
-void eMap::BuildMap(const int configuration) {
-/*
-// TODO: if very large random numbers are needed ( ie greater than RAND_MAX 32,767 )
-#include <random>
-	std::random_device r;
-	std::default_random_engine engine(r());	// seed the mersenne twister
-	std::uniform_int_distribution<int> uniform_dist(0, NUM_ELEMENTS);
-	int r = uniform_dist(engine) % NUM_ELEMENTS;
-*/
-	// TODO(?): make these file-loadable values
-	const int cellWidth = 32;
-	const int cellHeight = 32;
-	tileMap.SetCellSize(cellWidth, cellHeight);
-
-	srand(SDL_GetTicks());
-	int row = 0;
-	int column = 0;
-
-	for (auto && cell : tileMap) {
-		int type;
-		switch (configuration) {
-			case RANDOM_MAP: {
-				type = rand() % eTileImpl::NumTileTypes();
-				break;
-			}
-			case TRAVERSABLE_MAP: {
-				while (eTileImpl::IsCollidableHack(type = rand() % eTileImpl::NumTileTypes()))
-					;
-				break;
-			}
-			case COLLISION_MAP: {
-				while (!eTileImpl::IsCollidableHack(type = rand() % eTileImpl::NumTileTypes()))
-					;
-				break;
-			}
-			default: {	// RANDOM_MAP
-				type = rand() % eTileImpl::NumTileTypes();
-			break;
-			}
-		}
-
-		eVec2 cellMins = eVec2((float)(row * cellWidth), (float)(column * cellHeight));
-		cell.SetAbsBounds( eBounds(cellMins, cellMins + eVec2((float)cellWidth, (float)cellHeight)) );
-
-		eVec2 tileOffset = eVec2(-32.0f, -16.0f);
-		//-16.0f is a tileset specific offset
-		// FIXME/TODO: allow for tileset master image drawing offset if its a bit wonky source
-		// -32.0f is a logical-to-screen isometric coordinate calculation hack, 
-		// because the image is still a rectangle, not a rhombus, but CartesianToIsometric shifts X coordinate to the right
-		// FIXME/TODO: (-0.5f * tile image width, instead of const -32.0f because each image puts the isometric tip at the image's top midpoint)
-		// FIXME/BUG/TODO: make this flexibly based on the tile image sizes (image frames read in)
-		// AND the cartesian size of a logical tile base
-
-		// TODO: add one eTile per cell for now, but start layering them according to procedure/file-load
-		// FIXME/TODO: collisionModel currently aligns with the CELL exactly because tiles currently visually align with cells,
-		// however make the eTile::Init absBounds be procedure/file-load based
-		cell.TilesOwned().clear();
-		cell.TilesOwned().push_back(eTile(&cell, tileOffset, type, 0));	// DEBUG: test layer == 0
-		column++;
-		if (column >= tileMap.Columns()) {
-			column = 0;
-			row++;
-		}
-	}
-}
 //**************
 // eMap::ToggleTile
 // toggles the tile type at tileMap[r][c] closest to the given point
@@ -207,7 +132,7 @@ void eMap::ToggleTile(const eVec2 & point) {
 	tileType++;
 	if (tileType >= eTileImpl::NumTileTypes())
 		tileType = 0;
-//	tile.SetType(tileType);		// FIXME: the origin passed in should be the non-adjusted ortho-2D coordinates (not visual iso coords of renderImage.origin)
+	tile.SetType(tileType);
 }
 
 //**************
@@ -225,10 +150,6 @@ eVec2 eMap::GetMouseWorldPosition() const {
 // eMap::IsValid
 // returns true if point lies within map area
 // TODO: move the ignoreCollision functionality to a different collision detection function,
-// or perhaps some sort of tileFlags return value check (eg game->Map().IsValid(point) & TRAVERSABLE_TILE)
-// #define TRAVERSABLE_TILE (DOOR|STAIRS|BRICK_FLOOR) or whatever
-// and rename this tileFlags_t eMap::CheckTile(const eVec2 & point, byte_t * checkTile) const;
-// TODO: ALSO get rid of the references once the functionality of tile masking is separated
 //**************
 bool eMap::IsValid(const eVec2 & point, bool ignoreCollision) const {
 	
@@ -237,7 +158,7 @@ bool eMap::IsValid(const eVec2 & point, bool ignoreCollision) const {
 
 	if ( !ignoreCollision ) {
 		for (auto & tile : tileMap.Index(point).TilesOwned()) {
-			if (eTileImpl::IsCollidableHack(tile.Type()))
+			if (tile.IsCollidableHack(point))
 				return false;
 		}
 	}
@@ -247,18 +168,10 @@ bool eMap::IsValid(const eVec2 & point, bool ignoreCollision) const {
 
 //***************
 // eMap::Think
-// TODO: these commands should belong to a UserCommand interface
-// independent of eMap (and eMap shouldn't really have a ::Think())
+// FIXME: eMap (and eMap shouldn't really have a ::Think())
 //***************
 void eMap::Think() {
 	auto & input = game.GetInput();
-	if (input.KeyPressed(SDL_SCANCODE_0))
-		BuildMap(TRAVERSABLE_MAP);
-	else if (input.KeyPressed(SDL_SCANCODE_1))
-		BuildMap(COLLISION_MAP);
-	else if (input.KeyPressed(SDL_SCANCODE_2))
-		BuildMap(RANDOM_MAP);	
-
 	if (input.MousePressed(SDL_BUTTON_RIGHT))
 		ToggleTile(GetMouseWorldPosition());
 }

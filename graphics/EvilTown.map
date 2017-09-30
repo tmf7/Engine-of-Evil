@@ -1,5 +1,3 @@
-# image subframes file
-graphics/evilMaster.bsub
 # columns rows cell-width cell-height num_layers (note square cells because the base logic is orthogonal, not isometric)
 128 128 32 32 3
 # tileset file

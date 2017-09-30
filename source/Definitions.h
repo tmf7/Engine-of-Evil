@@ -1,6 +1,16 @@
 #ifndef EVIL_DEFINITIONS_H
 #define EVIL_DEFINITIONS_H
 
+/*
+// TODO: if very large random numbers are needed ( ie greater than RAND_MAX 32,767 )
+#include <random>
+	srand(SDL_GetTicks());
+	std::random_device r;
+	std::default_random_engine engine(r());	// seed the mersenne twister
+	std::uniform_int_distribution<int> uniform_dist(0, NUM_ELEMENTS);
+	int r = uniform_dist(engine) % NUM_ELEMENTS;
+*/
+
 #include "SDL.h"
 #include "SDL_ttf.h"
 #include "SDL_image.h"

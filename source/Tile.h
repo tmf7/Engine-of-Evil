@@ -16,30 +16,28 @@
 class eTileImpl {
 private:
 
-	friend class eTile;
 //	typedef void (*eTileBehavior_f)();
+	friend class				eTile;
 
 public:
 
-	static const int		invalidTileType = -1;
-	static const int		maxTileTypes = 256;
+	static const int			invalidTileType = -1;
+	static const int			maxTileTypes = 256;
 
 public:
-							eTileImpl();
+								eTileImpl();
 
-	int						Type() const;
-//	void					(*tileBehavior)();
+	int							Type() const;
+//	void						(*tileBehavior)();
 
-	static bool				LoadTileset(const char * tilesetFilename, bool appendNew = false);
-	static int				NumTileTypes();
+	static bool					LoadTileset(const char * tilesetFilename, bool appendNew = false);
+	static int					NumTileTypes();
+	static bool					HasCollider(int type);
 
-	static bool				IsCollidableHack(int type);
-	
 private:
 	
-	int						type;				// index within the tileSet
-	bool					collisionHack;		// FIXME: temporary solution to set entire CELL of spatial index grid to TRAVERSABLE/COLLISION
-	eBounds					collisionHack2;		// FIXME: make this a generic collider type (ie eBounds, eBox, or yet to implement eCircle and eLine/ePolyline)
+	int							type = invalidTileType;	// index within the tileSet
+	std::shared_ptr<eBounds>	collider = nullptr;		// FIXME: make this a generic collider shape (aabb, obb, circle, line, polyline)
 };
 
 extern std::vector<std::pair<int, int>>			tileSet;			// first == index within eImageManager::imageList; second == eImage subframe index;
@@ -53,10 +51,10 @@ inline int eTileImpl::NumTileTypes() {
 }
 
 //************
-// eTileImpl::IsCollidableHack
+// eTileImpl::HasCollider
 //************
-inline bool eTileImpl::IsCollidableHack(int type) {
-	return tileTypes[type].collisionHack;
+inline bool eTileImpl::HasCollider(int type) {
+	return tileTypes[type].collider != nullptr;
 }
 
 //************
@@ -64,7 +62,7 @@ inline bool eTileImpl::IsCollidableHack(int type) {
 //************
 inline eTileImpl::eTileImpl() 
 	: type(invalidTileType), 
-	  collisionHack(false) {
+	  collider(nullptr) {
 }
 
 //************
@@ -82,31 +80,31 @@ inline int eTileImpl::Type() const {
 //***********************************************
 class eTile {
 public:
-							eTile(eGridCell * owner, const eVec2 & origin, const int type, const int layer);
+										eTile(eGridCell * owner, const eVec2 & origin, const int type, const int layer);
 	
-	int						Type() const;
-	void					SetType(int newType, const eVec2 & originHack);
+	int									Type() const;
+	void								SetType(int newType);
 	
-	void					AssignToGrid();
-	void					RemoveFromGrid() const;
+	void								AssignToGrid();
+	void								RemoveFromGrid() const;
 
-	renderImage_t *			GetRenderImage();
-	void					UpdateRenderImageDisplay();
+	renderImage_t *						GetRenderImage();
+	void								UpdateRenderImageDisplay();
 
-	Uint32					GetLayer() const;
-	void					SetLayer(const int newLayer);
+	Uint32								GetLayer() const;
+	void								SetLayer(const int newLayer);
 
-	eGridCell *				GetOwner();
-	eCollisionModel &		CollisionModel();
+	eGridCell *							GetOwner();
+	std::shared_ptr<eCollisionModel>	CollisionModel();
 
-	bool					IsCollidableHack() const;	
+	bool								IsCollidableHack(const eVec2 & point) const;	
 
 private:
 
-	eGridCell *				owner;				// responsible for drawing this tile
-	eTileImpl *				impl;				// general tile type data
-	eCollisionModel			collisionModel;		// contains position and size of collision bounds	// FIXME(?): put in eTileImpl, and just give the origin here
-	renderImage_t			renderImage;		// data relevant to the renderer
+	eGridCell *							owner = nullptr;				// responsible for drawing this tile
+	eTileImpl *							impl = nullptr;					// general tile type data
+	std::shared_ptr<eCollisionModel>	collisionModel = nullptr;		// contains position and size of collision bounds
+	renderImage_t						renderImage;					// data relevant to the renderer
 };
 
 //************
@@ -161,15 +159,8 @@ inline eGridCell * eTile::GetOwner() {
 //************
 // eTile::CollisionModel
 //************
-inline eCollisionModel & eTile::CollisionModel() {
+inline std::shared_ptr<eCollisionModel> eTile::CollisionModel() {
 	return collisionModel;
-}
-
-//************
-// eTile::IsCollidableHack
-//************
-inline bool eTile::IsCollidableHack() const {
-	return impl->collisionHack;
 }
 
 #endif /* EVIL_TILE_H */

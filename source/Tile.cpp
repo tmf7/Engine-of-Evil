@@ -10,13 +10,19 @@ eTileImpl								tileTypes[eTileImpl::maxTileTypes];
 // returns false on failure to load, true otherwise
 // pairs image file ids and subframe indexes therein
 // DEBUG (.tls file format):
-// number of tiles\n
+// # tileset subframes master .bsub filename comment\n
+// allTilesSubframes.bsub\n
+// # comment explaining default collider reference list numbering rules\n
+// eBounds: width height xOffset yOffset	# 0 index comment\n
+// eBounds: width height xOffset yOffset	# 1
+// (repeat for all default colliders)
+// num_tiles: number of tiles\n
 // imageFilename\n
-// subframeIndex collisionHack # master tile index comment\n
+// subframeIndex colliderType # master tile index comment\n
 // (repeat tile property definitions for this file)
 // # (end of tileset definition comment)\n
 // imageFilename\n
-// subframeIndex collisionHack # master tile index comment\n
+// subframeIndex colliderType # master tile index comment\n
 // # (end of tileset definition comment)\n
 // (repeat image and corresponding tile definition pattern)
 //************
@@ -39,27 +45,45 @@ bool eTileImpl::LoadTileset(const char * tilesetFilename, bool appendNew) {
 	if (!game.GetImageManager().BatchLoadSubframes(buffer))
 		return false;
 
-	read.ignore(std::numeric_limits<std::streamsize>::max(), '\n');		// skip the third line comment
-	memset(buffer, 0, sizeof(buffer));
-	read.getline(buffer, sizeof(buffer), ':');
-	if (!VerifyRead(read))
-		return false;
+// FREEHILL BEGIN AABB (eBounds) collisionModel import test (1/2)
+	std::vector<std::shared_ptr<eBounds>> defaultAABBList;
+	while (true) {
+		read.ignore(std::numeric_limits<std::streamsize>::max(), '\n');		// skip the third line comment/rest of the line
+		memset(buffer, 0, sizeof(buffer));
+		read.getline(buffer, sizeof(buffer), ':');
+		if (!VerifyRead(read))
+			return false;
 	
-	std::string collisionShape{buffer};
-	std::vector<eBounds> defaultAABBList;
-	std::vector<eBox> defaultOBBList;			// FIXME(!): START HERE 9/28/2017 TF (current quasi-issue of an easily indexable list of collider shapes)
-												// SOLUTION: just focus on eBounds for now and comment out the rest
-												// FIXME: also finish re-coding .map and .tls file reading to account for their reformats
-	if (collisionShape == TO_STRING(eBounds)) {
-	} else if (collisionShape == TO_STRING(eBox)) {
-	} 
-/*	
+		std::string collisionShape{buffer};
+		if (collisionShape == TO_STRING(eBounds)) {
+			float width = 0;
+			float height = 0;
+			float xOffset = 0;
+			float yOffset = 0;
+			read >> width;
+			read >> height;
+			read >> xOffset;
+			read >> yOffset;
+			if (!VerifyRead(read))
+				return false;
+
+			std::shared_ptr<eBounds> aabb = std::make_shared<eBounds>();
+			(*aabb)[1] = eVec2(width, height);
+			(*aabb) += eVec2(xOffset, yOffset);
+			defaultAABBList.push_back(aabb);
+/*  
 	TODO: implement other collision shapes and give them a common eShape/eCollider interface
-	else if (collisionShape == TO_STRING(eCircle)) {
+	else if (collisionShape == TO_STRING(eBox)) {
+	} else if (collisionShape == TO_STRING(eCircle)) {
 	} else if (collisionShape == TO_STRING(eLine)) {
 	} else if (collisionShape == TO_STRING(ePolyLine)) {
 	}
 */
+		} else { // (collisionShape == "num_tiles")
+			break;
+		}
+	} 
+// FREEHILL END AABB (eBounds) collisionModel import test (1/2)
 
 	// read how many tiles are about to be loaded
 	// to minimize dynamic allocations
@@ -87,13 +111,13 @@ bool eTileImpl::LoadTileset(const char * tilesetFilename, bool appendNew) {
 		// get all subframe indexes for the eImage (separated by spaces), everything after '#' is ignored
 		while (read.peek() != '#') {
 			int subframeIndex;
-			int collisionHack;
+			int colliderType;
 
 			read >> subframeIndex;
 				if (!VerifyRead(read))
 					return false;
 
-			read >> collisionHack;
+			read >> colliderType;
 				if (!VerifyRead(read))
 					return false;
 
@@ -101,18 +125,8 @@ bool eTileImpl::LoadTileset(const char * tilesetFilename, bool appendNew) {
 																					// otherwise push an error image handle into this tileSet index
 			int type = tileSet.size() - 1;
 			tileTypes[type].type = type;
-			tileTypes[type].collisionHack = collisionHack > 1 ? false : (bool)collisionHack;	// FIXME: double hack to test one imported AABB collisionModel
-
-// FREEHILL BEGIN AABB (eBounds) collisionModel import test (1/2)
-			if (collisionHack > 1) {
-				float aabbWidth, aabbHeight, aabbXOffset, aabbYOffset;
-				read >> aabbWidth;
-				read >> aabbHeight;
-				read >> aabbXOffset;		// TODO: not used yet (as imageOffset?)
-				read >> aabbYOffset;		// TODO: not used yet (as imageOffset?)
-				tileTypes[type].collisionHack2 = eBounds(vec2_zero, eVec2(aabbWidth, aabbHeight));	// generic local bounds, converted to absBounds per tile
-			}
-// FREEHILL END AABB (eBounds) collisionModel import test (1/2)
+			if (colliderType > 0)
+				tileTypes[type].collider = defaultAABBList[colliderType - 1];
 
 			read.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
 		}
@@ -140,27 +154,33 @@ eTile::eTile(eGridCell * owner, const eVec2 & origin, const int type, const int 
 	renderImage.SetLayer(layer);
 	renderImage.origin = origin;
 	eMath::CartesianToIsometric(renderImage.origin.x, renderImage.origin.y);
-	SetType(type, origin);
+	SetType(type);
 }
 
 //************
 // eTile::SetType
 //************
-void eTile::SetType(int newType, const eVec2 & originHack) {
+void eTile::SetType(int newType) {
 	const float isoCellWidthAdjustment = (float)game.GetMap().TileMap().IsometricCellWidth() * 0.5f;
 	const float isoCellHeightAdjustment = (float)game.GetMap().TileMap().IsometricCellHeight();
 	float imageWidth = 0;
 	float imageHeight = 0;
 	eVec2 conversionOffset = vec2_zero;
 
-	// type change, so reset the old offset
+	// type change, so reset the old offset and collisionModel
 	if (renderImage.image != nullptr) {
+		if (impl->collider != nullptr) {
+			collisionModel->~eCollisionModel();
+			collisionModel = nullptr;
+		}
 		imageWidth = (float)renderImage.srcRect->w;
 		imageHeight = (float)renderImage.srcRect->h;
 		conversionOffset = eVec2(isoCellWidthAdjustment, imageHeight - isoCellHeightAdjustment);
 		renderImage.origin += conversionOffset;
 	}
 
+	eVec2 orthoOrigin = renderImage.origin;
+	eMath::IsometricToCartesian(orthoOrigin.x, orthoOrigin.y);
 	impl = &tileTypes[newType];															// FIXME: doesn't verify the array index
 	game.GetImageManager().GetImage(tileSet.at(newType).first, renderImage.image);		// which image (tile atlas)
 	renderImage.srcRect = &renderImage.image->GetSubframe(tileSet.at(newType).second);	// which part of that image
@@ -172,10 +192,11 @@ void eTile::SetType(int newType, const eVec2 & originHack) {
 	renderImage.origin += conversionOffset;
 
 // FREEHILL BEGIN AABB (eBounds) collisionModel import test (2/2)
-	if (impl->type == 155) {					// the test tree image
-		collisionModel.SetActive(false);		// TODO: dont update grid areas yet
-		collisionModel.LocalBounds() = impl->collisionHack2;
-		collisionModel.SetOrigin(originHack);		// FIXME: renderImage.origin is wrong, it should be position in ortho-space, then drawn in iso-space
+	if (impl->collider != nullptr) {
+		collisionModel = std::make_shared<eCollisionModel>();
+		collisionModel->SetActive(false);			// TODO: dont update grid areas yet
+		collisionModel->LocalBounds() = *impl->collider;
+		collisionModel->SetOrigin(orthoOrigin);
 	}
 // FREEHILL END AABB (eBounds) collisionModel import test (2/2)
 }
@@ -198,8 +219,6 @@ void eTile::AssignToGrid() {
 
 	// clip rectangle to orthographic world-space for proper grid alignment
 	auto & tileMap = game.GetMap().TileMap();
-	int row;
-	int column;
 	for (auto & point : visualWorldPoints) {
 		eMath::IsometricToCartesian(point.x, point.y);
 		auto & cell = tileMap.IndexValidated(point);
@@ -216,4 +235,15 @@ void eTile::AssignToGrid() {
 void eTile::RemoveFromGrid() const {
 	// TODO: implement because if a tileType changes different eGridCells may draw it
 	// otherwise loading a new map just clears the tileMap anyway without using this fn
+}
+
+//************
+// eTile::IsCollidableHack
+// FIXME: this is a hack because a eTile can have a collisionModel that lies beyond its owner cell
+// and eAI currently uses point-wise tests on a cell-by-cell basis, so it ignores this case
+//************
+bool eTile::IsCollidableHack(const eVec2 & point) const {
+	return collisionModel != nullptr ? eCollision::AABBContainsPoint(collisionModel->AbsBounds(), point) 
+									 : false;
+
 }
