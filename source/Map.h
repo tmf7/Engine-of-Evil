@@ -20,7 +20,7 @@ class eMap {
 public:
 
 	bool						Init();
-	bool						IsValid(const eVec2 & point, bool ignoreCollision = false) const;
+	bool						HitStaticWorldHack(const eVec2 & point);
 	void						Think();
 	void						Draw();
 	void						DebugDraw();

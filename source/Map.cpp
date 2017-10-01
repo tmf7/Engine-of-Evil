@@ -123,10 +123,15 @@ bool eMap::LoadMap(const char * mapFilename) {
 // TODO: stop using this, its more of a debug test for cursor location than a proper map editor
 //**************
 void eMap::ToggleTile(const eVec2 & point) {
-	if (!IsValid(point, true))
-		return;
 
-	auto & tile = tileMap.Index(point).TilesOwned()[0];		// FIXME: assumes only one tile exists for toggling in a eGridCell (not always true)
+	auto & cell = tileMap.IndexValidated(point);
+	if (cell.TilesOwned().empty()) {
+		auto & origin = cell.AbsBounds()[0];
+		cell.AddTileOwned(eTile(&cell, origin, 0, 0));	
+	}
+
+	// FIXME/BUG: assumes only one tile exists for toggling in a eGridCell (not always true)
+	auto & tile = cell.TilesOwned()[0];
 	int tileType = tile.Type();
 
 	tileType++;
@@ -147,23 +152,29 @@ eVec2 eMap::GetMouseWorldPosition() const {
 }
 
 //**************
-// eMap::IsValid
-// returns true if point lies within map area
-// TODO: move the ignoreCollision functionality to a different collision detection function,
+// eMap::HitStaticWorldHack
+// returns true if point lies beyond the map area,
+// or within one of the world's collider's
 //**************
-bool eMap::IsValid(const eVec2 & point, bool ignoreCollision) const {
+bool eMap::HitStaticWorldHack(const eVec2 & point) {
 	
-	if	( !tileMap.IsValid(point) )
-		return false;
+	if	(!tileMap.IsValid(point))
+		return true;
 
-	if ( !ignoreCollision ) {
-		for (auto & tile : tileMap.Index(point).TilesOwned()) {
-			if (tile.IsCollidableHack(point))
-				return false;
-		}
+	// FIXME: move this elsewhere because it now includes static and dynamic colliders added to the grid/tileMap
+	auto & cell = tileMap.Index(point);
+	for (auto & pair : cell.Contents()) {
+		if (eCollision::AABBContainsPoint(pair.second->AbsBounds(), point));
+			return true;
 	}
 
-	return true;
+	// FIXME: stop using this, instead test the point against all colliders owned by this cell
+//	for (auto & tile : tileMap.Index(point).TilesOwned()) {
+//		if (tile.IsCollidableHack(point))
+//			return false;
+//	}
+
+	return false;
 }
 
 //***************

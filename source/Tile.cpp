@@ -194,7 +194,7 @@ void eTile::SetType(int newType) {
 // FREEHILL BEGIN AABB (eBounds) collisionModel import test (2/2)
 	if (impl->collider != nullptr) {
 		collisionModel = std::make_shared<eCollisionModel>();
-		collisionModel->SetActive(false);			// TODO: dont update grid areas yet
+		collisionModel->SetActive(true);						// TODO: update grid areas test
 		collisionModel->LocalBounds() = *impl->collider;
 		collisionModel->SetOrigin(orthoOrigin);
 	}
@@ -205,7 +205,7 @@ void eTile::SetType(int newType) {
 // eTile::AssignToGrid
 // assign tile drawing responsibility to eGridCells visually overlapped by the renderImage.image's corners
 // TODO: if the eTile::type changes, then so should the eGridCells responsible for drawing *this
-// DEBUG: ensures no tile suddenly dissappears when scrolling the camera
+// DEBUG(performance): ensures no tile suddenly dissappears when scrolling the camera
 // for a single tileMap layer this results in each eGridCell::tileToDraw::size of:
 // 4 : 6 : 8, for center : edge : corner on average
 // more layers increases sizes (eg: 3 layers is about 4-6 : 11 : 20, depending on map design)

@@ -277,7 +277,7 @@ bool eAI::CheckVectorPath(eVec2 from, decision_t & along) {
 		testPoint.y = from.y + (collisionRadius * along.vector.y);
 
 		// check for collision
-		if (!(game.GetMap().IsValid(testPoint)))
+		if (game.GetMap().HitStaticWorldHack(testPoint))
 			break;
 
 		// forward test point rotated clockwise 90 degrees
@@ -285,7 +285,7 @@ bool eAI::CheckVectorPath(eVec2 from, decision_t & along) {
 		testPoint.y = from.y - (collisionRadius * along.vector.x);
 
 		// check for collision
-		if (!(game.GetMap().IsValid(testPoint)))
+		if (game.GetMap().HitStaticWorldHack(testPoint))
 			break;
 
 		// forward test point rotated counter-clockwise 90 degrees
@@ -293,7 +293,7 @@ bool eAI::CheckVectorPath(eVec2 from, decision_t & along) {
 		testPoint.y = from.y + (collisionRadius * along.vector.x);
 
 		// check for collision
-		if (!(game.GetMap().IsValid(testPoint)))
+		if (game.GetMap().HitStaticWorldHack(testPoint))
 			break;
 
 		// all test points validated
@@ -363,16 +363,13 @@ bool eAI::CheckFogOfWar(const eVec2 & point) const {
 //******************
 // eAI::AddUserWaypoint
 // TODO: use SpatialIndexGrid::Validate(point) to snap a waypoint onto the nearest
-// in-bounds map point (like Age of Empires flags)
+// in-bounds non-collision map point (like Age of Empires flags)
+// TODO: allow other entities to become waypoints (that move)
+// moving waypoints would need to have their info updated in the deque (hence pointers instead of copies)
+// of course that could be a separate category altogether
 //******************
 void eAI::AddUserWaypoint(const eVec2 & waypoint) {
-
-	// TODO: disallow waypoints on collision tiles and off-map
-	// allow other entities to become waypoints (that move)
-	// moving waypoints would need to have their info updated in the deque (hence pointers instead of copies)
-	// of course that could be a separate category altogether
-
-	if (game.GetMap().IsValid(waypoint)) {
+	if (!game.GetMap().HitStaticWorldHack(waypoint)) {
 		goals.PushFront(waypoint);
 		UpdateWaypoint();
 	}
