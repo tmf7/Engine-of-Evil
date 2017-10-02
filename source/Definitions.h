@@ -27,7 +27,9 @@
 #include <array>
 #include "Math.h"
 
-#define TO_STRING(x) #x
+#define MAX(a,b) (a > b ? a : b)
+#define MIN(a,b) (a < b ? a : b)
+#define TO_STRING(x) (#x)
 #define BIT(a) (1<<a)
 
 #define MAX_ESTRING_LENGTH 128

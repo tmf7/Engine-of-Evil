@@ -36,7 +36,7 @@ bool eEntity::Spawn(/*const char * entityFilename, eVec2 & worldPosition*/) {
 	// that dictates transitions between eAnimations and intra-animation-sequences (similar to Button.h)
 	sprite.SetImage(spriteImage);		// TODO: change this to a sprite.Init(...) maybe and return false if it fails
 
-	collisionModel.SetActive(false);					// FIXME/BUG(!!): eAI point collision tests collide with this if true
+	collisionModel.SetActive(true);					// FIXME/BUG(!!): eAI point collision tests collide with this if true
 	collisionModel.LocalBounds().ExpandSelf(8);			// FIXME: 16 x 16 square with (0, 0) at its center, 
 	collisionModel.SetOrigin(eVec2(192.0f, 192.0f));
 	collisionModel.Velocity() = vec2_zero;

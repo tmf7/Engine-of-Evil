@@ -14,21 +14,23 @@ class eGridCell;
 class eCollisionModel {
 public:
 
-								eCollisionModel();
-								eCollisionModel(const eVec2 & origin, const eVec2 & velocity, const eBounds & bounds);
-								~eCollisionModel();
+										eCollisionModel();
+										eCollisionModel(const eVec2 & origin, const eVec2 & velocity, const eBounds & bounds);
+										~eCollisionModel();
 
-	void						SetOrigin(const eVec2 & point);	
-	const eVec2 &				Origin() const;
-	void						UpdateOrigin();
-	eVec2						GetOriginDelta() const;
-	eBounds &					LocalBounds();
-	eBounds &					AbsBounds();
-	const eBounds &				LocalBounds() const;
-	const eBounds &				AbsBounds() const;
-	eVec2 &						Velocity();
-	bool						IsActive() const;
-	void						SetActive(bool active);
+	void								SetOrigin(const eVec2 & point);	
+	const eVec2 &						Origin() const;
+	void								UpdateOrigin();
+	eVec2								GetOriginDelta() const;
+	eBounds &							LocalBounds();
+	eBounds &							AbsBounds();
+	const eBounds &						LocalBounds() const;
+	const eBounds &						AbsBounds() const;
+	eVec2 &								Velocity();
+	const eVec2 &						Velocity() const;
+	bool								IsActive() const;
+	void								SetActive(bool active);
+	const std::vector<eGridCell *> &	Areas() const;
 
 private:
 
@@ -161,6 +163,13 @@ inline eVec2 & eCollisionModel::Velocity() {
 }
 
 //*************
+// eCollisionModel::Velocity
+//*************
+inline const eVec2 & eCollisionModel::Velocity() const {
+	return velocity;
+}
+
+//*************
 // eCollisionModel::IsActive
 //*************
 inline bool eCollisionModel::IsActive() const {
@@ -172,6 +181,13 @@ inline bool eCollisionModel::IsActive() const {
 //*************
 inline void eCollisionModel::SetActive(bool active) {
 	this->active = active;
+}
+
+//*************
+// eCollisionModel::SetActive
+//*************
+inline const std::vector<eGridCell *> & eCollisionModel::Areas() const {
+	return areas;
 }
 
 #endif /* EVIL_COLLISION_MODEL_H */

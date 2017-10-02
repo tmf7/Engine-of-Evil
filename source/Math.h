@@ -18,8 +18,6 @@ public:
 	static void			IsometricToCartesian(int & x, int & y);
 	static void			CartesianToIsometric(float & x, float & y);
 	static void			CartesianToIsometric(int & x, int & y);
-	static float		Maximize(float a, float b);
-	static float		Minimize(float a, float b);
 	static float		GetAngle(float x, float y);
 };
 
@@ -83,20 +81,6 @@ inline void eMath::CartesianToIsometric(int & x, int & y) {
 	int cartY = y;
 	x = cartX - cartY;
 	y = NearestInt((float)(cartX + cartY) * 0.5f);
-}
-
-//***************
-// eMath::Maximize
-//***************
-inline float eMath::Maximize(float a, float b) {
-	return a > b ? a : b;
-}
-
-//***************
-// eMath::Minimize
-//***************
-inline float eMath::Minimize(float a, float b) {
-	return a < b ? a : b;
 }
 
 //*****************

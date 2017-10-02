@@ -89,7 +89,7 @@ bool eCollision::OBBOBBTest(const eBox & a, const eBox & b) {
 // collisions vector is sorted from nearest to farthest
 // DEBUG: collisions.size() will most often be near zero
 //***************
-bool eCollision::ForwardCollisionTest(eCollisionModel & self, const std::vector<eGridCell *> & areaCells, std::vector<Collision_t> & collisions) {
+bool eCollision::ForwardCollisionTest(eCollisionModel & self, std::vector<Collision_t> & collisions) {
 	static std::unordered_map<eCollisionModel *, eCollisionModel *> alreadyTested;
 
 	eBounds broadPhaseBounds = GetBroadPhaseBounds(self);
@@ -97,28 +97,34 @@ bool eCollision::ForwardCollisionTest(eCollisionModel & self, const std::vector<
 									self.Velocity(), 
 									self.LocalBounds() );
 
-	// only test against contents if self may collide with the cell
-	for (auto && cell : areaCells) {
-		if (AABBAABBTest(broadPhaseBounds, cell->AbsBounds())) {
-			for (auto && kvPair : cell->Contents()) {
-				auto & collider = kvPair.second;
+	static std::vector<eGridCell *> broadAreaCells;					// DEBUG(performance): static to reduce dynamic allocations
+	GetAreaCells(broadPhaseBounds, broadAreaCells);
 
-				// don't test the same collider twice
-				if (alreadyTested.find(collider) != alreadyTested.end())
-					continue;
+	alreadyTested[&self] = &self;	// ignore self collision
+	for (auto && cell : broadAreaCells) {
+		if (!AABBAABBTest(broadPhaseBounds, cell->AbsBounds()))		// *will* it collide with the cell
+			continue;
 
-				Collision_t collision;
-				if (AABBAABBTest(broadPhaseBounds, collider->AbsBounds()) &&
-					(collision = MovingAABBAABBTest(nextSelfState, *collider)).fraction <= 1.0f) {
+		for (auto && kvPair : cell->Contents()) {
+			auto & collider = kvPair.second;
 
-					// FIXME/BUG(performance): populating a full list of collisions is costly
-					// SOLUTION(~): set collision, break and return at the first collision, disregard fraction and normal
-					collisions.push_back(collision);
-				}
+			// don't test the same collider twice
+			if (alreadyTested.find(collider) != alreadyTested.end())
+				continue;
+			alreadyTested[collider] = collider;
+
+			Collision_t collision;
+			if (AABBAABBTest(broadPhaseBounds, collider->AbsBounds()) &&
+				(collision = MovingAABBAABBTest(self, *collider)).owner != nullptr) {		// FIXME/BUG: nextSelfState allows escape, but prevents full touch,
+																							// while self is perfect alignment, but causes perma-stuck in collision
+				// FIXME/BUG(performance): populating a full list of collisions is costly
+				// SOLUTION(~): set collision, break and return at the first collision, disregard fraction and normal
+				collisions.push_back(collision);
 			}
 		}
 	}
 	alreadyTested.clear();
+	broadAreaCells.clear();
 
 	QuickSort(	collisions.data(), 
 				collisions.size(), 
@@ -134,7 +140,7 @@ bool eCollision::ForwardCollisionTest(eCollisionModel & self, const std::vector<
 // eCollision::GetAreaCells
 // fills the areaCells vector with pointers to the eGridCells 
 // within the given area bounds (includes touching)
-// DEBUG: make the areaCells function-static to avoid excessive dynamic allocation
+// FIXME(performance): make sure areaCells passed in avoids excessive dynamic allocation by using std::vector::reserve
 //***************
 void eCollision::GetAreaCells(const eBounds & area, std::vector<eGridCell *> & areaCells) {
 	auto & tileMap = game.GetMap().TileMap();
@@ -181,7 +187,7 @@ eBounds eCollision::GetBroadPhaseBounds(eCollisionModel & self) {
 //***************
 // eCollision::AABBContainsPoint
 // returns true if the given point is within the bounds
-// (includes touching)
+// DEBUG: includes touching
 //***************
 bool eCollision::AABBContainsPoint(const eBounds & bounds, const eVec2 & point) {
 	if (point.x > bounds[1].x || point.x < bounds[0].x ||
@@ -213,10 +219,14 @@ bool eCollision::AABBAABBTest(const eBounds & self, const eBounds & other) {
 //***************
 Collision_t eCollision::MovingAABBAABBTest(eCollisionModel & self, eCollisionModel & other) {
 	static const float NO_COLLISION = 2.0f;
+	Collision_t hitTest = { vec2_zero, NO_COLLISION, nullptr };
 
 	// started in collision
 	if (AABBAABBTest(self.AbsBounds(), other.AbsBounds())) {
-		return { GetCollisionNormal(self, other), 0.0f, &other };
+		hitTest.fraction = 0.0f;
+		hitTest.owner = &other;
+		GetCollisionNormal(self, other, hitTest);
+		return hitTest;
 	}
 
 	eVec2 selfMin = self.AbsBounds()[0];
@@ -230,21 +240,24 @@ Collision_t eCollision::MovingAABBAABBTest(eCollisionModel & self, eCollisionMod
 	// determine times of first and last contact, if any
 	for (int i = 0; i < 2; i++) {
 		if (velocity[i] < 0.0f) {
-			if (selfMax[i] < otherMin[i]) return { vec2_zero, NO_COLLISION, nullptr }; // non-intersecting and moving apart
-			if (otherMax[i] < selfMin[i]) tFirst = eMath::Maximize((otherMax[i] - selfMin[i]) / velocity[i], tFirst);
-			if (selfMax[i] > otherMin[i]) tLast = eMath::Minimize((otherMin[i] - selfMax[i]) / velocity[i], tLast);
+			if (selfMax[i] < otherMin[i]) return hitTest; // non-intersecting and moving apart
+			if (otherMax[i] < selfMin[i]) tFirst = MAX((otherMax[i] - selfMin[i]) / velocity[i], tFirst);
+			if (selfMax[i] > otherMin[i]) tLast = MIN((otherMin[i] - selfMax[i]) / velocity[i], tLast);
 		}
 		if (velocity[i] > 0.0f) {
-			if (selfMin[i] > otherMax[i]) return { vec2_zero, NO_COLLISION, nullptr }; // non-intersecting and moving apart
-			if (selfMax[i] < otherMin[i]) tFirst = eMath::Maximize((otherMin[i] - selfMax[i]) / velocity[i], tFirst);
-			if (otherMax[i] > selfMin[i]) tLast = eMath::Minimize((otherMax[i] - selfMin[i]) / velocity[i], tLast);
+			if (selfMin[i] > otherMax[i]) return hitTest; // non-intersecting and moving apart
+			if (selfMax[i] < otherMin[i]) tFirst = MAX((otherMin[i] - selfMax[i]) / velocity[i], tFirst);
+			if (otherMax[i] > selfMin[i]) tLast = MIN((otherMax[i] - selfMin[i]) / velocity[i], tLast);
 		}
 		
 		// generally, too far away to make contact
 		if (tFirst > tLast)
-			return { vec2_zero, NO_COLLISION, nullptr };
+			return hitTest;
 	}
-	return { GetCollisionNormal(self, other), tFirst, &other };
+	hitTest.fraction = tFirst;
+	hitTest.owner = &other;
+	GetCollisionNormal(self, other, hitTest);
+	return hitTest;		// intersecting
 }
 
 //***************
@@ -252,28 +265,28 @@ Collision_t eCollision::MovingAABBAABBTest(eCollisionModel & self, eCollisionMod
 // returns a vector based on self.velocity
 // and relative position to other
 // FIXME: calculate velocity based on oldOrigin in the event of zero physics velocity, yet instant origin movement
+// FIXME/BUG(?): corner vertex collision causes unstable diagonal normals
 //***************
-eVec2 eCollision::GetCollisionNormal(eCollisionModel & self, const eCollisionModel & other) {
+void eCollision::GetCollisionNormal(const eCollisionModel & self, const eCollisionModel & other, Collision_t & collision) {
 	eVec2 selfMin = self.AbsBounds()[0];
 	eVec2 selfMax = self.AbsBounds()[1];
 	eVec2 otherMin = other.AbsBounds()[0];
 	eVec2 otherMax = other.AbsBounds()[1];
-	eVec2 velocity = self.Velocity();
-
+	eVec2 velocity = self.Velocity(); 
+	
 	eVec2 normal = vec2_zero;
 	for (int i = 0; i < 2; i++) {
-		if (velocity[i] <= 0.0f) {
+		if (velocity[i] < 0.0f) {
 			if (otherMax[i] < selfMin[i] || other.Origin()[i] < self.Origin()[i])
 				normal[i] = 1.0f;
-			else
-				normal[i] = -1.0f;				
-		}
-		if (velocity[i] > 0.0f) {
+//			else
+//				normal[i] = -1.0f;				// FIXME(?): stay 0.0f for now
+		} else { // velocity[i] >= 0.0f
 			if (selfMax[i] < otherMin[i] || self.Origin()[i] < other.Origin()[i]) 
 				normal[i] = -1.0f;
-			else
-				normal[i] = 1.0f;
+//			else
+//				normal[i] = 1.0f;				// FIXME(?): stay 0.0f for now
 		}
 	}
-	return normal;
+	collision.normal = normal;
 }

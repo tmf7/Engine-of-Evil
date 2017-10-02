@@ -155,25 +155,17 @@ eVec2 eMap::GetMouseWorldPosition() const {
 // eMap::HitStaticWorldHack
 // returns true if point lies beyond the map area,
 // or within one of the world's collider's
+// FIXME: this fn is only used by eAI for probing movement (and adding waypoints), move the logic to eCollisionModel/eCollision
 //**************
 bool eMap::HitStaticWorldHack(const eVec2 & point) {
-	
 	if	(!tileMap.IsValid(point))
 		return true;
 
-	// FIXME: move this elsewhere because it now includes static and dynamic colliders added to the grid/tileMap
 	auto & cell = tileMap.Index(point);
 	for (auto & pair : cell.Contents()) {
-		if (eCollision::AABBContainsPoint(pair.second->AbsBounds(), point));
+		if (eCollision::AABBContainsPoint(pair.second->AbsBounds(), point))
 			return true;
 	}
-
-	// FIXME: stop using this, instead test the point against all colliders owned by this cell
-//	for (auto & tile : tileMap.Index(point).TilesOwned()) {
-//		if (tile.IsCollidableHack(point))
-//			return false;
-//	}
-
 	return false;
 }
 

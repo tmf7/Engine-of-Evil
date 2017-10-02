@@ -21,13 +21,13 @@ class eCollision {
 public:
 
 	static bool				OBBOBBTest(const eBox & a, const eBox & b);
-	static eVec2			GetCollisionNormal(eCollisionModel & self, const eCollisionModel & other);
+	static void				GetCollisionNormal(const eCollisionModel & self, const eCollisionModel & other, Collision_t & collision);
 	static void				GetAreaCells(const eBounds & area, std::vector<eGridCell *> & areaCells);
 	static eBounds			GetBroadPhaseBounds(eCollisionModel & self);
 	static bool				AABBContainsPoint(const eBounds & bounds, const eVec2 & point);
 	static bool				AABBAABBTest(const eBounds & a, const eBounds & b);
 	static Collision_t		MovingAABBAABBTest(eCollisionModel & self, eCollisionModel & other);
-	static bool				ForwardCollisionTest(eCollisionModel & self, const std::vector<eGridCell *> & areaCells, std::vector<Collision_t> & collisions);
+	static bool				ForwardCollisionTest(eCollisionModel & self, std::vector<Collision_t> & collisions);
 };
 
 #endif /* EVIL_COLLISION_H */

@@ -52,8 +52,22 @@ void eAI::Think() {
 	if (SDL_fabs(xMove) > 0.0f || SDL_fabs(yMove) > 0.0f) {
 		eMath::IsometricToCartesian(xMove, yMove);
 		collisionModel.Velocity().Set(xMove, yMove);
-		if (collisionModel.Velocity() != vec2_zero)
+		if (collisionModel.Velocity() != vec2_zero) {
+			static std::vector<Collision_t> collisions;		// FIXME(performance): static to reduce dynamic allocation, but this fn is also just misplaced/slow
+			if (eCollision::ForwardCollisionTest(collisionModel, collisions)) {
+				eVec2 normalVel = collisionModel.Velocity()  * collisions[0].fraction;		// FIXME: this does not account for game.GetFixedTime() interval
+				eVec2 tangentVel = collisionModel.Velocity() * (1.0f - collisions[0].fraction);
+				eVec2 collisionTangent = eVec2(-collisions[0].normal.y, collisions[0].normal.x);
+				eMath::CartesianToIsometric(collisionTangent.x, collisionTangent.y);
+				collisionTangent.Normalize();
+				float dirBias = collisionTangent * collisionModel.Velocity();
+				float push = collisionTangent * tangentVel;
+				tangentVel = (dirBias > 0 ?  collisionTangent * -push : collisionTangent * push);
+				collisionModel.Velocity() = normalVel + tangentVel;
+			}
 			collisionModel.UpdateOrigin();
+			collisions.clear();
+		}
 	}
 // END FREEHILL DEBUG AI/player control
 
@@ -261,7 +275,7 @@ void eAI::CompassFollow() {
 // eAI::CheckVectorPath
 // determines the state of the entity's position for the next few frames
 // return true if a future position using along is near the waypoint
-// TODO: make this a proper area/volume trace
+// TODO: make this a proper area probe (ie: speedbox or moving bounds collision test)
 //******************
 bool eAI::CheckVectorPath(eVec2 from, decision_t & along) {
 	eVec2 testPoint;
@@ -270,6 +284,7 @@ bool eAI::CheckVectorPath(eVec2 from, decision_t & along) {
 	along.validSteps = 0.0f;
 	along.stepRatio = 0.0f;
 	newSteps = 0.0f;
+	auto & tileMap = game.GetMap();
 	while (along.validSteps < maxSteps) {
 
 		// forward test point (starts on circle circumscribing the sprite bounding box)
