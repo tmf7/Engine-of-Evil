@@ -55,15 +55,26 @@ void eAI::Think() {
 		if (collisionModel.Velocity() != vec2_zero) {
 			static std::vector<Collision_t> collisions;		// FIXME(performance): static to reduce dynamic allocation, but this fn is also just misplaced/slow
 			if (eCollision::ForwardCollisionTest(collisionModel, collisions)) {
-				eVec2 normalVel = collisionModel.Velocity()  * collisions[0].fraction;		// FIXME: this does not account for game.GetFixedTime() interval
-				eVec2 tangentVel = collisionModel.Velocity() * (1.0f - collisions[0].fraction);
-				eVec2 collisionTangent = eVec2(-collisions[0].normal.y, collisions[0].normal.x);
-				eMath::CartesianToIsometric(collisionTangent.x, collisionTangent.y);
-				collisionTangent.Normalize();
-				float dirBias = collisionTangent * collisionModel.Velocity();
-				float push = collisionTangent * tangentVel;
-				tangentVel = (dirBias > 0 ?  collisionTangent * -push : collisionTangent * push);
-				collisionModel.Velocity() = normalVel + tangentVel;
+				eVec2 selfCenter = collisionModel.AbsBounds().Center();
+				for (auto & collision : collisions) {
+					eVec2 centerToCenter =  selfCenter - collision.owner->AbsBounds().Center();
+					float releaseDotTest = centerToCenter * collisionModel.Velocity();
+					if (releaseDotTest >= 0)
+						continue;
+					else {
+						collisionModel.Velocity() *= collision.fraction;
+						break;
+					}
+				}
+//				eVec2 normalVel = collisionModel.Velocity()  * collisions[0].fraction;		// FIXME: this does not account for game.GetFixedTime() interval
+//				eVec2 tangentVel = collisionModel.Velocity() * (1.0f - collisions[0].fraction);
+//				eVec2 collisionTangent = eVec2(-collisions[0].normal.y, collisions[0].normal.x);
+//				eMath::CartesianToIsometric(collisionTangent.x, collisionTangent.y);
+//				collisionTangent.Normalize();
+//				float dirBias = collisionTangent * collisionModel.Velocity();
+//				float push = collisionTangent * tangentVel;
+//				tangentVel = (dirBias > 0 ?  collisionTangent * -push : collisionTangent * push);
+//				collisionModel.Velocity() = normalVel + tangentVel;
 			}
 			collisionModel.UpdateOrigin();
 			collisions.clear();
