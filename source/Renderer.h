@@ -27,6 +27,13 @@ typedef struct renderImage_s {
 
 //	eEntity *					owner;			// entity using this renderimage, for secondary renderPool sort if priority causes flicker
 
+	eVec2						depth;			// FIXME: 3d quicksort test
+	eVec2						orthoOrigin;	// FIXME: 3d quicksort test
+	std::vector<renderImage_s *> allBehind;		// FIXME: 3d quicksort test
+	bool						visited;		// FIXME: 3d quicksort test
+	eVec2						renderBlockXYSize; // FIXME: 3d quicksort test
+	eVec2						localBoundsOffsetHack;	// FIXME: 3d quicksort test
+
 	renderImage_s()
 		: image(nullptr),
 		  srcRect(nullptr),

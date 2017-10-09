@@ -91,15 +91,10 @@ bool eCollision::OBBOBBTest(const eBox & a, const eBox & b) {
 //***************
 bool eCollision::ForwardCollisionTest(eCollisionModel & self, std::vector<Collision_t> & collisions) {
 	static std::unordered_map<eCollisionModel *, eCollisionModel *> alreadyTested;
-
-	eBounds broadPhaseBounds = GetBroadPhaseBounds(self);
-	eCollisionModel nextSelfState(	self.Origin() + self.Velocity(), // FIXME: * game.GetFixedTime()
-									self.Velocity(), 
-									self.LocalBounds() );
-
 	static std::vector<eGridCell *> broadAreaCells;					// DEBUG(performance): static to reduce dynamic allocations
-	GetAreaCells(broadPhaseBounds, broadAreaCells);
+	eBounds broadPhaseBounds = GetBroadPhaseBounds(self);
 
+	GetAreaCells(broadPhaseBounds, broadAreaCells);
 	alreadyTested[&self] = &self;	// ignore self collision
 	for (auto && cell : broadAreaCells) {
 		if (!AABBAABBTest(broadPhaseBounds, cell->AbsBounds()))		// *will* it collide with the cell
@@ -115,8 +110,8 @@ bool eCollision::ForwardCollisionTest(eCollisionModel & self, std::vector<Collis
 
 			Collision_t collision;
 			if (AABBAABBTest(broadPhaseBounds, collider->AbsBounds()) &&
-				(collision = MovingAABBAABBTest(self, *collider)).owner != nullptr) {		// FIXME/BUG: nextSelfState allows escape, but prevents full touch,
-																							// while self is perfect alignment, but causes perma-stuck in collision
+				(collision = MovingAABBAABBTest(self, *collider)).owner != nullptr) {
+
 				// FIXME/BUG(performance): populating a full list of collisions is costly
 				// SOLUTION(~): set collision, break and return at the first collision, disregard fraction and normal
 				collisions.push_back(collision);

@@ -217,15 +217,85 @@ void eRenderer::AddToRenderPool(renderImage_t * renderImage, bool dynamic) {
 		return;
 	renderImage->SetDrawnTime(gameTime);
 	std::vector<renderImage_t *> * targetPool = dynamic ? &dynamicPool : &staticPool;
-	renderImage->priority = (float)(renderImage->layer << 16) + (renderImage->origin.y + renderImage->srcRect->h);	// DEBUG: layer dominates, meta-z tie-breaker
+//	renderImage->priority = /*(float)(renderImage->layer << 16) +*/ (renderImage->origin.y + (float)renderImage->srcRect->h) + renderImage->depth.x;	// DEBUG: layer dominates, meta-z tie-breaker
 	targetPool->push_back(renderImage);
 }
+
+// FREEHILL BEGIN 3d quicksort test
+int globalDepth = 0;
+void TopoVisit(renderImage_t * ri) {
+	if (!ri->visited) {
+		ri->visited = true;
+		while (!ri->allBehind.empty()) {
+			TopoVisit(ri->allBehind.back());
+			ri->allBehind.pop_back();
+		}
+		ri->priority = (float)globalDepth++;
+		ri->allBehind.clear();
+	}
+}
+
+bool isBoxInFront(const eBounds & self, const eVec2 & selfZ, const eBounds & other, const eVec2 & otherZ) {
+	Uint8 separatingAxis = 0;
+	if (self[1][0] <= other[0][0] || self[0][0] >= other[1][0]) separatingAxis |= 1;
+	if (self[1][1] <= other[0][1] || self[0][1] >= other[1][1]) separatingAxis |= 2;
+	if (selfZ.y < otherZ.x || selfZ.x > otherZ.y) separatingAxis |= 4;
+
+	// prioritize z-axis tests (z, xz, yz, xyz)
+	if (separatingAxis & 4)
+		return (selfZ.x > otherZ.y);
+
+	// test remaining axes (x, y, xy)
+	switch (separatingAxis) {
+		case 1: return !(self[1][0] < other[1][0]);	// x
+		case 2: return !(self[1][1] < other[1][1]);	// y
+		case 3: return (!(self[1][0] < other[1][0])); // xy defaults to x instead of x | y
+		default: return false;	// error: intersecting boxes // FIXME: add cases for inter-penetrating renderBoxes
+	}
+}
+// FREEHILL END 3d quicksort test
 
 //***************
 // eRenderer::FlushDynamicPool
 // DEBUG: this unstable quicksort may put renderImages at random draw orders if they have equal priority
 //***************
 void eRenderer::FlushDynamicPool() {
+/*
+*/
+// FREEHILL BEGIN 3d quicksort test
+	static const eVec2 smallMax = eVec2(8.0f, 8.0f);
+	static const eVec2 normalMax = eVec2(32.0f, 32.0f);
+	for (auto & self : dynamicPool) {
+		eBounds selfClip = eBounds(self->origin, self->origin + eVec2(self->srcRect->w, self->srcRect->h));
+		eVec2 selfMins = eVec2( self->orthoOrigin.x, self->orthoOrigin.y );
+		eVec2 selfMaxs = selfMins + self->renderBlockXYSize;
+		eBounds selfBounds = eBounds(selfMins, selfMaxs);
+		selfBounds += self->localBoundsOffsetHack;
+
+		for (auto & other : dynamicPool) {
+			if (other == self)
+				continue;
+
+			eBounds otherClip = eBounds(other->origin, other->origin + eVec2(other->srcRect->w, other->srcRect->h));
+			if (eCollision::AABBAABBTest(selfClip, otherClip)) {
+				eVec2 otherMins = eVec2( other->orthoOrigin.x, other->orthoOrigin.y );
+				eVec2 otherMaxs = otherMins + other->renderBlockXYSize;
+				eBounds otherBounds = eBounds(otherMins, otherMaxs);
+				otherBounds += other->localBoundsOffsetHack;
+				
+				if (isBoxInFront(selfBounds, self->depth, otherBounds, other->depth)) {
+					self->allBehind.push_back(other);
+				}
+			}
+		}
+		self->visited = false;
+	}
+
+	int globalDepth = 0;
+	for (auto & a : dynamicPool)
+		TopoVisit(a);
+// FREEHILL END 3d quicksort test
+
 	// sort the dynamicPool for the scalableTarget
 	QuickSort(	dynamicPool.data(),
 				dynamicPool.size(),

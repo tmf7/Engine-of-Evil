@@ -153,6 +153,7 @@ eTile::eTile(eGridCell * owner, const eVec2 & origin, const int type, const int 
 	this->owner = owner;
 	renderImage.SetLayer(layer);
 	renderImage.origin = origin;
+	renderImage.orthoOrigin = origin;		// FIXME: 3d quicksort test
 	eMath::CartesianToIsometric(renderImage.origin.x, renderImage.origin.y);
 	SetType(type);
 }
@@ -184,6 +185,24 @@ void eTile::SetType(int newType) {
 	impl = &tileTypes[newType];															// FIXME: doesn't verify the array index
 	game.GetImageManager().GetImage(tileSet.at(newType).first, renderImage.image);		// which image (tile atlas)
 	renderImage.srcRect = &renderImage.image->GetSubframe(tileSet.at(newType).second);	// which part of that image
+
+// FREEHILL BEGIN 3d quicksort test
+	renderImage.renderBlockXYSize = (renderImage.image->GetSourceFilename() == "graphics/tree_test_tile.png") ? eVec2(8.0f, 8.0f) : eVec2(32.0f, 32.0f);
+	renderImage.localBoundsOffsetHack = (renderImage.image->GetSourceFilename() == "graphics/tree_test_tile.png") ? eVec2(32.0f, 10.0f) : vec2_zero;
+	renderImage.depth = vec2_zero;
+	switch(renderImage.layer) {
+		case 0: break;
+		case 1: 
+			renderImage.depth.x = 1.0f;
+			renderImage.depth.y = 1.0f + renderImage.srcRect->h;
+			break;
+		case 2: 
+			renderImage.depth.x = 130.0f;	// 128 + 1 + 1
+			renderImage.depth.y = 130.0f + renderImage.srcRect->h;
+			break;
+		default: break;
+	}
+// FREEHILL END 3d quicksort test
 
 	// visual alignment with isometric owner cell
 	imageWidth = (float)renderImage.srcRect->w;

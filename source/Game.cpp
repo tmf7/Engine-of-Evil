@@ -32,7 +32,7 @@ eGame::ErrorCode eGame::Init() {
 		return SDL_ERROR;
 
 //	SDL_LogSetAllPriority(SDL_LOG_PRIORITY_VERBOSE);	// SDL_LOG_PRIORITY_CRITICAL // 
-//	SDL_LogSetOutputFunction(FileLogFn_ptr, NULL);		// DEGUG: SDL_LogCritical is called alot for some reason, bottleneck (DrawOutlineText, IMG_Load seem to be the reason)
+//	SDL_LogSetOutputFunction(FileLogFn_ptr, NULL);		// DEBUG: SDL_LogCritical is called alot for some reason, bottleneck (DrawOutlineText, IMG_Load seem to be the reason)
 
 	if (!renderer.Init())
 		return RENDERER_ERROR;

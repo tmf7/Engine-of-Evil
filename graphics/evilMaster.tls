@@ -3,7 +3,7 @@ graphics/tilesetFrames.bsub
 # pre-defined colliders (0: no collider; non-0: value-1 for listed collider)
 eBounds: 32 32 0 0		# 0 (width height offset.x offset.y)
 eBounds: 16 16 0 0		# 1
-eBounds: 16 16 32 10		# 2
+eBounds: 16 16 32 10		# 2 32 32 15 -10
 num_tiles: 156
 graphics/grass_and_water.png
 0 0	# 0
@@ -95,10 +95,10 @@ graphics/medieval_building_tiles.png
 # (end of tileset 2)
 graphics/castle_walls.png
 0 1	# 84
-1 1	# 85
+1 0	# 85
 2 1	# 86
 3 1	# 87
-4 1	# 88
+4 0	# 88
 5 1	# 89
 6 1	# 90
 7 1	# 91
@@ -106,26 +106,26 @@ graphics/castle_walls.png
 9 1	# 93
 10 1	# 94
 11 1	# 95
-12 1	# 96
+12 0	# 96
 13 1	# 97
 14 1	# 98
 15 1	# 99
 16 1	# 100
 17 1	# 101
-18 1	# 102
-19 1	# 103
-20 1	# 104
-21 1	# 105
+18 0	# 102
+19 0	# 103
+20 0	# 104
+21 0	# 105
 22 1	# 106
 23 1	# 107
 24 1	# 108
 25 1	# 109
-26 1	# 110
+26 0	# 110
 27 1	# 111
 28 1	# 112
-29 1	# 113
-30 1	# 114
-31 1	# 115
+29 0	# 113
+30 0	# 114
+31 0	# 115
 32 0	# 116
 33 0	# 117
 34 0	# 118
