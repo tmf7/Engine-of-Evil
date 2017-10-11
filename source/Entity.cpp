@@ -36,12 +36,13 @@ bool eEntity::Spawn(/*const char * entityFilename, eVec2 & worldPosition*/) {
 	// that dictates transitions between eAnimations and intra-animation-sequences (similar to Button.h)
 	sprite.SetImage(spriteImage);		// TODO: change this to a sprite.Init(...) maybe and return false if it fails
 
-	collisionModel.SetActive(true);					// FIXME/BUG(!!): eAI point collision tests collide with this if true
-	collisionModel.LocalBounds().ExpandSelf(16);			// FIXME: 16 x 16 square with (0, 0) at its center, 
+	collisionModel.SetActive(true);
+	collisionModel.LocalBounds().ExpandSelf(8);			// FIXME: 16 x 16 square with (0, 0) at its center,
 	collisionModel.SetOrigin(eVec2(192.0f, 192.0f));
 	collisionModel.Velocity() = vec2_zero;
 
-//	imageOffset = 0.0f;
+	imageColliderOffset = eVec2(-32.0f, -45.0f);//eVec2(-58.0f, -90.0f);	// FIXME: import from an entity definition file
+
 	UpdateRenderImageOrigin();
 	UpdateRenderImageDisplay();
 	return true;
@@ -57,11 +58,10 @@ void eEntity::Draw() {
 	UpdateRenderImageDisplay();
 
 	auto & cameraBounds = game.GetCamera().CollisionModel().AbsBounds();
-	eBounds dstBounds = eBounds(renderImage.origin, renderImage.origin + eVec2((float)renderImage.srcRect->w, (float)renderImage.srcRect->h));
+	renderImage.worldClip = eBounds(renderImage.origin, renderImage.origin + eVec2((float)renderImage.srcRect->w, (float)renderImage.srcRect->h));
 
-	if (eCollision::AABBAABBTest(cameraBounds, dstBounds)) {
-		game.GetRenderer().AddToRenderPool(&renderImage, RENDERTYPE_DYNAMIC);
-	}
+	if (eCollision::AABBAABBTest(cameraBounds, renderImage.worldClip))
+		game.GetRenderer().AddToRenderPool(&renderImage, RENDERTYPE_DYNAMIC, true);
 }
 
 //*************
@@ -70,10 +70,13 @@ void eEntity::Draw() {
 // UpdateRenderImageOrigin ensures only the visuals are isometric
 //*************
 void eEntity::UpdateRenderImageOrigin() {
-	renderImage.origin = collisionModel.AbsBounds()[0];
-	renderImage.orthoOrigin = renderImage.origin;		// FIXME: 3d quicksort test
+	renderImage.origin = collisionModel.AbsBounds()[0];			// FIXME(?): eTile::renderImage::origin is unmoving in iso. world space (regardless of collision)
+																// SOLUTION: treat all renderImage-collisionModel relations the same
+																// everthing can have a Transform...position, orientation, scale
+																// then collisionModels have origins at their center w/offset from the transform
+																// and renderImage_ts have origins at their top-left corner w/ offset from the transform
 	eMath::CartesianToIsometric(renderImage.origin.x, renderImage.origin.y);
-	renderImage.origin += eVec2(-58.0f, -90.0f);//eVec2(-32.0f, -45.0f);// + imageOffset;		// FIXME: displacement from collisionModel origin...ish? (32 - width, 32 - height)~
+	renderImage.origin += imageColliderOffset;
 }
 
 //*************
@@ -86,32 +89,29 @@ void eEntity::UpdateRenderImageDisplay() {
 	renderImage.srcRect = &sprite.GetFrameHack();
 	renderImage.SetLayer(1);		// DEBUG: test starting layer
 
-	auto & input = game.GetInput();
+// FREEHILL BEGIN 3d quicksort test
 	static float baseDepth = 64.0f;
 	float increment = 2.0f;
+
+	auto & input = game.GetInput();
 	if (input.KeyPressed(SDL_SCANCODE_H))
 		baseDepth += increment;
 	else if (input.KeyPressed(SDL_SCANCODE_L))
 		baseDepth -= increment;
 
-// FREEHILL BEGIN 3d quicksort test
-	renderImage.renderBlockXYSize = eVec2(32.0f, 32.0f);
-	renderImage.localBoundsOffsetHack = vec2_zero;
-	renderImage.depth = vec2_zero;
+	eVec2 originHack = collisionModel.AbsBounds()[0];
+	eVec2 collisionOffsetHack = vec2_zero;
+	float baseDepthHack = 0.0f;
 	switch(renderImage.layer) {
 		case 0: break;
-		case 1: 
-			renderImage.depth.x = 1.0f;
-			renderImage.depth.y = 1.0f + renderImage.srcRect->h;
-			break;
-		case 2: 
-			renderImage.depth.x = baseDepth; 
-			renderImage.depth.y = baseDepth + renderImage.srcRect->h;
-			break;
-		default: break;
+		case 1: baseDepthHack = 1.0f; break;
+		case 2: baseDepthHack = baseDepth; break;
 	}
-// FREEHILL END 3d quicksort test
+	renderImage.renderBlock = eBounds3D(eVec3(originHack.x, originHack.y, 0.0f));	// FIXME: re-position and resize (find a way to avoid resizing later)
+	renderImage.renderBlock[1] = renderImage.renderBlock[0] + eVec3(16.0f, 16.0f, (float)renderImage.srcRect->h);	// FIXME: zSize here may vary depending on entity (like grass tiles have 0 zSize)
+	renderImage.renderBlock += eVec3(collisionOffsetHack.x, collisionOffsetHack.y, baseDepthHack);
 
+// FREEHILL END 3d quicksort test
 }
 
 //*************

@@ -4,6 +4,7 @@
 #include "Definitions.h"
 #include "Vector.h"
 #include "Bounds.h"
+#include "Bounds3D.h"
 #include "Sort.h"
 #include "Image.h"
 
@@ -27,12 +28,12 @@ typedef struct renderImage_s {
 
 //	eEntity *					owner;			// entity using this renderimage, for secondary renderPool sort if priority causes flicker
 
-	eVec2						depth;			// FIXME: 3d quicksort test
-	eVec2						orthoOrigin;	// FIXME: 3d quicksort test
-	std::vector<renderImage_s *> allBehind;		// FIXME: 3d quicksort test
-	bool						visited;		// FIXME: 3d quicksort test
-	eVec2						renderBlockXYSize; // FIXME: 3d quicksort test
-	eVec2						localBoundsOffsetHack;	// FIXME: 3d quicksort test
+// FREEHILL BEGIN 3d quicksort test
+	eBounds						worldClip;		// dstRect in world space (ie: not adjusted with camera position yet) used for occlusion tests
+	eBounds3D					renderBlock;	// determines draw order of visible images
+	std::vector<renderImage_s *> allBehind;		// topological sort
+	bool						visited;		// topological sort
+// FREEHILL END 3d quicksort test
 
 	renderImage_s()
 		: image(nullptr),
@@ -75,7 +76,7 @@ public:
 	SDL_Renderer *		GetSDLRenderer() const;
 	SDL_Window *		GetWindow() const;
 
-	void				AddToRenderPool(renderImage_t * renderImage, bool dynamic);
+	void				AddToRenderPool(renderImage_t * renderImage, bool dynamic, bool reprioritize = false);
 	void				FlushDynamicPool();
 	void				FlushStaticPool();
 
@@ -85,16 +86,25 @@ public:
 	void				DrawIsometricRect(const SDL_Color & color, eBounds rect, bool dynamic) const;
 	void				DrawCartesianRect(const SDL_Color & color, eBounds rect, bool fill, bool dynamic) const;
 
+	static void			TopologicalDrawDepthSort(const std::vector<renderImage_t *> & renderImagePool);
+
+private:
+	
+	static void			VisitTopologicalNode(renderImage_t * renderImage);
+
 private:
 
-	static const int					defaultRenderCapacity = 1024;// maximum number of items to draw using each render pool
+	static int							globalDrawDepth;				// for eRenderer::TopologicalDrawDepthSort
+	static const int					defaultRenderCapacity = 1024;	// maximum number of items to draw using each render pool
+	std::vector<renderImage_t *>		staticPoolInserts;				// minimize priority re-calculations	
+	std::vector<renderImage_t *>		dynamicPoolInserts;				// minimize priority re-calculations
 	std::vector<renderImage_t *>		staticPool;					
 	std::vector<renderImage_t *>		dynamicPool;				
 
-	SDL_Window *		window;
-	SDL_Renderer *		internal_renderer;
-	SDL_Texture *		scalableTarget;
-	TTF_Font *			font;
+	SDL_Window *						window;
+	SDL_Renderer *						internal_renderer;
+	SDL_Texture *						scalableTarget;
+	TTF_Font *							font;
 };
 
 // utility colors

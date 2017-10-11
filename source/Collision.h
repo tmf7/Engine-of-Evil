@@ -4,6 +4,7 @@
 #include "Definitions.h"
 
 class eVec2;
+class eBounds3D;
 
 // Collision_t
 typedef struct Collision_s {
@@ -26,6 +27,7 @@ public:
 	static eBounds			GetBroadPhaseBounds(eCollisionModel & self);
 	static bool				AABBContainsPoint(const eBounds & bounds, const eVec2 & point);
 	static bool				AABBAABBTest(const eBounds & a, const eBounds & b);
+	static bool				IsAABB3DInIsometricFront(const eBounds3D & self, const eBounds3D & other);
 	static Collision_t		MovingAABBAABBTest(eCollisionModel & self, eCollisionModel & other);
 	static bool				ForwardCollisionTest(eCollisionModel & self, std::vector<Collision_t> & collisions);
 };

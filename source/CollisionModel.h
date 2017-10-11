@@ -110,7 +110,7 @@ inline void eCollisionModel::SetOrigin(const eVec2 & point) {
 //*************
 // eCollisionModel::Origin
 // world-position of the collision center
-// DEBUG: equivalent to absBouds.Center()
+// DEBUG: NOT equivalent to absBounds.Center() if localBounds isn't centered on (0,0)
 //*************
 inline const eVec2 & eCollisionModel::Origin() const {
 	return origin;

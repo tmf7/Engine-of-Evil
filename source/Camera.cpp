@@ -34,6 +34,8 @@ void eCamera::Think() {
 	// TODO/FIXME (much later): zoom in/out adversly affects drawing coordinates
 	// and number of tiles drawn to the screen (which is currently more-or-less hardcoded)
 	// So right now this is more of an experiment/novelty than a feature
+	float oldZoomLevel = zoomLevel;
+	eVec2 oldOrigin = collisionModel.Origin();
 	if (input->KeyPressed(SDL_SCANCODE_EQUALS))
 		SetZoom(zoomLevel + zoomIncrement);
 	else if (input->KeyPressed(SDL_SCANCODE_MINUS))
@@ -50,6 +52,9 @@ void eCamera::Think() {
 		if (collisionModel.Velocity() != vec2_zero)
 			collisionModel.UpdateOrigin();
 	}
+
+	moved = (zoomLevel != oldZoomLevel || collisionModel.Origin() != oldOrigin);
+
 /*
 	// collision response with map edge
 	// TODO(?): move this to a collision detection/handling class

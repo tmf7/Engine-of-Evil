@@ -20,11 +20,6 @@ private:
 	friend class				eTile;
 
 public:
-
-	static const int			invalidTileType = -1;
-	static const int			maxTileTypes = 256;
-
-public:
 								eTileImpl();
 
 	int							Type() const;
@@ -35,13 +30,15 @@ public:
 	static bool					HasCollider(int type);
 
 private:
+
+	static const int								invalidTileType = -1;
+	static const int								maxTileTypes = 256;
+	static std::vector<std::pair<int, int>>			tileSet;		// first == index within eImageManager::imageList; second == eImage subframe index;
+	static std::array<eTileImpl, maxTileTypes>		tileTypes;
 	
 	int							type = invalidTileType;	// index within the tileSet
 	std::shared_ptr<eBounds>	collider = nullptr;		// FIXME: make this a generic collider shape (aabb, obb, circle, line, polyline)
 };
-
-extern std::vector<std::pair<int, int>>			tileSet;			// first == index within eImageManager::imageList; second == eImage subframe index;
-extern eTileImpl								tileTypes[eTileImpl::maxTileTypes];
 
 //************
 // eTileImpl::NumTileTypes

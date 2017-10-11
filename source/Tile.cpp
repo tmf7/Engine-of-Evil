@@ -1,9 +1,8 @@
 #include "Tile.h"
 #include "Game.h"
 
-// FIXME: these should be class static, not global
-std::vector<std::pair<int, int>>		tileSet;		// first == index within eImageManager::imageList; second == eImage subframe index;
-eTileImpl								tileTypes[eTileImpl::maxTileTypes];
+std::vector<std::pair<int, int>> eTileImpl::tileSet;		// first == index within eImageManager::imageList; second == eImage subframe index;
+std::array<eTileImpl, eTileImpl::maxTileTypes> eTileImpl::tileTypes;
 
 //************
 // eTileImpl::LoadTileset
@@ -153,7 +152,6 @@ eTile::eTile(eGridCell * owner, const eVec2 & origin, const int type, const int 
 	this->owner = owner;
 	renderImage.SetLayer(layer);
 	renderImage.origin = origin;
-	renderImage.orthoOrigin = origin;		// FIXME: 3d quicksort test
 	eMath::CartesianToIsometric(renderImage.origin.x, renderImage.origin.y);
 	SetType(type);
 }
@@ -182,26 +180,33 @@ void eTile::SetType(int newType) {
 
 	eVec2 orthoOrigin = renderImage.origin;
 	eMath::IsometricToCartesian(orthoOrigin.x, orthoOrigin.y);
-	impl = &tileTypes[newType];															// FIXME: doesn't verify the array index
-	game.GetImageManager().GetImage(tileSet.at(newType).first, renderImage.image);		// which image (tile atlas)
-	renderImage.srcRect = &renderImage.image->GetSubframe(tileSet.at(newType).second);	// which part of that image
+	impl = &eTileImpl::tileTypes[newType];															// FIXME(~): doesn't verify the array index
+	game.GetImageManager().GetImage(eTileImpl::tileSet.at(newType).first, renderImage.image);		// which image (tile atlas)
+	renderImage.srcRect = &renderImage.image->GetSubframe(eTileImpl::tileSet.at(newType).second);	// which part of that image
 
 // FREEHILL BEGIN 3d quicksort test
-	renderImage.renderBlockXYSize = (renderImage.image->GetSourceFilename() == "graphics/tree_test_tile.png") ? eVec2(8.0f, 8.0f) : eVec2(32.0f, 32.0f);
-	renderImage.localBoundsOffsetHack = (renderImage.image->GetSourceFilename() == "graphics/tree_test_tile.png") ? eVec2(32.0f, 10.0f) : vec2_zero;
-	renderImage.depth = vec2_zero;
+
+	// TODO: pull XYSize and boundsOffset/depth from .tls (where the collision models are defined)
+	float xySizeHack = (renderImage.image->GetSourceFilename() == "graphics/tree_test_tile.png") ? 8.0f : 32.0f;
+	eVec2 collisionOffsetHack = (renderImage.image->GetSourceFilename() == "graphics/tree_test_tile.png") ? eVec2(32.0f, 10.0f) : vec2_zero;
+	float baseDepthHack = 0.0f;
+	float zSizeHack = 0.0f;
 	switch(renderImage.layer) {
-		case 0: break;
+		case 0: 
+			break;
 		case 1: 
-			renderImage.depth.x = 1.0f;
-			renderImage.depth.y = 1.0f + renderImage.srcRect->h;
+			baseDepthHack = 1.0f; 
+			zSizeHack = (float)renderImage.srcRect->h;
 			break;
 		case 2: 
-			renderImage.depth.x = 130.0f;	// 128 + 1 + 1
-			renderImage.depth.y = 130.0f + renderImage.srcRect->h;
+			baseDepthHack = 130.0f;	// 128 + 1 + 1
+			zSizeHack = (float)renderImage.srcRect->h;
 			break;
-		default: break;
 	}
+	renderImage.renderBlock = eBounds3D(eVec3(orthoOrigin.x, orthoOrigin.y, 0.0f));
+	renderImage.renderBlock[1] = renderImage.renderBlock[0] + eVec3(xySizeHack, xySizeHack, zSizeHack);
+	renderImage.renderBlock += eVec3(collisionOffsetHack.x, collisionOffsetHack.y, baseDepthHack);
+
 // FREEHILL END 3d quicksort test
 
 	// visual alignment with isometric owner cell
@@ -213,7 +218,7 @@ void eTile::SetType(int newType) {
 // FREEHILL BEGIN AABB (eBounds) collisionModel import test (2/2)
 	if (impl->collider != nullptr) {
 		collisionModel = std::make_shared<eCollisionModel>();
-		collisionModel->SetActive(true);						// TODO: update grid areas test
+		collisionModel->SetActive(true);
 		collisionModel->LocalBounds() = *impl->collider;
 		collisionModel->SetOrigin(orthoOrigin);
 	}

@@ -204,6 +204,33 @@ bool eCollision::AABBAABBTest(const eBounds & self, const eBounds & other) {
 }
 
 //***************
+// eCollision::IsAABB3DInIsometricFront
+// returns true if self is closer to the isometric camera
+// DEBUG: includes touching in X and Y, but not Z
+// DEBUG: x increases visually down-right, y increases visually down-left, z increases visually straight up the screen
+// DEBUG: self defaults to behind other if no separating axis exists
+// FIXME: add cases for inter-penetration
+//***************
+bool eCollision::IsAABB3DInIsometricFront(const eBounds3D & self, const eBounds3D & other) {
+	Uint8 separatingAxis = 0;
+	if (self[1][0] <= other[0][0] || self[0][0] >= other[1][0]) separatingAxis |= 1;
+	if (self[1][1] <= other[0][1] || self[0][1] >= other[1][1]) separatingAxis |= 2;
+	if (self[1][2] < other[0][2]|| self[0][2] > other[1][2]) separatingAxis |= 4;
+
+	// prioritize z-axis tests (z, xz, yz, xyz)
+	if (separatingAxis & 4)
+		return (self[0][2] > other[1][2]);
+
+	// test remaining axes (x, y, xy)
+	switch (separatingAxis) {
+		case 1: return !(self[1][0] < other[1][0]);	// x
+		case 2: return !(self[1][1] < other[1][1]);	// y
+		case 3: return (!(self[1][0] < other[1][0])); // xy defaults to x instead of x | y
+		default: return false;	// error: inter-penetrating boxes
+	}
+}
+
+//***************
 // eCollision::MovingAABBAABBTest
 // sets the fraction along self.velocity where
 // collision first occurs with other,

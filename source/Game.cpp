@@ -172,6 +172,7 @@ bool eGame::Run() {
 //	renderer.FlushStaticPool();			// DEBUG: not currently used
 	renderer.Show();
 
+
 	// frame-rate governing delay
 	gameTime = SDL_GetTicks();
 	deltaTime = gameTime - startTime;

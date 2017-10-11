@@ -33,6 +33,7 @@ bool eMap::LoadMap(const char * mapFilename) {
 	if (!read.good()) 
 		return false;
 
+	std::vector<renderImage_t *> sortTiles;
 	char buffer[MAX_ESTRING_LENGTH];
 	int numColumns = 0;
 	int numRows = 0;
@@ -53,6 +54,7 @@ bool eMap::LoadMap(const char * mapFilename) {
 		return false;
 
 	// initialize each tileMap cell absBounds for image and collisionModel cell-occupancy tests
+	sortTiles.reserve(numRows * numColumns * numLayers);
 	tileMap.SetCellSize(cellWidth, cellHeight);
 	for (column = 0; column < numColumns; ++column) {
 		for (row = 0; row < numRows; ++row) {
@@ -94,6 +96,10 @@ bool eMap::LoadMap(const char * mapFilename) {
 			auto & cell = tileMap.Index(row, column);
 			auto & origin = cell.AbsBounds()[0];
 			cell.AddTileOwned(eTile(&cell, origin, tileType, layer));
+			const auto & tileRenderImage = cell.TilesOwned().back().GetRenderImage();
+			tileRenderImage->worldClip = eBounds(tileRenderImage->origin, 
+												 tileRenderImage->origin + eVec2((float)tileRenderImage->srcRect->w, (float)tileRenderImage->srcRect->h));
+			sortTiles.push_back(tileRenderImage);
 		}
 
 		if (read.peek() == '\n') {
@@ -114,6 +120,9 @@ bool eMap::LoadMap(const char * mapFilename) {
 			return false;
 	}
 	read.close();
+
+	// initialize the static map images sort order
+	eRenderer::TopologicalDrawDepthSort(sortTiles);		// FREEHILL 3d quicksort test
 	return true;
 }
 
@@ -183,15 +192,15 @@ void eMap::Think() {
 // eMap::Draw
 //***************
 void eMap::Draw() {
-	auto & cameraCollider = game.GetCamera().CollisionModel();
+	auto & camera = game.GetCamera();
 
-	// only redraw the map if the camera has moved, or its the start of the game
+	// reduce re-draw calls
 	// FIXME: change this logic when animated tiles are coded
-	if (cameraCollider.GetOriginDelta().LengthSquared() > FLT_EPSILON || game.GetGameTime() < 5000) {
+	if (camera.Moved() || game.GetGameTime() < 5000) {
 		visibleCells.clear();
 
 		// use the corner cells of the camera to designate the draw area
-		auto & camBounds = cameraCollider.AbsBounds();
+		auto & camBounds = camera.CollisionModel().AbsBounds();
 		std::array<eVec2, 4> corners;
 		camBounds.ToPoints(corners.data());
 		for (int i = 0; i < 4; i++)

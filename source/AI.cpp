@@ -66,6 +66,7 @@ void eAI::Think() {
 						break;
 					}
 				}
+				// TODO: push-type collision response
 //				eVec2 normalVel = collisionModel.Velocity()  * collisions[0].fraction;		// FIXME: this does not account for game.GetFixedTime() interval
 //				eVec2 tangentVel = collisionModel.Velocity() * (1.0f - collisions[0].fraction);
 //				eVec2 collisionTangent = eVec2(-collisions[0].normal.y, collisions[0].normal.x);
@@ -84,7 +85,6 @@ void eAI::Think() {
 
 	// only move with a waypoint
 	if (currentWaypoint != nullptr) {
-
 		wasStopped = !moving; 
 		Move();
 		UpdateKnownMap();		// FIXME: there is a user-input controlled function in here, it will not be called if UpdateWaypoint returns false

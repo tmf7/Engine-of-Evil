@@ -117,6 +117,21 @@ void HeapSort(type * data, const int numElements, lambdaCompare & compare) noexc
 	}
 }
 
+// DEBUG: compare must be of the lessThan/greaterThan (true/false) variety
+template <class type, class lambdaCompare>
+void SelectionSort(type * data, const int numElements, lambdaCompare & compare) noexcept {
+
+	for (int i = 0; i < numElements; i++) {
+		int left = i;
+		for (int right = i + 1; right < numElements; right++) {
+			if (compare(data[left], data[right])) {
+				left = right;
+			}
+		}
+		std::swap(std::move(data[i]), std::move(data[left]));
+	}
+}
+
 #if 0
 // global mergesort
 // only works on contiguous memory
@@ -206,21 +221,6 @@ void MergeSort(type * data, const int numElements, lambdaCompare & compare) {
 	delete[] upperIndex;
 }
 
-// DEBUG: compare must be of the lessThan/greaterThan (true/false) variety
-template <class type, class lambdaCompare>
-void SelectionSort(type * data, const int numElements, lambdaCompare & compare) noexcept {
-
-	for (int i = 0; i < numElements; i++) {
-		int left = i;
-		for (int right = i + 1; right < numElements; right++) {
-			if (compare(data[left], data[right])) {
-				left = right;
-			}
-		}
-		std::swap(std::move(data[i]), std::move(data[left]));
-	}
-}
-
 // insertion sort will do fewer comparisons 
 // than selection sort, but it may do more 
 // (potentially large) object copies/moves
@@ -241,6 +241,6 @@ void InsertionSort(type * data, const int numElements, lambdaCompare & compare) 
 		data[left + 1] = std::move(temp);
 	}
 }
-#endif /* MergeSort, SelectionSort, and InsertionSort*/
+#endif /* MergeSort and InsertionSort*/
 
 #endif /* EVIL_SORT_H */

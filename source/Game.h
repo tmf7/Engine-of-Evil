@@ -79,7 +79,7 @@ private:
 	const Uint32				defaultFPS = 60;
 	Uint32						fixedFPS;			// constant framerate
 	Uint32						frameTime;			// constant framerate governing time interval (depends on FixedFPS)
-	Uint32						deltaTime;			// actual time a frame takes to execute
+	Uint32						deltaTime;			// actual time a frame takes to execute (to the nearest millisecond)
 	Uint32						gameTime;			// time elapsed since execution began (updated at the end of each frame)
 };
 

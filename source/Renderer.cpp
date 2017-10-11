@@ -10,6 +10,7 @@ const SDL_Color blueColor		= { 0, 0, 255, SDL_ALPHA_OPAQUE };
 const SDL_Color pinkColor		= { 255, 0, 255, SDL_ALPHA_OPAQUE };
 const SDL_Color lightBlueColor	= { 0, 255, 255, SDL_ALPHA_OPAQUE };
 const SDL_Color yellowColor		= { 255, 255, 0, SDL_ALPHA_OPAQUE };
+int eRenderer::globalDrawDepth	= 0;
 
 //***************
 // eRenderer::Init
@@ -135,11 +136,9 @@ void eRenderer::DrawOutlineText(const char * text, eVec2 & point, const SDL_Colo
 void eRenderer::DrawIsometricRect(const SDL_Color & color, eBounds rect, bool dynamic) const {
 	SDL_SetRenderDrawColor(internal_renderer, color.r, color.g, color.b, color.a);
 
+
 	std::array<eVec2, 5> fPoints;
-	fPoints[0] = rect[0];
-	fPoints[1] = eVec2(rect[1].x, rect[0].y);
-	fPoints[2] = rect[1];
-	fPoints[3] = eVec2(rect[0].x, rect[1].y);
+	rect.ToPoints(fPoints.data());
 	fPoints[4] = fPoints[0];
 
 	// convert to isometric rhombus
@@ -197,6 +196,7 @@ void eRenderer::DrawCartesianRect(const SDL_Color & color, eBounds rect, bool fi
 
 //***************
 // eRenderer::DrawImage
+// DEBUG: adjusts image origin by camera position ("transform")
 //***************
 void eRenderer::DrawImage(renderImage_t * renderImage) const {
 	auto & cameraAdjustment = game.GetCamera().CollisionModel().AbsBounds()[0];
@@ -211,91 +211,68 @@ void eRenderer::DrawImage(renderImage_t * renderImage) const {
 // dynamic == false is used for overlays and/or HUD guis
 // dynamic == true is used for scaling and translating groups of images together based on camera properties
 //***************
-void eRenderer::AddToRenderPool(renderImage_t * renderImage, bool dynamic) {
+void eRenderer::AddToRenderPool(renderImage_t * renderImage, bool dynamic, bool reprioritize) {
 	const auto & gameTime = game.GetGameTime();
 	if (renderImage->lastDrawTime == gameTime)
 		return;
 	renderImage->SetDrawnTime(gameTime);
-	std::vector<renderImage_t *> * targetPool = dynamic ? &dynamicPool : &staticPool;
-//	renderImage->priority = /*(float)(renderImage->layer << 16) +*/ (renderImage->origin.y + (float)renderImage->srcRect->h) + renderImage->depth.x;	// DEBUG: layer dominates, meta-z tie-breaker
+	std::vector<renderImage_t *> * targetPool = nullptr;
+	if (reprioritize)
+		targetPool = dynamic ? &dynamicPoolInserts : &staticPoolInserts;
+	else
+		targetPool = dynamic ? &dynamicPool : &staticPool;
 	targetPool->push_back(renderImage);
 }
 
-// FREEHILL BEGIN 3d quicksort test
-int globalDepth = 0;
-void TopoVisit(renderImage_t * ri) {
-	if (!ri->visited) {
-		ri->visited = true;
-		while (!ri->allBehind.empty()) {
-			TopoVisit(ri->allBehind.back());
-			ri->allBehind.pop_back();
+//***************
+// eRenderer::TopologicalDrawDepthSort
+// assigns draw order priority to the given renderImage_t(s)
+// based on their positions relative to the camera
+// DEBUG: this is best used on either an entire eRenderer::staticPool/eRenderer::dynamicPool for a frame
+// or ONCE for all static geometry in game at startup, followed by adjusting the renderImage_t::priority of dynamic geometry separately
+// (starting, for example, with calling this with those items to establish a "localDrawDepth" order amongst them)
+//***************
+void eRenderer::TopologicalDrawDepthSort(const std::vector<renderImage_t *> & renderImagePool) {
+	for (auto & self : renderImagePool) {
+		auto & selfClip = self->worldClip;
+
+		for (auto & other : renderImagePool) {
+			auto & otherClip = other->worldClip;
+
+			if (other != self && 
+				eCollision::AABBAABBTest(selfClip, otherClip) && 
+				eCollision::IsAABB3DInIsometricFront(self->renderBlock, other->renderBlock))
+				self->allBehind.push_back(other);
 		}
-		ri->priority = (float)globalDepth++;
-		ri->allBehind.clear();
+		self->visited = false;
 	}
+
+	globalDrawDepth = 0;
+	for (auto & renderImage : renderImagePool)
+		VisitTopologicalNode(renderImage);
+
 }
 
-bool isBoxInFront(const eBounds & self, const eVec2 & selfZ, const eBounds & other, const eVec2 & otherZ) {
-	Uint8 separatingAxis = 0;
-	if (self[1][0] <= other[0][0] || self[0][0] >= other[1][0]) separatingAxis |= 1;
-	if (self[1][1] <= other[0][1] || self[0][1] >= other[1][1]) separatingAxis |= 2;
-	if (selfZ.y < otherZ.x || selfZ.x > otherZ.y) separatingAxis |= 4;
-
-	// prioritize z-axis tests (z, xz, yz, xyz)
-	if (separatingAxis & 4)
-		return (selfZ.x > otherZ.y);
-
-	// test remaining axes (x, y, xy)
-	switch (separatingAxis) {
-		case 1: return !(self[1][0] < other[1][0]);	// x
-		case 2: return !(self[1][1] < other[1][1]);	// y
-		case 3: return (!(self[1][0] < other[1][0])); // xy defaults to x instead of x | y
-		default: return false;	// error: intersecting boxes // FIXME: add cases for inter-penetrating renderBoxes
+//***************
+// eRenderer::VisitTopologicalNode
+//***************
+void eRenderer::VisitTopologicalNode(renderImage_t * renderImage) {
+	if (!renderImage->visited) {
+		renderImage->visited = true;
+		while (!renderImage->allBehind.empty()) {
+			VisitTopologicalNode(renderImage->allBehind.back());
+			renderImage->allBehind.pop_back();
+		}
+		renderImage->priority = (float)globalDrawDepth++;
+		renderImage->allBehind.clear();
 	}
 }
-// FREEHILL END 3d quicksort test
 
 //***************
 // eRenderer::FlushDynamicPool
 // DEBUG: this unstable quicksort may put renderImages at random draw orders if they have equal priority
 //***************
 void eRenderer::FlushDynamicPool() {
-/*
-*/
-// FREEHILL BEGIN 3d quicksort test
-	static const eVec2 smallMax = eVec2(8.0f, 8.0f);
-	static const eVec2 normalMax = eVec2(32.0f, 32.0f);
-	for (auto & self : dynamicPool) {
-		eBounds selfClip = eBounds(self->origin, self->origin + eVec2(self->srcRect->w, self->srcRect->h));
-		eVec2 selfMins = eVec2( self->orthoOrigin.x, self->orthoOrigin.y );
-		eVec2 selfMaxs = selfMins + self->renderBlockXYSize;
-		eBounds selfBounds = eBounds(selfMins, selfMaxs);
-		selfBounds += self->localBoundsOffsetHack;
-
-		for (auto & other : dynamicPool) {
-			if (other == self)
-				continue;
-
-			eBounds otherClip = eBounds(other->origin, other->origin + eVec2(other->srcRect->w, other->srcRect->h));
-			if (eCollision::AABBAABBTest(selfClip, otherClip)) {
-				eVec2 otherMins = eVec2( other->orthoOrigin.x, other->orthoOrigin.y );
-				eVec2 otherMaxs = otherMins + other->renderBlockXYSize;
-				eBounds otherBounds = eBounds(otherMins, otherMaxs);
-				otherBounds += other->localBoundsOffsetHack;
-				
-				if (isBoxInFront(selfBounds, self->depth, otherBounds, other->depth)) {
-					self->allBehind.push_back(other);
-				}
-			}
-		}
-		self->visited = false;
-	}
-
-	int globalDepth = 0;
-	for (auto & a : dynamicPool)
-		TopoVisit(a);
-// FREEHILL END 3d quicksort test
-
 	// sort the dynamicPool for the scalableTarget
 	QuickSort(	dynamicPool.data(),
 				dynamicPool.size(),
@@ -304,6 +281,38 @@ void eRenderer::FlushDynamicPool() {
 					else if (a->priority > b->priority) return 1;
 					return 0;
 			});
+
+// FREEHILL BEGIN 3d quicksort test
+	TopologicalDrawDepthSort(dynamicPoolInserts);	// assign a "localDrawDepth" priority amongst the dynamicPoolInserts
+													// to avoid the need to loop over the same dynamicPool items with each new imageToInsert (maybe)
+	float newPriorityMin = 0.0f;
+	for (auto & imageToInsert : dynamicPoolInserts) {
+		float newPriorityMax = 0.0f;
+
+		auto & iter = dynamicPool.begin();
+		for (/*iter*/; iter != dynamicPool.end() ; ++iter) {
+			if (eCollision::AABBAABBTest(imageToInsert->worldClip, (*iter)->worldClip)) {	// FIXME: this check works for ONE eEntity, but may break for more
+																							// double-check the logic, and test the reality of it
+				if (eCollision::IsAABB3DInIsometricFront(imageToInsert->renderBlock, (*iter)->renderBlock)) {
+					newPriorityMin = (*iter)->priority;
+				} else {
+					newPriorityMax = (*iter)->priority;
+					break;
+				}
+			}
+		}
+		float newPriority = (newPriorityMin + newPriorityMax) * 0.5f;
+		imageToInsert->priority = newPriority;		// needed in the event this renderImage goes straight to dynamicPool next frame
+		dynamicPool.emplace(iter, imageToInsert);
+		newPriorityMin = newPriority;
+		// FIXME/BUG(~): ensure iter is properly positioned for the next imageToInsert search works
+		// because iter may be pointing to the newly inserted item (or one in front of it) in dynamicPool
+		// or utterly somewhere else if dynamicPool resized (which is unlikely given that it has defaultRenderCapacity[1024] reserved)
+	}
+
+	// FIXME(performance~): also don't clear the rendertarget (and don't call RenderPresent) if nothing moved/changed
+	// FIXME/BUG: mirror this logic for FlushStaticPool
+// FREEHILL END 3d quicksort test
 
 	// set the render target, and scale according to camera zoom
 	SDL_SetRenderTarget(internal_renderer, scalableTarget);
@@ -314,6 +323,7 @@ void eRenderer::FlushDynamicPool() {
 		DrawImage(renderImage);
 
 	dynamicPool.clear();
+	dynamicPoolInserts.clear();
 
 	// reset the render target to default, 
 	// reset the renderer scale,
