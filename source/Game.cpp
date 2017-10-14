@@ -133,21 +133,26 @@ bool eGame::Run() {
 	
 	// system updates
 	input.Update();
-	entities[0]->Think();			// TODO: loop over all entities
+	for (auto & entity : entities)
+		entity->Think();
+
 	camera.Think();
 	map.Think();
 
 	// draw the dynamic/scalable gameplay
 	renderer.Clear();
 	map.Draw();
-	entities[0]->Draw();
+	for (auto & entity : entities)
+		entity->Draw();
 	renderer.FlushDynamicPool();
 
 	// TODO: write and call these DYNAMIC geometry debug draw calls
 	// draw all debug information as an overlay
 	// TODO(?): use a visitor or observer pattern to execute all DebugDraws with one call
-		entities[0]->DebugDraw();		// loop over all entities for their collision bounds, and grid occupancy
-										// ALSO: only draw goal/trail_waypoints and known_map for a SINGLE currently SELECTED entity
+	// loop over all entities for their collision bounds, and grid occupancy
+	// ALSO: only draw goal/trail_waypoints and known_map for a SINGLE currently SELECTED entity
+	for (auto & entity : entities)
+		entity->DebugDraw();		
 
 // BEGIN FREEHILL cursor tile highlight test
 		// FIXME: put this somewhere else (like eMap::Draw)

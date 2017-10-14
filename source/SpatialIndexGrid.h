@@ -14,11 +14,11 @@ class eSpatialIndexGrid {
 public:
 
 							eSpatialIndexGrid();
-							eSpatialIndexGrid(const eSpatialIndexGrid & other);
-							eSpatialIndexGrid(eSpatialIndexGrid && other);
-							~eSpatialIndexGrid() = default;
+//							eSpatialIndexGrid(const eSpatialIndexGrid & other);
+//							eSpatialIndexGrid(eSpatialIndexGrid && other);
+//							~eSpatialIndexGrid() = default;
 
-	eSpatialIndexGrid &		operator=(eSpatialIndexGrid other);
+//	eSpatialIndexGrid &		operator=(eSpatialIndexGrid other);
 
 	bool					IsValid(const int row, const int column) const;
 	bool					IsValid(const eVec2 & point) const;
@@ -75,7 +75,7 @@ inline eSpatialIndexGrid<type, rows, columns>::eSpatialIndexGrid()
 	  invCellWidth(1.0f),
 	  invCellHeight(1.0f) {
 }
-
+/*
 //******************
 // eSpatialIndexGrid::eSpatialIndexGrid
 //******************
@@ -121,6 +121,7 @@ inline eSpatialIndexGrid<type, rows, columns> & eSpatialIndexGrid<type, rows, co
 	std::swap(invCellHeight, other.invCellHeight);
 	return *this;
 }
+*/
 
 //**************
 // eSpatialIndexGrid::IsValid

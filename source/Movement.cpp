@@ -1,15 +1,14 @@
 #include "Movement.h"
 #include "Game.h"
 
+/*
 //***************
 // eMovement::eMovement
 // FIXME/BUG: eDeque.front winds up pointing to invalid memory during eEntity dtor
 //***************
-eMovement::eMovement(const eMovement & other)
-	: owner(other.owner),
-	  knownMap(other.knownMap)		// FIXME/BUG(!): ensure the copy ctor of eSpatiaIndexGrid is called here
+eMovement::eMovement(const eMovement & other)	// FIXME/BUG(!): ensure the copy ctor of eSpatiaIndexGrid is called here
 	  {
-/*
+
 	eEntity *			owner;	
 
 	byte_map_t			knownMap;				// tracks visited tiles 
@@ -37,7 +36,7 @@ eMovement::eMovement(const eMovement & other)
 
 	bool				moving;
 	int					maxSteps;				// number of steps at current speed to project along a potential path
-*/
+
 }
 
 //***************
@@ -46,6 +45,8 @@ eMovement::eMovement(const eMovement & other)
 eMovement::eMovement(eMovement && other) {
 
 }
+
+*/
 
 //***************
 // eMovement::eMovement
@@ -73,12 +74,14 @@ eMovement::eMovement(eEntity * const owner, const float movementSpeed) {
 	moveState		= MOVETYPE_NONE;
 }
 
+/*
 //***************
 // eMovement::operator=
 //***************
 eMovement & eMovement::operator=(eMovement other) {
 	// TODO: implement swap of copy
 }
+*/
 
 //***************
 // eMovement::Think

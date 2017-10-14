@@ -150,13 +150,16 @@ bool eMap::LoadMap(const char * mapFilename) {
 			read.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
 			readState = SPAWNING_ENTITIES;
 		} else if (readState == SPAWNING_ENTITIES) {
+			if (read.peek() == '#')
+				break;
+			
 			int prefabListIndex = -1;
 			eVec3 worldPosition;
 			read >> prefabListIndex;
 			read >> worldPosition.x;
 			read >> worldPosition.y;
 			read >> worldPosition.z;
-			read.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+			read.ignore(std::numeric_limits<std::streamsize>::max(), '\n');		// FIXME/BUG: this is a problem if the last float is eof
 			if (!VerifyRead(read))
 				return false;
 			

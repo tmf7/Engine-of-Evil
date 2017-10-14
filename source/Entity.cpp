@@ -55,8 +55,8 @@ eEntity::eEntity(const entitySpawnArgs_t & spawnArgs)
 	if (!spawnArgs.spriteFilename.empty()) {
 		sprite = std::make_shared<eSprite>();	// TODO: sprite initialization should be just this one line
 		std::shared_ptr<eImage> spriteImage = nullptr;
-		if (!game.GetImageManager().LoadImage(spawnArgs.spriteFilename.c_str(), SDL_TEXTUREACCESS_STATIC, spriteImage))
-			throw badEntityCtorException(spawnArgs.spriteFilename.c_str());
+		if (!game.GetImageManager().LoadImage(spawnArgs.spriteFilename.c_str(), SDL_TEXTUREACCESS_STATIC, spriteImage))	// FIXME: bad filename??? 
+			throw badEntityCtorException(spawnArgs.spriteFilename.c_str());	
 
 		sprite->SetImage(spriteImage);			
 		auto & localMins = spawnArgs.localBounds[0];

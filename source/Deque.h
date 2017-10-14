@@ -33,7 +33,7 @@ public:
 		new (&data) type(other.data);
 		return *this;
 	};
-	eNode<type> &	operator=(eNode<type> && other) noexcept {																	// move assignment
+	eNode<type> &	operator=(eNode<type> && other) noexcept {															// move assignment
 		std::swap(data, other.data);
 		return *this;
 	};
@@ -113,7 +113,10 @@ inline eDeque<type>::eDeque()
 // copy constructor
 //******************
 template <class type>
-inline eDeque<type>::eDeque(const eDeque<type> & other) {
+inline eDeque<type>::eDeque(const eDeque<type> & other) 
+	: nodeCount(0), 
+	  front(nullptr), 
+	  back(nullptr) {
 	eNode<type> * otherIterator;
 
 	for (otherIterator = other.back; otherIterator != nullptr; otherIterator = otherIterator->next)

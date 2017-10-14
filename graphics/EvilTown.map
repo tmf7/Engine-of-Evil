@@ -393,4 +393,5 @@ graphics/evilMaster.tls
 graphics/evilMaster.bepf
 # spawn unique eEntities
 1 192.0 192.0 64.0		# prefabList index, xPos yPos of eEntity::collisionModel::origin in orthographic 2D world-space, and zPos of eEntity::renderImage::renderBlock bottom in 3D world-space
-1 200.0 200.0 64.0
+1 300.0 300.0 64.0
+# end of file
