@@ -43,15 +43,14 @@ eGame::ErrorCode eGame::Init() {
 //	if (!animationManager.Init())
 //		return ANIMATION_MANAGER_ERROR;
 
+	if (!entityPrefabManager.Init())
+		return ENTITY_PREFAB_MANAGER_ERROR;
+
 	if (!map.Init())
 		return MAP_ERROR;
 
 	input.Init();		// DEBUG: will crash if it fails (around the new allocation)
 	camera.Init();
-
-	entities.push_back(std::make_shared<eAI>());
-	if (!entities[0]->Spawn())
-		return ENTITY_ERROR;		// FIXME: make this entityID dependent
 
 // DEBUG: testing global static memory allocation, works (taskmanager shows 1GB in use for evil.exe; takes about 2 seconds to memset 1GB though, slow startup, ran quick after)
 //	memset(memoryPool, 0xff, sizeof(byte_t) * ONE_GIGABYTE);
@@ -84,11 +83,11 @@ void eGame::Shutdown(eGame::ErrorCode error) {
 			case ANIMATION_MANAGER_ERROR:
 				SDL_strlcpy(message, "ANIMATION MANAGER INIT FAILURE", 64);
 				break;
+			case ENTITY_PREFAB_MANAGER_ERROR:
+				SDL_strlcpy(message, "ENTITY PREFAB MANAGER INIT FAILURE", 64);
+				break;
 			case MAP_ERROR:
 				SDL_strlcpy(message, "MAP INIT FAILURE", 64);
-				break;
-			case ENTITY_ERROR:
-				SDL_strlcpy(message, "ENTITY (entityID_or_name_here) INIT FAILURE", 64);
 				break;
 		}
 		SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_INFORMATION, "Error", message, NULL);

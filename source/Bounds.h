@@ -28,7 +28,9 @@ public:
 	eBounds			Expand(const float range) const;				
 	eBounds &		ExpandSelf(const float range);
 
-	void			Zero();											
+	void			Zero();		
+	void			Clear();
+	bool			IsEmpty() const;									
 	eVec2			Center() const;									
 	float			Radius() const;									
 	float			Width() const;
@@ -139,6 +141,24 @@ inline bool eBounds::operator!=(const eBounds & a) const {
 //*************
 inline void eBounds::Zero() {
 	bounds[0].x = bounds[0].y = bounds[1].x = bounds[1].y = 0.0f;
+}
+
+//*************
+// eBounds::Clear
+// inside-out bounds (mins > maxs)
+//*************
+inline void eBounds::Clear() {
+	bounds[0][0] = bounds[0][1] = 1.0f;
+	bounds[1][0] = bounds[1][1] = -1.0f;
+
+}
+
+//*************
+// eBounds::IsEmpty
+// true if the bounds is inside-out
+//*************
+inline bool eBounds::IsEmpty() const {
+	return (bounds[0] == -bounds[1]);
 }
 
 //*************

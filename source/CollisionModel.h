@@ -15,7 +15,6 @@ class eCollisionModel {
 public:
 
 										eCollisionModel();
-										eCollisionModel(const eVec2 & origin, const eVec2 & velocity, const eBounds & bounds);
 										~eCollisionModel();
 
 	void								SetOrigin(const eVec2 & point);	
@@ -60,18 +59,6 @@ private:
 // eCollisionModel::eCollisionModel
 //************
 inline eCollisionModel::eCollisionModel() {
-}
-
-//*************
-// eCollisionModel::eCollisionModel
-// TODO: pass in initialization arguments for origin and AABB size
-// because collisionModels for eTiles will have velocity == vec2_zero; (for example)
-//************
-inline eCollisionModel::eCollisionModel(const eVec2 & origin, const eVec2 & velocity, const eBounds & bounds)
-	: velocity (velocity),
-	  localBounds(bounds),
-	  origin(vec2_zero) {
-	SetOrigin(origin);
 }
 
 //*************

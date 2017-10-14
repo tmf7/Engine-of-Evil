@@ -28,16 +28,7 @@ void eGridCell::DebugDraw() {
 
 	auto & renderer = game.GetRenderer();
 	for (auto & tile : tilesOwned) {
-		if (tile.CollisionModel() != nullptr) {	
+		if (tile.CollisionModel() != nullptr)
 			game.GetRenderer().DrawIsometricRect(pinkColor, tile.CollisionModel()->AbsBounds(), true);
-			if (tile.Type() == 155) {
-				auto & ai = game.GetEntity(0);
-				// FIXME: RENDERTYPE_STATIC affects draw-order overwriting
-				if (eCollision::AABBAABBTest(tile.CollisionModel()->AbsBounds(), ai->CollisionModel().AbsBounds()))
-					game.GetRenderer().DrawOutlineText("HIT", eVec2(100.0f, 100.0f), redColor, true, RENDERTYPE_STATIC);
-				else 
-					game.GetRenderer().DrawOutlineText("MISS", eVec2(100.0f, 100.0f), lightBlueColor, true, RENDERTYPE_STATIC);
-			}
-		}
 	}
 }

@@ -53,7 +53,7 @@ bool eImageManager::Init() {
 // prior to this to facilitate starting with a fresh set of images
 // TODO: allow selective unloading of images (eg: std::shared_ptr already does reference counting
 // take those numbers and add/subtract according to the next level's filename batch)
-// DEBUG (bimg file format):
+// DEBUG (.bimg file format):
 // imageFilename\n
 // imageFilename\n
 // (repeat)
@@ -72,7 +72,8 @@ bool eImageManager::BatchLoadImages(const char * imageBatchFile) {
 		if (!VerifyRead(read))
 			return false;
 
-		LoadImage(filename, SDL_TEXTUREACCESS_STATIC, tempResult);
+		if (!LoadImage(filename, SDL_TEXTUREACCESS_STATIC, tempResult))
+			return false;
 		read.ignore(std::numeric_limits<std::streamsize>::max(), '\n'); // skip the rest of the line
 	}
 	read.close();

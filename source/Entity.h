@@ -7,27 +7,53 @@
 #include "Collision.h"
 #include "Renderer.h"
 
+// entitySpawnArgs_t
+typedef struct entitySpawnArgs_s {
+	eBounds			localBounds;
+	std::string		prefabFilename		= nullptr;
+	std::string		spriteFilename		= nullptr;
+	eVec3			renderBlockSize		= vec3_zero;
+	eVec2			imageColliderOffset = vec2_zero;
+	float			movementSpeed		= 0.0f;
+	int				prefabManagerIndex	= 0;
+	bool			collisionActive		= false;
+//	int				colliderType;		// TODO: AABB/OBB/Circle/Line/Polyline
+//	int				colliderMask;		// TODO: solid, liquid, enemy, player, etc
+		
+					entitySpawnArgs_s() { localBounds.Clear(); };
+} entitySpawnArgs_t;
+
 //*************************************************
 //					eEntity
 //
 //*************************************************
 class eEntity {
-public:
-								eEntity();
+private:
 
-	virtual bool				Spawn(/*const char * entityFilename, eVec2 & worldPosition*/);
-	virtual void				Think() = 0;
+	friend class				eMovement;
+
+public:
+								eEntity(const eEntity & other);
+								eEntity(eEntity && other);
+								eEntity(const entitySpawnArgs_t & spawnArgs);
+								~eEntity() = default;								
+
+	static bool					Spawn(const int entityPrefabIndex, const eVec3 & worldPosition/*, const eVec2 & facingDir*/);
+
+	eEntity &					operator=(eEntity entity);
+	virtual void				Think();
 	virtual void				Draw();
-	virtual void				DebugDraw() = 0;
-	virtual renderImage_t *		GetRenderImage();
+	virtual void				DebugDraw();
+
+	renderImage_t *				GetRenderImage();
 	void						UpdateRenderImageOrigin();
 	void						UpdateRenderImageDisplay();
 	eCollisionModel &			CollisionModel();
 	eSprite &					Sprite();
+	const std::string &			GetPrefabFilename() const;
 
 protected:
 
-	renderImage_t				renderImage;			// data relevant to the renderer
 
 	// DEBUG: collisionModel.Origin(), collisionModel.AbsBounds().Center and renderImage.origin 
 	// are treated different in eEntity compared to eTile. 
@@ -39,34 +65,36 @@ protected:
 	// TODO: update eAI logic to work from a universal eTransform::origin, and make
 	// renderImage::origin, and collisionModel::origin positioned via offsets from that shared eTransform::origin
 	// for both eTile and eEntity (static and dynamic objects)
-	eVec2						imageColliderOffset;	
+	eVec2								imageColliderOffset;	
 
-	eSprite						sprite;					// TODO: use this to manipulate the renderImage_t
-	eCollisionModel				collisionModel;		
-
-	// TODO: not all eEntity require visible sprites or collision models (mix and match composite instead of inheritence)
-//	std::shared_ptr<eSprite>			optionalSprite;
-//	std::shared_ptr<eCollisionModel>	optionalCollisionModel;
+	renderImage_t						renderImage;			// data relevant to the renderer
+	std::shared_ptr<eSprite>			sprite;					// TODO: use this to manipulate the renderImage_t
+	std::shared_ptr<eCollisionModel>	collisionModel;	
+	std::shared_ptr<eMovement>			movementPlanner;
+	std::string							prefabFilename;
+	int									prefabManagerIndex;		// index of this eEntity's prefab within eEntityPrefabManager::prefabList
+	int									spawnedEntityID;
 };
-
-//**************
-// eEntity::eEntity
-//**************
-inline eEntity::eEntity() {
-}
 
 //**************
 // eEntity::CollisionModel
 //**************
 inline eCollisionModel & eEntity::CollisionModel() {
-	return collisionModel;
+	return *collisionModel;
 }
 
 //**************
 // eEntity::Sprite
 //**************
 inline eSprite & eEntity::Sprite() {
-	return sprite;
+	return *sprite;
+}
+
+//**************
+// eEntity::GetPrefabFilename
+//**************
+inline const std::string & eEntity::GetPrefabFilename() const {
+	return prefabFilename;
 }
 
 #endif /* ENTITY_H */

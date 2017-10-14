@@ -14,6 +14,13 @@ typedef enum {
 	RENDERTYPE_DYNAMIC
 } eRenderType_t;
 
+
+class RenderImage {
+
+};
+
+
+
 // renderImage_t
 typedef struct renderImage_s {
 	std::shared_ptr<eImage>		image;			// source image (ie texture wrapper)
@@ -35,17 +42,25 @@ typedef struct renderImage_s {
 	bool						visited;		// topological sort
 // FREEHILL END 3d quicksort test
 
-	renderImage_s()
-		: image(nullptr),
-		  srcRect(nullptr),
-		  layer(MAX_LAYER),
-		  lastDrawTime(0) {};
+								renderImage_s()
+									: image(nullptr),
+									  srcRect(nullptr),
+									  layer(MAX_LAYER),
+									  lastDrawTime(0) {};
 	
-	renderImage_s(std::shared_ptr<eImage> & image, const SDL_Rect * srcRect, const eVec2 & origin, const Uint8 layer)
-		: image(image),
-		  srcRect(srcRect), 
-		  origin(origin),
-		  layer(layer) {};
+								renderImage_s(std::shared_ptr<eImage> & image, const SDL_Rect * srcRect, const eVec2 & origin, const Uint8 layer)
+									: image(image),
+									  srcRect(srcRect), 
+									  origin(origin),
+									  layer(layer) {
+								};
+
+								renderImage_s(const renderImage_s & other) {
+								};
+								renderImage_s(renderImage_s && other) {
+								};
+	renderImage_s &				operator=(renderImage_s other) {
+								};
 
 	void	SetDrawnTime(Uint32 drawTime)	{ lastDrawTime = drawTime; }
 	void	SetLayer(const int layer)		{ this->layer = layer; }

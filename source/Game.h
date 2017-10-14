@@ -4,12 +4,13 @@
 #include "Definitions.h"
 #include "Renderer.h"
 #include "ImageManager.h"
+#include "EntityPrefabManager.h"
 //#include "AnimationManager.h"
 #include "Vector.h"
 #include "Map.h"
 #include "Entity.h"
 #include "Camera.h"
-#include "AI.h"
+#include "Movement.h"
 #include "Input.h"
 
 class eGame {
@@ -32,8 +33,8 @@ public:
 		RENDERER_ERROR,
 		IMAGE_MANAGER_ERROR,
 		ANIMATION_MANAGER_ERROR,
+		ENTITY_PREFAB_MANAGER_ERROR,
 		MAP_ERROR,
-		ENTITY_ERROR,
 		INIT_SUCCESS = -1
 	};
 
@@ -47,9 +48,13 @@ public:
 	eRenderer &					GetRenderer();
 	eImageManager &				GetImageManager();
 //	eAnimationManager &			GetAnimationManager();
+	eEntityPrefabManager &		GetEntityPrefabManager();
 	eCamera &					GetCamera();
 	eMap &						GetMap();
+	void						AddEntity(std::shared_ptr<eEntity> & entity);
+	void						RemoveEntity(int entityID);
 	std::shared_ptr<eEntity>	GetEntity(int entityID);
+	int							NumEntities() const;
 
 	// frame-rate metrics
 	void						SetFixedFPS(const Uint32 newFPS);
@@ -74,6 +79,7 @@ private:
 	eRenderer					renderer;
 	eImageManager				imageManager;
 //	eAnimationManager			animationManager;
+	eEntityPrefabManager			entityPrefabManager;
 	eCamera						camera;
 
 	const Uint32				defaultFPS = 60;
@@ -137,6 +143,13 @@ inline eAnimationManager & eGame::GetAnimationManager() {
 }
 */
 
+//*****************
+// eGame::GetEntityPrefabManager
+//*****************
+inline eEntityPrefabManager & eGame::GetEntityPrefabManager() {
+	return entityPrefabManager;
+}
+
 //****************
 // eGame::GetCamera
 //****************
@@ -152,11 +165,33 @@ inline eMap & eGame::GetMap() {
 }
 
 //****************
+// eGame::AddEntity
+//****************
+inline void eGame::AddEntity(std::shared_ptr<eEntity> & entity) {
+	return entities.push_back(entity);
+}
+
+//****************
+// eGame::RemoveEntity
+// DEBUG: ASSERT (entityID >= 0 && entityID < numEntities)
+//****************
+inline void eGame::RemoveEntity(int entityID) {
+	entities.erase(entities.begin() + entityID);
+}
+
+//****************
 // eGame::GetEntity
-// DEBUG: ASSERT (entityID >= 0 && entityID <= numEntities)
+// DEBUG: ASSERT (entityID >= 0 && entityID < numEntities)
 //****************
 inline std::shared_ptr<eEntity> eGame::GetEntity(int entityID) {
 	return entities[entityID];
+}
+
+//****************
+// eGame::NumEntities
+//****************
+inline int eGame::NumEntities() const {
+	return entities.size();
 }
 
 //****************

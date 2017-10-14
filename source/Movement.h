@@ -1,5 +1,5 @@
-#ifndef EVIL_AI_H
-#define EVIL_AI_H
+#ifndef EVIL_MOVEMENT_H
+#define EVIL_MOVEMENT_H
 
 #include "Deque.h"
 #include "Vector.h"
@@ -37,18 +37,15 @@ typedef enum {
 	PATHTYPE_WALL
 } pathfindingType_t;
 
-class eAI : public eEntity {
+class eMovement {
 public:
 
-						eAI();
+						eMovement(eEntity * const owner, const float movementSpeed);
 
-	virtual bool		Spawn() override;
-	virtual void		Think() override;
-	virtual void		Draw() override;
-	virtual void		DebugDraw() override;
+	void				Think();
+	void				DebugDraw();
 	void				AddUserWaypoint(const eVec2 & waypoint);
 	const byte_map_t &	KnownMap() const;
-	bool				CheckFogOfWar(const eVec2 & point) const;
 
 	// debugging
 	void				DrawGoalWaypoints();
@@ -58,14 +55,32 @@ public:
 
 private:
 
+	// pathfinding (general)
+	void				Move();
+	bool				CheckVectorPath(eVec2 from, decision_t & along);
+	void				CheckWalls(float * bias);
+	void				UpdateWaypoint(bool getNext = false);
+
+	// pathfinding (wall-follow)
+	void				WallFollow();
+
+	// pathfinding (compass)
+	void				CompassFollow();
+	bool				CheckTrail();
+	void				UpdateKnownMap();
+	void				StopMoving();
+
+private:
+
+	eEntity *			owner;	
+
 	byte_map_t			knownMap;				// tracks visited tiles 
 	movementType_t		moveState;
 	pathfindingType_t	pathingState;
 
-	float				speedHack;				// DEBUG: eCollisionModel integration test using old unit-velocity * speed (magnitude) logic
+	float				maxMoveSpeed;
 	float				collisionRadius;		// circular collision radius for prediction when using line of sight
 	float				goalRange;				// acceptable range to consider the goal waypoint reached
-	float				sightRange;				// range of drawable visibility (fog of war)
 
 	eDeque<eVec2>		trail;					// AI-defined waypoints for effective backtracking
 	eDeque<eVec2>		goals;					// User-defined waypoints as terminal destinations
@@ -84,51 +99,23 @@ private:
 
 	bool				moving;
 	int					maxSteps;				// number of steps at current speed to project along a potential path
-
-private:
-
-	// pathfinding (general)
-	void				Move();
-	bool				CheckVectorPath(eVec2 from, decision_t & along);
-	void				CheckWalls(float * bias);
-	void				UpdateWaypoint(bool getNext = false);
-
-	// pathfinding (wall-follow)
-	void				WallFollow();
-
-	// pathfinding (compass)
-	void				CompassFollow();
-	bool				CheckTrail();
-	void				UpdateKnownMap();
-	void				StopMoving();
 };
 
-//***************
-// eAI::eAI
-//***************
-inline eAI::eAI() {
-	sightRange	= 128.0f;
-	collisionModel.Velocity() = vec2_oneZero * 5;		// FIXME: test speed, load from file spawnArgs instead
-	goalRange	= collisionModel.Velocity().Length();
-	speedHack = goalRange;
-	maxSteps	= 5;
-}
-
 //*************
-// eAI::KnownMap
+// eMovement::KnownMap
 //*************
-inline const byte_map_t & eAI::KnownMap() const {
+inline const byte_map_t & eMovement::KnownMap() const {
 	return knownMap;
 }
 
 //******************
-// eAI::StopMoving
+// eMovement::StopMoving
 //******************
-inline void eAI::StopMoving() {
+inline void eMovement::StopMoving() {
 	wallSide = nullptr;
-	collisionModel.Velocity().Zero();
+	owner->collisionModel->Velocity().Zero();
 	moving = false;
 }
 
-#endif /* EVIL_AI_H */
+#endif /* EVIL_MOVEMENT_H */
 

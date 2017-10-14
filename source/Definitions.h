@@ -43,4 +43,15 @@
 //#define ONE_GIGABYTE 1073741824
 //extern byte_t memoryPool[ONE_GIGABYTE];
 
+//*************************************************
+//					exceptions
+//*************************************************
+struct badEntityCtorException : public std::exception {
+	badEntityCtorException(const char * entityPrefabFilename)
+		: what(entityPrefabFilename) {
+	};
+
+	std::string what;
+};
+
 #endif /* EVIL_DEFINITIONS_H */

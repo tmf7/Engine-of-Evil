@@ -1,6 +1,6 @@
 #include "Map.h"
 #include "Game.h"
-#include "AI.h"
+//#include "Movement.h"
 
 //**************
 // eMap::Init
@@ -26,6 +26,13 @@ bool eMap::Init () {
 // # end of layer 2 comment\n
 // (repeat, note that 0 as a master-tileSet-index indicates a placeholder, ie a tileMap index to skip for that layer)
 // (also note that ALL read values are reduced by 1 before loading into an eTileImpl::type here)
+// # end of layer n comment\n
+// # batch-load eEntity prefabs used on this map\n
+// entityPrefabBatchFilename.bepf		# defines prefabList indexes used below (everything past the first string is ignored)\n
+// # spawn unique eEntities\n
+// prefabListIndex xPosFloat yPosFloat	# eEntity::collisionModel::origin in isometric world-space (everything past the last float is ignored)\n
+// prefabListIndex xPosFloat yPosFloat	# comment\n
+// (repeat)
 //**************
 bool eMap::LoadMap(const char * mapFilename) {
 	std::ifstream	read(mapFilename);
@@ -77,47 +84,84 @@ bool eMap::LoadMap(const char * mapFilename) {
 	row = 0;
 	column = 0;
 	int layer = 0;
+	enum {
+		READING_MAP,
+		LOADING_PREFABS,
+		SPAWNING_ENTITIES
+	};
+
+	int readState = READING_MAP;
 	while (!read.eof()) {
-		int tileType = INVALID_ID;
+		if (readState == READING_MAP) {
+			int tileType = INVALID_ID;
+			bool firstComment = false;
 
-		if (read.peek() == '#') {
-			read.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-			row = 0;
-			column = 0;
-			++layer;
-		} else {
-			read >> tileType;
-		}
-		if (!VerifyRead(read))
-			return false;
+			if (read.peek() == '#') {
+				read.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+				row = 0;
+				column = 0;
+				++layer;
+				firstComment = true;
+			} else {
+				read >> tileType;
+			}
+			if (!VerifyRead(read))
+				return false;
 		
-		--tileType;			// DEBUG: .map format is easier to read with 0's instead of -1's so all values are incremented by 1 when writing it
-		if (tileType > INVALID_ID) {
-			auto & cell = tileMap.Index(row, column);
-			auto & origin = cell.AbsBounds()[0];
-			cell.AddTileOwned(eTile(&cell, origin, tileType, layer));
-			const auto & tileRenderImage = cell.TilesOwned().back().GetRenderImage();
-			tileRenderImage->worldClip = eBounds(tileRenderImage->origin, 
-												 tileRenderImage->origin + eVec2((float)tileRenderImage->srcRect->w, (float)tileRenderImage->srcRect->h));
-			sortTiles.push_back(tileRenderImage);
-		}
+			--tileType;			// DEBUG: .map format is easier to read with 0's instead of -1's so all values are incremented by 1 when writing it
+			if (tileType > INVALID_ID) {
+				auto & cell = tileMap.Index(row, column);
+				auto & origin = cell.AbsBounds()[0];
+				cell.AddTileOwned(eTile(&cell, origin, tileType, layer));
+				const auto & tileRenderImage = cell.TilesOwned().back().GetRenderImage();
+				tileRenderImage->worldClip = eBounds(tileRenderImage->origin, 
+													 tileRenderImage->origin + eVec2((float)tileRenderImage->srcRect->w, (float)tileRenderImage->srcRect->h));
+				sortTiles.push_back(tileRenderImage);
+			}
 
-		if (read.peek() == '\n') {
-			read.ignore(1, '\n');
-			row = 0;
-			column++;
-		} else if (read.peek() == ',') {
-			read.ignore(1, ',');
-			row++;
-			if (row >= tileMap.Rows()) {
+			if (read.peek() == '\n') {
+				read.ignore(1, '\n');
 				row = 0;
 				column++;
+			} else if (read.peek() == ',') {
+				read.ignore(1, ',');
+				row++;
+				if (row >= tileMap.Rows()) {
+					row = 0;
+					column++;
+				}
 			}
-		}
 
-		// TODO: remove this, it's just a backup in case of an excessive .map file
-		if (!tileMap.IsValid(row, column))
-			return false;
+			if (firstComment && read.peek() == '#') {
+				readState = LOADING_PREFABS;
+				read.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+			} else if (!tileMap.IsValid(row, column)) {			// TODO: remove this, it's just a backup in case of an excessive .map file
+				return false;
+			}
+		} else if (readState == LOADING_PREFABS) {
+			memset(buffer, 0, sizeof(buffer));
+			read.getline(buffer, sizeof(buffer), '\n');
+			if (!VerifyRead(read))
+				return false;
+
+			if (!game.GetEntityPrefabManager().BatchLoadPrefabs(buffer))
+				return false;
+
+			read.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+			readState = SPAWNING_ENTITIES;
+		} else if (readState == SPAWNING_ENTITIES) {
+			int prefabListIndex = -1;
+			eVec3 worldPosition;
+			read >> prefabListIndex;
+			read >> worldPosition.x;
+			read >> worldPosition.y;
+			read >> worldPosition.z;
+			read.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+			if (!VerifyRead(read))
+				return false;
+			
+			eEntity::Spawn(prefabListIndex, worldPosition);
+		}
 	}
 	read.close();
 

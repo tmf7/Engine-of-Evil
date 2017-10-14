@@ -18,7 +18,7 @@ public:
 	SDL_Texture *			Source() const;
 	int						GetWidth() const;
 	int						GetHeight() const;
-	std::string				GetSourceFilename() const;
+	const std::string &		GetSourceFilename() const;
 	int						GetImageManagerIndex() const;
 	
 	void					SetSubframes(std::vector<SDL_Rect> && frames);

@@ -6,7 +6,7 @@ class eVec2;
 //*************************************************
 //				eSpatial Index Grid
 //  Maps points in 2D space to elements of a 2D array
-//  by dividing the space into a regular grid of cells.
+//  by dividing the space into an orthographic grid of cells.
 //  This class uses stack memory.
 //*************************************************
 template< class type, int rows, int columns>

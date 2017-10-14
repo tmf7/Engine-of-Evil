@@ -1,16 +1,16 @@
-#include "AI.h"
+#include "Movement.h"
 #include "Game.h"
 
 //***************
-// eAI::Spawn
-// TODO: make this spawn independent of eEntity::Spawn
+// eMovement::eMovement
 //***************
-bool eAI::Spawn() {
+eMovement::eMovement(eEntity * const owner, const float movementSpeed) {
 
-	if (!eEntity::Spawn())
-		return false;
-
-	collisionRadius = collisionModel.LocalBounds().Radius();
+	this->owner = owner;
+	maxMoveSpeed = movementSpeed;									// FIXME/BUG(~): used to set the initial collisionModel.Velocity() here
+	goalRange	= maxMoveSpeed;
+	maxSteps	= 5;												// FIXME: change this logic to a linecast (instead of 3 * 5 * maxMoveSpeed points)
+	collisionRadius = owner->collisionModel->LocalBounds().Radius();
 	StopMoving();
 
 	// knownMap dimensions, based in initialized tileMap dimensions
@@ -18,21 +18,20 @@ bool eAI::Spawn() {
 						  game.GetMap().TileMap().CellHeight() );
 	knownMap.ClearAllCells();
 
-	currentTile		= &knownMap.Index(collisionModel.Origin());
+	currentTile		= &knownMap.Index(owner->collisionModel->Origin());
 	previousTile	= currentTile;
 	lastTrailTile	= nullptr;
 	currentWaypoint = nullptr;
 	wallSide		= nullptr;
 	pathingState	= PATHTYPE_NONE;
 	moveState		= MOVETYPE_NONE;
-	return true;
 }
 
 //***************
-// eAI::Think
+// eMovement::Think
 // selects and updates a pathfinding type (eg: waypoint+obstacle avoid, A* optimal path, wall follow, Area awareness, raw compass?, etc)
 //***************
-void eAI::Think() {
+void eMovement::Think() {
 	bool wasStopped;
 
 // BEGIN FREEHILL DEBUG AI/player control
@@ -47,22 +46,22 @@ void eAI::Think() {
 		moveToggle = !moveToggle;
 	} 
 
-	float xMove = speedHack * (float)(input.KeyHeld(SDL_SCANCODE_RIGHT) - input.KeyHeld(SDL_SCANCODE_LEFT));
-	float yMove = speedHack * (float)(input.KeyHeld(SDL_SCANCODE_DOWN) - input.KeyHeld(SDL_SCANCODE_UP));
+	float xMove = maxMoveSpeed * (float)(input.KeyHeld(SDL_SCANCODE_RIGHT) - input.KeyHeld(SDL_SCANCODE_LEFT));
+	float yMove = maxMoveSpeed * (float)(input.KeyHeld(SDL_SCANCODE_DOWN) - input.KeyHeld(SDL_SCANCODE_UP));
 	if (SDL_fabs(xMove) > 0.0f || SDL_fabs(yMove) > 0.0f) {
 		eMath::IsometricToCartesian(xMove, yMove);
-		collisionModel.Velocity().Set(xMove, yMove);
-		if (collisionModel.Velocity() != vec2_zero) {
+		owner->collisionModel->Velocity().Set(xMove, yMove);
+		if (owner->collisionModel->Velocity() != vec2_zero) {
 			static std::vector<Collision_t> collisions;		// FIXME(performance): static to reduce dynamic allocation, but this fn is also just misplaced/slow
-			if (eCollision::ForwardCollisionTest(collisionModel, collisions)) {
-				eVec2 selfCenter = collisionModel.AbsBounds().Center();
+			if (eCollision::ForwardCollisionTest(*(owner->collisionModel), collisions)) {
+				eVec2 selfCenter = owner->collisionModel->AbsBounds().Center();
 				for (auto & collision : collisions) {
 					eVec2 centerToCenter =  selfCenter - collision.owner->AbsBounds().Center();
-					float releaseDotTest = centerToCenter * collisionModel.Velocity();
+					float releaseDotTest = centerToCenter * owner->collisionModel->Velocity();
 					if (releaseDotTest >= 0)
 						continue;
 					else {
-						collisionModel.Velocity() *= collision.fraction;
+						owner->collisionModel->Velocity() *= collision.fraction;
 						break;
 					}
 				}
@@ -77,7 +76,7 @@ void eAI::Think() {
 //				tangentVel = (dirBias > 0 ?  collisionTangent * -push : collisionTangent * push);
 //				collisionModel.Velocity() = normalVel + tangentVel;
 			}
-			collisionModel.UpdateOrigin();
+			owner->collisionModel->UpdateOrigin();
 			collisions.clear();
 		}
 	}
@@ -91,28 +90,28 @@ void eAI::Think() {
 
 		// drop a trail waypoint (but never in a deadend that stopped the entity last frame)
 		if (moving && !wasStopped && moveState != MOVETYPE_TRAIL && lastTrailTile != currentTile) {
-			trail.PushFront(collisionModel.Origin());
+			trail.PushFront(owner->collisionModel->Origin());
 			lastTrailTile = currentTile;
 		}
 
 		// check if goal is close enough to stop
-		if (collisionModel.Origin().Compare(*currentWaypoint, goalRange)) {
+		if (owner->collisionModel->Origin().Compare(*currentWaypoint, goalRange)) {
 			StopMoving();
 			UpdateWaypoint(true);
 		}
 
 		// finalize the move
-		if (collisionModel.Velocity() != vec2_zero) {
+		if (owner->collisionModel->Velocity() != vec2_zero) {
 			moving = true;
-			collisionModel.UpdateOrigin();
+			owner->collisionModel->UpdateOrigin();
 		}
 	}
 }
 
 //***************
-// eAI::Move
+// eMovement::Move
 //***************
-void eAI::Move() {
+void eMovement::Move() {
 
 	// set the velocity
 	if (pathingState == PATHTYPE_COMPASS)
@@ -122,12 +121,12 @@ void eAI::Move() {
 }
 
 //******************
-// eAI::WallFollow
+// eMovement::WallFollow
 // Determines the optimal movement vector to continue following a wall (as if a hand were placed on it)
 // TODO: incorperate knownMap/stepRatio usage, directional bias usage?, more stopping conditions, goal waypoint short-circuit (like CompassFollow)
 // DEBUG: default movement towards waypoint; default search for walls right-to-left using the first-found
 //******************
-void eAI::WallFollow() {
+void eMovement::WallFollow() {
 	decision_t	test;					// vector tested for optimal travel decision
 	float		rotationAngle;			// cumulative amount the testVector has rotated in its search
 	eQuat *		rotationDirection;		// wallSide affects the sweep direction that constitutes around-front of the entity
@@ -135,7 +134,7 @@ void eAI::WallFollow() {
 	bool		nearWall;
 
 	if (!moving) { 
-		forward.vector = *currentWaypoint - collisionModel.Origin();
+		forward.vector = *currentWaypoint - owner->collisionModel->Origin();
 		forward.vector.Normalize();
 		moving = true;
 	}
@@ -156,7 +155,7 @@ void eAI::WallFollow() {
 	nearWall = false;
 	rotationAngle = 0.0f;
 	while (rotationAngle < 360.0f) {
-		CheckVectorPath(collisionModel.Origin() + (test.vector * speedHack), test);
+		CheckVectorPath(owner->collisionModel->Origin() + (test.vector * maxMoveSpeed), test);
 		if (wallFollowing && nearWall && test.validSteps > 0) { 
 			forward = test;
 			CheckWalls(nullptr);
@@ -182,16 +181,16 @@ void eAI::WallFollow() {
 	if (wallSide != nullptr && (!nearWall || rotationAngle >= 360.0f))
 		StopMoving();
 	else 
-		collisionModel.Velocity() = forward.vector * speedHack;
+		owner->collisionModel->Velocity() = forward.vector * maxMoveSpeed;
 	// moveState may have changed, track the correct waypoint
 //	UpdateWaypoint();
 }
 
 //******************
-// eAI::CompassFollow
+// eMovement::CompassFollow
 // Determines the optimal movement vector to reach the current waypoint
 //******************
-void eAI::CompassFollow() {
+void eMovement::CompassFollow() {
 	decision_t	waypoint;				// from the sprite to the next waypoint
 	decision_t	test;					// vector tested for optimal travel decision
 	decision_t	best;					// optimal movement
@@ -218,7 +217,7 @@ void eAI::CompassFollow() {
 			*currentTile = VISITED_TILE;
 	}
 
-	waypoint.vector = *currentWaypoint - collisionModel.Origin();
+	waypoint.vector = *currentWaypoint - owner->collisionModel->Origin();
 	waypoint.vector.Normalize();
 
 	bestWeight = 0.0f;
@@ -227,15 +226,15 @@ void eAI::CompassFollow() {
 
 		// check how clear the path is starting one step along it
 		// and head straight for the waypoint if the test.vector path crosses extremely near it
-		if (CheckVectorPath(collisionModel.Origin() + (test.vector * speedHack), test)) {
-			if (CheckVectorPath(collisionModel.Origin() + (waypoint.vector * speedHack), waypoint))
+		if (CheckVectorPath(owner->collisionModel->Origin() + (test.vector * maxMoveSpeed), test)) {
+			if (CheckVectorPath(owner->collisionModel->Origin() + (waypoint.vector * maxMoveSpeed), waypoint))
 				forward = waypoint;
 			else
 				forward = test;
 
 			// initilize the new left and right, and their validSteps that'll be used next frame
 			CheckWalls(nullptr);
-			collisionModel.Velocity() = forward.vector * speedHack;
+			owner->collisionModel->Velocity() = forward.vector * maxMoveSpeed;
 			return;
 		}
 
@@ -276,19 +275,19 @@ void eAI::CompassFollow() {
 		forward = best;
 		// initilize the new left and right, and their validSteps that'll be used next frame
 		CheckWalls(nullptr);
-		collisionModel.Velocity() = forward.vector * speedHack;
+		owner->collisionModel->Velocity() = forward.vector * maxMoveSpeed;
 	}
 	// moveState may have changed, track the correct waypoint
 	UpdateWaypoint();
 }
 
 //******************
-// eAI::CheckVectorPath
+// eMovement::CheckVectorPath
 // determines the state of the entity's position for the next few frames
 // return true if a future position using along is near the waypoint
 // TODO: make this a proper area probe (ie: speedbox or moving bounds collision test)
 //******************
-bool eAI::CheckVectorPath(eVec2 from, decision_t & along) {
+bool eMovement::CheckVectorPath(eVec2 from, decision_t & along) {
 	eVec2 testPoint;
 	float newSteps;
 
@@ -334,7 +333,7 @@ bool eAI::CheckVectorPath(eVec2 from, decision_t & along) {
 			return true;
 
 		// move to check validity of next position
-		from += along.vector * speedHack;
+		from += along.vector * maxMoveSpeed;
 	}
 
 	if (along.validSteps == 0.0f)
@@ -346,11 +345,11 @@ bool eAI::CheckVectorPath(eVec2 from, decision_t & along) {
 }
 
 //**************
-// eAI::CheckWalls
+// eMovement::CheckWalls
 // assigns the vectors perpendicular to the forward vector
 // and checks if the range along them has significantly changed
 //**************
-void eAI::CheckWalls(float * bias) {
+void eMovement::CheckWalls(float * bias) {
 	float oldLeftSteps = left.validSteps;
 	float oldRightSteps = right.validSteps;
 
@@ -359,9 +358,9 @@ void eAI::CheckWalls(float * bias) {
 	left.vector.Set(-forward.vector.y, forward.vector.x);	// forward rotated 90 degrees counter-clockwise
 	right.vector.Set(forward.vector.y, -forward.vector.x);	// forward rotated 90 degrees clockwise
 
-	CheckVectorPath(collisionModel.Origin() + (forward.vector * speedHack), forward);
-	CheckVectorPath(collisionModel.Origin() + (left.vector * speedHack), left);
-	CheckVectorPath(collisionModel.Origin() + (right.vector * speedHack), right);
+	CheckVectorPath(owner->collisionModel->Origin() + (forward.vector * maxMoveSpeed), forward);
+	CheckVectorPath(owner->collisionModel->Origin() + (left.vector * maxMoveSpeed), left);
+	CheckVectorPath(owner->collisionModel->Origin() + (right.vector * maxMoveSpeed), right);
 
 	if (bias == nullptr)
 		return;
@@ -372,29 +371,15 @@ void eAI::CheckWalls(float * bias) {
 	bias[3] *= !(forward.validSteps == 0.0f) * forward.stepRatio;								// forward path not closed
 }
 
-
 //******************
-// eAI::CheckFogOfWar
-// TODO: have the map object check if ANY of the team entities have visited a tile about to be drawn, if not draw black,
-// if so, then the map goes through all entities calling CheckFogOfWar, if ONE returns true then it'll stop sweep and draw bright,
-// if none return true by the end of the sweep, then draw dim ( reduce sweep time by using a locational Potential_Visible_Set )
-//******************
-bool eAI::CheckFogOfWar(const eVec2 & point) const {
-	eVec2 lineOfSight;
-
-	lineOfSight = point - collisionModel.Origin();
-	return lineOfSight.LengthSquared() <= sightRange;
-}
-
-//******************
-// eAI::AddUserWaypoint
+// eMovement::AddUserWaypoint
 // TODO: use SpatialIndexGrid::Validate(point) to snap a waypoint onto the nearest
 // in-bounds non-collision map point (like Age of Empires flags)
 // TODO: allow other entities to become waypoints (that move)
 // moving waypoints would need to have their info updated in the deque (hence pointers instead of copies)
 // of course that could be a separate category altogether
 //******************
-void eAI::AddUserWaypoint(const eVec2 & waypoint) {
+void eMovement::AddUserWaypoint(const eVec2 & waypoint) {
 	if (!game.GetMap().HitStaticWorldHack(waypoint)) {
 		goals.PushFront(waypoint);
 		UpdateWaypoint();
@@ -402,9 +387,9 @@ void eAI::AddUserWaypoint(const eVec2 & waypoint) {
 }
 
 //******************
-// eAI::UpdateWaypoint
+// eMovement::UpdateWaypoint
 //******************
-void eAI::UpdateWaypoint(bool getNext) {
+void eMovement::UpdateWaypoint(bool getNext) {
 	switch (moveState) {
 		case MOVETYPE_GOAL: {
 			if (getNext && !goals.IsEmpty()) {
@@ -451,10 +436,10 @@ void eAI::UpdateWaypoint(bool getNext) {
 }
 
 //******************
-// eAI::CheckTrail
+// eMovement::CheckTrail
 // returns false if the entity should fresh-start goal pathfinding
 //******************
-bool eAI::CheckTrail() {
+bool eMovement::CheckTrail() {
 	eInput * input;
 
 	input = &game.GetInput();
@@ -467,11 +452,11 @@ bool eAI::CheckTrail() {
 }
 
 //******************
-// eAI::UpdateKnownMap
+// eMovement::UpdateKnownMap
 // marks the currentTile as VISITED_TILE, clears out un-needed trail waypoints,
 // and resets tiles around the current goal waypoint to UNKNOWN_TILE
 //******************
-void eAI::UpdateKnownMap() {
+void eMovement::UpdateKnownMap() {
 	byte_t * checkTile;
 	int row, column;
 	int startRow, startCol;
@@ -482,7 +467,7 @@ void eAI::UpdateKnownMap() {
 	// DEBUG: only needs to be more then **half-way** onto a new tile
 	// to set the currentTile as previousTile and VISITED_TILE,
 	// instead of completely off the tile (via a full absBounds check agains the eTile bounds)
-	checkTile = &knownMap.Index(collisionModel.Origin());
+	checkTile = &knownMap.Index(owner->collisionModel->Origin());
 	if (checkTile != currentTile) {
 		previousTile = currentTile;
 		*previousTile = VISITED_TILE;
@@ -498,7 +483,7 @@ void eAI::UpdateKnownMap() {
 		// that the AI displays when attempting to attain a goal (ie sometimes there's an opening that's missed in favor
 		// of maintaining the directional weight)
 		if (!goals.IsEmpty()) {
-			tileResetRange = (int)((goals.Back()->Data() - collisionModel.Origin()).Length() / (knownMap.CellWidth() * 2));
+			tileResetRange = (int)((goals.Back()->Data() - owner->collisionModel->Origin()).Length() / (knownMap.CellWidth() * 2));
 
 			// find the knownMap row and column of the current goal waypoint
 			knownMap.Index(goals.Back()->Data(), row, column);
@@ -544,18 +529,10 @@ void eAI::UpdateKnownMap() {
 	}
 }
 
-//***************
-// eAI::Draw
-// TODO: make this draw independent of eEntity::Draw()
-//***************
-void eAI::Draw() {
-	eEntity::Draw();
-}
-
 //******************
-// eAI::DebugDraw
+// eMovement::DebugDraw
 //******************
-void eAI::DebugDraw() {
+void eMovement::DebugDraw() {
 	DrawGoalWaypoints();
 	DrawKnownMap();
 	DrawCollisionCircle();
@@ -563,9 +540,9 @@ void eAI::DebugDraw() {
 }
 
 //******************
-// eAI::DrawGoalWaypoints
+// eMovement::DrawGoalWaypoints
 //******************
-void eAI::DrawGoalWaypoints() {
+void eMovement::DrawGoalWaypoints() {
 	eNode<eVec2> * iterator;
 	eVec2 goalPoint;
 
@@ -581,9 +558,9 @@ void eAI::DrawGoalWaypoints() {
 }
 
 //******************
-// eAI::DrawTrailWaypoints
+// eMovement::DrawTrailWaypoints
 //******************
-void eAI::DrawTrailWaypoints() {
+void eMovement::DrawTrailWaypoints() {
 	eNode<eVec2> * iterator;
 	eVec2 trailPoint;
 
@@ -599,11 +576,11 @@ void eAI::DrawTrailWaypoints() {
 }
 
 //******************
-// eAI::DrawCollisionCircle
+// eMovement::DrawCollisionCircle
 // draws the forward sweep angle checked for collision prediction in any-angle pathfinding
 // FIXME: draw a partial circle in eRenderer instead
 //******************
-void eAI::DrawCollisionCircle() {
+void eMovement::DrawCollisionCircle() {
 /*
 	eVec2 debugVector;
 	eVec2 debugPoint;
@@ -629,7 +606,7 @@ void eAI::DrawCollisionCircle() {
 			debugPoint.SnapInt();
 */
 			// DEBUG: just test the iso-collision bounds for now
-			game.GetRenderer().DrawIsometricRect(yellowColor, collisionModel.AbsBounds(), RENDERTYPE_DYNAMIC);
+			game.GetRenderer().DrawIsometricRect(yellowColor, owner->collisionModel->AbsBounds(), RENDERTYPE_DYNAMIC);
 //			game.GetRenderer().DrawPixel(debugPoint, color[0], color[1], color[2]);
 /*
 		}
@@ -640,10 +617,10 @@ void eAI::DrawCollisionCircle() {
 }
 
 //******************
-// eAI::DrawKnownMap
+// eMovement::DrawKnownMap
 // TODO: check collision/draw layers, and draw debug rects over visited (and visible) tiles instead of entire cells.
 //******************
-void eAI::DrawKnownMap() const {
+void eMovement::DrawKnownMap() const {
 	auto & tileMap = game.GetMap().TileMap();
 	auto & visibleCells = game.GetMap().VisibleCells();
 	for (auto & visibleCell : visibleCells) {

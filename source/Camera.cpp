@@ -42,7 +42,7 @@ void eCamera::Think() {
 		SetZoom(zoomLevel - zoomIncrement);
 
 	if (input->KeyHeld(SDL_SCANCODE_SPACE)) {
-		eVec2 snapFocus = game.GetEntity(0)->CollisionModel().Origin();
+		eVec2 snapFocus = game.GetEntity(0)->CollisionModel().Origin();		// FIXME: 0th eEntity should not be the default thing to snap focus to
 		eMath::CartesianToIsometric(snapFocus.x, snapFocus.y);
 		collisionModel.SetOrigin(snapFocus);
 	} else {
