@@ -27,7 +27,6 @@ SDL_LogOutputFunction FileLogFn_ptr = &FileLogFn;
 // eGame::Init
 //****************
 eGame::ErrorCode eGame::Init() {
-
 	if (SDL_Init(SDL_INIT_EVERYTHING) == -1)
 		return SDL_ERROR;
 
@@ -49,7 +48,11 @@ eGame::ErrorCode eGame::Init() {
 	if (!map.Init())
 		return MAP_ERROR;
 
-	input.Init();		// DEBUG: will crash if it fails (around the new allocation)
+	try {
+		input.Init();
+	} catch (const std::bad_alloc & e) {
+		return INPUT_ERROR;
+	}
 	camera.Init();
 
 // DEBUG: testing global static memory allocation, works (taskmanager shows 1GB in use for evil.exe; takes about 2 seconds to memset 1GB though, slow startup, ran quick after)

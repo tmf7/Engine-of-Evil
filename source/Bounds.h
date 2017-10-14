@@ -158,7 +158,7 @@ inline void eBounds::Clear() {
 // true if the bounds is inside-out
 //*************
 inline bool eBounds::IsEmpty() const {
-	return (bounds[0] == -bounds[1]);
+	return (bounds[0][0] > bounds[1][0] && bounds[0][1] > bounds[1][1]);
 }
 
 //*************

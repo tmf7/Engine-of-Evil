@@ -14,13 +14,6 @@ typedef enum {
 	RENDERTYPE_DYNAMIC
 } eRenderType_t;
 
-
-class RenderImage {
-
-};
-
-
-
 // renderImage_t
 typedef struct renderImage_s {
 	std::shared_ptr<eImage>		image;			// source image (ie texture wrapper)
@@ -53,13 +46,6 @@ typedef struct renderImage_s {
 									  srcRect(srcRect), 
 									  origin(origin),
 									  layer(layer) {
-								};
-
-								renderImage_s(const renderImage_s & other) {
-								};
-								renderImage_s(renderImage_s && other) {
-								};
-	renderImage_s &				operator=(renderImage_s other) {
 								};
 
 	void	SetDrawnTime(Uint32 drawTime)	{ lastDrawTime = drawTime; }

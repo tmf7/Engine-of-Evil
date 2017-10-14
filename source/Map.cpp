@@ -27,11 +27,11 @@ bool eMap::Init () {
 // (repeat, note that 0 as a master-tileSet-index indicates a placeholder, ie a tileMap index to skip for that layer)
 // (also note that ALL read values are reduced by 1 before loading into an eTileImpl::type here)
 // # end of layer n comment\n
-// # batch-load eEntity prefabs used on this map\n
-// entityPrefabBatchFilename.bepf		# defines prefabList indexes used below (everything past the first string is ignored)\n
+// # batch-load eEntity prefabs used on this map (defines prefabList indexes used below)\n
+// entityPrefabBatchFilename.bepf\n
 // # spawn unique eEntities\n
-// prefabListIndex xPosFloat yPosFloat	# eEntity::collisionModel::origin in isometric world-space (everything past the last float is ignored)\n
-// prefabListIndex xPosFloat yPosFloat	# comment\n
+// prefabListIndex xPos yPos zPos	# eEntity::collisionModel::origin in orthographic 2D world-space, zPos of eEntity::renderImage::renderBlock's bottom in 3D world-space\n
+// prefabListIndex xPos yPos zPos	# int float float float (everything past the last float is ignored)\n
 // (repeat)
 //**************
 bool eMap::LoadMap(const char * mapFilename) {
@@ -160,7 +160,10 @@ bool eMap::LoadMap(const char * mapFilename) {
 			if (!VerifyRead(read))
 				return false;
 			
-			eEntity::Spawn(prefabListIndex, worldPosition);
+			if (!eEntity::Spawn(prefabListIndex, worldPosition)) {
+				std::string message = "Invalid prefabListIndex value: " + std::to_string(prefabListIndex) + "\nOr invalid prefab file contents.";
+				SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_INFORMATION, "Error", message.c_str(), NULL);
+			}
 		}
 	}
 	read.close();

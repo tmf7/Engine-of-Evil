@@ -389,8 +389,8 @@ graphics/evilMaster.tls
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 # end of layer 3
-# batch-load eEntity prefabs used on this map
-graphics/evilMaster.bepf	# prefabList indexes are defined in the batch file
+# batch-load eEntity prefabs used on this map (prefabList indexes are defined in the batch file)
+graphics/evilMaster.bepf
 # spawn unique eEntities
-1 192.0 192.0 64.0		# prefabList index, xPos yPos of eEntity::collisionModel::origin in isometric world-space, and zPos height of renderBlock in 3D world-space
-2 200.0 200.0 64.0
+1 192.0 192.0 64.0		# prefabList index, xPos yPos of eEntity::collisionModel::origin in orthographic 2D world-space, and zPos of eEntity::renderImage::renderBlock bottom in 3D world-space
+1 200.0 200.0 64.0

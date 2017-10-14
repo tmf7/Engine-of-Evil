@@ -102,7 +102,10 @@ private:
 // default constructor empty eDeque
 //******************
 template <class type>
-inline eDeque<type>::eDeque() : nodeCount(0), front(nullptr), back(nullptr) {
+inline eDeque<type>::eDeque() 
+	: nodeCount(0), 
+	  front(nullptr), 
+	  back(nullptr) {
 }
 
 //******************
@@ -122,7 +125,10 @@ inline eDeque<type>::eDeque(const eDeque<type> & other) {
 // move constructor
 //******************
 template <class type>
-inline eDeque<type>::eDeque(eDeque<type> && other) noexcept : nodeCount(0), front(nullptr), back(nullptr)  {
+inline eDeque<type>::eDeque(eDeque<type> && other) noexcept 
+	: nodeCount(0), 
+	  front(nullptr), 
+	  back(nullptr)  {
 	std::swap(nodeCount, other.nodeCount);
 	std::swap(front, other.front);
 	std::swap(back, other.back);
@@ -159,10 +165,12 @@ inline eDeque<type> & eDeque<type>::operator=(eDeque<type> other) noexcept {
 //******************
 // eDeque::operator=
 // move assignment
-// FIXME/BUG: self-assignment clears the deque AND failure to swap leaves the deque empty
 //******************
 template <class type>
 inline eDeque<type> & eDeque<type>::operator=(eDeque<type> && other) noexcept {
+	if (this == &other)
+		return *this;
+
 	Clear();
 	std::swap(nodeCount, other.nodeCount);
 	std::swap(front, other.front);

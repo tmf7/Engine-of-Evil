@@ -3,6 +3,52 @@
 
 //***************
 // eMovement::eMovement
+// FIXME/BUG: eDeque.front winds up pointing to invalid memory during eEntity dtor
+//***************
+eMovement::eMovement(const eMovement & other)
+	: owner(other.owner),
+	  knownMap(other.knownMap)		// FIXME/BUG(!): ensure the copy ctor of eSpatiaIndexGrid is called here
+	  {
+/*
+	eEntity *			owner;	
+
+	byte_map_t			knownMap;				// tracks visited tiles 
+	movementType_t		moveState;
+	pathfindingType_t	pathingState;
+
+	float				maxMoveSpeed;
+	float				collisionRadius;		// circular collision radius for prediction when using line of sight
+	float				goalRange;				// acceptable range to consider the goal waypoint reached
+
+	eDeque<eVec2>		trail;					// AI-defined waypoints for effective backtracking
+	eDeque<eVec2>		goals;					// User-defined waypoints as terminal destinations
+	eVec2 *				currentWaypoint;		// simplifies switching between the deque being tracked
+
+	decision_t			forward;				// currently used movement vector
+	decision_t			left;					// perpendicular to forward.vector counter-clockwise
+	decision_t			right;					// perpendicular to forward.vector clockwise
+
+	byte_t *			previousTile;			// most recently exited valid tile
+	byte_t *			currentTile;			// tile at the entity's origin
+	byte_t *			lastTrailTile;			// tile on which the last trail waypoint was placed (prevents redundant placement)
+
+	// pathfinding (wall-follow)
+	decision_t *		wallSide;				// direction to start sweeping from during PATHTYPE_WALL
+
+	bool				moving;
+	int					maxSteps;				// number of steps at current speed to project along a potential path
+*/
+}
+
+//***************
+// eMovement::eMovement
+//***************
+eMovement::eMovement(eMovement && other) {
+
+}
+
+//***************
+// eMovement::eMovement
 //***************
 eMovement::eMovement(eEntity * const owner, const float movementSpeed) {
 
@@ -25,6 +71,13 @@ eMovement::eMovement(eEntity * const owner, const float movementSpeed) {
 	wallSide		= nullptr;
 	pathingState	= PATHTYPE_NONE;
 	moveState		= MOVETYPE_NONE;
+}
+
+//***************
+// eMovement::operator=
+//***************
+eMovement & eMovement::operator=(eMovement other) {
+	// TODO: implement swap of copy
 }
 
 //***************

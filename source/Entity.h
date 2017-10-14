@@ -10,8 +10,8 @@
 // entitySpawnArgs_t
 typedef struct entitySpawnArgs_s {
 	eBounds			localBounds;
-	std::string		prefabFilename		= nullptr;
-	std::string		spriteFilename		= nullptr;
+	std::string		prefabFilename		= "";
+	std::string		spriteFilename		= "";
 	eVec3			renderBlockSize		= vec3_zero;
 	eVec2			imageColliderOffset = vec2_zero;
 	float			movementSpeed		= 0.0f;

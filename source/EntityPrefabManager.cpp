@@ -16,6 +16,9 @@ bool eEntityPrefabManager::Init() {
 	try {
 		prefabList.push_back(std::make_shared<eEntity>(defaultSpawnArgs));	// error prefab
 	} catch (const badEntityCtorException & e) {
+		// TODO: output to an error log file (popup is fine for now because it's more obvious and immediate)
+		std::string message = e.what + " caused eEntity (0) prefab failure.";
+		SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_INFORMATION, "Error", message.c_str(), NULL);
 		return false;
 	}
 	return true;
@@ -109,8 +112,8 @@ bool eEntityPrefabManager::GetPrefab(int prefabID, std::shared_ptr<eEntity> & re
 // spriteFilename= filename.png\n		(leave spriteFilename, renderBlockSize, and imageColliderOffset empty if entity has no visuals)
 // renderBlockSize= x y z\n				(floats)
 // imageCollisionOffset= x y\n			(floats)
+// localBounds= xMin yMin xMax yMax\n	(floats, mins = -maxs avoids allocating an eCollisionModel on the eEntity, collisionActive and movementSpeed will be ignored.)
 // movementSpeed= scalarValue\n			(float, set to 0 to avoid allocating an eMovement on the eEntity)
-// localBounds= xMin yMin xMax yMax\n	(floats, mins = -maxs avoids allocating an eCollisionModel on the eEntity, and the collisionActive line will be ignored.)
 // collisionActive= trueOrFalseHere\n	(boolalpha)
 //***************
 bool eEntityPrefabManager::LoadPrefab(const char * filename, std::shared_ptr<eEntity> & result) {
@@ -135,9 +138,8 @@ bool eEntityPrefabManager::LoadPrefab(const char * filename, std::shared_ptr<eEn
 	read.getline(buffer, sizeof(buffer), '\n');
 	if (!VerifyRead(read))
 		return false;
-	spawnArgs.spriteFilename = buffer;
-	read.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
 
+	spawnArgs.spriteFilename = buffer;
 	if (!spawnArgs.spriteFilename.empty()) {
 		read.ignore(std::numeric_limits<std::streamsize>::max(), '=');	// renderBlockSize
 		read >> spawnArgs.renderBlockSize.x;
@@ -153,16 +155,11 @@ bool eEntityPrefabManager::LoadPrefab(const char * filename, std::shared_ptr<eEn
 		read.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
 		if (!VerifyRead(read))
 			return false;
+
 	} else {
 		read.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
 		read.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
 	}
-
-	read.ignore(std::numeric_limits<std::streamsize>::max(), '=');		// movementSpeed
-	read >> spawnArgs.movementSpeed;
-	read.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-	if (!VerifyRead(read))
-		return false;
 
 	read.ignore(std::numeric_limits<std::streamsize>::max(), '=');		// localBounds
 	read >> spawnArgs.localBounds[0][0];
@@ -174,9 +171,15 @@ bool eEntityPrefabManager::LoadPrefab(const char * filename, std::shared_ptr<eEn
 		return false;
 
 	if (!spawnArgs.localBounds.IsEmpty()) {
+		read.ignore(std::numeric_limits<std::streamsize>::max(), '=');	// movementSpeed
+		read >> spawnArgs.movementSpeed;
+		read.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+		if (!VerifyRead(read))
+			return false;
+
 		read.ignore(std::numeric_limits<std::streamsize>::max(), '=');	// collisionActive
 		read >> std::boolalpha >> spawnArgs.collisionActive;
-		read.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+//		read.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
 		if (!VerifyRead(read))
 			return false;
 	}

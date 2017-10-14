@@ -14,6 +14,11 @@ class eSpatialIndexGrid {
 public:
 
 							eSpatialIndexGrid();
+							eSpatialIndexGrid(const eSpatialIndexGrid & other);
+							eSpatialIndexGrid(eSpatialIndexGrid && other);
+							~eSpatialIndexGrid() = default;
+
+	eSpatialIndexGrid &		operator=(eSpatialIndexGrid other);
 
 	bool					IsValid(const int row, const int column) const;
 	bool					IsValid(const eVec2 & point) const;
@@ -53,6 +58,7 @@ private:
 	type					cells[rows][columns];
 	int						cellWidth;
 	int						cellHeight;
+	int						layerDepth;					// 3D world-space increment sets eTile's renderBlock zPos from its layer (and eEntitiy layer from zPos)
 	int						isoCellWidth;				// to visually adjust images
 	int						isoCellHeight;				// to visually adjust images
 	float					invCellWidth;
@@ -68,6 +74,52 @@ inline eSpatialIndexGrid<type, rows, columns>::eSpatialIndexGrid()
 	  cellHeight(1),
 	  invCellWidth(1.0f),
 	  invCellHeight(1.0f) {
+}
+
+//******************
+// eSpatialIndexGrid::eSpatialIndexGrid
+//******************
+template< class type, int rows, int columns >
+inline eSpatialIndexGrid<type, rows, columns>::eSpatialIndexGrid(const eSpatialIndexGrid & other) 
+	: cellWidth(other.cellWidth), 
+	  cellHeight(other.cellHeight),
+	  layerDepth(other.layerDepth),
+	  isoCellWidth(other.isoCellWidth),
+	  isoCellHeight(other.isoCellHeight),
+	  invCellWidth(other.invCellWidth),
+	  invCellHeight(other.invCellHeight) {
+	std::copy(other.begin(), other.end(), begin());		// DEBUG: shouldn't throw std::bad_alloc as both items exist on the stack
+}
+
+//******************
+// eSpatialIndexGrid::eSpatialIndexGrid
+//******************
+template< class type, int rows, int columns >
+inline eSpatialIndexGrid<type, rows, columns>::eSpatialIndexGrid(eSpatialIndexGrid && other) 
+	: cellWidth(other.cellWidth), 
+	  cellHeight(other.cellHeight),
+	  layerDepth(other.layerDepth),
+	  isoCellWidth(other.isoCellWidth),
+	  isoCellHeight(other.isoCellHeight),
+	  invCellWidth(other.invCellWidth),
+	  invCellHeight(other.invCellHeight) {
+	cells = &other.cells[0][0];				// DEBUG: &cells[0][0] == &other.cells[0][0], then other gets destroyed (only freeing other.cells handle...?)
+}
+
+//******************
+// eSpatialIndexGrid::operator=
+//******************
+template< class type, int rows, int columns >
+inline eSpatialIndexGrid<type, rows, columns> & eSpatialIndexGrid<type, rows, columns>::operator=(eSpatialIndexGrid other) {
+	std::swap(cells, other.cells);
+	std::swap(cellWidth, other.cellWidth);
+	std::swap(cellHeight, other.cellHeight);
+	std::swap(layerDepth, other.layerDepth);
+	std::swap(isoCellWidth, other.isoCellWidth);
+	std::swap(isoCellHeight, other.isoCellHeight);
+	std::swap(invCellWidth, other.invCellWidth);
+	std::swap(invCellHeight, other.invCellHeight);
+	return *this;
 }
 
 //**************

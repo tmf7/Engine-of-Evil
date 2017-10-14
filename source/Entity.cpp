@@ -2,14 +2,13 @@
 
 //**************
 // eEntity::eEntity
-// FIXME(?): what if other.collisionModel (etc) are nullptr? exception thrown?
 //**************
 eEntity::eEntity(const eEntity & other) {
 	imageColliderOffset = other.imageColliderOffset;
-	renderImage			= other.renderImage;							// FIXME: theres std::shared_ptr<eImage> in here, may be a move/copy problem
+	renderImage			= other.renderImage;		// DEBUG: shallow std::shared_ptr<eImage> assignment, and std::vector<renderImage_s *> deep copy ctor
 	sprite				= other.sprite ? std::make_shared<eSprite>(*other.sprite) : nullptr;
 	collisionModel		= other.collisionModel ? std::make_shared<eCollisionModel>(*other.collisionModel) : nullptr;
-	movementPlanner		= other.movementPlanner ? std::make_shared<eMovement>(*other.movementPlanner) : nullptr;
+	movementPlanner		= other.movementPlanner ? std::make_shared<eMovement>(*other.movementPlanner) : nullptr;		// FIXME/BUG(!): bad deep copy ???
 	prefabFilename		= other.prefabFilename;
 	prefabManagerIndex	= other.prefabManagerIndex;
 	spawnedEntityID		= other.spawnedEntityID;
@@ -20,10 +19,10 @@ eEntity::eEntity(const eEntity & other) {
 //**************
 eEntity::eEntity(eEntity && other)
 	: imageColliderOffset(std::move(other.imageColliderOffset)),
-	  renderImage(std::move(other.renderImage)),					// FIXME: theres std::shared_ptr<eImage> in here, may be a move/copy problem
+	  renderImage(std::move(other.renderImage)),	// DEBUG: shallow std::shared_ptr<eImage> swap, and std::vector<renderImage_s *> move ctor
 	  sprite(std::move(other.sprite)),
 	  collisionModel(std::move(other.collisionModel)),
-	  movementPlanner(std::move(other.movementPlanner)),
+	  movementPlanner(std::move(other.movementPlanner)),		// FIXME/BUG(!): bad deep move ctor ???
 	  prefabFilename(std::move(other.prefabFilename)),
 	  prefabManagerIndex(other.prefabManagerIndex),
 	  spawnedEntityID(other.spawnedEntityID) {
@@ -39,20 +38,23 @@ eEntity::eEntity(const entitySpawnArgs_t & spawnArgs)
 	  prefabManagerIndex(spawnArgs.prefabManagerIndex),
 	  spawnedEntityID(-1) {
 
-	if (spawnArgs.movementSpeed) {
-		// FIXME/BUG(!): *this may move if its container re-allocates, or is otherwise moved
-		movementPlanner = std::make_shared<eMovement>(this, spawnArgs.movementSpeed);
-	}
-
 	if (!spawnArgs.localBounds.IsEmpty()) {
+		collisionModel = std::make_shared<eCollisionModel>();
 		collisionModel->LocalBounds() = spawnArgs.localBounds;
 		collisionModel->SetActive(spawnArgs.collisionActive);
+	
+		if (spawnArgs.movementSpeed) {
+			// FIXME/BUG(!): *this may move if its container re-allocates, or is otherwise moved
+			// SOLUTION: the movementPlanner.owner ptr value must update if *this moves,
+			// or...???
+			movementPlanner = std::make_shared<eMovement>(this, spawnArgs.movementSpeed);
+		}
 	}
 
 	// init sprite and renderBlock for draw order sorting
 	if (!spawnArgs.spriteFilename.empty()) {
 		sprite = std::make_shared<eSprite>();	// TODO: sprite initialization should be just this one line
-		std::shared_ptr<eImage> spriteImage;
+		std::shared_ptr<eImage> spriteImage = nullptr;
 		if (!game.GetImageManager().LoadImage(spawnArgs.spriteFilename.c_str(), SDL_TEXTUREACCESS_STATIC, spriteImage))
 			throw badEntityCtorException(spawnArgs.spriteFilename.c_str());
 
@@ -68,7 +70,7 @@ eEntity::eEntity(const entitySpawnArgs_t & spawnArgs)
 //**************
 eEntity & eEntity::operator=(eEntity other) {
 	std::swap(imageColliderOffset, other.imageColliderOffset);
-	std::swap(renderImage, other.renderImage);
+	std::swap(renderImage, other.renderImage);		// DEBUG: shallow std::shared_ptr<eImage> swap, and std::vector<renderImage_s *> move ctor
 	std::swap(sprite, other.sprite);
 	std::swap(collisionModel, other.collisionModel);
 	std::swap(movementPlanner, other.movementPlanner);
@@ -84,22 +86,20 @@ eEntity & eEntity::operator=(eEntity other) {
 // TODO: position via a single stack eTransform, not the eCollisionModel, or renderImage_t, or eSprite
 //***************
 bool eEntity::Spawn(const int entityPrefabIndex, const eVec3 & worldPosition /*, const eVec2 & facingDir*/) {
-
-	// TODO: allocate space for an entity (std::make_shared<eEntity>(spawnArgs))
-	// spawn it
-	// upon failure, catch the thrown bad exception
 	std::shared_ptr<eEntity> prefabEntity = nullptr;
-	if (!game.GetEntityPrefabManager().GetPrefab(entityPrefabIndex, prefabEntity));
+	if (!game.GetEntityPrefabManager().GetPrefab(entityPrefabIndex, prefabEntity))
 		return false;
 
 	int spawnID = game.NumEntities();
 	try {
-		// FIXME/BUG(!): new allocation and control block, but not a deep copy of eEntity shared pointers
-		game.AddEntity(std::make_shared<eEntity>(prefabEntity));
+		// FIXME/BUG(!): ensure this invokes the copy ctor and not the move ctor
+		// by checking the contents of game.entityPrefabManager.prefabList
+		// and the contents of game.entities before & after this line
+		game.AddEntity(std::make_shared<eEntity>(*prefabEntity));
 		auto & newEntity = game.GetEntity(spawnID);
 		newEntity->spawnedEntityID = spawnID;
 
-		// FIXME: use worldPosition.z to determine a layer (ie: set a const layer depth, or depth for each layer)
+		// TODO: use worldPosition.z to determine a layer (ie: set a const layer depth, or depth for each layer in eSpatialIndexGrid)
 		newEntity->renderImage.renderBlock += worldPosition;
 		newEntity->collisionModel->SetOrigin(eVec2(worldPosition.x, worldPosition.y));
 	//	if (newEntity->spriteController != nullptr)	// TODO: eMovement may be opposite facing, and eEntity may not have a eSprite, so only eSpriteController cares about facing
@@ -149,7 +149,7 @@ void eEntity::DebugDraw() {
 // UpdateRenderImageOrigin ensures only the visuals are isometric
 //*************
 void eEntity::UpdateRenderImageOrigin() {
-	renderImage.origin = collisionModel->AbsBounds()[0];		// FIXME(?): eTile::renderImage::origin is unmoving in iso. world space (regardless of collision)
+	renderImage.origin = collisionModel->AbsBounds()[0];		// FIXME(later): eTile::renderImage::origin is unmoving in iso. world space (regardless of collision)
 																// SOLUTION: treat all renderImage-collisionModel relations the same
 																// everthing can have a Transform...position, orientation, scale
 																// then collisionModels have origins at their center w/offset from the transform
@@ -169,27 +169,18 @@ void eEntity::UpdateRenderImageDisplay() {
 	renderImage.SetLayer(1);		// DEBUG: test starting layer
 
 // FREEHILL BEGIN 3d quicksort test
-	static float baseDepth = 64.0f;
-	float increment = 2.0f;
-
+	float zChange = 0.0f;
 	auto & input = game.GetInput();
 	if (input.KeyPressed(SDL_SCANCODE_H))
-		baseDepth += increment;
+		zChange = 2.0f;
 	else if (input.KeyPressed(SDL_SCANCODE_L))
-		baseDepth -= increment;
-
-	eVec2 originHack = collisionModel->AbsBounds()[0];
-	eVec2 collisionOffsetHack = vec2_zero;
-	float baseDepthHack = 0.0f;
-	switch(renderImage.layer) {
-		case 0: break;
-		case 1: baseDepthHack = 1.0f; break;
-		case 2: baseDepthHack = baseDepth; break;
-	}
-	renderImage.renderBlock = eBounds3D(eVec3(originHack.x, originHack.y, 0.0f));	// FIXME: re-position and resize (find a way to avoid resizing later)
-	renderImage.renderBlock[1] = renderImage.renderBlock[0] + eVec3(16.0f, 16.0f, (float)renderImage.srcRect->h);	// FIXME: zSize here may vary depending on entity (like grass tiles have 0 zSize)
-	renderImage.renderBlock += eVec3(collisionOffsetHack.x, collisionOffsetHack.y, baseDepthHack);
-
+		zChange = -2.0f;
+	
+	// translate from old renderBlock pos, to new renderBlock pos
+	// DEBUG: renderBlock and collisionModel currently designed to align, while offsetting renderImage.origin instead
+	eVec2 collisionMins = collisionModel->AbsBounds()[0];
+	eVec3 renderBlockMins = renderImage.renderBlock[0];
+	renderImage.renderBlock += eVec3(renderBlockMins.x - collisionMins.x, renderBlockMins.y - collisionMins.y, zChange);
 // FREEHILL END 3d quicksort test
 }
 

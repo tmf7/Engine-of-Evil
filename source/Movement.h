@@ -40,8 +40,12 @@ typedef enum {
 class eMovement {
 public:
 
+						eMovement(const eMovement & other);
+						eMovement(eMovement && other);
 						eMovement(eEntity * const owner, const float movementSpeed);
+						~eMovement() = default;
 
+	eMovement &			operator=(eMovement other);
 	void				Think();
 	void				DebugDraw();
 	void				AddUserWaypoint(const eVec2 & waypoint);

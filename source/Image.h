@@ -95,7 +95,7 @@ inline int eImage::GetHeight() const {
 //**************
 // eImage::GetFilename
 //**************
-inline std::string eImage::GetSourceFilename() const {
+inline const std::string & eImage::GetSourceFilename() const {
 	return sourceFilename;
 }
 
