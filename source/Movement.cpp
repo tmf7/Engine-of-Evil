@@ -1,87 +1,32 @@
 #include "Movement.h"
 #include "Game.h"
 
-/*
-//***************
-// eMovement::eMovement
-// FIXME/BUG: eDeque.front winds up pointing to invalid memory during eEntity dtor
-//***************
-eMovement::eMovement(const eMovement & other)	// FIXME/BUG(!): ensure the copy ctor of eSpatiaIndexGrid is called here
-	  {
-
-	eEntity *			owner;	
-
-	byte_map_t			knownMap;				// tracks visited tiles 
-	movementType_t		moveState;
-	pathfindingType_t	pathingState;
-
-	float				maxMoveSpeed;
-	float				collisionRadius;		// circular collision radius for prediction when using line of sight
-	float				goalRange;				// acceptable range to consider the goal waypoint reached
-
-	eDeque<eVec2>		trail;					// AI-defined waypoints for effective backtracking
-	eDeque<eVec2>		goals;					// User-defined waypoints as terminal destinations
-	eVec2 *				currentWaypoint;		// simplifies switching between the deque being tracked
-
-	decision_t			forward;				// currently used movement vector
-	decision_t			left;					// perpendicular to forward.vector counter-clockwise
-	decision_t			right;					// perpendicular to forward.vector clockwise
-
-	byte_t *			previousTile;			// most recently exited valid tile
-	byte_t *			currentTile;			// tile at the entity's origin
-	byte_t *			lastTrailTile;			// tile on which the last trail waypoint was placed (prevents redundant placement)
-
-	// pathfinding (wall-follow)
-	decision_t *		wallSide;				// direction to start sweeping from during PATHTYPE_WALL
-
-	bool				moving;
-	int					maxSteps;				// number of steps at current speed to project along a potential path
-
-}
-
 //***************
 // eMovement::eMovement
 //***************
-eMovement::eMovement(eMovement && other) {
-
-}
-
-*/
-
-//***************
-// eMovement::eMovement
-//***************
-eMovement::eMovement(eEntity * const owner, const float movementSpeed) {
-
-	this->owner = owner;
-	maxMoveSpeed = movementSpeed;									// FIXME/BUG(~): used to set the initial collisionModel.Velocity() here
-	goalRange	= maxMoveSpeed;
-	maxSteps	= 5;												// FIXME: change this logic to a linecast (instead of 3 * 5 * maxMoveSpeed points)
-	collisionRadius = owner->collisionModel->LocalBounds().Radius();
-	StopMoving();
-
-	// knownMap dimensions, based in initialized tileMap dimensions
+eMovement::eMovement(const float movementSpeed)
+	: maxMoveSpeed(movementSpeed),
+	  goalRange(movementSpeed),
+	  maxSteps(5),		// FIXME: change this logic to a linecast (instead of 3 * 5 * maxMoveSpeed points)
+	  currentTile(nullptr),
+	  previousTile(nullptr),
+	  lastTrailTile(nullptr),
+	  currentWaypoint(nullptr),
+	  wallSide(nullptr),
+	  pathingState(PATHTYPE_NONE),
+	  moveState(MOVETYPE_NONE) {		
 	knownMap.SetCellSize( game.GetMap().TileMap().CellWidth(),
 						  game.GetMap().TileMap().CellHeight() );
 	knownMap.ClearAllCells();
+}
 
+void eMovement::Init(eEntity * owner) {
+	this->owner = owner;
+	collisionRadius = owner->collisionModel->LocalBounds().Radius();
 	currentTile		= &knownMap.Index(owner->collisionModel->Origin());
 	previousTile	= currentTile;
-	lastTrailTile	= nullptr;
-	currentWaypoint = nullptr;
-	wallSide		= nullptr;
-	pathingState	= PATHTYPE_NONE;
-	moveState		= MOVETYPE_NONE;
+	StopMoving();
 }
-
-/*
-//***************
-// eMovement::operator=
-//***************
-eMovement & eMovement::operator=(eMovement other) {
-	// TODO: implement swap of copy
-}
-*/
 
 //***************
 // eMovement::Think
@@ -591,7 +536,7 @@ void eMovement::UpdateKnownMap() {
 void eMovement::DebugDraw() {
 	DrawGoalWaypoints();
 	DrawKnownMap();
-	DrawCollisionCircle();
+//	DrawCompassSearchArc();
 	DrawTrailWaypoints();
 }
 
@@ -631,23 +576,23 @@ void eMovement::DrawTrailWaypoints() {
 	}
 }
 
+/*
 //******************
-// eMovement::DrawCollisionCircle
+// eMovement::DrawCompassSearchArc
 // draws the forward sweep angle checked for collision prediction in any-angle pathfinding
 // FIXME: draw a partial circle in eRenderer instead
 //******************
-void eMovement::DrawCollisionCircle() {
-/*
+void eMovement::DrawCompassSearchArc() {
 	eVec2 debugVector;
 	eVec2 debugPoint;
 	float rotationAngle;
 	int pink[3] = { 255, 0, 255 };
 	int blue[3] = { 0,0,255 };
 	int * color;
-*/
-	if (!game.debugFlags.COLLISION)
+
+	if (!game.debugFlags.COMPASS_SEARCH)		// TODO: not defined, possibly replace with debugFlags.PATHFINDING to cover all eMovement Debug Drawing
 		return;
-/*
+
 	// draws one pixel for each point on the current collision circle 
 	if (moveState == MOVETYPE_GOAL)
 		color = pink;
@@ -660,17 +605,13 @@ void eMovement::DrawCollisionCircle() {
 		if (collisionModel.Velocity() * debugVector >= 0) {
 			debugPoint = collisionModel.Origin() + (debugVector * collisionRadius) - game.GetCamera().CollisionModel().AbsBounds()[0];
 			debugPoint.SnapInt();
-*/
-			// DEBUG: just test the iso-collision bounds for now
-			game.GetRenderer().DrawIsometricRect(yellowColor, owner->collisionModel->AbsBounds(), RENDERTYPE_DYNAMIC);
-//			game.GetRenderer().DrawPixel(debugPoint, color[0], color[1], color[2]);
-/*
+			game.GetRenderer().DrawPixel(debugPoint, color[0], color[1], color[2]);
 		}
 		debugVector = rotateCounterClockwiseZ * debugVector;
 		rotationAngle += ROTATION_INCREMENT;
 	}
-*/
 }
+*/
 
 //******************
 // eMovement::DrawKnownMap

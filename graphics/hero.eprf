@@ -1,6 +1,6 @@
 # leave spriteFilename, renderBlockSize, and imageColliderOffset empty if entity has no visuals. Set localBounds mins > maxs if entity has no collision; if so then collisionActive and movementSpeed lines will be ignored. Set movementSpeed to 0 to avoid allocating an eMovement.
 spriteFilename=graphics/hero.png
-renderBlockSize= 8.0 8.0 64.0
+renderBlockSize= 16.0 16.0 64.0
 imageCollisionOffset= -32.0 -45.0		# -58.0 -90.0
 localBounds= -8.0 -8.0 8.0 8.0
 movementSpeed= 5.0

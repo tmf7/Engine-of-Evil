@@ -159,7 +159,7 @@ bool eMap::LoadMap(const char * mapFilename) {
 			read >> worldPosition.x;
 			read >> worldPosition.y;
 			read >> worldPosition.z;
-			read.ignore(std::numeric_limits<std::streamsize>::max(), '\n');		// FIXME/BUG: this is a problem if the last float is eof
+			read.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
 			if (!VerifyRead(read))
 				return false;
 			

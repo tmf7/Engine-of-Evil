@@ -199,7 +199,7 @@ void eTile::SetType(int newType) {
 			zSizeHack = (float)renderImage.srcRect->h;
 			break;
 		case 2: 
-			baseDepthHack = 130.0f;	// 128 + 1 + 1
+			baseDepthHack = 130.0f;	// 128 + 1 + 1 (or 65 * 2)
 			zSizeHack = (float)renderImage.srcRect->h;
 			break;
 	}

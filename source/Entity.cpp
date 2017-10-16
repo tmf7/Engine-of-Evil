@@ -43,19 +43,15 @@ eEntity::eEntity(const entitySpawnArgs_t & spawnArgs)
 		collisionModel->LocalBounds() = spawnArgs.localBounds;
 		collisionModel->SetActive(spawnArgs.collisionActive);
 	
-		if (spawnArgs.movementSpeed) {
-			// FIXME/BUG(!): *this may move if its container re-allocates, or is otherwise moved
-			// SOLUTION: the movementPlanner.owner ptr value must update if *this moves,
-			// or...???
-			movementPlanner = std::make_shared<eMovement>(this, spawnArgs.movementSpeed);
-		}
+		if (spawnArgs.movementSpeed)
+			movementPlanner = std::make_shared<eMovement>(spawnArgs.movementSpeed);
 	}
 
 	// init sprite and renderBlock for draw order sorting
 	if (!spawnArgs.spriteFilename.empty()) {
 		sprite = std::make_shared<eSprite>();	// TODO: sprite initialization should be just this one line
 		std::shared_ptr<eImage> spriteImage = nullptr;
-		if (!game.GetImageManager().LoadImage(spawnArgs.spriteFilename.c_str(), SDL_TEXTUREACCESS_STATIC, spriteImage))	// FIXME: bad filename??? 
+		if (!game.GetImageManager().LoadImage(spawnArgs.spriteFilename.c_str(), SDL_TEXTUREACCESS_STATIC, spriteImage))
 			throw badEntityCtorException(spawnArgs.spriteFilename.c_str());	
 
 		sprite->SetImage(spriteImage);			
@@ -82,7 +78,7 @@ eEntity & eEntity::operator=(eEntity other) {
 
 //***************
 // eEntity::Spawn
-// copy a prefab eEntity and add unique details
+// copies a prefab eEntity and adds unique details
 // TODO: position via a single stack eTransform, not the eCollisionModel, or renderImage_t, or eSprite
 //***************
 bool eEntity::Spawn(const int entityPrefabIndex, const eVec3 & worldPosition /*, const eVec2 & facingDir*/) {
@@ -97,16 +93,29 @@ bool eEntity::Spawn(const int entityPrefabIndex, const eVec3 & worldPosition /*,
 		// and the contents of game.entities before & after this line
 		game.AddEntity(std::make_shared<eEntity>(*prefabEntity));
 		auto & newEntity = game.GetEntity(spawnID);
-		newEntity->spawnedEntityID = spawnID;
+		newEntity->spawnedEntityID = spawnID;			// FIXME/BUG(!): game.RemoveEntity(entityID) will invalidate all indexes above entityID
+														// SOLUTION: make game.entities a HashTable (which also partially solves the movementPlanner &owner update)
+														// TODO: the same goes for ImageManager and EntityPrefabManger's HashIndexes into std::vectors
+		
+		// FIXME/BUG(!): &newEntity may move if its container re-allocates, or is otherwise moved
+		// EG: game.entities.RemoveEntity(entityID); shifts all addresses above entityID (game.entities has reserved MAX_ENTITIES so push-resize is unlikely)
+		// SOLUTION: the movementPlanner.owner ptr value must update if &newEntity changes, so make eEntity monitor its oldAddress and newAddress
+		// and push any changes to its movementPlanner
+		if (newEntity->movementPlanner != nullptr)
+			newEntity->movementPlanner->Init(newEntity.get());
 
-		// TODO: use worldPosition.z to determine a layer (ie: set a const layer depth, or depth for each layer in eSpatialIndexGrid)
-		newEntity->renderImage.renderBlock += worldPosition;
-		newEntity->collisionModel->SetOrigin(eVec2(worldPosition.x, worldPosition.y));
-	//	if (newEntity->spriteController != nullptr)	// TODO: eMovement may be opposite facing, and eEntity may not have a eSprite, so only eSpriteController cares about facing
-	//		newEntity->spriteController->SetFacingDirection(facingDir);		
+		if (newEntity->sprite != nullptr) {
+			// TODO: use worldPosition.z to determine a layer (ie: set a const layer depth, or depth for each layer in eSpatialIndexGrid)
+			newEntity->renderImage.renderBlock += worldPosition;
+			newEntity->collisionModel->SetOrigin(eVec2(worldPosition.x, worldPosition.y));
 
-		newEntity->UpdateRenderImageOrigin();
-		newEntity->UpdateRenderImageDisplay();
+			// TODO: eMovement may be opposite facing, and eEntity may not have a eSprite, so only eSpriteController cares about facing
+//			if (newEntity->spriteController != nullptr)	
+//				newEntity->spriteController->SetFacingDirection(facingDir);		
+
+			newEntity->UpdateRenderImageOrigin();
+			newEntity->UpdateRenderImageDisplay();
+		}
 		return true;
 	} catch (const badEntityCtorException & e) {
 		// TODO: output to an error log file (popup is fine for now because it's more obvious and immediate)
@@ -120,7 +129,11 @@ bool eEntity::Spawn(const int entityPrefabIndex, const eVec3 & worldPosition /*,
 // eEntity::Draw
 //***************
 void eEntity::Draw() {
-	// FIXME(?): move these two calls elsewhere
+	if (sprite == nullptr)
+		return;
+
+	// TODO: make eEntity.renderImage manipulation/drawing part of eSprite
+	// then just call sprite->Draw(); here
 	UpdateRenderImageOrigin();
 	UpdateRenderImageDisplay();
 
@@ -135,12 +148,24 @@ void eEntity::Draw() {
 // eEntity::Think
 //***************
 void eEntity::Think() {
+	if (movementPlanner != nullptr)
+		movementPlanner->Think();
 }
 
 //***************
 // eEntity::DebugDraw
 //***************
 void eEntity::DebugDraw() {
+	if (game.debugFlags.RENDERBLOCKS && sprite != nullptr) {
+		game.GetRenderer().DrawIsometricPrism(lightBlueColor, renderImage.renderBlock, RENDERTYPE_DYNAMIC);
+	}
+
+	if (game.debugFlags.COLLISION && collisionModel != nullptr) {
+		game.GetRenderer().DrawIsometricRect(yellowColor, collisionModel->AbsBounds(), RENDERTYPE_DYNAMIC);
+	}
+
+	if (movementPlanner != nullptr)
+		movementPlanner->DebugDraw();
 }
 
 //*************
@@ -180,7 +205,7 @@ void eEntity::UpdateRenderImageDisplay() {
 	// DEBUG: renderBlock and collisionModel currently designed to align, while offsetting renderImage.origin instead
 	eVec2 collisionMins = collisionModel->AbsBounds()[0];
 	eVec3 renderBlockMins = renderImage.renderBlock[0];
-	renderImage.renderBlock += eVec3(renderBlockMins.x - collisionMins.x, renderBlockMins.y - collisionMins.y, zChange);
+	renderImage.renderBlock += eVec3(collisionMins.x - renderBlockMins.x, collisionMins.y - renderBlockMins.y , zChange);
 // FREEHILL END 3d quicksort test
 }
 

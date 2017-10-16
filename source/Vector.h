@@ -8,6 +8,8 @@
 
 // handles vectors, quaternions, and their operations
 
+class eVec3;
+
 //******************
 // eVec2
 //******************
@@ -56,17 +58,17 @@ extern eVec2 vec2_zeroOne;
 //******************
 // eVec2::eVec2
 //******************
-inline eVec2::eVec2() {
-	x = 0.0f;
-	y = 0.0f;
+inline eVec2::eVec2()
+	: x(0.0f),
+	  y(0.0f) {
 }
 
 //******************
 // eVec2::eVec2
 //******************
-inline eVec2::eVec2(const float x, const float y) {
-	this->x = x;
-	this->y = y;
+inline eVec2::eVec2(const float x, const float y) 
+	: x(x),
+	  y(y) {
 }
 
 //******************
@@ -312,6 +314,7 @@ public:
 
 				eVec3();
 	explicit	eVec3(const float x, const float y, const float z);
+				eVec3(const eVec2 & point);
 
 	void		Set(const float x, const float y, const float z);
 	void		Zero();
@@ -349,19 +352,28 @@ extern eVec3 vec3_oneZero;
 //******************
 // eVec3::eVec3
 //******************
-inline eVec3::eVec3() {
-	x = 0.0f;
-	y = 0.0f;
-	z = 0.0f;
+inline eVec3::eVec3()
+	: x(0.0f),
+	  y(0.0f),
+	  z(0.0f) {
 }
 
 //******************
 // eVec3::eVec3
 //******************
-inline eVec3::eVec3(const float x, const float y, const float z) {
-	this->x = x;
-	this->y = y;
-	this->z = z;
+inline eVec3::eVec3(const float x, const float y, const float z)
+	: x(x),
+	  y(y),
+	  z(z) {
+}
+
+//******************
+// eVec3::eVec3
+//******************
+inline eVec3::eVec3(const eVec2 & point)
+	: x(point.x),
+	  y(point.y),
+	  z(0.0f) {
 }
 
 //******************
@@ -640,27 +652,31 @@ extern eQuat rotateClockwiseZ;			// rotate ROTATION_INCREMENT clockwise about z-
 //******************
 // eQuat::eQuat
 //******************
-inline eQuat::eQuat() {
+inline eQuat::eQuat()
+	: x(0.0f),
+	  y(0.0f),
+	  z(0.0f),
+	  w(0.0f) {
 }
 
 //******************
 // eQuat::eQuat
 //******************
-inline eQuat::eQuat(const float x, const float y, const float z, const float w) {
-	this->x = x;
-	this->y = y;
-	this->z = z;
-	this->w = w;
+inline eQuat::eQuat(const float x, const float y, const float z, const float w)
+	: x(x),
+	  y(y),
+	  z(z),
+	  w(w) {
 }
 
 //******************
 // eQuat::eQuat
 //******************
-inline eQuat::eQuat(const eVec3 vector, const float scalar) {
-	x = vector.x;
-	y = vector.y;
-	z = vector.z;
-	w = scalar;
+inline eQuat::eQuat(const eVec3 vector, const float scalar)
+	: x(vector.x),
+	  y(vector.y),
+	  z(vector.z),
+	  w(scalar) {
 }
 
 //******************

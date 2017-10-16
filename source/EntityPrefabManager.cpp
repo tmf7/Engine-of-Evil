@@ -109,7 +109,7 @@ bool eEntityPrefabManager::GetPrefab(int prefabID, std::shared_ptr<eEntity> & re
 // and returns false on failure
 // DEBUG (.eprf file format):
 // # first line comment\n 
-// spriteFilename= filename.png\n		(leave spriteFilename, renderBlockSize, and imageColliderOffset empty if entity has no visuals)
+// spriteFilename=filename.png\n		(leave spriteFilename, renderBlockSize, and imageColliderOffset empty if entity has no visuals)
 // renderBlockSize= x y z\n				(floats)
 // imageCollisionOffset= x y\n			(floats)
 // localBounds= xMin yMin xMax yMax\n	(floats, mins = -maxs avoids allocating an eCollisionModel on the eEntity, collisionActive and movementSpeed will be ignored.)

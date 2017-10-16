@@ -20,6 +20,7 @@ public:
 		bool	GOAL_WAYPOINTS		= true;
 		bool	TRAIL_WAYPOINTS		= true;
 		bool	COLLISION			= true;
+		bool	RENDERBLOCKS		= true;
 		bool	KNOWN_MAP_DRAW		= true;
 		bool	KNOWN_MAP_CLEAR		= true;
 		bool	FRAMERATE			= true;

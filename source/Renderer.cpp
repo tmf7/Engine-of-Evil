@@ -126,16 +126,59 @@ void eRenderer::DrawOutlineText(const char * text, eVec2 & point, const SDL_Colo
 	}
 }
 
+// FREEHILL BEGIN renderblock draw test
 //***************
 // eRenderer::DrawIsometricRect
 // converts the given rect into an isomectric box
-// fill draws the rect solid
+// dynamic moves and scales with the camera
+// DEBUG: immediatly draws to the given render target
+//***************
+void eRenderer::DrawIsometricPrism(const SDL_Color & color, eBounds3D rect, bool dynamic) const {
+	SDL_SetRenderDrawColor(internal_renderer, color.r, color.g, color.b, color.a);
+
+	std::array<eVec3, 9> fPoints;
+	rect.ToPoints(fPoints.data());
+	fPoints[8] = fPoints[4];
+
+	// convert to isometric rhombus
+	// and translate with camera
+	// FIXME: CartToIso doesn't account for the z of each fPoint
+	std::array<SDL_Point, 9> iPoints;
+	for (int i = 0; i < fPoints.size(); i++) {
+		fPoints[i].x += fPoints[i].z;
+		fPoints[i].y += fPoints[i].z;
+		eMath::CartesianToIsometric(fPoints[i].x, fPoints[i].y);
+		fPoints[i] -= (eVec3)game.GetCamera().CollisionModel().AbsBounds()[0] * dynamic;
+		fPoints[i].SnapInt();
+		iPoints[i] = { (int)fPoints[i].x, (int)fPoints[i].y };
+	}
+
+	if (dynamic) {
+		SDL_SetRenderTarget(internal_renderer, scalableTarget);
+		SDL_RenderSetScale(internal_renderer, game.GetCamera().GetZoom(), game.GetCamera().GetZoom());
+		SDL_RenderDrawLines(internal_renderer, iPoints.data(), iPoints.size());
+		SDL_SetRenderTarget(internal_renderer, NULL);
+		SDL_RenderSetScale(internal_renderer, 1.0f, 1.0f);
+		SDL_RenderCopy(internal_renderer, scalableTarget, NULL, NULL);
+	} else {
+		SDL_RenderDrawLines(internal_renderer, iPoints.data(), iPoints.size());
+	}
+	SDL_SetRenderDrawColor(internal_renderer, clearColor.r, clearColor.g, clearColor.b, clearColor.a);
+}
+
+
+
+
+// FREEHILL END renderblock draw test
+
+//***************
+// eRenderer::DrawIsometricRect
+// converts the given rect into an isomectric box
 // dynamic moves and scales with the camera
 // DEBUG: immediatly draws to the given render target
 //***************
 void eRenderer::DrawIsometricRect(const SDL_Color & color, eBounds rect, bool dynamic) const {
 	SDL_SetRenderDrawColor(internal_renderer, color.r, color.g, color.b, color.a);
-
 
 	std::array<eVec2, 5> fPoints;
 	rect.ToPoints(fPoints.data());
