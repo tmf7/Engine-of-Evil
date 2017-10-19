@@ -13,8 +13,13 @@ std::array<eTileImpl, eTileImpl::maxTileTypes> eTileImpl::tileTypes;
 // allTilesSubframes.bsub\n
 // # comment explaining default collider reference list numbering rules\n
 // eBounds: width height xOffset yOffset	# 0 index comment\n
-// eBounds: width height xOffset yOffset	# 1
+// eBounds: width height xOffset yOffset	# 1\n
 // (repeat for all default colliders)
+// # comment explaining default renderBlockSize reference list numbering rules\n
+// rbSizeIntro: width height depth	# 0 index comment\n
+// rbSizeIntro: width height depth	# 1\n
+// (repeat for all default renderBlock sizes)
+// # begin tile type definitions comment\n
 // num_tiles: number of tiles\n
 // imageFilename\n
 // subframeIndex colliderType # master tile index comment\n
@@ -35,7 +40,7 @@ bool eTileImpl::LoadTileset(const char * tilesetFilename, bool appendNew) {
 	if (!read.good())
 		return false;
 
-	read.ignore(std::numeric_limits<std::streamsize>::max(), '\n');		// skip the first line comment
+	read.ignore(std::numeric_limits<std::streamsize>::max(), '\n');			// skip the first line comment
 	memset(buffer, 0, sizeof(buffer));
 	read.getline(buffer, sizeof(buffer), '\n');
 	if (!VerifyRead(read))
@@ -44,25 +49,30 @@ bool eTileImpl::LoadTileset(const char * tilesetFilename, bool appendNew) {
 	if (!game.GetImageManager().BatchLoadSubframes(buffer))
 		return false;
 
+	enum {
+		LOADING_DEFAULT_COLLISION,
+		LOADING_DEFAULT_RENDERBLOCKS,
+		LOADING_TILESET
+	};
+	int readState = LOADING_DEFAULT_COLLISION;
+
 // FREEHILL BEGIN AABB (eBounds) collisionModel import test (1/2)
+	read.ignore(std::numeric_limits<std::streamsize>::max(), '\n');			// skip the third line comment
+
 	std::vector<std::shared_ptr<eBounds>> defaultAABBList;
-	while (true) {
-		read.ignore(std::numeric_limits<std::streamsize>::max(), '\n');		// skip the third line comment/rest of the line
+	while (readState == LOADING_DEFAULT_COLLISION) {
 		memset(buffer, 0, sizeof(buffer));
 		read.getline(buffer, sizeof(buffer), ':');
 		if (!VerifyRead(read))
 			return false;
 	
-		std::string collisionShape{buffer};
+		std::string collisionShape = buffer;
 		if (collisionShape == TO_STRING(eBounds)) {
 			float width = 0;
 			float height = 0;
 			float xOffset = 0;
 			float yOffset = 0;
-			read >> width;
-			read >> height;
-			read >> xOffset;
-			read >> yOffset;
+			read >> width >> height >> xOffset >> yOffset;
 			if (!VerifyRead(read))
 				return false;
 
@@ -78,11 +88,40 @@ bool eTileImpl::LoadTileset(const char * tilesetFilename, bool appendNew) {
 	} else if (collisionShape == TO_STRING(ePolyLine)) {
 	}
 */
-		} else { // (collisionShape == "num_tiles")
-			break;
+		}
+		
+		read.ignore(std::numeric_limits<std::streamsize>::max(), '\n');		// skip the rest of the line
+		if (read.peek() == '#') {
+			read.ignore(std::numeric_limits<std::streamsize>::max(), '\n');	// skip the renderBlockSize rules comment
+			readState = LOADING_DEFAULT_RENDERBLOCKS;
 		}
 	} 
 // FREEHILL END AABB (eBounds) collisionModel import test (1/2)
+
+// FREEHILL BEGIN renderBlockSize import (1/2)
+
+	std::vector<eVec3> defaultRenderBlockSizes;
+	while (readState == LOADING_DEFAULT_RENDERBLOCKS) {
+		read.ignore(std::numeric_limits<std::streamsize>::max(), ':');		// rbSize text
+		if (!VerifyRead(read))
+			return false;
+	
+		float width = 0;
+		float height = 0;
+		float depth = 0;
+		read >> width >> height >> depth;
+		if (!VerifyRead(read))
+			return false;
+	
+		defaultRenderBlockSizes.emplace_back(width, height, depth); 
+		read.ignore(std::numeric_limits<std::streamsize>::max(), '\n');		// skip the rest of the line
+		if (read.peek() == '#') {
+			read.ignore(std::numeric_limits<std::streamsize>::max(), '\n');	// begin tile type definitions comment
+			read.ignore(std::numeric_limits<std::streamsize>::max(), ':');	// num_tiles text
+			readState = LOADING_TILESET;
+		}
+	} 
+// FREEHILL END renderBlockSize import (1/2)
 
 	// read how many tiles are about to be loaded
 	// to minimize dynamic allocations
@@ -90,10 +129,11 @@ bool eTileImpl::LoadTileset(const char * tilesetFilename, bool appendNew) {
 	read >> numTiles;
 	if (!VerifyRead(read))
 		return false;
+
 	tileSet.reserve(tileSet.size() + numTiles);
 	read.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
 
-	while (!read.eof()) {
+	while (!read.eof()) {	// readState == LOADING_TILESET
 		// read a source image name
 		memset(buffer, 0, sizeof(buffer));
 		read.getline(buffer, sizeof(buffer), '\n');
@@ -111,14 +151,11 @@ bool eTileImpl::LoadTileset(const char * tilesetFilename, bool appendNew) {
 		while (read.peek() != '#') {
 			int subframeIndex;
 			int colliderType;
+			int renderBlockType;
 
-			read >> subframeIndex;
-				if (!VerifyRead(read))
-					return false;
-
-			read >> colliderType;
-				if (!VerifyRead(read))
-					return false;
+			read >> subframeIndex >> colliderType >> renderBlockType;
+			if (!VerifyRead(read))
+				return false;
 
 			tileSet.push_back(std::pair<int, int> { imageID, subframeIndex });		// FIXME: verify the subframe exists, 
 																					// otherwise push an error image handle into this tileSet index
@@ -126,6 +163,9 @@ bool eTileImpl::LoadTileset(const char * tilesetFilename, bool appendNew) {
 			tileTypes[type].type = type;
 			if (colliderType > 0)
 				tileTypes[type].collider = defaultAABBList[colliderType - 1];
+
+			if (renderBlockType > 0)
+				tileTypes[type].renderBlockSize = defaultRenderBlockSizes[renderBlockType - 1];
 
 			read.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
 		}
@@ -144,16 +184,25 @@ bool eTileImpl::LoadTileset(const char * tilesetFilename, bool appendNew) {
 // owner is the originating eGridCell responsible for this eTile's lifetime
 // origin is the top-left corner of the image position in world-coordinates (on an orthographic 2D grid)
 // type is the index within the master tileSet vector
-// layer is the draw order depth
-// TODO: Initialize the collisionModel based on file data
+// layer sets *this.renderImage.renderBlock's base z-position (for draw order sorting)
 // DEBUG: every tile is aligned with at least one cell no matter its size (ie: no freely-aligned tile-image origins)
 //************
 eTile::eTile(eGridCell * owner, const eVec2 & origin, const int type, const int layer) {
 	this->owner = owner;
-	renderImage.SetLayer(layer);
+	renderImage.layer = layer;
 	renderImage.origin = origin;
 	eMath::CartesianToIsometric(renderImage.origin.x, renderImage.origin.y);
 	SetType(type);
+}
+
+//************
+// eTile::SetLayer
+//************
+void eTile::SetLayer(const int newLayer) {
+	float newRBMinZ = game.GetMap().TileMap().MinLayerZ(newLayer);
+	float oldRBMinZ = renderImage.renderBlock[0].z;
+	renderImage.renderBlock += eVec3(0.0f, 0.0f, newRBMinZ - oldRBMinZ);
+	renderImage.layer = newLayer;
 }
 
 //************
@@ -180,12 +229,27 @@ void eTile::SetType(int newType) {
 
 	eVec2 orthoOrigin = renderImage.origin;
 	eMath::IsometricToCartesian(orthoOrigin.x, orthoOrigin.y);
-	impl = &eTileImpl::tileTypes[newType];															// FIXME(~): doesn't verify the array index
-	game.GetImageManager().GetImage(eTileImpl::tileSet.at(newType).first, renderImage.image);		// which image (tile atlas)
-	renderImage.srcRect = &renderImage.image->GetSubframe(eTileImpl::tileSet.at(newType).second);	// which part of that image
+	impl = &eTileImpl::tileTypes[newType];																	// FIXME(~): doesn't verify the array index
+	game.GetImageManager().GetImage(eTileImpl::tileSet.at(newType).first, renderImage.image);				// which image (tile atlas)
+	renderImage.srcRect = &renderImage.image->GetSubframe(eTileImpl::tileSet.at(newType).second);			// which part of that image
+	renderImage.renderBlock = eBounds3D((eVec3)orthoOrigin, (eVec3)orthoOrigin + impl->renderBlockSize);	// FREEHILL 3d quicksort test
+	SetLayer(renderImage.layer);
+
+// FREEHILL BEGIN AABB (eBounds) collisionModel import test (2/2)
+	if (impl->collider != nullptr) {
+		collisionModel = std::make_shared<eCollisionModel>();
+		collisionModel->SetActive(true);
+		collisionModel->LocalBounds() = *(impl->collider);
+		collisionModel->SetOrigin(orthoOrigin);
+		
+		// TODO: use an eTransform and offset instead of directly linking visuals and colliders
+		// FREEHILL 3d quicksort test
+		renderImage.renderBlock += (eVec3)collisionModel->LocalBounds()[0];
+	}
+// FREEHILL END AABB (eBounds) collisionModel import test (2/2)
 
 // FREEHILL BEGIN 3d quicksort test
-
+/*
 	// TODO: pull XYSize and boundsOffset/depth from .tls (where the collision models are defined)
 	float xySizeHack = (renderImage.image->GetSourceFilename() == "graphics/tree_test_tile.png") ? 8.0f : 32.0f;
 	eVec2 collisionOffsetHack = (renderImage.image->GetSourceFilename() == "graphics/tree_test_tile.png") ? eVec2(32.0f, 10.0f) : vec2_zero;
@@ -206,7 +270,7 @@ void eTile::SetType(int newType) {
 	renderImage.renderBlock = eBounds3D(eVec3(orthoOrigin.x, orthoOrigin.y, 0.0f));
 	renderImage.renderBlock[1] = renderImage.renderBlock[0] + eVec3(xySizeHack, xySizeHack, zSizeHack);
 	renderImage.renderBlock += eVec3(collisionOffsetHack.x, collisionOffsetHack.y, baseDepthHack);
-
+*/
 // FREEHILL END 3d quicksort test
 
 	// visual alignment with isometric owner cell
@@ -214,15 +278,6 @@ void eTile::SetType(int newType) {
 	imageHeight = (float)renderImage.srcRect->h;
 	conversionOffset = eVec2(-isoCellWidthAdjustment, isoCellHeightAdjustment - imageHeight);
 	renderImage.origin += conversionOffset;
-
-// FREEHILL BEGIN AABB (eBounds) collisionModel import test (2/2)
-	if (impl->collider != nullptr) {
-		collisionModel = std::make_shared<eCollisionModel>();
-		collisionModel->SetActive(true);
-		collisionModel->LocalBounds() = *impl->collider;
-		collisionModel->SetOrigin(orthoOrigin);
-	}
-// FREEHILL END AABB (eBounds) collisionModel import test (2/2)
 }
 
 //************

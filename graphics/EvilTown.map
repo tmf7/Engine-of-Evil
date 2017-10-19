@@ -1,4 +1,4 @@
-# columns rows cell-width cell-height num_layers (note square cells because the base logic is orthogonal, not isometric)
+# columns rows cell-width cell-height layer-depth num_layers (note square cells because the base logic is orthogonal, not isometric)
 128 128 32 32 3
 # tileset file
 graphics/evilMaster.tls
@@ -392,6 +392,6 @@ graphics/evilMaster.tls
 # batch-load eEntity prefabs used on this map (prefabList indexes are defined in the batch file)
 graphics/evilMaster.bepf
 # spawn unique eEntities
-1 192.0 192.0 64.0		# prefabList index, xPos yPos of eEntity::collisionModel::origin in orthographic 2D world-space, and zPos of eEntity::renderImage::renderBlock bottom in 3D world-space
-1 300.0 300.0 64.0
+1 192.0 192.0 1.0		# prefabList index, xPos yPos of eEntity::collisionModel::origin in orthographic 2D world-space, and zPos of eEntity::renderImage::renderBlock bottom in 3D world-space
+1 300.0 300.0 1.0
 # end of file

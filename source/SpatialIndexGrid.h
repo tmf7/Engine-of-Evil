@@ -1,6 +1,8 @@
 #ifndef EVIL_SPATIAL_INDEX_GRID_H
 #define EVIL_SPATIAL_INDEX_GRID_H
 
+#include <vector>
+
 class eVec2;
 
 //*************************************************
@@ -36,9 +38,13 @@ public:
 
 	int						IsometricCellWidth() const;
 	int						IsometricCellHeight() const;
+	int						LayerDepth(const int layer) const;
+	int						MinLayerZ(const int layer) const;
+	int						MaxLayerZ(const int layer) const;
 	int						CellWidth() const;
 	int						CellHeight() const;
 	void					SetCellSize(const int cellWidth, const int cellHeight);
+	void					AddLayerDepth(const size_t depth);
 
 	// iterator hooks
 	type *					begin();
@@ -58,7 +64,7 @@ private:
 	type					cells[rows][columns];
 	int						cellWidth;
 	int						cellHeight;
-	int						layerDepth;					// 3D world-space increment sets eTile's renderBlock zPos from its layer (and eEntitiy layer from zPos)
+	std::vector<int>		layerDepths;				// 3D world-space increment sets eTile's renderBlock zPos from its layer (and eEntitiy layer from zPos)
 	int						isoCellWidth;				// to visually adjust images
 	int						isoCellHeight;				// to visually adjust images
 	float					invCellWidth;
@@ -297,6 +303,36 @@ inline int eSpatialIndexGrid<type, rows, columns>::IsometricCellHeight() const {
 }
 
 //******************
+// eSpatialIndexGrid::LayerDepth
+// DEBUG: layer > 0 && layer < layerDepths.size()
+//******************
+template< class type, int rows, int columns>
+inline int eSpatialIndexGrid<type, rows, columns>::LayerDepth(const int layer) const {
+	return layerDepths[layer];
+}
+
+//******************
+// eSpatialIndexGrid::MinLayerZ
+// DEBUG: layer > 0 && layer < layerDepths.size()
+//******************
+template< class type, int rows, int columns>
+inline int eSpatialIndexGrid<type, rows, columns>::MinLayerZ(const int layer) const {
+	int minLayerZ = 0;
+	for (int i = 0; i < layer; ++i)
+		minLayerZ += (layerDepths[i] + 1);		// DEBUG: +1 to ensure layer depth intervals don't touch
+	return minLayerZ;
+}
+
+//******************
+// eSpatialIndexGrid::MaxLayerZ
+// DEBUG: layer > 0 && layer < layerDepths.size()
+//******************
+template< class type, int rows, int columns>
+inline int eSpatialIndexGrid<type, rows, columns>::MaxLayerZ(const int layer) const {
+	return MinLayerZ(layer) + layerDepths[layer];
+}
+
+//******************
 // eSpatialIndexGrid::CellWidth
 //******************
 template< class type, int rows, int columns>
@@ -313,8 +349,8 @@ inline int eSpatialIndexGrid<type, rows, columns>::CellHeight() const {
 }
 
 //******************
-// eSpatialIndexGrid::SetCellWidth
-// minimum width and height are 1
+// eSpatialIndexGrid::SetCellSize
+// DEBUG: minimum width and height are 1
 //******************
 template< class type, int rows, int columns>
 inline void eSpatialIndexGrid<type, rows, columns>::SetCellSize(const int cellWidth, const int cellHeight) {
@@ -322,8 +358,17 @@ inline void eSpatialIndexGrid<type, rows, columns>::SetCellSize(const int cellWi
 	this->cellHeight = cellHeight > 0 ? cellHeight : 1;
 	invCellWidth = 1.0f / (float)this->cellWidth;
 	invCellHeight = 1.0f / (float)this->cellHeight;
-	isoCellWidth = cellWidth + cellHeight;
-	isoCellHeight = isoCellWidth >> 1;
+	isoCellWidth = cellWidth + cellHeight;				// DEBUG: formula results of converting a rectangle's vertices using eMath::CartesianToIsometric
+	isoCellHeight = isoCellWidth >> 1;					// DEBUG: same here
+}
+
+//******************
+// eSpatialIndexGrid::AddLayerDepth
+// DEBUG: depth >= 0
+//******************
+template< class type, int rows, int columns>
+inline void eSpatialIndexGrid<type, rows, columns>::AddLayerDepth(const size_t depth) {
+	layerDepths.push_back(depth);
 }
 
 //******************

@@ -51,11 +51,7 @@ bool eMap::LoadMap(const char * mapFilename) {
 	int column = 0;
 
 	read.ignore(std::numeric_limits<std::streamsize>::max(), '\n');		// skip the first line comment
-	read >> numColumns;
-	read >> numRows;
-	read >> cellWidth;
-	read >> cellHeight;
-	read >> numLayers;
+	read >> numColumns >> numRows >> cellWidth >> cellHeight >> numLayers;
 	read.ignore(std::numeric_limits<std::streamsize>::max(), '\n');		// skip the rest of the line
 	if (!VerifyRead(read))
 		return false;
@@ -91,6 +87,7 @@ bool eMap::LoadMap(const char * mapFilename) {
 	};
 
 	int readState = READING_MAP;
+	size_t tallestRenderBlock = 0;
 	while (!read.eof()) {
 		if (readState == READING_MAP) {
 			int tileType = INVALID_ID;
@@ -98,6 +95,8 @@ bool eMap::LoadMap(const char * mapFilename) {
 
 			if (read.peek() == '#') {
 				read.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+				tileMap.AddLayerDepth(tallestRenderBlock);
+				tallestRenderBlock = 0;
 				row = 0;
 				column = 0;
 				++layer;
@@ -116,6 +115,9 @@ bool eMap::LoadMap(const char * mapFilename) {
 				const auto & tileRenderImage = cell.TilesOwned().back().GetRenderImage();
 				tileRenderImage->worldClip = eBounds(tileRenderImage->origin, 
 													 tileRenderImage->origin + eVec2((float)tileRenderImage->srcRect->w, (float)tileRenderImage->srcRect->h));
+				if (tileRenderImage->renderBlock.Depth() > tallestRenderBlock)
+					tallestRenderBlock = (size_t)tileRenderImage->renderBlock.Depth();
+
 				sortTiles.push_back(tileRenderImage);
 			}
 

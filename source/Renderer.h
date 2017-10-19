@@ -49,8 +49,6 @@ typedef struct renderImage_s {
 								};
 
 	void	SetDrawnTime(Uint32 drawTime)	{ lastDrawTime = drawTime; }
-	void	SetLayer(const int layer)		{ this->layer = layer; }
-	Uint32	GetLayer() const				{ return layer; }
 } renderImage_t;
 
 //**************************************************

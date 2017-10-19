@@ -54,9 +54,8 @@ eEntity::eEntity(const entitySpawnArgs_t & spawnArgs)
 		if (!game.GetImageManager().LoadImage(spawnArgs.spriteFilename.c_str(), SDL_TEXTUREACCESS_STATIC, spriteImage))
 			throw badEntityCtorException(spawnArgs.spriteFilename.c_str());	
 
-		sprite->SetImage(spriteImage);			
-		auto & localMins = spawnArgs.localBounds[0];
-		eVec3 blockMins = eVec3(localMins.x, localMins.y, 0.0f);
+		sprite->SetImage(spriteImage);
+		eVec3 blockMins = (eVec3)spawnArgs.localBounds[0];
 		renderImage.renderBlock = eBounds3D(blockMins, blockMins + spawnArgs.renderBlockSize);
 	}
 }
@@ -156,13 +155,11 @@ void eEntity::Think() {
 // eEntity::DebugDraw
 //***************
 void eEntity::DebugDraw() {
-	if (game.debugFlags.RENDERBLOCKS && sprite != nullptr) {
+	if (game.debugFlags.RENDERBLOCKS && sprite != nullptr)
 		game.GetRenderer().DrawIsometricPrism(lightBlueColor, renderImage.renderBlock, RENDERTYPE_DYNAMIC);
-	}
 
-	if (game.debugFlags.COLLISION && collisionModel != nullptr) {
+	if (game.debugFlags.COLLISION && collisionModel != nullptr)
 		game.GetRenderer().DrawIsometricRect(yellowColor, collisionModel->AbsBounds(), RENDERTYPE_DYNAMIC);
-	}
 
 	if (movementPlanner != nullptr)
 		movementPlanner->DebugDraw();
@@ -191,7 +188,7 @@ void eEntity::UpdateRenderImageOrigin() {
 void eEntity::UpdateRenderImageDisplay() {
 	renderImage.image = sprite->GetImage();
 	renderImage.srcRect = &sprite->GetFrameHack();
-	renderImage.SetLayer(1);		// DEBUG: test starting layer
+	renderImage.layer = 1;		// DEBUG: test starting layer
 
 // FREEHILL BEGIN 3d quicksort test
 	float zChange = 0.0f;

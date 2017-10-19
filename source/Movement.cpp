@@ -13,10 +13,11 @@ eMovement::eMovement(const float movementSpeed)
 	  lastTrailTile(nullptr),
 	  currentWaypoint(nullptr),
 	  wallSide(nullptr),
-	  pathingState(PATHTYPE_NONE),
-	  moveState(MOVETYPE_NONE) {		
-	knownMap.SetCellSize( game.GetMap().TileMap().CellWidth(),
-						  game.GetMap().TileMap().CellHeight() );
+	  pathingState(PATHTYPE_COMPASS),
+	  moveState(MOVETYPE_GOAL) {
+	auto & tileMap = game.GetMap().TileMap();
+	knownMap.SetCellSize( tileMap.CellWidth(),
+						  tileMap.CellHeight());
 	knownMap.ClearAllCells();
 }
 
@@ -37,14 +38,12 @@ void eMovement::Think() {
 
 // BEGIN FREEHILL DEBUG AI/player control
 	auto & input = game.GetInput();
-	static bool moveToggle = false;
 	if (input.MousePressed(SDL_BUTTON_LEFT))
 		AddUserWaypoint(game.GetMap().GetMouseWorldPosition());
 
 	if (input.KeyPressed(SDL_SCANCODE_M)) {
-		pathingState = moveToggle ? PATHTYPE_COMPASS : PATHTYPE_WALL;
-		moveState = moveToggle ? MOVETYPE_GOAL : MOVETYPE_GOAL;
-		moveToggle = !moveToggle;
+		pathingState = (pathingState == PATHTYPE_COMPASS ? PATHTYPE_WALL : PATHTYPE_COMPASS);
+		moveState = MOVETYPE_GOAL;
 	} 
 
 	float xMove = maxMoveSpeed * (float)(input.KeyHeld(SDL_SCANCODE_RIGHT) - input.KeyHeld(SDL_SCANCODE_LEFT));
@@ -354,7 +353,7 @@ void eMovement::CheckWalls(float * bias) {
 	float oldLeftSteps = left.validSteps;
 	float oldRightSteps = right.validSteps;
 
-	static const float stepIncreaseThreshold = 2.0f;
+	static const float stepIncreaseThreshold = 2.0f;		// updated validSteps must be larger than the oldValidSteps + this to warrant a bias modification
 
 	left.vector.Set(-forward.vector.y, forward.vector.x);	// forward rotated 90 degrees counter-clockwise
 	right.vector.Set(forward.vector.y, -forward.vector.x);	// forward rotated 90 degrees clockwise

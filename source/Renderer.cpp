@@ -126,7 +126,6 @@ void eRenderer::DrawOutlineText(const char * text, eVec2 & point, const SDL_Colo
 	}
 }
 
-// FREEHILL BEGIN renderblock draw test
 //***************
 // eRenderer::DrawIsometricRect
 // converts the given rect into an isomectric box
@@ -136,27 +135,46 @@ void eRenderer::DrawOutlineText(const char * text, eVec2 & point, const SDL_Colo
 void eRenderer::DrawIsometricPrism(const SDL_Color & color, eBounds3D rect, bool dynamic) const {
 	SDL_SetRenderDrawColor(internal_renderer, color.r, color.g, color.b, color.a);
 
-	std::array<eVec3, 9> fPoints;
+	std::array<eVec3, 10> fPoints;
 	rect.ToPoints(fPoints.data());
-	fPoints[8] = fPoints[4];
+	
+	// shift and insert points necessary to close the bottom and top
+	for (int i = 8; i > 4; --i)
+		fPoints[i] = fPoints[i - 1];
+	
+	fPoints[9] = fPoints[4];
+	fPoints[4] = fPoints[0];
 
 	// convert to isometric rhombus
 	// and translate with camera
-	// FIXME: CartToIso doesn't account for the z of each fPoint
-	std::array<SDL_Point, 9> iPoints;
+	std::array<SDL_Point, 10> iPoints;
 	for (int i = 0; i < fPoints.size(); i++) {
-		fPoints[i].x += fPoints[i].z;
-		fPoints[i].y += fPoints[i].z;
+		fPoints[i].x -= fPoints[i].z;
+		fPoints[i].y -= fPoints[i].z;
 		eMath::CartesianToIsometric(fPoints[i].x, fPoints[i].y);
 		fPoints[i] -= (eVec3)game.GetCamera().CollisionModel().AbsBounds()[0] * dynamic;
 		fPoints[i].SnapInt();
 		iPoints[i] = { (int)fPoints[i].x, (int)fPoints[i].y };
 	}
 
+	std::array<SDL_Point, 2> verticals;
 	if (dynamic) {
 		SDL_SetRenderTarget(internal_renderer, scalableTarget);
 		SDL_RenderSetScale(internal_renderer, game.GetCamera().GetZoom(), game.GetCamera().GetZoom());
 		SDL_RenderDrawLines(internal_renderer, iPoints.data(), iPoints.size());
+
+		verticals[0] = iPoints[6];
+		verticals[1] = iPoints[1];
+		SDL_RenderDrawLines(internal_renderer, verticals.data(), verticals.size());
+
+		verticals[0] = iPoints[7];
+		verticals[1] = iPoints[2];
+		SDL_RenderDrawLines(internal_renderer, verticals.data(), verticals.size());
+
+		verticals[0] = iPoints[8];
+		verticals[1] = iPoints[3];
+		SDL_RenderDrawLines(internal_renderer, verticals.data(), verticals.size());
+
 		SDL_SetRenderTarget(internal_renderer, NULL);
 		SDL_RenderSetScale(internal_renderer, 1.0f, 1.0f);
 		SDL_RenderCopy(internal_renderer, scalableTarget, NULL, NULL);
@@ -165,11 +183,6 @@ void eRenderer::DrawIsometricPrism(const SDL_Color & color, eBounds3D rect, bool
 	}
 	SDL_SetRenderDrawColor(internal_renderer, clearColor.r, clearColor.g, clearColor.b, clearColor.a);
 }
-
-
-
-
-// FREEHILL END renderblock draw test
 
 //***************
 // eRenderer::DrawIsometricRect

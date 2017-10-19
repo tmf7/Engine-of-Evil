@@ -36,8 +36,9 @@ private:
 	static std::vector<std::pair<int, int>>			tileSet;		// first == index within eImageManager::imageList; second == eImage subframe index;
 	static std::array<eTileImpl, maxTileTypes>		tileTypes;
 	
-	int							type = invalidTileType;	// index within the tileSet
+	eVec3						renderBlockSize;		// draw order sorting
 	std::shared_ptr<eBounds>	collider = nullptr;		// FIXME: make this a generic collider shape (aabb, obb, circle, line, polyline)
+	int							type = invalidTileType;	// index within the tileSet
 };
 
 //************
@@ -136,14 +137,7 @@ inline void eTile::UpdateRenderImageDisplay() {
 // eTile::GetLayer
 //************
 inline Uint32 eTile::GetLayer() const {
-	return renderImage.GetLayer();
-}
-
-//************
-// eTile::SetLayer
-//************
-inline void eTile::SetLayer(const int newLayer) {
-	renderImage.SetLayer(newLayer);
+	return renderImage.layer;
 }
 
 //************

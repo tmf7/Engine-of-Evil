@@ -18,17 +18,17 @@ void eGridCell::AddTileOwned(eTile && tile) {
 	tilesOwned.back().AssignToGrid();
 }
 
-
 //************
 // eGridCell::DebugDraw
 //************
 void eGridCell::DebugDraw() {
-	if (!game.debugFlags.COLLISION)
-		return;
-
 	auto & renderer = game.GetRenderer();
 	for (auto & tile : tilesOwned) {
-		if (tile.CollisionModel() != nullptr)
+		if (game.debugFlags.COLLISION && tile.CollisionModel() != nullptr)
 			game.GetRenderer().DrawIsometricRect(pinkColor, tile.CollisionModel()->AbsBounds(), true);
+
+		auto & renderBlock = tile.GetRenderImage()->renderBlock;
+		if (game.debugFlags.RENDERBLOCKS && renderBlock.Depth() > 0)		// DEBUG(performance): currently not drawing flat renderBlocks
+			game.GetRenderer().DrawIsometricPrism(lightBlueColor, renderBlock, RENDERTYPE_DYNAMIC);
 	}
 }

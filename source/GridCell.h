@@ -11,7 +11,7 @@ class eCollisionModel;
 //***************************************
 class eGridCell {
 public:
-										eGridCell();
+										eGridCell() = default;
 
 	void								Draw();
 	void								DebugDraw();
@@ -35,29 +35,19 @@ private:
 	std::vector<eTile *>				tilesToDraw;// what to draw
 	std::vector<eTile>					tilesOwned;	// which eTiles' lifetimes are managed
 	eBounds								absBounds;	// using world-coordinates
-
+/*
 	// pathfinding
-	eGridCell *							parent;		// originating cell to set the path back from a goal
-	int									gCost;		// distance from start cell to this cell
-	int									hCost;		// distance from this cell to a goal
-	int									fCost;		// sum of gCost and hCost
-	int									gridRow;	// index within tileMap
-	int									gridCol;	// index within tileMap
-	bool								inOpenSet;	// expidites PathFind openSet searches
-	bool								inClosedSet;// expidites PathFind closedSet searches
+	// TODO: make part of a separate A* grid
+	eGridCell *							parent		= nullptr;	// originating cell to set the path back from a goal
+	int									gCost		= 0;		// distance from start cell to this cell
+	int									hCost		= 0;		// distance from this cell to a goal
+	int									fCost		= 0;		// sum of gCost and hCost
+	int									gridRow;				// index within A* grid
+	int									gridCol;				// index within A* grid
+	bool								inOpenSet	= false;	// expidites PathFind openSet searches
+	bool								inClosedSet = false;// expidites PathFind closedSet searches
+*/
 };
-
-//************
-// eGridCell::eGridCell
-//************
-inline eGridCell::eGridCell() 
-	: parent(nullptr),
-	  gCost(0),
-	  hCost(0),
-	  fCost(0),
-	  inOpenSet(false),
-	  inClosedSet(false) {
-}
 
 //************
 // eGridCell::TilesOwned
