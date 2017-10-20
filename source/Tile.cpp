@@ -243,35 +243,9 @@ void eTile::SetType(int newType) {
 		collisionModel->SetOrigin(orthoOrigin);
 		
 		// TODO: use an eTransform and offset instead of directly linking visuals and colliders
-		// FREEHILL 3d quicksort test
-		renderImage.renderBlock += (eVec3)collisionModel->LocalBounds()[0];
+		renderImage.renderBlock += (eVec3)collisionModel->LocalBounds()[0];	// FREEHILL 3d quicksort test
 	}
 // FREEHILL END AABB (eBounds) collisionModel import test (2/2)
-
-// FREEHILL BEGIN 3d quicksort test
-/*
-	// TODO: pull XYSize and boundsOffset/depth from .tls (where the collision models are defined)
-	float xySizeHack = (renderImage.image->GetSourceFilename() == "graphics/tree_test_tile.png") ? 8.0f : 32.0f;
-	eVec2 collisionOffsetHack = (renderImage.image->GetSourceFilename() == "graphics/tree_test_tile.png") ? eVec2(32.0f, 10.0f) : vec2_zero;
-	float baseDepthHack = 0.0f;
-	float zSizeHack = 0.0f;
-	switch(renderImage.layer) {
-		case 0: 
-			break;
-		case 1: 
-			baseDepthHack = 1.0f; 
-			zSizeHack = (float)renderImage.srcRect->h;
-			break;
-		case 2: 
-			baseDepthHack = 130.0f;	// 128 + 1 + 1 (or 65 * 2)
-			zSizeHack = (float)renderImage.srcRect->h;
-			break;
-	}
-	renderImage.renderBlock = eBounds3D(eVec3(orthoOrigin.x, orthoOrigin.y, 0.0f));
-	renderImage.renderBlock[1] = renderImage.renderBlock[0] + eVec3(xySizeHack, xySizeHack, zSizeHack);
-	renderImage.renderBlock += eVec3(collisionOffsetHack.x, collisionOffsetHack.y, baseDepthHack);
-*/
-// FREEHILL END 3d quicksort test
 
 	// visual alignment with isometric owner cell
 	imageWidth = (float)renderImage.srcRect->w;
