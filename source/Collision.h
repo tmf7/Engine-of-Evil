@@ -5,12 +5,13 @@
 
 class eVec2;
 class eBounds3D;
+extern const float noCollisionFraction;
 
 // Collision_t
 typedef struct Collision_s {
-	eVec2				normal;			// surface normal of collided object 
-	float				fraction;		// fraction along a movement to first contact
-	eCollisionModel *	owner;			// collided object
+	eVec2				normal;								// surface normal of collided object (default ctor: x = 0.0f, y = 0.0f)
+	float				fraction = noCollisionFraction;		// fraction along a movement to first contact
+	eCollisionModel *	owner = nullptr;					// collided object
 } Collision_t;
 
 

@@ -33,6 +33,7 @@ void eMovement::Init(eEntity * owner) {
 // eMovement::Think
 // selects and updates a pathfinding type (eg: waypoint+obstacle avoid, A* optimal path, wall follow, Area awareness, raw compass?, etc)
 //***************
+std::vector<eVec2> collisionNormalsDrawTest;
 void eMovement::Think() {
 	bool wasStopped;
 
@@ -57,10 +58,13 @@ void eMovement::Think() {
 				eVec2 selfCenter = owner->collisionModel->AbsBounds().Center();
 				for (auto & collision : collisions) {
 					eVec2 centerToCenter =  selfCenter - collision.owner->AbsBounds().Center();
+
+					collisionNormalsDrawTest.push_back(collision.normal);
+
 					float releaseDotTest = centerToCenter * owner->collisionModel->Velocity();
-					if (releaseDotTest >= 0)
+					if (releaseDotTest >= 0) {	// FIXME/BUG(!): non-square colliders will produce positive dots, despite needing to 0 the velocity
 						continue;
-					else {
+					} else {
 						owner->collisionModel->Velocity() *= collision.fraction;
 						break;
 					}
@@ -537,6 +541,22 @@ void eMovement::DebugDraw() {
 	DrawKnownMap();
 //	DrawCompassSearchArc();
 	DrawTrailWaypoints();
+
+	float normalDrawLength = 100.0f;
+	int screenCoord = 250;
+	int multiOffset = 30;
+	std::array<SDL_Point, 2> points;
+	for (int count = 0; count < collisionNormalsDrawTest.size(); ++count) {
+		auto & normal = collisionNormalsDrawTest[count];
+		points[0] = { screenCoord + (multiOffset * count), screenCoord };
+		points[1] = { points[0].x + eMath::NearestInt(normal.x * normalDrawLength * 0.5f), points[0].y + eMath::NearestInt(normal.y * normalDrawLength * 0.5f) };
+		game.GetRenderer().DrawLine(redColor, points);
+
+		points[0] = points[1];
+		points[1] = { points[0].x + eMath::NearestInt(normal.x * normalDrawLength * 0.5f), points[0].y + eMath::NearestInt(normal.y * normalDrawLength * 0.5f) };
+		game.GetRenderer().DrawLine(blueColor, points);
+	}
+	collisionNormalsDrawTest.clear();
 }
 
 //******************
@@ -553,7 +573,7 @@ void eMovement::DrawGoalWaypoints() {
 		goalPoint = iterator->Data();
 		goalPoint.SnapInt();
 		eBounds goalBounds = eBounds(goalPoint).ExpandSelf(8);
-		game.GetRenderer().DrawIsometricRect(redColor, goalBounds, true);
+		game.GetRenderer().DrawIsometricRect(redColor, goalBounds, RENDERTYPE_DYNAMIC);
 	}
 }
 

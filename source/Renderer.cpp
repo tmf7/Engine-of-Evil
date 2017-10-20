@@ -126,6 +126,30 @@ void eRenderer::DrawOutlineText(const char * text, eVec2 & point, const SDL_Colo
 	}
 }
 
+
+// FREEHILL BEGIN delete this
+
+//***************
+// eRenderer::DrawIsometricRect
+// converts the given rect into an isomectric box
+// dynamic moves and scales with the camera
+// DEBUG: immediatly draws to the given render target
+//***************
+void eRenderer::DrawLine(const SDL_Color & color, std::array<SDL_Point, 2> points) const {
+	SDL_SetRenderDrawColor(internal_renderer, color.r, color.g, color.b, color.a);
+
+	SDL_SetRenderTarget(internal_renderer, scalableTarget);
+	SDL_RenderSetScale(internal_renderer, game.GetCamera().GetZoom(), game.GetCamera().GetZoom());
+	SDL_RenderDrawLines(internal_renderer, points.data(), points.size());
+	SDL_SetRenderTarget(internal_renderer, NULL);
+	SDL_RenderSetScale(internal_renderer, 1.0f, 1.0f);
+	SDL_RenderCopy(internal_renderer, scalableTarget, NULL, NULL);
+
+	SDL_SetRenderDrawColor(internal_renderer, clearColor.r, clearColor.g, clearColor.b, clearColor.a);
+}
+
+// FREEHILL END delete this
+
 //***************
 // eRenderer::DrawIsometricRect
 // converts the given rect into an isomectric box

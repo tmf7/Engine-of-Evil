@@ -1,5 +1,7 @@
 #include "Game.h"
 
+const float noCollisionFraction = 2.0f;
+
 //***************
 // eCollision::OBBOBBTest
 // test for a separating axis using 
@@ -113,7 +115,7 @@ bool eCollision::ForwardCollisionTest(eCollisionModel & self, std::vector<Collis
 				(collision = MovingAABBAABBTest(self, *collider)).owner != nullptr) {
 
 				// FIXME/BUG(performance): populating a full list of collisions is costly
-				// SOLUTION(~): set collision, break and return at the first collision, disregard fraction and normal
+				// SOLUTION(~): only save the closest collision
 				collisions.push_back(collision);
 			}
 		}
@@ -227,7 +229,7 @@ bool eCollision::IsAABB3DInIsometricFront(const eBounds3D & self, const eBounds3
 		case 2: return !(self[1][1] < other[1][1]);	// y
 		case 3: return (!(self[1][0] < other[1][0])); // xy defaults to x instead of x | y
 		default: return false;	// error: inter-penetrating boxes
-		// TODO: focus on center-point positions and extents now
+		// TODO(~): focus on center-point positions and extents now
 	}
 }
 
@@ -238,11 +240,10 @@ bool eCollision::IsAABB3DInIsometricFront(const eBounds3D & self, const eBounds3
 // fraction > 1.0f implies no collision,
 // and bundles it with the collision normal
 // and a pointer to other for convenience
-// DEBUG: includes touching at the very end of self.velocity
+// DEBUG: includes touching at the very end of self.velocity (ie fraction == 1.0f)
 //***************
 Collision_t eCollision::MovingAABBAABBTest(eCollisionModel & self, eCollisionModel & other) {
-	static const float NO_COLLISION = 2.0f;
-	Collision_t hitTest = { vec2_zero, NO_COLLISION, nullptr };
+	Collision_t hitTest;
 
 	// started in collision
 	if (AABBAABBTest(self.AbsBounds(), other.AbsBounds())) {
@@ -287,8 +288,10 @@ Collision_t eCollision::MovingAABBAABBTest(eCollisionModel & self, eCollisionMod
 // eCollision::GetCollisionNormal
 // returns a vector based on self.velocity
 // and relative position to other
-// FIXME: calculate velocity based on oldOrigin in the event of zero physics velocity, yet instant origin movement
-// FIXME/BUG(?): corner vertex collision causes unstable diagonal normals
+// FIXME: calculate velocity based on oldOrigin in the event of SetOrigin() movement
+// FIXME/BUG(!): corner vertex collision causes unstable diagonal normals
+// SOLUTION: if both components are abs(x) == 1, then normalize the normal
+// also, ensure the CORNER normal direction is based on the geometry, not the movment
 //***************
 void eCollision::GetCollisionNormal(const eCollisionModel & self, const eCollisionModel & other, Collision_t & collision) {
 	eVec2 selfMin = self.AbsBounds()[0];
@@ -298,17 +301,60 @@ void eCollision::GetCollisionNormal(const eCollisionModel & self, const eCollisi
 	eVec2 velocity = self.Velocity(); 
 	
 	eVec2 normal = vec2_zero;
+
+/*
 	for (int i = 0; i < 2; i++) {
 		if (velocity[i] < 0.0f) {
 			if (otherMax[i] < selfMin[i] || other.Origin()[i] < self.Origin()[i])
 				normal[i] = 1.0f;
-//			else
-//				normal[i] = -1.0f;				// FIXME(?): stay 0.0f for now
+			else
+				normal[i] = -1.0f;
 		} else { // velocity[i] >= 0.0f
 			if (selfMax[i] < otherMin[i] || self.Origin()[i] < other.Origin()[i]) 
 				normal[i] = -1.0f;
-//			else
-//				normal[i] = 1.0f;				// FIXME(?): stay 0.0f for now
+			else
+				normal[i] = 1.0f;
+		}
+	}
+
+	if (SDL_fabs(normal.x) > 0.0f && SDL_fabs(normal.y) > 0.0f)
+		normal.Normalize();		
+*/
+
+	float xEntry = 0.0f;
+	float yEntry = 0.0f;
+	// find the distance between the objects on the near and far sides for both x and y
+	if (velocity.x > 0.0f) 
+		xEntry = otherMin.x - selfMax.x;
+	else 
+		xEntry = otherMax.x - selfMin.x;
+
+	if (velocity.y > 0.0f) 
+		yEntry = otherMin.y - selfMax.y;
+	else 
+		yEntry = otherMax.y - selfMin.y;
+
+
+	// entry times on an axis (here x enters later than y) ...depending on velocity, not actual SAT...
+	// IMPORTANT: if a collider is a trigger (allows overlap) then xExit, yExit, xInvExit, yInvExit matter here
+	// MY VERSION := xEntry = collision.fraction * velocity.x; yEntry = collision.fraction * velocity.y
+	float xFraction = collision.fraction * velocity.x;
+	float yFraction = collision.fraction * velocity.y;
+	if (xFraction > yFraction) {		
+		if (xEntry < 0.0f) {	// separating distance along x axis (ie min to max, or max to min ...depending on velocity, not actual SAT...)
+			normal.x = 1.0f;
+			normal.y = 0.0f;
+		} else {
+			normal.x = -1.0f;
+			normal.y = 0.0f;
+		}
+	} else {
+		if (yEntry < 0.0f) {
+			normal.x = 0.0f;
+			normal.y = 1.0f;
+		} else {
+			normal.x = 0.0f;
+			normal.y = -1.0f;
 		}
 	}
 	collision.normal = normal;

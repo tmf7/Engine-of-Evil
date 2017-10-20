@@ -199,7 +199,7 @@ eTile::eTile(eGridCell * owner, const eVec2 & origin, const int type, const int 
 // eTile::SetLayer
 //************
 void eTile::SetLayer(const int newLayer) {
-	float newRBMinZ = game.GetMap().TileMap().MinLayerZ(newLayer);
+	float newRBMinZ = (float)game.GetMap().TileMap().MinLayerZ(newLayer);
 	float oldRBMinZ = renderImage.renderBlock[0].z;
 	renderImage.renderBlock += eVec3(0.0f, 0.0f, newRBMinZ - oldRBMinZ);
 	renderImage.layer = newLayer;

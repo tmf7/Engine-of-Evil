@@ -87,9 +87,6 @@ bool eEntity::Spawn(const int entityPrefabIndex, const eVec3 & worldPosition /*,
 
 	int spawnID = game.NumEntities();
 	try {
-		// FIXME/BUG(!): ensure this invokes the copy ctor and not the move ctor
-		// by checking the contents of game.entityPrefabManager.prefabList
-		// and the contents of game.entities before & after this line
 		game.AddEntity(std::make_shared<eEntity>(*prefabEntity));
 		auto & newEntity = game.GetEntity(spawnID);
 		newEntity->spawnedEntityID = spawnID;			// FIXME/BUG(!): game.RemoveEntity(entityID) will invalidate all indexes above entityID
@@ -192,11 +189,11 @@ void eEntity::UpdateRenderImageDisplay() {
 
 // FREEHILL BEGIN 3d quicksort test
 	float zChange = 0.0f;
-	auto & input = game.GetInput();
+	auto & input = game.GetInput();			// FIXME/BUG(!): input.Init() not called yet (so numKeys == 0)
 	if (input.KeyPressed(SDL_SCANCODE_H))
-		zChange = 2.0f;
+		zChange = 3.0f;
 	else if (input.KeyPressed(SDL_SCANCODE_L))
-		zChange = -2.0f;
+		zChange = -9.0f;
 	
 	// translate from old renderBlock pos, to new renderBlock pos
 	// DEBUG: renderBlock and collisionModel currently designed to align, while offsetting renderImage.origin instead

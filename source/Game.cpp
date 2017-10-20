@@ -42,18 +42,20 @@ eGame::ErrorCode eGame::Init() {
 //	if (!animationManager.Init())
 //		return ANIMATION_MANAGER_ERROR;
 
+	try {
+		input.Init();
+	} catch (const std::bad_alloc & e) {
+		return INPUT_ERROR;
+	}
+
+	camera.Init();
+
 	if (!entityPrefabManager.Init())
 		return ENTITY_PREFAB_MANAGER_ERROR;
 
 	if (!map.Init())
 		return MAP_ERROR;
 
-	try {
-		input.Init();
-	} catch (const std::bad_alloc & e) {
-		return INPUT_ERROR;
-	}
-	camera.Init();
 
 // DEBUG: testing global static memory allocation, works (taskmanager shows 1GB in use for evil.exe; takes about 2 seconds to memset 1GB though, slow startup, ran quick after)
 //	memset(memoryPool, 0xff, sizeof(byte_t) * ONE_GIGABYTE);
