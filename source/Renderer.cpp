@@ -126,37 +126,44 @@ void eRenderer::DrawOutlineText(const char * text, eVec2 & point, const SDL_Colo
 	}
 }
 
-
-// FREEHILL BEGIN delete this
-
 //***************
-// eRenderer::DrawIsometricRect
-// converts the given rect into an isomectric box
+// eRenderer::DrawLines
 // dynamic moves and scales with the camera
+// draws points.size()-1 lines from front to back
 // DEBUG: immediatly draws to the given render target
 //***************
-void eRenderer::DrawLine(const SDL_Color & color, std::array<SDL_Point, 2> points) const {
+void eRenderer::DrawLines(const SDL_Color & color, std::vector<eVec2>  points, bool dynamic) const {
 	SDL_SetRenderDrawColor(internal_renderer, color.r, color.g, color.b, color.a);
 
-	SDL_SetRenderTarget(internal_renderer, scalableTarget);
-	SDL_RenderSetScale(internal_renderer, game.GetCamera().GetZoom(), game.GetCamera().GetZoom());
-	SDL_RenderDrawLines(internal_renderer, points.data(), points.size());
-	SDL_SetRenderTarget(internal_renderer, NULL);
-	SDL_RenderSetScale(internal_renderer, 1.0f, 1.0f);
-	SDL_RenderCopy(internal_renderer, scalableTarget, NULL, NULL);
+	std::vector<SDL_Point> iPoints;
+	iPoints.reserve(points.size());
+	for (int i = 0; i < points.size(); i++) {
+		eMath::CartesianToIsometric(points[i].x, points[i].y);
+		points[i] -= game.GetCamera().CollisionModel().AbsBounds()[0] * dynamic;
+		points[i].SnapInt();
+		iPoints[i] = { (int)points[i].x, (int)points[i].y };
+	}
 
+	if (dynamic) {
+		SDL_SetRenderTarget(internal_renderer, scalableTarget);
+		SDL_RenderSetScale(internal_renderer, game.GetCamera().GetZoom(), game.GetCamera().GetZoom());
+		SDL_RenderDrawLines(internal_renderer, iPoints.data(), iPoints.size());
+		SDL_SetRenderTarget(internal_renderer, NULL);
+		SDL_RenderSetScale(internal_renderer, 1.0f, 1.0f);
+		SDL_RenderCopy(internal_renderer, scalableTarget, NULL, NULL);
+	} else {
+		SDL_RenderDrawLines(internal_renderer, iPoints.data(), iPoints.size());
+	}
 	SDL_SetRenderDrawColor(internal_renderer, clearColor.r, clearColor.g, clearColor.b, clearColor.a);
 }
 
-// FREEHILL END delete this
-
 //***************
-// eRenderer::DrawIsometricRect
+// eRenderer::DrawIsometricPrism
 // converts the given rect into an isomectric box
 // dynamic moves and scales with the camera
 // DEBUG: immediatly draws to the given render target
 //***************
-void eRenderer::DrawIsometricPrism(const SDL_Color & color, eBounds3D rect, bool dynamic) const {
+void eRenderer::DrawIsometricPrism(const SDL_Color & color, const eBounds3D & rect, bool dynamic) const {
 	SDL_SetRenderDrawColor(internal_renderer, color.r, color.g, color.b, color.a);
 
 	std::array<eVec3, 10> fPoints;
@@ -214,7 +221,7 @@ void eRenderer::DrawIsometricPrism(const SDL_Color & color, eBounds3D rect, bool
 // dynamic moves and scales with the camera
 // DEBUG: immediatly draws to the given render target
 //***************
-void eRenderer::DrawIsometricRect(const SDL_Color & color, eBounds rect, bool dynamic) const {
+void eRenderer::DrawIsometricRect(const SDL_Color & color, const eBounds & rect, bool dynamic) const {
 	SDL_SetRenderDrawColor(internal_renderer, color.r, color.g, color.b, color.a);
 
 	std::array<eVec2, 5> fPoints;
@@ -250,12 +257,12 @@ void eRenderer::DrawIsometricRect(const SDL_Color & color, eBounds rect, bool dy
 // dynamic moves and scales with the camera
 // DEBUG: immediatly draws to the given render target
 //***************
-void eRenderer::DrawCartesianRect(const SDL_Color & color, eBounds rect, bool fill, bool dynamic) const {
+void eRenderer::DrawCartesianRect(const SDL_Color & color, const eBounds & rect, bool fill, bool dynamic) const {
 	SDL_SetRenderDrawColor(internal_renderer, color.r, color.g, color.b, color.a);
 
-	rect.TranslateSelf(-game.GetCamera().CollisionModel().AbsBounds()[0] * dynamic);
-	SDL_Rect drawRect = {	eMath::NearestInt(rect[0].x), 
-							eMath::NearestInt(rect[0].y), 
+	auto & cameraMins = game.GetCamera().CollisionModel().AbsBounds()[0];
+	SDL_Rect drawRect = {	eMath::NearestInt(rect[0].x - cameraMins.x * dynamic), 
+							eMath::NearestInt(rect[0].y - cameraMins.y * dynamic), 
 							eMath::NearestInt(rect.Width()), 
 							eMath::NearestInt(rect.Height()) };
 

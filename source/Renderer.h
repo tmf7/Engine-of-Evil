@@ -81,12 +81,10 @@ public:
 
 	void				DrawOutlineText(const char * text, eVec2 & point, const SDL_Color & color, bool constText, bool dynamic);
 	void				DrawImage(renderImage_t * renderImage) const;
-
-	void				DrawLine(const SDL_Color & color, std::array<SDL_Point, 2> points) const;
-
-	void				DrawIsometricPrism(const SDL_Color & color, eBounds3D rect, bool dynamic) const;
-	void				DrawIsometricRect(const SDL_Color & color, eBounds rect, bool dynamic) const;
-	void				DrawCartesianRect(const SDL_Color & color, eBounds rect, bool fill, bool dynamic) const;
+	void				DrawLines(const SDL_Color & color, std::vector<eVec2> points, bool dynamic) const;
+	void				DrawIsometricPrism(const SDL_Color & color, const eBounds3D & rect, bool dynamic) const;
+	void				DrawIsometricRect(const SDL_Color & color, const eBounds & rect, bool dynamic) const;
+	void				DrawCartesianRect(const SDL_Color & color, const eBounds & rect, bool fill, bool dynamic) const;
 
 	static void			TopologicalDrawDepthSort(const std::vector<renderImage_t *> & renderImagePool);
 

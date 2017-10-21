@@ -52,6 +52,7 @@ public:
 	void				DrawGoalWaypoints();
 	void				DrawTrailWaypoints();
 //	void				DrawCompassSearchArc();
+//	void				DrawCollisionNormals();			// TODO: move this to eEntity, or ePlayerInput, or eCollision (with a parameter)
 	void				DrawKnownMap() const;
 
 private:

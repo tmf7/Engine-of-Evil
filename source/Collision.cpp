@@ -115,7 +115,7 @@ bool eCollision::ForwardCollisionTest(eCollisionModel & self, std::vector<Collis
 				(collision = MovingAABBAABBTest(self, *collider)).owner != nullptr) {
 
 				// FIXME/BUG(performance): populating a full list of collisions is costly
-				// SOLUTION(~): only save the closest collision
+				// SOLUTION(~): only save the closest collision thats on approach (not moving away)
 				collisions.push_back(collision);
 			}
 		}

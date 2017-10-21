@@ -33,7 +33,6 @@ void eMovement::Init(eEntity * owner) {
 // eMovement::Think
 // selects and updates a pathfinding type (eg: waypoint+obstacle avoid, A* optimal path, wall follow, Area awareness, raw compass?, etc)
 //***************
-std::vector<eVec2> collisionNormalsDrawTest;
 void eMovement::Think() {
 	bool wasStopped;
 
@@ -49,45 +48,66 @@ void eMovement::Think() {
 
 	float xMove = maxMoveSpeed * (float)(input.KeyHeld(SDL_SCANCODE_RIGHT) - input.KeyHeld(SDL_SCANCODE_LEFT));
 	float yMove = maxMoveSpeed * (float)(input.KeyHeld(SDL_SCANCODE_DOWN) - input.KeyHeld(SDL_SCANCODE_UP));
+
 	if (SDL_fabs(xMove) > 0.0f || SDL_fabs(yMove) > 0.0f) {
 		eMath::IsometricToCartesian(xMove, yMove);
 		owner->collisionModel->Velocity().Set(xMove, yMove);
+
 		if (owner->collisionModel->Velocity() != vec2_zero) {
-			static std::vector<Collision_t> collisions;		// FIXME(performance): static to reduce dynamic allocation, but this fn is also just misplaced/slow
+			static std::vector<Collision_t> collisions;		// DEBUG: static to reduce dynamic allocation, cleared during this function
+			eVec2 collisionTangent;
+			eVec2 slideVelocity;
+			float remainingFraction = 0.0f;
+			bool hit = false;
+			
+			// correction-type collision response
 			if (eCollision::ForwardCollisionTest(*(owner->collisionModel), collisions)) {
-				Collision_t nearestCollision;
 				for (auto & collision : collisions) {
-
-					collisionNormalsDrawTest.push_back(collision.normal);
-
-					float releaseDotTest = collision.normal * owner->collisionModel->Velocity();
-					if (releaseDotTest >= 0) {
+					bool movingAway = (collision.normal * owner->collisionModel->Velocity() >= 0);
+					if (movingAway) {
 						continue;
 					} else {
-//						owner->collisionModel->Velocity() *= collision.fraction;
-						nearestCollision = collision;
+						hit = true;
+						remainingFraction = 1.0f - collision.fraction;
+						if (remainingFraction < 1.0f) {
+							owner->collisionModel->Velocity() *= collision.fraction;
+							owner->collisionModel->UpdateOrigin();
+						} else {
+							collisionTangent = eVec2(-collision.normal.y, collision.normal.x);		// CCW 90 degrees
+							float whichWay = collisionTangent * owner->collisionModel->Velocity();
+							if (whichWay < 0)
+								collisionTangent *= -1.0f;
+							float slide = owner->collisionModel->Velocity() * collisionTangent * remainingFraction;
+							slideVelocity = collisionTangent * slide;
+						}
 						break;
 					}
 				}
-
-				// TODO: slide-type collision response
-				// FIXME: sliding into collision causes overlap (so do a second collision correction just with truncated velocity)
-				// FIXME: pseudoTangent doesn't account for diagonals with equal components
-				eVec2 pseudoTangent = eVec2(nearestCollision.normal.y, nearestCollision.normal.x);
-				float dotprod = owner->collisionModel->Velocity() * pseudoTangent * (1.0f - nearestCollision.fraction);
-				owner->collisionModel->Velocity().Set(dotprod * nearestCollision.normal.y, dotprod * nearestCollision.normal.x);
-
-/*
-				eVec2 collisionTangent = eVec2(-nearestCollision.normal.y, nearestCollision.normal.x);		// CCW 90 degrees
-				float slide = owner->collisionModel->Velocity() * collisionTangent * (1.0f - nearestCollision.fraction);
-				float whichWay = collisionTangent * owner->collisionModel->Velocity();
-				eVec2 projectedStep = (whichWay > 0 ? collisionTangent : -collisionTangent) * slide;
-				eVec2 allowedStep = owner->collisionModel->Velocity()  * nearestCollision.fraction;		// FIXME: this does not account for game.GetFixedTime() interval
-				owner->collisionModel->Velocity() = allowedStep + projectedStep;
-*/
 			}
-			owner->collisionModel->UpdateOrigin();
+
+			// slide-type collision response
+			// FIXME: works near-perfect, except when sliding into a vertex-vertex collision along a wall
+			// SOLUTION: it should be safe to ignore that collision w/o truncation (because it's known this is a slide, not an approach)
+			// vert-vert coll. are easy to detect because of their diagonal normals
+			if (remainingFraction == 1.0f) {
+				owner->collisionModel->Velocity() = slideVelocity;
+				if(eCollision::ForwardCollisionTest(*(owner->collisionModel), collisions)) {
+					for (auto & collision : collisions) {
+						bool movingAway = (collision.normal * owner->collisionModel->Velocity() >= 0);
+						if (movingAway || fabs(collision.normal.x) < 1.0f) {	// if one component is, both are
+							continue;
+						} else {
+							owner->collisionModel->Velocity() *= collision.fraction;
+							break;
+						}
+					}
+				}
+				owner->collisionModel->UpdateOrigin();
+			}
+
 			collisions.clear();
+			if (!hit)
+				owner->collisionModel->UpdateOrigin();
 		}
 	}
 // END FREEHILL DEBUG AI/player control
@@ -546,23 +566,8 @@ void eMovement::DebugDraw() {
 	DrawGoalWaypoints();
 	DrawKnownMap();
 //	DrawCompassSearchArc();
+//	DrawCollisionNormals();
 	DrawTrailWaypoints();
-
-	float normalDrawLength = 100.0f;
-	int screenCoord = 250;
-	int multiOffset = 30;
-	std::array<SDL_Point, 2> points;
-	for (int count = 0; count < collisionNormalsDrawTest.size(); ++count) {
-		auto & normal = collisionNormalsDrawTest[count];
-		points[0] = { screenCoord + (multiOffset * count), screenCoord };
-		points[1] = { points[0].x + eMath::NearestInt(normal.x * normalDrawLength * 0.5f), points[0].y + eMath::NearestInt(normal.y * normalDrawLength * 0.5f) };
-		game.GetRenderer().DrawLine(redColor, points);
-
-		points[0] = points[1];
-		points[1] = { points[0].x + eMath::NearestInt(normal.x * normalDrawLength * 0.5f), points[0].y + eMath::NearestInt(normal.y * normalDrawLength * 0.5f) };
-		game.GetRenderer().DrawLine(blueColor, points);
-	}
-	collisionNormalsDrawTest.clear();
 }
 
 //******************
@@ -602,6 +607,29 @@ void eMovement::DrawTrailWaypoints() {
 }
 
 /*
+std::vector<Collision_t> collisionNormalsDrawTest;		// debugging hack
+//******************
+// eMovement::DrawCollisionNormals
+// DEBUG: this was originally used and populated during the player-control-input logic
+//******************
+void eMovment::DrawCollisionNormals() {
+	float normalDrawLength = 100.0f;
+	float screenCoord = 250.0f;
+	float multiOffset = 30.0f;
+	std::vector<eVec2> points;
+	for (int count = 0; count < collisionNormalsDrawTest.size(); ++count) {
+		auto & normal = collisionNormalsDrawTest[count];
+		points[0] = { screenCoord + (multiOffset * count), screenCoord };
+		points[1] = { points[0].x + normal.x * normalDrawLength * 0.5f, points[0].y + normal.y * normalDrawLength * 0.5f };
+		game.GetRenderer().DrawLines(redColor, points, RENDERTYPE_DYNAMIC);
+
+		points[0] = points[1];
+		points[1] = { points[0].x + normal.x * normalDrawLength * 0.5f, points[0].y + normal.y * normalDrawLength * 0.5f };
+		game.GetRenderer().DrawLines(blueColor, points, RENDERTYPE_DYNAMIC);
+	}
+	collisionNormalsDrawTest.clear();
+}
+
 //******************
 // eMovement::DrawCompassSearchArc
 // draws the forward sweep angle checked for collision prediction in any-angle pathfinding
