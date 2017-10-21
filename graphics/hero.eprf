@@ -3,5 +3,5 @@ spriteFilename=graphics/hero.png
 renderBlockSize= 16.0 16.0 64.0
 imageCollisionOffset= -32.0 -45.0		# -58.0 -90.0
 localBounds= -8.0 -8.0 8.0 8.0
-movementSpeed= 2.0
+movementSpeed= 4.0
 collisionActive= true

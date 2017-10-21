@@ -55,30 +55,36 @@ void eMovement::Think() {
 		if (owner->collisionModel->Velocity() != vec2_zero) {
 			static std::vector<Collision_t> collisions;		// FIXME(performance): static to reduce dynamic allocation, but this fn is also just misplaced/slow
 			if (eCollision::ForwardCollisionTest(*(owner->collisionModel), collisions)) {
-				eVec2 selfCenter = owner->collisionModel->AbsBounds().Center();
+				Collision_t nearestCollision;
 				for (auto & collision : collisions) {
-					eVec2 centerToCenter =  selfCenter - collision.owner->AbsBounds().Center();
 
 					collisionNormalsDrawTest.push_back(collision.normal);
 
-					float releaseDotTest = centerToCenter * owner->collisionModel->Velocity();
-					if (releaseDotTest >= 0) {	// FIXME/BUG(!): non-square colliders will produce positive dots, despite needing to 0 the velocity
+					float releaseDotTest = collision.normal * owner->collisionModel->Velocity();
+					if (releaseDotTest >= 0) {
 						continue;
 					} else {
-						owner->collisionModel->Velocity() *= collision.fraction;
+//						owner->collisionModel->Velocity() *= collision.fraction;
+						nearestCollision = collision;
 						break;
 					}
 				}
-				// TODO: push-type collision response
-//				eVec2 normalVel = collisionModel.Velocity()  * collisions[0].fraction;		// FIXME: this does not account for game.GetFixedTime() interval
-//				eVec2 tangentVel = collisionModel.Velocity() * (1.0f - collisions[0].fraction);
-//				eVec2 collisionTangent = eVec2(-collisions[0].normal.y, collisions[0].normal.x);
-//				eMath::CartesianToIsometric(collisionTangent.x, collisionTangent.y);
-//				collisionTangent.Normalize();
-//				float dirBias = collisionTangent * collisionModel.Velocity();
-//				float push = collisionTangent * tangentVel;
-//				tangentVel = (dirBias > 0 ?  collisionTangent * -push : collisionTangent * push);
-//				collisionModel.Velocity() = normalVel + tangentVel;
+
+				// TODO: slide-type collision response
+				// FIXME: sliding into collision causes overlap (so do a second collision correction just with truncated velocity)
+				// FIXME: pseudoTangent doesn't account for diagonals with equal components
+				eVec2 pseudoTangent = eVec2(nearestCollision.normal.y, nearestCollision.normal.x);
+				float dotprod = owner->collisionModel->Velocity() * pseudoTangent * (1.0f - nearestCollision.fraction);
+				owner->collisionModel->Velocity().Set(dotprod * nearestCollision.normal.y, dotprod * nearestCollision.normal.x);
+
+/*
+				eVec2 collisionTangent = eVec2(-nearestCollision.normal.y, nearestCollision.normal.x);		// CCW 90 degrees
+				float slide = owner->collisionModel->Velocity() * collisionTangent * (1.0f - nearestCollision.fraction);
+				float whichWay = collisionTangent * owner->collisionModel->Velocity();
+				eVec2 projectedStep = (whichWay > 0 ? collisionTangent : -collisionTangent) * slide;
+				eVec2 allowedStep = owner->collisionModel->Velocity()  * nearestCollision.fraction;		// FIXME: this does not account for game.GetFixedTime() interval
+				owner->collisionModel->Velocity() = allowedStep + projectedStep;
+*/
 			}
 			owner->collisionModel->UpdateOrigin();
 			collisions.clear();

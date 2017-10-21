@@ -229,7 +229,6 @@ bool eCollision::IsAABB3DInIsometricFront(const eBounds3D & self, const eBounds3
 		case 2: return !(self[1][1] < other[1][1]);	// y
 		case 3: return (!(self[1][0] < other[1][0])); // xy defaults to x instead of x | y
 		default: return false;	// error: inter-penetrating boxes
-		// TODO(~): focus on center-point positions and extents now
 	}
 }
 
@@ -286,12 +285,10 @@ Collision_t eCollision::MovingAABBAABBTest(eCollisionModel & self, eCollisionMod
 
 //***************
 // eCollision::GetCollisionNormal
-// returns a vector based on self.velocity
-// and relative position to other
-// FIXME: calculate velocity based on oldOrigin in the event of SetOrigin() movement
-// FIXME/BUG(!): corner vertex collision causes unstable diagonal normals
-// SOLUTION: if both components are abs(x) == 1, then normalize the normal
-// also, ensure the CORNER normal direction is based on the geometry, not the movment
+// sets the collision's surface-normal based on self's relative position to other
+// TODO: trigger colliders (ie: allowing traversal) may need exit fraction and normal information
+// FIXME(?): this doesn't account for vertex-vertex diagonal collision normals
+// FIXME: this only works for AABB, not OBB or general convex polygons
 //***************
 void eCollision::GetCollisionNormal(const eCollisionModel & self, const eCollisionModel & other, Collision_t & collision) {
 	eVec2 selfMin = self.AbsBounds()[0];
@@ -301,61 +298,70 @@ void eCollision::GetCollisionNormal(const eCollisionModel & self, const eCollisi
 	eVec2 velocity = self.Velocity(); 
 	
 	eVec2 normal = vec2_zero;
+	float xRightEntryDist = fabsf(otherMin.x - selfMax.x);
+	float xLeftEntryDist = fabsf(selfMin.x - otherMax.x);
+	float yTopEntryDist = fabsf(otherMin.y - selfMax.y);
+	float yBottomEntryDist = fabsf(selfMin.y - otherMax.y);
 
-/*
-	for (int i = 0; i < 2; i++) {
-		if (velocity[i] < 0.0f) {
-			if (otherMax[i] < selfMin[i] || other.Origin()[i] < self.Origin()[i])
-				normal[i] = 1.0f;
-			else
-				normal[i] = -1.0f;
-		} else { // velocity[i] >= 0.0f
-			if (selfMax[i] < otherMin[i] || self.Origin()[i] < other.Origin()[i]) 
-				normal[i] = -1.0f;
-			else
-				normal[i] = 1.0f;
+	enum {
+		RIGHT	= 1,
+		LEFT	= 2,
+		TOP		= 4,
+		BOTTOM	= 8
+	};
+	Uint8 entryDir = 0;
+	if (collision.fraction == 0.0f) {
+		entryDir |= (RIGHT * (xRightEntryDist == 0.0f)) 
+					| (LEFT * (xLeftEntryDist == 0.0f)) 
+					| (TOP * (yTopEntryDist == 0.0f)) 
+					| (BOTTOM * (yBottomEntryDist == 0.0f));
+	} else {
+		float xFraction = fabsf( velocity.x != 0.0f ? MIN(xRightEntryDist, xLeftEntryDist) / velocity.x : 0.0f);
+		float yFraction = fabs( velocity.y != 0.0f ? MIN(yTopEntryDist, yBottomEntryDist) / velocity.y : 0.0f);
+		
+		if (xFraction == yFraction) {
+			entryDir |=	(xRightEntryDist < xLeftEntryDist ? RIGHT : LEFT);
+			entryDir |= (yTopEntryDist < yBottomEntryDist ? TOP : BOTTOM);
+		} else if (xFraction < yFraction) {
+			entryDir |=	(xRightEntryDist < xLeftEntryDist ? RIGHT : LEFT);
+		} else {
+			entryDir |= (yTopEntryDist < yBottomEntryDist ? TOP : BOTTOM);
 		}
 	}
 
-	if (SDL_fabs(normal.x) > 0.0f && SDL_fabs(normal.y) > 0.0f)
-		normal.Normalize();		
-*/
-
-	float xEntry = 0.0f;
-	float yEntry = 0.0f;
-	// find the distance between the objects on the near and far sides for both x and y
-	if (velocity.x > 0.0f) 
-		xEntry = otherMin.x - selfMax.x;
-	else 
-		xEntry = otherMax.x - selfMin.x;
-
-	if (velocity.y > 0.0f) 
-		yEntry = otherMin.y - selfMax.y;
-	else 
-		yEntry = otherMax.y - selfMin.y;
-
-
-	// entry times on an axis (here x enters later than y) ...depending on velocity, not actual SAT...
-	// IMPORTANT: if a collider is a trigger (allows overlap) then xExit, yExit, xInvExit, yInvExit matter here
-	// MY VERSION := xEntry = collision.fraction * velocity.x; yEntry = collision.fraction * velocity.y
-	float xFraction = collision.fraction * velocity.x;
-	float yFraction = collision.fraction * velocity.y;
-	if (xFraction > yFraction) {		
-		if (xEntry < 0.0f) {	// separating distance along x axis (ie min to max, or max to min ...depending on velocity, not actual SAT...)
-			normal.x = 1.0f;
-			normal.y = 0.0f;
-		} else {
+	switch(entryDir) {
+		case RIGHT: 
 			normal.x = -1.0f;
 			normal.y = 0.0f;
-		}
-	} else {
-		if (yEntry < 0.0f) {
-			normal.x = 0.0f;
-			normal.y = 1.0f;
-		} else {
+			break;
+		case LEFT: 
+			normal.x = 1.0f;
+			normal.y = 0.0f;
+			break;
+		case TOP:
 			normal.x = 0.0f;
 			normal.y = -1.0f;
-		}
+			break;
+		case BOTTOM:
+			normal.x = 0.0f;
+			normal.y = 1.0f;
+			break;
+		case RIGHT | TOP:
+			normal.x = -0.707f;
+			normal.y = -0.707f;
+			break;
+		case RIGHT | BOTTOM:
+			normal.x = -0.707f;
+			normal.y = 0.707f;
+			break;
+		case LEFT | TOP:
+			normal.x = 0.707f;
+			normal.y = -0.707f;
+			break;
+		case LEFT | BOTTOM:
+			normal.x = 0.707f;
+			normal.y = 0.707f;
+			break;
 	}
 	collision.normal = normal;
 }
