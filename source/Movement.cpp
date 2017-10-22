@@ -77,7 +77,7 @@ void eMovement::Think() {
 							break;
 						} else {						// setup for slide-response along an edge or vertex
 							// BUGFIX: for multi-vertex collision slide
-							if (fabsf(collision.normal.x) < 1.0f && fabsf(collision.normal.y) < 1.0f) {	// vertex collision
+							if (abs(collision.normal.x) < 1.0f && abs(collision.normal.y) < 1.0f) {	// vertex collision
 								if (movingAway < approachingVertex)
 									approachingVertex = movingAway;
 								else
@@ -90,7 +90,7 @@ void eMovement::Think() {
 								collisionTangent *= -1.0f;
 						} 
 
-						if (!(fabsf(collision.normal.x) < 1.0f && fabsf(collision.normal.y) < 1.0f))	// edge collision
+						if (!(abs(collision.normal.x) < 1.0f && abs(collision.normal.y) < 1.0f))	// edge collision
 							break;
 					}
 				}
@@ -104,7 +104,7 @@ void eMovement::Think() {
 				if(eCollision::ForwardCollisionTest(*(owner->collisionModel), collisions)) {
 					for (auto & collision : collisions) {
 						bool movingAway = (collision.normal * owner->collisionModel->Velocity() >= 0);
-						if (movingAway || (fabsf(collision.normal.x) < 1.0f && fabsf(collision.normal.y) < 1.0f)) {	// aabb can ignore vertex collisions
+						if (movingAway || (abs(collision.normal.x) < 1.0f && abs(collision.normal.y) < 1.0f)) {	// aabb can ignore vertex collisions
 							continue;
 						} else {
 							owner->collisionModel->Velocity() *= collision.fraction;

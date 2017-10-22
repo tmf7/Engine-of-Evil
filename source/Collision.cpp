@@ -1,6 +1,12 @@
 #include "Game.h"
 
 const float noCollisionFraction = 2.0f;
+typedef enum {
+	RIGHT	= 1,
+	LEFT	= 2,
+	TOP		= 4,
+	BOTTOM	= 8
+} eNormalDir_t;
 
 //***************
 // eCollision::OBBOBBTest
@@ -12,12 +18,11 @@ bool eCollision::OBBOBBTest(const eBox & a, const eBox & b) {
 	float rb;
 	float R[2][2];
 	float AbsR[2][2];
-	static const float EPSILON = 0.015625f;	// 1/64 (because binary fractions)
 
 	// DEBUG: all z-values of rotation matrix R are 0,
 	// except z-z which would be R[2][2] if R were 3x3
-	// so it is hereafter replaced with (1.0f + EPSILON)
-	static const float R22 = 1.0f + EPSILON;
+	// so it is hereafter replaced with (1.0f + FLT_EPSILON)
+	static const float R22 = 1.0f + FLT_EPSILON;
 
 	const auto & aAxes = a.Axes();
 	const auto & aExtents = a.Extents();
@@ -42,7 +47,7 @@ bool eCollision::OBBOBBTest(const eBox & a, const eBox & b) {
 	// their corss product is (near) zero
 	for (int i = 0; i < 2; i++)
 		for (int j = 0; j < 2; j++)
-			AbsR[i][j] = abs(R[i][j]) + EPSILON;
+			AbsR[i][j] = abs(R[i][j]) + FLT_EPSILON;
 
 	// test axes a.axes[0] and a.axes[1]
 	for (int i = 0; i < 2; i++) {
@@ -91,8 +96,8 @@ bool eCollision::OBBOBBTest(const eBox & a, const eBox & b) {
 // collisions vector is sorted from nearest to farthest
 // DEBUG: collisions.size() will most often be near zero
 //***************
-bool eCollision::ForwardCollisionTest(eCollisionModel & self, std::vector<Collision_t> & collisions) {
-	static std::unordered_map<eCollisionModel *, eCollisionModel *> alreadyTested;
+bool eCollision::ForwardCollisionTest(const eCollisionModel & self, std::vector<Collision_t> & collisions) {
+	static std::unordered_map<const eCollisionModel *, const eCollisionModel *> alreadyTested;
 	static std::vector<eGridCell *> broadAreaCells;					// DEBUG(performance): static to reduce dynamic allocations
 	eBounds broadPhaseBounds = GetBroadPhaseBounds(self);
 
@@ -161,7 +166,7 @@ void eCollision::GetAreaCells(const eBounds & area, std::vector<eGridCell *> & a
 // the swept area of a moving eBounds
 // based on the eCollisionModel velocity
 //***************
-eBounds eCollision::GetBroadPhaseBounds(eCollisionModel & self) {
+eBounds eCollision::GetBroadPhaseBounds(const eCollisionModel & self) {
 	eBounds bpBounds;
 	if (self.Velocity().x > 0.0f) {
 		bpBounds[0][0] = self.AbsBounds()[0][0];
@@ -179,30 +184,6 @@ eBounds eCollision::GetBroadPhaseBounds(eCollisionModel & self) {
 		bpBounds[1][1] = self.AbsBounds()[1][1] - self.Velocity().y;
 	}
 	return bpBounds;
-}
-
-//***************
-// eCollision::AABBContainsPoint
-// returns true if the given point is within the bounds
-// DEBUG: includes touching
-//***************
-bool eCollision::AABBContainsPoint(const eBounds & bounds, const eVec2 & point) {
-	if (point.x > bounds[1].x || point.x < bounds[0].x ||
-		point.y > bounds[1].y || point.y < bounds[0].y) {
-		return false;
-	}
-	return true;
-}
-
-//***************
-// eCollision::AABBAABBTest
-// returns true in the case of intersection
-// DEBUG: includes touching
-//***************
-bool eCollision::AABBAABBTest(const eBounds & self, const eBounds & other) {
-	if (self[1][0] < other[0][0] || self[0][0] > other[1][0]) return false;
-	if (self[1][1] < other[0][1] || self[0][1] > other[1][1]) return false;
-	return true;
 }
 
 //***************
@@ -241,7 +222,7 @@ bool eCollision::IsAABB3DInIsometricFront(const eBounds3D & self, const eBounds3
 // and a pointer to other for convenience
 // DEBUG: includes touching at the very end of self.velocity (ie fraction == 1.0f)
 //***************
-Collision_t eCollision::MovingAABBAABBTest(eCollisionModel & self, eCollisionModel & other) {
+Collision_t eCollision::MovingAABBAABBTest(const eCollisionModel & self, eCollisionModel & other) {
 	Collision_t hitTest;
 
 	// started in collision
@@ -286,9 +267,10 @@ Collision_t eCollision::MovingAABBAABBTest(eCollisionModel & self, eCollisionMod
 //***************
 // eCollision::GetCollisionNormal
 // sets the collision's surface-normal based on self's relative position to other
+// predicts collision normal if not yet in contact
 // TODO: trigger colliders (ie: allowing traversal) may need exit fraction and normal information
-// FIXME(?): this doesn't account for vertex-vertex diagonal collision normals
-// FIXME: this only works for AABB, not OBB or general convex polygons
+// DEBUG: this only works for AABB, not OBB or general convex polygons
+// DEBUG: overlapping is zero normal vector
 //***************
 void eCollision::GetCollisionNormal(const eCollisionModel & self, const eCollisionModel & other, Collision_t & collision) {
 	eVec2 selfMin = self.AbsBounds()[0];
@@ -297,18 +279,15 @@ void eCollision::GetCollisionNormal(const eCollisionModel & self, const eCollisi
 	eVec2 otherMax = other.AbsBounds()[1];
 	eVec2 velocity = self.Velocity(); 
 	
-	eVec2 normal = vec2_zero;
-	float xRightEntryDist = fabsf(otherMin.x - selfMax.x);
-	float xLeftEntryDist = fabsf(selfMin.x - otherMax.x);
-	float yTopEntryDist = fabsf(otherMin.y - selfMax.y);
-	float yBottomEntryDist = fabsf(selfMin.y - otherMax.y);
 
-	enum {
-		RIGHT	= 1,
-		LEFT	= 2,
-		TOP		= 4,
-		BOTTOM	= 8
-	};
+	// FIXME: these four floats are similar to those used in GetNormal (below)
+	// SOLUTION: call a ClosestPointOnAABB(const eBounds & self, const eBounds & other);
+	// or similar, then just use that one point to query the normal
+	float xRightEntryDist = abs(otherMin.x - selfMax.x);
+	float xLeftEntryDist = abs(selfMin.x - otherMax.x);
+	float yTopEntryDist = abs(selfMax.y - otherMin.y);
+	float yBottomEntryDist = abs(selfMin.y - otherMax.y);
+
 	Uint8 entryDir = 0;
 	if (collision.fraction == 0.0f) {
 		entryDir |= (RIGHT * (xRightEntryDist == 0.0f)) 
@@ -316,8 +295,8 @@ void eCollision::GetCollisionNormal(const eCollisionModel & self, const eCollisi
 					| (TOP * (yTopEntryDist == 0.0f)) 
 					| (BOTTOM * (yBottomEntryDist == 0.0f));
 	} else {
-		float xFraction = fabsf( velocity.x != 0.0f ? MIN(xRightEntryDist, xLeftEntryDist) / velocity.x : 0.0f);
-		float yFraction = fabs( velocity.y != 0.0f ? MIN(yTopEntryDist, yBottomEntryDist) / velocity.y : 0.0f);
+		float xFraction = abs( velocity.x != 0.0f ? MIN(xRightEntryDist, xLeftEntryDist) / velocity.x : 0.0f);
+		float yFraction = abs( velocity.y != 0.0f ? MIN(yTopEntryDist, yBottomEntryDist) / velocity.y : 0.0f);
 		
 		if (xFraction == yFraction) {
 			entryDir |=	(xRightEntryDist < xLeftEntryDist ? RIGHT : LEFT);
@@ -329,6 +308,21 @@ void eCollision::GetCollisionNormal(const eCollisionModel & self, const eCollisi
 		}
 	}
 
+	// FIXME: modify this normal logic to be geometric RIGHT (etc) not movement direction
+	// ie RIGHT normal should be (-1.0f, 0.0f)
+	switch(entryDir) {
+		case RIGHT:				collision.normal = -vec2_oneZero; return;
+		case LEFT:				collision.normal =  vec2_oneZero; return;
+		case TOP:				collision.normal = -vec2_zeroOne; return;
+		case BOTTOM:			collision.normal =  vec2_zeroOne; return;
+		case RIGHT | TOP:		collision.normal =  vec2_one * -0.707f; return;
+		case RIGHT | BOTTOM:	collision.normal =  eVec2(-0.707f, 0.707f); return;
+		case LEFT | TOP:		collision.normal =  eVec2(0.707f, -0.707f); return;
+		case LEFT | BOTTOM:		collision.normal =  vec2_one * 0.707f; return;
+		default:				collision.normal =  vec2_zero; return;
+	}
+
+/*
 	switch(entryDir) {
 		case RIGHT: 
 			normal.x = -1.0f;
@@ -364,4 +358,65 @@ void eCollision::GetCollisionNormal(const eCollisionModel & self, const eCollisi
 			break;
 	}
 	collision.normal = normal;
+*/
+}
+
+//***************
+// eCollision::RayAABBTest
+// ray: Point = begin + t * dir
+// plane: Point * normal = distFromOrigin
+// return tmin, hitPoint, and hitNormal
+//***************
+bool eCollision::RayAABBTest(const eVec2 & begin, const eVec2 & dir, const eBounds & bounds) {
+	float tFirst = 0.0f;
+	float tLast = FLT_MAX;
+
+	for (int i = 0; i < 2; ++i) {
+		if (abs(dir[i]) < FLT_EPSILON) {		// parallel to both planes of this slab
+			if (begin[i] < bounds[0][i] || begin[i] > bounds[1][i])
+				return false;
+		} else {								// near and far plane intersection points of this slab
+			float dirInv = 1.0f / dir[i];
+			float t1 = (bounds[0][i] - begin[i]) * dirInv;	// min plane
+			float t2 = (bounds[1][i] - begin[i]) * dirInv;	// max plane
+			if (t1 > t2)									// swap min/max if needed, but keep track of changes to get the plane (or vertex?) normal
+				std::swap(t1, t2);
+
+			tFirst = MAX(tFirst, t1);
+			tLast = MIN(tFirst, t2);
+			if (tFirst > tLast)					// slab intervals stopped overlapping, no intersection
+				return false;
+		}
+	}
+	eVec2 hitPoint = begin + dir * tFirst;		// point on (or in) the AABB, determine the closest normal
+	float fraction = tFirst;
+	eVec2 normal = vec2_zero;	// which plane or vertex was hit (vec2_zero for fully inside, not just touching)
+
+	return true;
+}
+
+//***************
+// eCollision::LineAABBTest
+// use Ray test but cutoff after end (ie t > tEnd => no intersection)
+//***************
+bool eCollision::LineAABBTest(const eVec2 & begin, const eVec2 & end, const eBounds & bounds) {
+
+}
+
+void GetNormal(const Uint8 entryDir, eVec2 & normal) {
+	Uint8 entryDir = (RIGHT * (abs(point.x - bounds[0].x) == 0.0f)) 
+					| (LEFT * (abs(point.x - bounds[1].x) == 0.0f)) 
+					| (TOP * (abs(point.y - bounds[0].y) == 0.0f)) 
+					| (BOTTOM * (abs(point.y - bounds[1].y) == 0.0f));
+	
+	switch(entryDir) {
+		case RIGHT:				normal = -vec2_oneZero; return;
+		case LEFT:				normal =  vec2_oneZero; return;
+		case TOP:				normal = -vec2_zeroOne; return;
+		case BOTTOM:			normal =  vec2_zeroOne; return;
+		case RIGHT | TOP:		normal =  vec2_one * -0.707f; return;
+		case RIGHT | BOTTOM:	normal =  eVec2(-0.707f, 0.707f); return;
+		case LEFT | TOP:		normal =  eVec2(0.707f, -0.707f); return;
+		case LEFT | BOTTOM:		normal =  vec2_one * 0.707f; return;
+	}
 }

@@ -54,6 +54,7 @@ public:
 extern eVec2 vec2_zero;
 extern eVec2 vec2_oneZero;
 extern eVec2 vec2_zeroOne;
+extern eVec2 vec2_one;
 
 //******************
 // eVec2::eVec2
@@ -348,6 +349,7 @@ public:
 
 extern eVec3 vec3_zero;
 extern eVec3 vec3_oneZero;
+extern eVec3 vec3_one;
 
 //******************
 // eVec3::eVec3
