@@ -58,43 +58,53 @@ void eMovement::Think() {
 			eVec2 collisionTangent;
 			eVec2 slideVelocity;
 			float remainingFraction = 0.0f;
+			float movingAway = 0.0f;
+			float approachingVertex = 0.0f;
 			bool hit = false;
 			
 			// correction-type collision response
 			if (eCollision::ForwardCollisionTest(*(owner->collisionModel), collisions)) {
 				for (auto & collision : collisions) {
-					bool movingAway = (collision.normal * owner->collisionModel->Velocity() >= 0);
-					if (movingAway) {
+					movingAway = collision.normal * owner->collisionModel->Velocity();
+					if (movingAway >= 0.0f) {
 						continue;
 					} else {
 						hit = true;
 						remainingFraction = 1.0f - collision.fraction;
-						if (remainingFraction < 1.0f) {
+						if (remainingFraction < 1.0f) {	// correction-response
 							owner->collisionModel->Velocity() *= collision.fraction;
 							owner->collisionModel->UpdateOrigin();
-						} else {
-							collisionTangent = eVec2(-collision.normal.y, collision.normal.x);		// CCW 90 degrees
+							break;
+						} else {						// setup for slide-response along an edge or vertex
+							// BUGFIX: for multi-vertex collision slide
+							if (fabsf(collision.normal.x) < 1.0f && fabsf(collision.normal.y) < 1.0f) {	// vertex collision
+								if (movingAway < approachingVertex)
+									approachingVertex = movingAway;
+								else
+									continue;
+							}
+
+							collisionTangent = eVec2(-collision.normal.y, collision.normal.x);			// CCW 90 degrees
 							float whichWay = collisionTangent * owner->collisionModel->Velocity();
 							if (whichWay < 0)
 								collisionTangent *= -1.0f;
-							float slide = owner->collisionModel->Velocity() * collisionTangent * remainingFraction;
-							slideVelocity = collisionTangent * slide;
-						}
-						break;
+						} 
+
+						if (!(fabsf(collision.normal.x) < 1.0f && fabsf(collision.normal.y) < 1.0f))	// edge collision
+							break;
 					}
 				}
+				float slide = owner->collisionModel->Velocity() * collisionTangent * remainingFraction;
+				slideVelocity = collisionTangent * slide;
 			}
 
 			// slide-type collision response
-			// FIXME: works near-perfect, except when sliding into a vertex-vertex collision along a wall
-			// SOLUTION: it should be safe to ignore that collision w/o truncation (because it's known this is a slide, not an approach)
-			// vert-vert coll. are easy to detect because of their diagonal normals
 			if (remainingFraction == 1.0f) {
 				owner->collisionModel->Velocity() = slideVelocity;
 				if(eCollision::ForwardCollisionTest(*(owner->collisionModel), collisions)) {
 					for (auto & collision : collisions) {
 						bool movingAway = (collision.normal * owner->collisionModel->Velocity() >= 0);
-						if (movingAway || fabs(collision.normal.x) < 1.0f) {	// if one component is, both are
+						if (movingAway || (fabsf(collision.normal.x) < 1.0f && fabsf(collision.normal.y) < 1.0f)) {	// aabb can ignore vertex collisions
 							continue;
 						} else {
 							owner->collisionModel->Velocity() *= collision.fraction;
@@ -315,7 +325,7 @@ void eMovement::CompassFollow() {
 // eMovement::CheckVectorPath
 // determines the state of the entity's position for the next few frames
 // return true if a future position using along is near the waypoint
-// TODO: make this a proper area probe (ie: speedbox or moving bounds collision test)
+// TODO: make this a proper area probe (ie: speedbox, or moving bounds collision test, or linecast)
 //******************
 bool eMovement::CheckVectorPath(eVec2 from, decision_t & along) {
 	eVec2 testPoint;

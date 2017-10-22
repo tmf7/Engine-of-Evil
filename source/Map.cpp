@@ -219,9 +219,9 @@ eVec2 eMap::GetMouseWorldPosition() const {
 // FIXME: this fn is only used by eAI for probing movement (and adding waypoints), move the logic to eCollisionModel/eCollision
 //**************
 bool eMap::HitStaticWorldHack(const eVec2 & point) {
-	if	(!tileMap.IsValid(point))
-		return true;
-
+	if	(!tileMap.IsValid(point))			// TODO: check if an eBounds, line, or point is *fully* within the map's bounding box 
+		return true;						// (ie map collider and test to eCollision)
+		
 	auto & cell = tileMap.Index(point);
 	for (auto & pair : cell.Contents()) {
 		if (eCollision::AABBContainsPoint(pair.second->AbsBounds(), point))
