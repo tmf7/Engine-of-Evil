@@ -31,6 +31,8 @@
 #define MIN(a,b) (a < b ? a : b)
 #define TO_STRING(x) (#x)
 #define BIT(a) (1<<a)
+#define XOR_SEQ(a,b) (a) ? !(b) : (b)
+#define XOR(a,b) !(a) != !(b)
 
 #define MAX_ESTRING_LENGTH 128
 #define MAX_MAP_ROWS 256
@@ -39,6 +41,7 @@
 #define MAX_IMAGES 1024
 #define MAX_LAYER 128
 #define INVALID_ID -1
+
 
 //#define ONE_GIGABYTE 1073741824
 //extern byte_t memoryPool[ONE_GIGABYTE];
