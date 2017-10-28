@@ -27,6 +27,14 @@ public:
 	const eBounds &						AbsBounds() const;
 	const eBounds &						AbsBounds();
 	void								SetAbsBounds(const eBounds & bounds);
+	void								SetGridPosition(const int row, const int column);
+	int									GridRow() const;
+	int									GridColumn() const;
+
+public:
+
+	bool								inOpenSet	= false;	// expidites openSet searches
+	bool								inClosedSet = false;	// expidites closedSet searches
 
 private:
 
@@ -35,18 +43,17 @@ private:
 	std::vector<eTile *>				tilesToDraw;// what to draw
 	std::vector<eTile>					tilesOwned;	// which eTiles' lifetimes are managed
 	eBounds								absBounds;	// using world-coordinates
+
+	// pathfinding and collision queries
 /*
-	// pathfinding
 	// TODO: make part of a separate A* grid
 	eGridCell *							parent		= nullptr;	// originating cell to set the path back from a goal
 	int									gCost		= 0;		// distance from start cell to this cell
 	int									hCost		= 0;		// distance from this cell to a goal
 	int									fCost		= 0;		// sum of gCost and hCost
-	int									gridRow;				// index within A* grid
-	int									gridCol;				// index within A* grid
-	bool								inOpenSet	= false;	// expidites PathFind openSet searches
-	bool								inClosedSet = false;// expidites PathFind closedSet searches
 */
+	int									gridRow;				// index within grid
+	int									gridCol;				// index within grid
 };
 
 //************
@@ -106,6 +113,28 @@ inline const eBounds & eGridCell::AbsBounds() {
 //******************
 inline void eGridCell::SetAbsBounds(const eBounds & bounds) {
 	absBounds = bounds;
+}
+
+//******************
+// eGridCell::SetGridPosition
+//******************
+inline void eGridCell::SetGridPosition(const int row, const int column) {
+	gridRow = row;
+	gridCol = column;
+}
+
+//******************
+// eGridCell::GridRow
+//******************
+inline int eGridCell::GridRow() const {
+	return gridRow;
+}
+
+//******************
+// eGridCell::GridColumn
+//******************
+inline int eGridCell::GridColumn() const {
+	return gridCol;
 }
 
 #endif /* EVIL_GRIDCELL_H */

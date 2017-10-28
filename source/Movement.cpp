@@ -38,6 +38,8 @@ void eMovement::Think() {
 
 // BEGIN FREEHILL DEBUG AI/player control
 	auto & input = game.GetInput();
+	auto & ownerVelocity = owner->collisionModel->Velocity();
+	auto & ownerCollisionModel = owner->collisionModel;
 	if (input.MousePressed(SDL_BUTTON_LEFT))
 		AddUserWaypoint(game.GetMap().GetMouseWorldPosition());
 
@@ -51,9 +53,9 @@ void eMovement::Think() {
 
 	if (SDL_fabs(xMove) > 0.0f || SDL_fabs(yMove) > 0.0f) {
 		eMath::IsometricToCartesian(xMove, yMove);
-		owner->collisionModel->Velocity().Set(xMove, yMove);
+		ownerVelocity.Set(xMove, yMove);
 
-		if (owner->collisionModel->Velocity() != vec2_zero) {
+		if (ownerVelocity != vec2_zero) {
 			static std::vector<Collision_t> collisions;		// DEBUG: static to reduce dynamic allocation, cleared during this function
 			eVec2 collisionTangent;
 			eVec2 slideVelocity;
@@ -63,17 +65,17 @@ void eMovement::Think() {
 			bool hit = false;
 			
 			// correction-type collision response
-			if (eCollision::ForwardCollisionTest(*(owner->collisionModel), collisions)) {
+			if (eCollision::BoxCast(collisions, ownerCollisionModel->AbsBounds(), ownerVelocity.Normalized(), ownerVelocity.Length())) {
 				for (auto & collision : collisions) {
-					movingAway = collision.normal * owner->collisionModel->Velocity();
+					movingAway = collision.normal * ownerVelocity;
 					if (movingAway >= 0.0f) {
 						continue;
 					} else {
 						hit = true;
 						remainingFraction = 1.0f - collision.fraction;
 						if (remainingFraction < 1.0f) {	// correction-response
-							owner->collisionModel->Velocity() *= collision.fraction;
-							owner->collisionModel->UpdateOrigin();
+							ownerVelocity *= collision.fraction;
+							ownerCollisionModel->UpdateOrigin();
 							break;
 						} else {						// setup for slide-response along an edge or vertex
 							// BUGFIX: for multi-vertex collision slide
@@ -85,7 +87,7 @@ void eMovement::Think() {
 							}
 
 							collisionTangent = eVec2(-collision.normal.y, collision.normal.x);			// CCW 90 degrees
-							float whichWay = collisionTangent * owner->collisionModel->Velocity();
+							float whichWay = collisionTangent * ownerVelocity;
 							if (whichWay < 0)
 								collisionTangent *= -1.0f;
 						} 
@@ -94,30 +96,30 @@ void eMovement::Think() {
 							break;
 					}
 				}
-				float slide = owner->collisionModel->Velocity() * collisionTangent * remainingFraction;
+				float slide = ownerVelocity * collisionTangent * remainingFraction;
 				slideVelocity = collisionTangent * slide;
 			}
 
 			// slide-type collision response
 			if (remainingFraction == 1.0f) {
-				owner->collisionModel->Velocity() = slideVelocity;
-				if(eCollision::ForwardCollisionTest(*(owner->collisionModel), collisions)) {
+				ownerVelocity = slideVelocity;
+				if(eCollision::BoxCast(collisions, ownerCollisionModel->AbsBounds(), ownerVelocity.Normalized(), ownerVelocity.Length())) {
 					for (auto & collision : collisions) {
-						bool movingAway = (collision.normal * owner->collisionModel->Velocity() >= 0);
+						bool movingAway = (collision.normal * ownerVelocity >= 0);
 						if (movingAway || (abs(collision.normal.x) < 1.0f && abs(collision.normal.y) < 1.0f)) {	// aabb can ignore vertex collisions
 							continue;
 						} else {
-							owner->collisionModel->Velocity() *= collision.fraction;
+							ownerVelocity *= collision.fraction;
 							break;
 						}
 					}
 				}
-				owner->collisionModel->UpdateOrigin();
+				ownerCollisionModel->UpdateOrigin();
 			}
 
 			collisions.clear();
 			if (!hit)
-				owner->collisionModel->UpdateOrigin();
+				ownerCollisionModel->UpdateOrigin();
 		}
 	}
 // END FREEHILL DEBUG AI/player control
@@ -130,20 +132,20 @@ void eMovement::Think() {
 
 		// drop a trail waypoint (but never in a deadend that stopped the entity last frame)
 		if (moving && !wasStopped && moveState != MOVETYPE_TRAIL && lastTrailTile != currentTile) {
-			trail.PushFront(owner->collisionModel->Origin());
+			trail.PushFront(ownerCollisionModel->Origin());
 			lastTrailTile = currentTile;
 		}
 
 		// check if goal is close enough to stop
-		if (owner->collisionModel->Origin().Compare(*currentWaypoint, goalRange)) {
+		if (ownerCollisionModel->Origin().Compare(*currentWaypoint, goalRange)) {
 			StopMoving();
 			UpdateWaypoint(true);
 		}
 
 		// finalize the move
-		if (owner->collisionModel->Velocity() != vec2_zero) {
+		if (ownerVelocity != vec2_zero) {
 			moving = true;
-			owner->collisionModel->UpdateOrigin();
+			ownerCollisionModel->UpdateOrigin();
 		}
 	}
 }
@@ -239,6 +241,7 @@ void eMovement::CompassFollow() {
 	float		weight;					// net bias for a decision about a test
 	float		bestWeight;				// highest net result of all modifications to validSteps
 	float		bias[4] = { 2.0f, 1.0f, 1.05f, 1.1f };	// { waypoint, left, right, forward }
+	auto &		ownerCollisionModel = owner->collisionModel;
 
 	if (!moving) {
 		test.vector = vec2_oneZero;
@@ -257,7 +260,7 @@ void eMovement::CompassFollow() {
 			*currentTile = VISITED_TILE;
 	}
 
-	waypoint.vector = *currentWaypoint - owner->collisionModel->Origin();
+	waypoint.vector = *currentWaypoint - ownerCollisionModel->Origin();
 	waypoint.vector.Normalize();
 
 	bestWeight = 0.0f;
@@ -266,15 +269,15 @@ void eMovement::CompassFollow() {
 
 		// check how clear the path is starting one step along it
 		// and head straight for the waypoint if the test.vector path crosses extremely near it
-		if (CheckVectorPath(owner->collisionModel->Origin() + (test.vector * maxMoveSpeed), test)) {
-			if (CheckVectorPath(owner->collisionModel->Origin() + (waypoint.vector * maxMoveSpeed), waypoint))
+		if (CheckVectorPath(ownerCollisionModel->Origin() + (test.vector * maxMoveSpeed), test)) {
+			if (CheckVectorPath(ownerCollisionModel->Origin() + (waypoint.vector * maxMoveSpeed), waypoint))
 				forward = waypoint;
 			else
 				forward = test;
 
 			// initilize the new left and right, and their validSteps that'll be used next frame
 			CheckWalls(nullptr);
-			owner->collisionModel->Velocity() = forward.vector * maxMoveSpeed;
+			ownerCollisionModel->Velocity() = forward.vector * maxMoveSpeed;
 			return;
 		}
 
@@ -315,7 +318,7 @@ void eMovement::CompassFollow() {
 		forward = best;
 		// initilize the new left and right, and their validSteps that'll be used next frame
 		CheckWalls(nullptr);
-		owner->collisionModel->Velocity() = forward.vector * maxMoveSpeed;
+		ownerCollisionModel->Velocity() = forward.vector * maxMoveSpeed;
 	}
 	// moveState may have changed, track the correct waypoint
 	UpdateWaypoint();
@@ -328,14 +331,37 @@ void eMovement::CompassFollow() {
 // TODO: make this a proper area probe (ie: speedbox, or moving bounds collision test, or linecast)
 //******************
 bool eMovement::CheckVectorPath(eVec2 from, decision_t & along) {
-	eVec2 testPoint;
-	float newSteps;
+	static std::vector<Collision_t> collisions;
+	static std::vector<eGridCell *> tileMapAreaCells;
 
+	auto & tileMap = game.GetMap();
+	eVec2 testPoint;
+	float newSteps = 0.0f;
 	along.validSteps = 0.0f;
 	along.stepRatio = 0.0f;
-	newSteps = 0.0f;
-	auto & tileMap = game.GetMap();
+
 	while (along.validSteps < maxSteps) {
+
+		// FIXME: from starts one step forward of the current position already
+		// SOLUTION: just make the calls from Origin (not translated)
+
+		// FIXME: can these casts be determined to lands on/near a waypoint? (goalRange)
+		// SOLUTION: give the current goal a temp collider to be tested against during a boxcast? (so it'll show up in collisions)... probably not
+
+		// FIXME: fraction should be < length if all the boxcast collides with is a map interior edge
+		// SOLUTION: 4 segments?
+
+		eCollision::BoxCast(collisions, owner->collisionModel->AbsBounds(), along.vector, maxMoveSpeed * (float)maxSteps, true);
+		if (!collisions.empty())
+			along.validSteps = collisions[0].fraction;
+
+		eCollision::GetAreaCells(from, along.vector, maxMoveSpeed * (float)maxSteps * collisions[0].fraction, tileMapAreaCells);
+		for (auto & cell : tileMapAreaCells)
+			if (knownMap.Index(cell->GridRow(), cell->GridColumn()) == UNKNOWN_TILE)
+				newSteps++;
+
+
+
 
 		// forward test point (starts on circle circumscribing the sprite bounding box)
 		testPoint.x = from.x + (collisionRadius * along.vector.x);
@@ -364,7 +390,7 @@ bool eMovement::CheckVectorPath(eVec2 from, decision_t & along) {
 		// all test points validated
 		along.validSteps++;
 
-		// check if the step falls on an unexplored tile
+		// check if the step along centerline falls on an unexplored tile
 		if (knownMap.Index(from) == UNKNOWN_TILE)
 			newSteps++;
 

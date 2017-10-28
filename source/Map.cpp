@@ -62,6 +62,7 @@ bool eMap::LoadMap(const char * mapFilename) {
 	for (column = 0; column < numColumns; ++column) {
 		for (row = 0; row < numRows; ++row) {
 			auto & cell = tileMap.Index(row, column);
+			cell.SetGridPosition(row, column);
 			eVec2 cellMins = eVec2((float)(row * cellWidth), (float)(column * cellHeight));
 			cell.SetAbsBounds( eBounds(cellMins, cellMins + eVec2((float)cellWidth, (float)cellHeight)) );
 			cell.TilesOwned().reserve(numLayers);	// BUGFIX: assures the tilesOwned vector data doesn't reallocate/move and invalidate tilesToDraw

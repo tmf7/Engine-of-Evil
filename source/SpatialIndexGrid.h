@@ -36,6 +36,8 @@ public:
 	type &					Index(const int row, const int column);
 	const type	&			Index(const int row, const int column) const;
 
+	void					GetNeighbors(const int row, const int column, std::vector<type *> & neighbors);
+
 	int						IsometricCellWidth() const;
 	int						IsometricCellHeight() const;
 	int						LayerDepth(const int layer) const;
@@ -242,6 +244,7 @@ inline void eSpatialIndexGrid<type, rows, columns>::Index(const eVec2 & point, i
 //******************
 // eSpatialIndexGrid::Index
 // returns mutable cells[row][column] closest to the given point
+// DEBUG: users must ensure input is within bounds of (rows * cellHeight) * (columns * cellWidth)
 //******************
 template< class type, int rows, int columns>
 inline type & eSpatialIndexGrid<type, rows, columns>::Index(const eVec2 & point) {
@@ -255,6 +258,7 @@ inline type & eSpatialIndexGrid<type, rows, columns>::Index(const eVec2 & point)
 //******************
 // eSpatialIndexGrid::Index
 // returns const cells[row][column] closest to the given point
+// DEBUG: users must ensure input is within bounds of (rows * cellHeight) * (columns * cellWidth)
 //******************
 template< class type, int rows, int columns>
 inline const type & eSpatialIndexGrid<type, rows, columns>::Index(const eVec2 & point) const {
@@ -284,6 +288,21 @@ inline type & eSpatialIndexGrid<type, rows, columns>::Index(const int row, const
 template< class type, int rows, int columns>
 inline const type & eSpatialIndexGrid<type, rows, columns>::Index(const int row, const int column) const {
 	return cells[row][column];
+}
+
+//**************
+// eSpatialIndexGrid::GetNeighbors
+//**************
+template< class type, int rows, int columns>
+inline void eSpatialIndexGrid<type, rows, columns>::GetNeighbors(const int row, const int column, std::vector<type *> & neighbors) {
+	for (int r = -1; r <= 1; ++r) {
+		for (int c = -1; c <= 1; ++c) {
+			int checkRow = row + r;
+			int checkCol = column + c;
+			if (IsValid(checkRow, checkCol))
+				neighbors.push_back(&Index(checkRow, checkCol));
+		}
+	}
 }
 
 //******************

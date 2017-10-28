@@ -23,6 +23,7 @@ public:
 	bool			Compare(const eBounds & a) const;
 	bool			Compare(const eBounds & a, const float epsilon) const;
 
+	eBounds			Intersect(const eBounds & a) const;
 	eBounds			Translate(const eVec2 & translation) const;		
 	eBounds &		TranslateSelf(const eVec2 & translation);		
 	eBounds			Expand(const float range) const;				
@@ -261,4 +262,16 @@ inline void eBounds::ToPoints(eVec2 points[4]) const {
 	}
 }
 
+//*************
+// eBounds::Intersect
+// returns the eBounds shared between this and a (includes touching)
+//*************
+inline eBounds eBounds::Intersect(const eBounds & a) const {
+	eBounds intersection;
+	intersection.bounds[0][0] = ( a.bounds[0][0] > bounds[0][0] ) ? a.bounds[0][0] : bounds[0][0];
+	intersection.bounds[0][1] = ( a.bounds[0][1] > bounds[0][1] ) ? a.bounds[0][1] : bounds[0][1];
+	intersection.bounds[1][0] = ( a.bounds[1][0] < bounds[1][0] ) ? a.bounds[1][0] : bounds[1][0];
+	intersection.bounds[1][1] = ( a.bounds[1][1] < bounds[1][1] ) ? a.bounds[1][1] : bounds[1][1];
+	return intersection;
+}
 #endif  /* EVIL_BOUNDS_H */

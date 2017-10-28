@@ -137,7 +137,7 @@ void eRenderer::DrawLines(const SDL_Color & color, std::vector<eVec2>  points, b
 
 	std::vector<SDL_Point> iPoints;
 	iPoints.reserve(points.size());
-	for (int i = 0; i < points.size(); i++) {
+	for (size_t i = 0; i < points.size(); ++i) {
 		eMath::CartesianToIsometric(points[i].x, points[i].y);
 		points[i] -= game.GetCamera().CollisionModel().AbsBounds()[0] * dynamic;
 		points[i].SnapInt();
@@ -179,7 +179,7 @@ void eRenderer::DrawIsometricPrism(const SDL_Color & color, const eBounds3D & re
 	// convert to isometric rhombus
 	// and translate with camera
 	std::array<SDL_Point, 10> iPoints;
-	for (int i = 0; i < fPoints.size(); i++) {
+	for (size_t i = 0; i < fPoints.size(); ++i) {
 		fPoints[i].x -= fPoints[i].z;
 		fPoints[i].y -= fPoints[i].z;
 		eMath::CartesianToIsometric(fPoints[i].x, fPoints[i].y);
@@ -231,7 +231,7 @@ void eRenderer::DrawIsometricRect(const SDL_Color & color, const eBounds & rect,
 	// convert to isometric rhombus
 	// and translate with camera
 	std::array<SDL_Point, 5> iPoints;
-	for (int i = 0; i < fPoints.size(); i++) {
+	for (size_t i = 0; i < fPoints.size(); ++i) {
 		eMath::CartesianToIsometric(fPoints[i].x, fPoints[i].y);
 		fPoints[i] -= game.GetCamera().CollisionModel().AbsBounds()[0] * dynamic;
 		fPoints[i].SnapInt();

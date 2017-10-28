@@ -24,24 +24,37 @@ class eCollision {
 public:
 
 	static bool				OBBOBBTest(const eBox & a, const eBox & b);
-	static void				GetCollisionNormal(const eVec2 & point, const eBounds & bounds, Collision_t & collision);
-	static void				GetCollisionNormal(const eCollisionModel & self, const eCollisionModel & other, Collision_t & collision);
+	static void				GetCollisionNormal(const eVec2 & point, const eBounds & bounds, eVec2 & resultNormal);
+	static void				GetCollisionNormal(const eBounds & self, const eVec2 dir, const float length, const eBounds & other, Collision_t & collision);
 	static void				GetAreaCells(const eBounds & area, std::vector<eGridCell *> & areaCells);
+	static void				GetAreaCells(const eBounds & bounds, const eVec2 dir, const float length, std::vector<eGridCell *> & areaCells);
 	static void				GetAreaCells(const eVec2 & begin, const eVec2 dir, const float length, std::vector<eGridCell *> & areaCells);
-	static eBounds			GetBroadPhaseBounds(const eCollisionModel & self);
 	static bool				AABBContainsPoint(const eBounds & bounds, const eVec2 & point);
 	static bool				AABBContainsAABB(const eBounds & self, const eBounds & other);
 	static bool				AABBContainsPolyLine(const eBounds & bounds, const std::vector<eVec2> & polyLine);	
 	static bool				AABBAABBTest(const eBounds & a, const eBounds & b);
+	static bool				SegmentAABBTest(const eVec2 & begin, const eVec2 & end, const eBounds & bounds);
 	static bool				IsAABB3DInIsometricFront(const eBounds3D & self, const eBounds3D & other);
-	static Collision_t		MovingAABBAABBTest(const eCollisionModel & self, eCollisionModel & other);
-	static bool				ForwardCollisionTest(const eCollisionModel & self, std::vector<Collision_t> & collisions);
-	static bool				RayCast(Collision_t & result, const eVec2 & begin, const eVec2 & dir, const float length = FLT_MAX);
-	static bool				RayAABBTest(const eVec2 & begin, const eVec2 & dir, const float length, const eBounds & bounds, Collision_t & result);
+	static bool				MovingAABBAABBTest(const eBounds & self, const eVec2 dir, const float length, const eBounds & other, float & resultFraction);
+	static bool				RayAABBTest(const eVec2 & begin, const eVec2 & dir, const float length, const eBounds & bounds, float & resultFraction);
+	static bool				BoxCast(std::vector<Collision_t> & collisions, const eBounds bounds, const eVec2 dir, const float length, bool closestHitsOnly = false);
+	static bool				RayCast(std::vector<Collision_t> & collisions, const eVec2 & begin, const eVec2 & dir, const float length = FLT_MAX, bool ignoreStartInCollision = true, bool closestHitsOnly = false);
+
+	static eBounds			GetBroadPhaseBounds(const eCollisionModel & self);		// FIXME: deprecated
 
 private:
 
 	static void				SetAABBNormal(Uint8 entryDir, eVec2 & normal);
+
+private:
+
+	typedef enum {
+		RIGHT	= 1,
+		LEFT	= 2,
+		TOP		= 4,
+		BOTTOM	= 8
+	} eNormalDir_t;
+
 };
 
 
@@ -100,10 +113,10 @@ inline void eCollision::SetAABBNormal(const Uint8 entryDir, eVec2 & normal) {
 		case LEFT:				normal = -vec2_oneZero; return;
 		case TOP:				normal = -vec2_zeroOne; return;
 		case BOTTOM:			normal =  vec2_zeroOne; return;
-		case RIGHT | TOP:		normal =  vec2_one * 0.707f; return;		// was -707
-		case RIGHT | BOTTOM:	normal =  eVec2(0.707f, -0.707f); return;	// was -707, 707
-		case LEFT | TOP:		normal =  eVec2(-0.707f, 0.707f); return;	// was 707, -707
-		case LEFT | BOTTOM:		normal =  vec2_one * -0.707f; return;		// was 707
+		case RIGHT | TOP:		normal =  eVec2(0.707f, -0.707f); return;
+		case RIGHT | BOTTOM:	normal =  vec2_one * 0.707f; return;
+		case LEFT | TOP:		normal =  vec2_one * -0.707f; return;
+		case LEFT | BOTTOM:		normal =  eVec2(-0.707f, 0.707f); return;
 		default:				normal =  vec2_zero; return;
 	}
 }

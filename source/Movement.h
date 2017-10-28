@@ -12,31 +12,6 @@ template <class type, int rows, int columns>
 class eSpatialIndexGrid;
 typedef eSpatialIndexGrid<byte_t, MAX_MAP_ROWS, MAX_MAP_COLUMNS> byte_map_t;
 
-// values for byte_map_t knownMap;
-typedef enum {
-	UNKNOWN_TILE,
-	VISITED_TILE
-} tileState_t ;
-
-// used to decide on a new movement direction
-typedef struct decision_s {
-	eVec2			vector		= vec2_zero;
-	float			stepRatio	= 0.0f;		// ratio of valid steps to those that land on previously unvisited tiles
-	float			validSteps	= 0.0f;		// collision-free steps that could be taken along the vector
-} decision_t;
-
-typedef enum {
-	MOVETYPE_NONE,		// TODO: actually integrate this
-	MOVETYPE_GOAL,		// waypoint tracking
-	MOVETYPE_TRAIL		// waypoint tracking
-} movementType_t;
-
-typedef enum {
-	PATHTYPE_NONE,		// TODO: actually integrate this
-	PATHTYPE_COMPASS,
-	PATHTYPE_WALL
-} pathfindingType_t;
-
 class eMovement {
 public:
 
@@ -57,22 +32,30 @@ public:
 
 private:
 
-	// pathfinding (general)
-	void				Move();
-	bool				CheckVectorPath(eVec2 from, decision_t & along);
-	void				CheckWalls(float * bias);
-	void				UpdateWaypoint(bool getNext = false);
+	// values for byte_map_t knownMap;
+	typedef enum {
+		UNKNOWN_TILE,
+		VISITED_TILE
+	} tileState_t ;
 
-	// pathfinding (wall-follow)
-	void				WallFollow();
+	// used to decide on a new movement direction
+	typedef struct decision_s {
+		eVec2			vector		= vec2_zero;
+		float			stepRatio	= 0.0f;		// ratio of valid steps to those that land on previously unvisited tiles
+		float			validSteps	= 0.0f;		// collision-free steps that could be taken along the vector
+	} decision_t;
 
-	// pathfinding (compass)
-	void				CompassFollow();
-	bool				CheckTrail();
-	void				UpdateKnownMap();
-	void				StopMoving();
-
-private:
+	typedef enum {
+		MOVETYPE_NONE,		// TODO: actually integrate this
+		MOVETYPE_GOAL,		// waypoint tracking
+		MOVETYPE_TRAIL		// waypoint tracking
+	} movementType_t;
+	
+	typedef enum {
+		PATHTYPE_NONE,		// TODO: actually integrate this
+		PATHTYPE_COMPASS,
+		PATHTYPE_WALL
+	} pathfindingType_t;
 
 	eEntity *			owner;	
 
@@ -101,6 +84,23 @@ private:
 
 	bool				moving;
 	int					maxSteps;				// number of steps at current speed to project along a potential path
+
+private:
+
+	// pathfinding (general)
+	void				Move();
+	bool				CheckVectorPath(eVec2 from, decision_t & along);
+	void				CheckWalls(float * bias);
+	void				UpdateWaypoint(bool getNext = false);
+
+	// pathfinding (wall-follow)
+	void				WallFollow();
+
+	// pathfinding (compass)
+	void				CompassFollow();
+	bool				CheckTrail();
+	void				UpdateKnownMap();
+	void				StopMoving();
 };
 
 //*************
