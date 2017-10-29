@@ -297,6 +297,9 @@ template< class type, int rows, int columns>
 inline void eSpatialIndexGrid<type, rows, columns>::GetNeighbors(const int row, const int column, std::vector<type *> & neighbors) {
 	for (int r = -1; r <= 1; ++r) {
 		for (int c = -1; c <= 1; ++c) {
+			if (r == 0 && c == 0)
+				continue;
+
 			int checkRow = row + r;
 			int checkCol = column + c;
 			if (IsValid(checkRow, checkCol))

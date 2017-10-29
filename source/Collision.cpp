@@ -111,8 +111,8 @@ bool eCollision::SegmentAABBTest(const eVec2 & begin, const eVec2 & end, const e
 		
 //***************
 // eCollision::BoxCast
-// fills collisions according to AABBs intersected by self along its velocity
-// sorted from nearest to farthest
+// fills collisions according to AABBs intersected by bounds along (dir * length)
+// sorted from nearest to farthest (collision.fractions in range [0.0f, 1.0f])
 // returns true if any collision occurs
 // DEBUG: dir must be unit length
 // TODO: add a collision mask param to filter collisions
@@ -121,11 +121,15 @@ bool eCollision::BoxCast(std::vector<Collision_t> & collisions, const eBounds bo
 	static std::unordered_map<const eBounds *, const eBounds *> alreadyTested;
 	static std::vector<eGridCell *> broadAreaCells;					// DEBUG(performance): static to reduce dynamic allocations
 
-//	eBounds broadPhaseBounds = GetBroadPhaseBounds(self);
-//	GetAreaCells(broadPhaseBounds, broadAreaCells);
+	// tighter area for long casts
+//	if (length > 2.0f * bounds.Radius())							// FIXME: adjust this threshold
+		GetAreaCells(bounds, dir, length, broadAreaCells);			// FIXME/BUG: causes catching on collider corners
+//	 else
+//		GetAreaCells(GetBroadPhaseBounds(bounds, dir, length), broadAreaCells);
+
 	bool closestHit = false;
-	GetAreaCells(bounds, dir, length, broadAreaCells);
 	alreadyTested[&bounds] = &bounds;								// ignore self collision
+
 	for (auto & cell : broadAreaCells) {
 		for (auto && kvPair : cell->Contents()) {
 			auto & collider = kvPair.second;
@@ -135,7 +139,7 @@ bool eCollision::BoxCast(std::vector<Collision_t> & collisions, const eBounds bo
 			if (alreadyTested.find(otherBounds) != alreadyTested.end())
 				continue;
 
-			alreadyTested[otherBounds] = otherBounds;
+			alreadyTested[otherBounds] = otherBounds;			// FIXME/BUG: self-test is still occuring, i think
 			Collision_t collision;
 			if (/*AABBAABBTest(broadPhaseBounds, *otherBounds) && */ MovingAABBAABBTest(bounds, dir, length, *otherBounds, collision.fraction)) {
 				collision.owner = collider;
@@ -193,12 +197,12 @@ void eCollision::GetAreaCells(const eBounds & area, std::vector<eGridCell *> & a
 //***************
 // eCollision::GetAreaCells
 // fills the areaCells vector with pointers to the eGridCells 
-// along the given area swept by the bounds (includes touching)
+// along the given area swept by the bounds along (dir * length) (includes touching)
 // DEBUG(performance): make sure areaCells passed in avoids excessive dynamic allocation by using a reserved/managed vector, or static memory
 //***************
 void eCollision::GetAreaCells(const eBounds & bounds, const eVec2 dir, const float length, std::vector<eGridCell *> & areaCells) {
 	auto & tileMap = game.GetMap().TileMap();
-	static std::vector<eGridCell *> openSet;
+	static std::deque<eGridCell *> openSet;		// first-come-first-served testing
 	static std::vector<eGridCell *> closedSet;
 	static std::vector<eGridCell *> neighbors;
 	
@@ -208,8 +212,8 @@ void eCollision::GetAreaCells(const eBounds & bounds, const eVec2 dir, const flo
 
 	float placeholderFraction;					// DEBUG: not used
 	while(!openSet.empty()) {
-		auto & cell = openSet.back();
-		openSet.pop_back();		
+		auto cell = openSet.front();
+		openSet.pop_front();		
 		closedSet.push_back(cell);
 		cell->inOpenSet = false;
 		cell->inClosedSet = true;
@@ -227,9 +231,10 @@ void eCollision::GetAreaCells(const eBounds & bounds, const eVec2 dir, const flo
 			neighbors.clear();
 		}
 	}
-
-	for (auto & cell : closedSet)
+	int test = closedSet.size();
+	for (auto & cell : closedSet)			// FIXME/BUG: upon actual collision, closedSet baloons up to hundreds of cells unnecessarily
 		cell->inClosedSet = false;
+	closedSet.clear();
 }
 
 //***************
@@ -296,26 +301,25 @@ void eCollision::GetAreaCells(const eVec2 & begin, const eVec2 dir, const float 
 //***************
 // eCollision::BroadPhaseBounds
 // generates an AABB that encompasses
-// the swept area of a moving eBounds
-// based on the eCollisionModel velocity
-// FIXME: deprecated
+// the swept area of a moving eBounds along (dir * length)
 //***************
-eBounds eCollision::GetBroadPhaseBounds(const eCollisionModel & self) {
+eBounds eCollision::GetBroadPhaseBounds(const eBounds & bounds, const eVec2 & dir, const float length) {
+	eVec2 velocity = dir * length;
 	eBounds bpBounds;
-	if (self.Velocity().x > 0.0f) {
-		bpBounds[0][0] = self.AbsBounds()[0][0];
-		bpBounds[1][0] = self.AbsBounds()[1][0] + self.Velocity().x;
+	if (velocity.x > 0.0f) {
+		bpBounds[0][0] = bounds[0][0];
+		bpBounds[1][0] = bounds[1][0] + velocity.x;
 	} else {
-		bpBounds[0][0] = self.AbsBounds()[0][0] + self.Velocity().x;
-		bpBounds[1][0] = self.AbsBounds()[1][0] - self.Velocity().x;
+		bpBounds[0][0] = bounds[0][0] + velocity.x;
+		bpBounds[1][0] = bounds[1][0] - velocity.x;
 	}
 		
-	if (self.Velocity().y > 0.0f) {
-		bpBounds[0][1] = self.AbsBounds()[0][1];
-		bpBounds[1][1] = self.AbsBounds()[1][1] + self.Velocity().y;
+	if (velocity.y > 0.0f) {
+		bpBounds[0][1] = bounds[0][1];
+		bpBounds[1][1] = bounds[1][1] + velocity.y;
 	} else {
-		bpBounds[0][1] = self.AbsBounds()[0][1] + self.Velocity().y;
-		bpBounds[1][1] = self.AbsBounds()[1][1] - self.Velocity().y;
+		bpBounds[0][1] = bounds[0][1] + velocity.y;
+		bpBounds[1][1] = bounds[1][1] - velocity.y;
 	}
 	return bpBounds;
 }
@@ -486,7 +490,7 @@ bool eCollision::RayAABBTest(const eVec2 & begin, const eVec2 & dir, const float
 //***************
 // eCollision::RayCast
 // fills collisions according to AABBs intersected by the ray (directed line segment)
-// sorted from nearest to farthest
+// sorted from nearest to farthest (collision.fraction in range [0.0f, length])
 // returns true if any collision occurs
 // DEBUG: dir must be unit length
 // TODO: add a collision mask param to filter collisions

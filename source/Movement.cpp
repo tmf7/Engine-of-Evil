@@ -331,37 +331,56 @@ void eMovement::CompassFollow() {
 // TODO: make this a proper area probe (ie: speedbox, or moving bounds collision test, or linecast)
 //******************
 bool eMovement::CheckVectorPath(eVec2 from, decision_t & along) {
+	auto & tileMap = game.GetMap().TileMap();
+/*
 	static std::vector<Collision_t> collisions;
 	static std::vector<eGridCell *> tileMapAreaCells;
-
-	auto & tileMap = game.GetMap();
+	static std::array<eBounds, 4> mapEdges = {  eBounds(vec2_zero, eVec2(0.0f, tileMap.Height())),									// left
+												eBounds(eVec2(tileMap.Width(), 0.0f), eVec2(tileMap.Width(), tileMap.Height())),	// right
+												eBounds(vec2_zero, eVec2(tileMap.Width(), 0.0f)),									// top
+												eBounds(eVec2(0.0f, tileMap.Height()), eVec2(tileMap.Width(), tileMap.Height())) };	// bottom
+*/
 	eVec2 testPoint;
 	float newSteps = 0.0f;
 	along.validSteps = 0.0f;
 	along.stepRatio = 0.0f;
+/*
+	// FIXME: from starts one step forward of the current position already
+	// SOLUTION: just make the calls from Origin (not translated)
 
-	while (along.validSteps < maxSteps) {
+	auto & ownerBounds = owner->collisionModel->AbsBounds();
+	float castLength = maxMoveSpeed * (float)maxSteps;
+	eCollision::BoxCast(collisions, ownerBounds, along.vector, castLength, true);
 
-		// FIXME: from starts one step forward of the current position already
-		// SOLUTION: just make the calls from Origin (not translated)
+	if (!collisions.empty()) {
+		along.validSteps = collisions[0].fraction * (float)maxSteps;
 
-		// FIXME: can these casts be determined to lands on/near a waypoint? (goalRange)
-		// SOLUTION: give the current goal a temp collider to be tested against during a boxcast? (so it'll show up in collisions)... probably not
-
-		// FIXME: fraction should be < length if all the boxcast collides with is a map interior edge
-		// SOLUTION: 4 segments?
-
-		eCollision::BoxCast(collisions, owner->collisionModel->AbsBounds(), along.vector, maxMoveSpeed * (float)maxSteps, true);
-		if (!collisions.empty())
-			along.validSteps = collisions[0].fraction;
-
-		eCollision::GetAreaCells(from, along.vector, maxMoveSpeed * (float)maxSteps * collisions[0].fraction, tileMapAreaCells);
-		for (auto & cell : tileMapAreaCells)
+		eCollision::GetAreaCells(from, along.vector, castLength * collisions[0].fraction, tileMapAreaCells);
+		for (auto & cell : tileMapAreaCells) {
 			if (knownMap.Index(cell->GridRow(), cell->GridColumn()) == UNKNOWN_TILE)
 				newSteps++;
+		}
+	} else {
+		float nearestEdgeFraction = 1.0f;
+		float mapEdgeFraction = 0.0f;
+		for(int i = 0, edgeHits = 0; i < mapEdges.size() && edgeHits < 2; ++i) {
+			if (eCollision::MovingAABBAABBTest(ownerBounds, along.vector, castLength, mapEdges[i], mapEdgeFraction) &&
+				++edgeHits &&							// DEBUG: one less if statment for the early-out test
+				mapEdgeFraction < nearestEdgeFraction)
+				nearestEdgeFraction = mapEdgeFraction;
+		}
+		along.validSteps = nearestEdgeFraction * (float)maxSteps;
 
+		// FIXME(performance): make goalBounds part of eMovement alongside currentWaypoint and update it wherever currentWaypoint does
+		eBounds goalBounds = eBounds(*currentWaypoint);
+		goalBounds.ExpandSelf(goalRange);
 
-
+		if (moveState == MOVETYPE_GOAL &&				// DEBUG: mapEdgeFraction just a placeholder here
+			eCollision::MovingAABBAABBTest(ownerBounds, along.vector, castLength * nearestEdgeFraction, goalBounds, mapEdgeFraction))
+			return true;
+	}
+*/
+	while (along.validSteps < maxSteps) {
 
 		// forward test point (starts on circle circumscribing the sprite bounding box)
 		testPoint.x = from.x + (collisionRadius * along.vector.x);
@@ -485,7 +504,7 @@ void eMovement::UpdateWaypoint(bool getNext) {
 			return;
 		}
 		default: {		// DEBUG: currently for PATHTYPE_WALL
-						// FIXME/TODO: have PATHTYPE_WALL pay attention to knownMap and trail waypoints too
+						// TODO: have PATHTYPE_WALL pay attention to knownMap and trail waypoints too
 			if (getNext && !goals.IsEmpty()) {
 				goals.PopBack();
 				trail.Clear();

@@ -25,6 +25,7 @@
 #include <unordered_map>
 #include <vector>
 #include <array>
+#include <deque>
 #include "Math.h"
 
 #define MAX(a,b) (a > b ? a : b)

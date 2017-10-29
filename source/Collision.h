@@ -39,8 +39,7 @@ public:
 	static bool				RayAABBTest(const eVec2 & begin, const eVec2 & dir, const float length, const eBounds & bounds, float & resultFraction);
 	static bool				BoxCast(std::vector<Collision_t> & collisions, const eBounds bounds, const eVec2 dir, const float length, bool closestHitsOnly = false);
 	static bool				RayCast(std::vector<Collision_t> & collisions, const eVec2 & begin, const eVec2 & dir, const float length = FLT_MAX, bool ignoreStartInCollision = true, bool closestHitsOnly = false);
-
-	static eBounds			GetBroadPhaseBounds(const eCollisionModel & self);		// FIXME: deprecated
+	static eBounds			GetBroadPhaseBounds(const eBounds & bounds, const eVec2 & dir, const float length);
 
 private:
 
