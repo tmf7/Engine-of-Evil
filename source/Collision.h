@@ -25,20 +25,20 @@ public:
 
 	static bool				OBBOBBTest(const eBox & a, const eBox & b);
 	static void				GetCollisionNormal(const eVec2 & point, const eBounds & bounds, eVec2 & resultNormal);
-	static void				GetCollisionNormal(const eBounds & self, const eVec2 dir, const float length, const eBounds & other, Collision_t & collision);
+	static void				GetCollisionNormal(const eBounds & self, const eVec2 & dir, const float length, const eBounds & other, Collision_t & collision);
 	static void				GetAreaCells(const eBounds & area, std::vector<eGridCell *> & areaCells);
-	static void				GetAreaCells(const eBounds & bounds, const eVec2 dir, const float length, std::vector<eGridCell *> & areaCells);
-	static void				GetAreaCells(const eVec2 & begin, const eVec2 dir, const float length, std::vector<eGridCell *> & areaCells);
+	static void				GetAreaCells(const eBounds & bounds, const eVec2 & dir, const float length, std::vector<eGridCell *> & areaCells);
+	static void				GetAreaCells(const eVec2 & begin, const eVec2 & dir, const float length, std::vector<eGridCell *> & areaCells);
 	static bool				AABBContainsPoint(const eBounds & bounds, const eVec2 & point);
 	static bool				AABBContainsAABB(const eBounds & self, const eBounds & other);
 	static bool				AABBContainsPolyLine(const eBounds & bounds, const std::vector<eVec2> & polyLine);	
 	static bool				AABBAABBTest(const eBounds & a, const eBounds & b);
 	static bool				SegmentAABBTest(const eVec2 & begin, const eVec2 & end, const eBounds & bounds);
 	static bool				IsAABB3DInIsometricFront(const eBounds3D & self, const eBounds3D & other);
-	static bool				MovingAABBAABBTest(const eBounds & self, const eVec2 dir, const float length, const eBounds & other, float & resultFraction);
+	static bool				MovingAABBAABBTest(const eBounds & self, const eVec2 & dir, const float length, const eBounds & other, float & resultFraction);
 	static bool				RayAABBTest(const eVec2 & begin, const eVec2 & dir, const float length, const eBounds & bounds, float & resultFraction);
-	static bool				BoxCast(std::vector<Collision_t> & collisions, const eBounds bounds, const eVec2 dir, const float length, bool closestHitsOnly = false);
-	static bool				RayCast(std::vector<Collision_t> & collisions, const eVec2 & begin, const eVec2 & dir, const float length = FLT_MAX, bool ignoreStartInCollision = true, bool closestHitsOnly = false);
+	static bool				BoxCast(std::vector<Collision_t> & collisions, const eBounds & bounds, const eVec2 & dir, const float length);
+	static bool				RayCast(std::vector<Collision_t> & collisions, const eVec2 & begin, const eVec2 & dir, const float length = FLT_MAX, bool ignoreStartInCollision = true);
 	static eBounds			GetBroadPhaseBounds(const eBounds & bounds, const eVec2 & dir, const float length);
 
 private:

@@ -83,13 +83,12 @@ private:
 	decision_t *		wallSide;				// direction to start sweeping from during PATHTYPE_WALL
 
 	bool				moving;
-	int					maxSteps;				// number of steps at current speed to project along a potential path
 
 private:
 
 	// pathfinding (general)
 	void				Move();
-	bool				CheckVectorPath(eVec2 from, decision_t & along);
+	bool				CheckVectorPath(decision_t & along);
 	void				CheckWalls(float * bias);
 	void				UpdateWaypoint(bool getNext = false);
 

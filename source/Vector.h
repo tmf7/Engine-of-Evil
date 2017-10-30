@@ -55,6 +55,7 @@ extern eVec2 vec2_zero;
 extern eVec2 vec2_oneZero;
 extern eVec2 vec2_zeroOne;
 extern eVec2 vec2_one;
+extern eVec2 vec2_epsilon;
 
 //******************
 // eVec2::eVec2

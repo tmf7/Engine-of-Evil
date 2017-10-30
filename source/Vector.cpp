@@ -1,9 +1,11 @@
 #include "Vector.h"
+#include <float.h>
 
 eVec2 vec2_zero(0.0f, 0.0f);
 eVec2 vec2_oneZero(1.0f, 0.0f);
 eVec2 vec2_zeroOne(0.0f, 1.0f);
 eVec2 vec2_one(1.0f, 1.0f);
+eVec2 vec2_epsilon(FLT_EPSILON, FLT_EPSILON);
 
 eVec3 vec3_zero(0.0f, 0.0f, 0.0f);
 eVec3 vec3_oneZero(1.0f, 0.0f, 0.0f);
