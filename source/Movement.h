@@ -20,8 +20,11 @@ public:
 	void				Init(eEntity * const owner);
 	void				Think();
 	void				DebugDraw();
-	void				AddUserWaypoint(const eVec2 & waypoint);
+	void				AddUserWaypoint(const eVec2 & waypoint);		// TODO: ePlayerInput should call this
 	const byte_map_t &	KnownMap() const;
+
+	void				CollisionResponseSlide();						// TODO: make paret of ePlayerInput
+	void				CollisionResponseCorrection();					// TODO: make paret of ePlayerInput
 
 	// debugging
 	void				DrawGoalWaypoints();

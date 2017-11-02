@@ -37,8 +37,8 @@ void eMovement::Think() {
 
 // BEGIN FREEHILL DEBUG AI/player control
 	auto & input = game.GetInput();
-	auto & ownerVelocity = owner->collisionModel->Velocity();
 	auto & ownerCollisionModel = owner->collisionModel;
+	auto & ownerVelocity = ownerCollisionModel->Velocity();
 	if (input.MousePressed(SDL_BUTTON_LEFT))
 		AddUserWaypoint(game.GetMap().GetMouseWorldPosition());
 
@@ -53,74 +53,7 @@ void eMovement::Think() {
 	if (SDL_fabs(xMove) > 0.0f || SDL_fabs(yMove) > 0.0f) {
 		eMath::IsometricToCartesian(xMove, yMove);
 		ownerVelocity.Set(xMove, yMove);
-
-		if (ownerVelocity != vec2_zero) {
-			static std::vector<Collision_t> collisions;		// DEBUG: static to reduce dynamic allocation, cleared during this function
-			eVec2 collisionTangent;
-			eVec2 slideVelocity;
-			float remainingFraction = 0.0f;
-			float movingAway = 0.0f;
-			float approachingVertex = 0.0f;
-			bool hit = false;
-			
-			// correction-type collision response
-			if (eCollision::BoxCast(collisions, ownerCollisionModel->AbsBounds(), ownerVelocity.Normalized(), ownerVelocity.Length())) {
-				for (auto & collision : collisions) {
-					movingAway = collision.normal * ownerVelocity;
-					if (movingAway >= 0.0f) {
-						continue;
-					} else {
-						hit = true;
-						remainingFraction = 1.0f - collision.fraction;
-						if (remainingFraction < 1.0f) {	// correction-response
-							ownerVelocity *= collision.fraction;
-							ownerCollisionModel->UpdateOrigin();
-							break;
-						} else {						// setup for slide-response along an edge or vertex
-							// BUGFIX: for multi-vertex collision slide
-							if (abs(collision.normal.x) < 1.0f && abs(collision.normal.y) < 1.0f) {	// vertex collision
-								if (movingAway < approachingVertex)
-									approachingVertex = movingAway;
-								else
-									continue;
-							}
-
-							collisionTangent = eVec2(-collision.normal.y, collision.normal.x);		// CCW 90 degrees
-							float whichWay = collisionTangent * ownerVelocity;
-							if (whichWay < 0)
-								collisionTangent *= -1.0f;
-						} 
-
-						if (!(abs(collision.normal.x) < 1.0f && abs(collision.normal.y) < 1.0f))	// edge collision
-							break;
-					}
-				}
-				float slide = ownerVelocity * collisionTangent * remainingFraction;
-				slideVelocity = collisionTangent * slide;
-			}
-			// DEBUG: collisions not cleared to maintain list of correction normals
-
-			// slide-type collision response
-			if (remainingFraction == 1.0f) {
-				ownerVelocity = slideVelocity;
-				if(eCollision::BoxCast(collisions, ownerCollisionModel->AbsBounds(), ownerVelocity.Normalized(), ownerVelocity.Length())) {
-					for (auto & collision : collisions) {
-						bool movingAway = (collision.normal * ownerVelocity >= 0);
-						if (movingAway || (abs(collision.normal.x) < 1.0f && abs(collision.normal.y) < 1.0f)) {	// aabb can ignore vertex collisions
-							continue;
-						} else {
-							ownerVelocity *= collision.fraction;
-							break;
-						}
-					}
-				}
-				ownerCollisionModel->UpdateOrigin();
-			}
-			collisions.clear();
-
-			if (!hit)
-				ownerCollisionModel->UpdateOrigin();
-		}
+		CollisionResponseSlide();
 	}
 // END FREEHILL DEBUG AI/player control
 
@@ -145,9 +78,118 @@ void eMovement::Think() {
 		// finalize the move
 		if (ownerVelocity != vec2_zero) {
 			moving = true;
+
+			// TODO: failsafe to disallow overlap in the event of a rounding error for validSteps
+			// possibly make a CorrectionResponse fn to be used in player-input, and here
+//			if (eCollision::BoxCast(collisions, ownerCollisionModel->AbsBounds(), ownerVelocity.Normalized(), ownerVelocity.Length()))
+//				ownerVelocity *= collisions[0].fraction;
+
 			ownerCollisionModel->UpdateOrigin();
 		}
 	}
+}
+
+//***************
+// eMovement::CollisionResponseSlide
+// TODO(~): move this to a player class
+//***************
+void eMovement::CollisionResponseSlide() {
+	static std::vector<Collision_t> collisions;		// DEBUG: static to reduce dynamic allocation, cleared during this function
+													// TODO: make this a private data member instead of per-fn
+
+	auto & ownerCollisionModel = owner->collisionModel;
+	auto & ownerVelocity = ownerCollisionModel->Velocity();
+	eVec2 collisionTangent;
+	float remainingFraction = 0.0f;
+	float movingAway = 0.0f;
+	float approachingVertex = 0.0f;
+
+	if (ownerVelocity == vec2_zero)
+		return;
+			
+	// correction-type collision response
+	if (eCollision::BoxCast(collisions, ownerCollisionModel->AbsBounds(), ownerVelocity.Normalized(), ownerVelocity.Length())) {
+		for (auto & collision : collisions) {
+			movingAway = collision.normal * ownerVelocity;
+			if (movingAway >= 0.0f) {
+				continue;
+			} else {
+				remainingFraction = 1.0f - collision.fraction;
+				if (remainingFraction < 1.0f) {	// correction-response
+					ownerVelocity *= collision.fraction;
+					break;
+				} else {						// setup for slide-response along an edge or vertex
+/*
+					// BUGFIX: for multi-vertex collision slide
+					// FIXME: setup this scenario again to confirm double-vertex collision doesn't mess w/the logic
+					if (abs(collision.normal.x) < 1.0f && abs(collision.normal.y) < 1.0f) {	// vertex collision
+						if (movingAway < approachingVertex)
+							approachingVertex = movingAway;
+						else
+							continue;
+					}
+*/
+					// FIXME: don't do this for every collision, but don't only do it for edge collisions
+					// because sometimes there is only vertex collisions
+					collisionTangent = eVec2(-collision.normal.y, collision.normal.x);		// CCW 90 degrees
+					float whichWay = collisionTangent * ownerVelocity;
+					if (whichWay < 0)
+						collisionTangent *= -1.0f;
+					break;
+				} 
+
+//				if (!(abs(collision.normal.x) < 1.0f && abs(collision.normal.y) < 1.0f))	// edge collision
+//					break;
+			}
+		}
+		collisions.clear();
+	}
+
+	// slide-type collision response (sliding can ignore glancing vertex collisions)
+	if (remainingFraction == 1.0f) {
+		float slide = ownerVelocity * collisionTangent;
+		ownerVelocity = collisionTangent * slide;
+		if(eCollision::BoxCast(collisions, ownerCollisionModel->AbsBounds(), ownerVelocity.Normalized(), ownerVelocity.Length())) {
+			for (auto & collision : collisions) {
+				movingAway = collision.normal * ownerVelocity;
+				if (movingAway >= 0.0f /*|| (abs(collision.normal.x) < 1.0f && abs(collision.normal.y) < 1.0f)*/) {	// aabb can ignore vertex collisions
+					continue;
+				} else {
+					ownerVelocity *= collision.fraction;
+					break;
+				}
+			}
+		}
+		collisions.clear();
+	}
+	ownerCollisionModel->UpdateOrigin();
+}
+
+
+//***************
+// eMovement::CollisionResponseCorrection
+// TODO(~): move this to a player class
+//***************
+void eMovement::CollisionResponseCorrection() {
+	static std::vector<Collision_t> collisions;		// DEBUG: static to reduce dynamic allocation, cleared during this function
+
+	auto & ownerCollisionModel = owner->collisionModel;
+	auto & ownerVelocity = ownerCollisionModel->Velocity();
+	float movingAway = 0.0f;
+	
+	if(eCollision::BoxCast(collisions, ownerCollisionModel->AbsBounds(), ownerVelocity.Normalized(), ownerVelocity.Length())) {
+		for (auto & collision : collisions) {
+			movingAway = collision.normal * ownerVelocity;
+			if (movingAway >= 0.0f) {
+				continue;
+			} else {
+				ownerVelocity *= collision.fraction;
+				break;
+			}
+		}
+		collisions.clear();
+	}
+	ownerCollisionModel->UpdateOrigin();
 }
 
 //***************
@@ -330,18 +372,19 @@ void eMovement::CompassFollow() {
 // returns true if a future position using along is near the waypoint
 //******************
 bool eMovement::CheckVectorPath(decision_t & along) {
-	static const auto & tileMap = game.GetMap().TileMap();
-	static const auto & ownerBounds = owner->collisionModel->AbsBounds();
-	static const auto & boundsCenter = ownerBounds.Center();
+	auto & tileMap = game.GetMap().TileMap();
 	static const float mapWidth = (float)tileMap.CellWidth() * 50.0f;		// FIXME: use used/visible map dimensions (not the full stack area)
 	static const float mapHeight = (float)tileMap.CellHeight() * 50.0f;
 	static const float maxSteps = 5.0f;										// how many future steps to test
-	static const float castLength = maxMoveSpeed * maxSteps;
 	static std::vector<Collision_t> collisions;
 	static const std::array<eBounds, 4> mapEdges = { eBounds(vec2_zero, eVec2(0.0f, mapHeight)),					// left
 													 eBounds(eVec2(mapWidth, 0.0f), eVec2(mapWidth, mapHeight)),	// right
 													 eBounds(vec2_zero, eVec2(mapWidth, 0.0f)),						// top
 													 eBounds(eVec2(0.0f, mapHeight), eVec2(mapWidth, mapHeight)) };	// bottom
+
+	auto & ownerBounds = owner->collisionModel->AbsBounds();
+	auto & boundsCenter = ownerBounds.Center();
+	float castLength = maxMoveSpeed * maxSteps;
 	float nearestFraction = 1.0f;
 	float newSteps = 0.0f;
 	along.validSteps = 0.0f;
@@ -357,6 +400,8 @@ bool eMovement::CheckVectorPath(decision_t & along) {
 	// SOLUTION: correct, colliders overlap because at some angle there is just enough of cast.fraction for validSteps to be 1, causing an overlap
 	// ie: rounding error (subtracting 1 step from the final validSteps won't solve it... will it?)
 	// WallFollowing testing for validSteps > 1 (instead of 0) seems to work, but doesn't address the root problem
+	// SOLUTION: since minimizing the factors in the rounding doesn't work, 
+	// try correction-collision-response on the final velocity w/a single MovingAABBAABBTest
 
 	float mapEdgeFraction = 0.0f;
 	for(int i = 0; i < mapEdges.size(); ++i) {

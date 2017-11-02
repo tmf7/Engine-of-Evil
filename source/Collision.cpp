@@ -369,7 +369,7 @@ void eCollision::GetCollisionNormal(const eVec2 & point, const eBounds & bounds,
 					| (LEFT * (abs(point.x - bounds[1].x) == 0.0f)) 
 					| (TOP * (abs(point.y - bounds[0].y) == 0.0f)) 
 					| (BOTTOM * (abs(point.y - bounds[1].y) == 0.0f));
-	SetAABBNormal(entryDir, resultNormal);
+//	SetAABBNormal(entryDir, resultNormal);									// FIXME: no travel dir like for bounds' collision normal
 }
 
 //***************
@@ -380,12 +380,18 @@ void eCollision::GetCollisionNormal(const eVec2 & point, const eBounds & bounds,
 // DEBUG: this only works for AABB, not OBB or general convex polygons
 // DEBUG: overlapping beyond touching is zero normal vector
 //***************
-void eCollision::GetCollisionNormal(const eBounds & self, const eVec2 & dir, const float length, const eBounds & other, Collision_t & collision) {
+void eCollision::GetCollisionNormal(eBounds self, const eVec2 & dir, const float length, const eBounds & other, Collision_t & collision) {
+	if (collision.fraction > 0.0f)
+		self += dir * (length * collision.fraction);
+
+	// FIXME: there are 4 (or 2) setups where dir must be considered to decide
+	// if both an x and y dist are 0.0f
+
 	eVec2 selfMin = self[0];
 	eVec2 selfMax = self[1];
 	eVec2 otherMin = other[0];
 	eVec2 otherMax = other[1];
-	eVec2 velocity = dir * length; 
+//	eVec2 velocity = dir * length + vec2_epsilon;	// DEBUG: account for axis-parallel travel, and divide-by-zero 
 
 	// distance from self to other for normal on other's surface
 	float xRightEntryDist = abs(selfMin.x - otherMax.x);
@@ -394,14 +400,26 @@ void eCollision::GetCollisionNormal(const eBounds & self, const eVec2 & dir, con
 	float yBottomEntryDist = abs(selfMin.y - otherMax.y);
 
 	Uint8 entryDir = 0;
-	if (collision.fraction == 0.0f) {
+/*
+	if (xRightEntryDist == 0.0f) {
+		entryDir = RIGHT;
+	} else if (xLeftEntryDist == 0.0f) {
+		entryDir = LEFT;
+	} else if (yTopEntryDist == 0.0f) {
+		entryDir = TOP;
+	} else if (yBottomEntryDist == 0.0f) {
+		entryDir = BOTTOM;
+	}
+*/
+//	if (collision.fraction == 0.0f) {
 		entryDir |= (RIGHT * (xRightEntryDist == 0.0f)) 
 					| (LEFT * (xLeftEntryDist == 0.0f)) 
 					| (TOP * (yTopEntryDist == 0.0f)) 
 					| (BOTTOM * (yBottomEntryDist == 0.0f));
+/*
 	} else {
-		float xFraction = abs( velocity.x != 0.0f ? MIN(xRightEntryDist, xLeftEntryDist) / velocity.x : 0.0f);
-		float yFraction = abs( velocity.y != 0.0f ? MIN(yTopEntryDist, yBottomEntryDist) / velocity.y : 0.0f);
+		float xFraction = abs(MIN(xRightEntryDist, xLeftEntryDist) / velocity.x);
+		float yFraction = abs(MIN(yTopEntryDist, yBottomEntryDist) / velocity.y);
 		
 		if (xFraction == yFraction) {
 			entryDir |=	(xRightEntryDist < xLeftEntryDist ? RIGHT : LEFT);
@@ -412,8 +430,8 @@ void eCollision::GetCollisionNormal(const eBounds & self, const eVec2 & dir, con
 			entryDir |= (yTopEntryDist < yBottomEntryDist ? TOP : BOTTOM);
 		}
 	}
-
-	SetAABBNormal(entryDir, collision.normal);
+*/
+	SetAABBNormal(entryDir, dir, collision.normal);
 }
 
 //***************
