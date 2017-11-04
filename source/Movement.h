@@ -23,8 +23,9 @@ public:
 	void				AddUserWaypoint(const eVec2 & waypoint);		// TODO: ePlayerInput should call this
 	const byte_map_t &	KnownMap() const;
 
-	void				CollisionResponseSlide();						// TODO: make paret of ePlayerInput
-	void				CollisionResponseCorrection();					// TODO: make paret of ePlayerInput
+	bool				FindApproachingCollision(const eVec2 & dir, const float length, Collision_t & result) const;
+	void				CollisionResponseSlide();
+	void				CollisionResponseCorrection();
 
 	// debugging
 	void				DrawGoalWaypoints();

@@ -144,11 +144,16 @@ bool eCollision::BoxCast(std::vector<Collision_t> & collisions, const eBounds & 
 	alreadyTested.clear();
 	broadAreaCells.clear();
 
+	// DEBUG: prioritize edge collisions over vertex collisions with the same fraction
 	QuickSort(	collisions.data(), 
 				collisions.size(), 
 				[](auto && a, auto && b) {
 					if (a.fraction < b.fraction) return -1;
 					else if (a.fraction > b.fraction) return 1;
+					else if (!(abs(a.normal.x) < 1.0f && abs(a.normal.y) < 1.0f) && 
+							  (abs(b.normal.x) < 1.0f && abs(b.normal.y) < 1.0f)) return -1;
+					else if ((abs(a.normal.x) < 1.0f && abs(a.normal.y) < 1.0f) && 
+							 !(abs(b.normal.x) < 1.0f && abs(b.normal.y) < 1.0f)) return 1;
 					return 0;
 	});
 	return !collisions.empty();
@@ -369,7 +374,7 @@ void eCollision::GetCollisionNormal(const eVec2 & point, const eBounds & bounds,
 					| (LEFT * (abs(point.x - bounds[1].x) == 0.0f)) 
 					| (TOP * (abs(point.y - bounds[0].y) == 0.0f)) 
 					| (BOTTOM * (abs(point.y - bounds[1].y) == 0.0f));
-//	SetAABBNormal(entryDir, resultNormal);									// FIXME: no travel dir like for bounds' collision normal
+	SetAABBNormal(entryDir, resultNormal);
 }
 
 //***************
@@ -431,7 +436,7 @@ void eCollision::GetCollisionNormal(eBounds self, const eVec2 & dir, const float
 		}
 	}
 */
-	SetAABBNormal(entryDir, dir, collision.normal);
+	SetAABBNormal(entryDir, collision.normal);
 }
 
 //***************

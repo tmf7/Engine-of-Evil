@@ -43,7 +43,7 @@ public:
 
 private:
 
-	static void				SetAABBNormal(const Uint8 entryDir, const eVec2 & dir, eVec2 & normal);
+	static void				SetAABBNormal(const Uint8 entryDir, eVec2 & normal);
 
 private:
 
@@ -106,49 +106,21 @@ inline bool eCollision::AABBAABBTest(const eBounds & self, const eBounds & other
 //***************
 // eCollision::SetAABBNormal
 //***************
-inline void eCollision::SetAABBNormal(const Uint8 entryDir, const eVec2 & dir, eVec2 & normal) {
+inline void eCollision::SetAABBNormal(const Uint8 entryDir, eVec2 & normal) {
+	static const eVec2 topRight		= eVec2(0.707f, -0.707f);
+	static const eVec2 bottomRight	= vec2_one * 0.707f;
+	static const eVec2 topLeft		= vec2_one * -0.707f;
+	static const eVec2 bottomLeft	= eVec2(-0.707f, 0.707f);
+
 	switch(entryDir) {
 		case RIGHT:				normal =  vec2_oneZero; return;
 		case LEFT:				normal = -vec2_oneZero; return;
 		case TOP:				normal = -vec2_zeroOne; return;
 		case BOTTOM:			normal =  vec2_zeroOne; return;
-//		case RIGHT | TOP:		normal =  eVec2(0.707f, -0.707f); return;
-//		case RIGHT | BOTTOM:	normal =  vec2_one * 0.707f; return;
-//		case LEFT | TOP:		normal =  vec2_one * -0.707f; return;
-//		case LEFT | BOTTOM:		normal =  eVec2(-0.707f, 0.707f); return;
-
-		case RIGHT | TOP: {
-			// normals: (0,-1), (1,0)
-			float upDot = abs(-vec2_zeroOne * dir);
-			float rightDot = abs(vec2_oneZero * dir);
-			float trueDot = abs(eVec2(0.707f, -0.707f) * dir);
-			normal = (abs(upDot - trueDot) > abs(rightDot - trueDot) ? -vec2_zeroOne : vec2_oneZero);
-			return;
-		}
-		case RIGHT | BOTTOM: {
-			// normals: (0,1), (1,0)
-			float downDot = abs(vec2_zeroOne * dir);
-			float rightDot = abs(vec2_oneZero * dir);
-			float trueDot = abs(vec2_one * 0.707f * dir);
-			normal = (abs(downDot - trueDot) > abs(rightDot - trueDot) ? vec2_zeroOne : vec2_oneZero);
-			return;
-		}
-		case LEFT | TOP: {
-			// normals: (0,-1), (-1,0)
-			float upDot = abs(-vec2_zeroOne * dir);
-			float leftDot = abs(-vec2_oneZero * dir);
-			float trueDot = abs(vec2_one * -0.707f * dir);
-			normal = (abs(upDot - trueDot) > abs(leftDot - trueDot) ? -vec2_zeroOne : -vec2_oneZero);
-			return;
-		}
-		case LEFT | BOTTOM: {
-			// normals: (0,1), (-1,0)
-			float downDot = abs(vec2_zeroOne * dir);
-			float leftDot = abs(-vec2_oneZero * dir);
-			float trueDot = abs(eVec2(-0.707f, 0.707f) * dir);
-			normal = (abs(downDot - trueDot) > abs(leftDot - trueDot) ? vec2_zeroOne : -vec2_oneZero);
-			return;
-		}
+		case TOP | RIGHT:		normal =  topRight; return;
+		case TOP | LEFT:		normal =  topLeft; return;
+		case BOTTOM | RIGHT:	normal =  bottomRight; return;
+		case BOTTOM | LEFT:		normal =  bottomLeft; return;
 		default:				normal =  vec2_zero; return;
 	}
 }

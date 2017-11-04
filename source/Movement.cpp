@@ -51,13 +51,16 @@ void eMovement::Think() {
 	float yMove = maxMoveSpeed * (float)(input.KeyHeld(SDL_SCANCODE_DOWN) - input.KeyHeld(SDL_SCANCODE_UP));
 
 	if (SDL_fabs(xMove) > 0.0f || SDL_fabs(yMove) > 0.0f) {
-		eMath::IsometricToCartesian(xMove, yMove);
-		ownerVelocity.Set(xMove, yMove);
+		eVec2 moveInput(xMove, yMove);
+		moveInput.Normalize();
+		moveInput *= maxMoveSpeed;
+		eMath::IsometricToCartesian(moveInput.x, moveInput.y);
+		ownerVelocity.Set(moveInput.x, moveInput.y);
 		CollisionResponseSlide();
 	}
 // END FREEHILL DEBUG AI/player control
 
-	// only move with a waypoint
+	// only pathfind with a waypoint
 	if (currentWaypoint != nullptr) {
 		wasStopped = !moving; 
 		Move();
@@ -78,130 +81,103 @@ void eMovement::Think() {
 		// finalize the move
 		if (ownerVelocity != vec2_zero) {
 			moving = true;
-
-			// TODO: failsafe to disallow overlap in the event of a rounding error for validSteps
-			// possibly make a CorrectionResponse fn to be used in player-input, and here
-//			if (eCollision::BoxCast(collisions, ownerCollisionModel->AbsBounds(), ownerVelocity.Normalized(), ownerVelocity.Length()))
-//				ownerVelocity *= collisions[0].fraction;
-
+//			CollisionResponseCorrection();			// BUGFIX: failsafe to disallow overlap in the event of a rounding error for validSteps
 			ownerCollisionModel->UpdateOrigin();
 		}
 	}
 }
 
 //***************
-// eMovement::CollisionResponseSlide
-// TODO(~): move this to a player class
+// eMovement::FindApproachingCollision
+// returns true if dir * length leads to a non-tangential collision
+// TODO(?): move this to eCollisionModel
 //***************
-void eMovement::CollisionResponseSlide() {
-	static std::vector<Collision_t> collisions;		// DEBUG: static to reduce dynamic allocation, cleared during this function
-													// TODO: make this a private data member instead of per-fn
+bool eMovement::FindApproachingCollision(const eVec2 & dir, const float length, Collision_t & result) const {
+	static std::vector<Collision_t> collisions;		// FIXME: make this a private data member instead of per-fn
 
 	auto & ownerCollisionModel = owner->collisionModel;
 	auto & ownerVelocity = ownerCollisionModel->Velocity();
-	eVec2 collisionTangent;
-	float remainingFraction = 0.0f;
-	float movingAway = 0.0f;
-	float approachingVertex = 0.0f;
 
-	if (ownerVelocity == vec2_zero)
-		return;
-			
-	// correction-type collision response
-	if (eCollision::BoxCast(collisions, ownerCollisionModel->AbsBounds(), ownerVelocity.Normalized(), ownerVelocity.Length())) {
+	collisions.clear();	// DEBUG: lazy clearing
+	if(eCollision::BoxCast(collisions, ownerCollisionModel->AbsBounds(), dir, length)) {
 		for (auto & collision : collisions) {
-			movingAway = collision.normal * ownerVelocity;
-			if (movingAway >= 0.0f) {
+			float movingAway = collision.normal * ownerVelocity;
+			float movingAwayThreshold = ((abs(collision.normal.x) < 1.0f && abs(collision.normal.y) < 1.0f) ? -0.707f * length : 0.0f); // vertex : edge
+			if (movingAway >= movingAwayThreshold) {
 				continue;
 			} else {
-				remainingFraction = 1.0f - collision.fraction;
-				if (remainingFraction < 1.0f) {	// correction-response
-					ownerVelocity *= collision.fraction;
-					break;
-				} else {						// setup for slide-response along an edge or vertex
-/*
-					// BUGFIX: for multi-vertex collision slide
-					// FIXME: setup this scenario again to confirm double-vertex collision doesn't mess w/the logic
-					if (abs(collision.normal.x) < 1.0f && abs(collision.normal.y) < 1.0f) {	// vertex collision
-						if (movingAway < approachingVertex)
-							approachingVertex = movingAway;
-						else
-							continue;
-					}
-*/
-					// FIXME: don't do this for every collision, but don't only do it for edge collisions
-					// because sometimes there is only vertex collisions
-					collisionTangent = eVec2(-collision.normal.y, collision.normal.x);		// CCW 90 degrees
-					float whichWay = collisionTangent * ownerVelocity;
-					if (whichWay < 0)
-						collisionTangent *= -1.0f;
-					break;
-				} 
-
-//				if (!(abs(collision.normal.x) < 1.0f && abs(collision.normal.y) < 1.0f))	// edge collision
-//					break;
+				result = collision;
+				return true;
 			}
 		}
-		collisions.clear();
 	}
-
-	// slide-type collision response (sliding can ignore glancing vertex collisions)
-	if (remainingFraction == 1.0f) {
-		float slide = ownerVelocity * collisionTangent;
-		ownerVelocity = collisionTangent * slide;
-		if(eCollision::BoxCast(collisions, ownerCollisionModel->AbsBounds(), ownerVelocity.Normalized(), ownerVelocity.Length())) {
-			for (auto & collision : collisions) {
-				movingAway = collision.normal * ownerVelocity;
-				if (movingAway >= 0.0f /*|| (abs(collision.normal.x) < 1.0f && abs(collision.normal.y) < 1.0f)*/) {	// aabb can ignore vertex collisions
-					continue;
-				} else {
-					ownerVelocity *= collision.fraction;
-					break;
-				}
-			}
-		}
-		collisions.clear();
-	}
-	ownerCollisionModel->UpdateOrigin();
+	return false;
 }
-
 
 //***************
 // eMovement::CollisionResponseCorrection
-// TODO(~): move this to a player class
+// TODO(?): move this to eCollisionModel
 //***************
 void eMovement::CollisionResponseCorrection() {
-	static std::vector<Collision_t> collisions;		// DEBUG: static to reduce dynamic allocation, cleared during this function
-
 	auto & ownerCollisionModel = owner->collisionModel;
 	auto & ownerVelocity = ownerCollisionModel->Velocity();
-	float movingAway = 0.0f;
-	
-	if(eCollision::BoxCast(collisions, ownerCollisionModel->AbsBounds(), ownerVelocity.Normalized(), ownerVelocity.Length())) {
-		for (auto & collision : collisions) {
-			movingAway = collision.normal * ownerVelocity;
-			if (movingAway >= 0.0f) {
-				continue;
-			} else {
-				ownerVelocity *= collision.fraction;
-				break;
-			}
-		}
-		collisions.clear();
+	if (ownerVelocity == vec2_zero)
+		return;	
+
+	Collision_t collision;
+	float length = ownerVelocity.Length();
+	if(FindApproachingCollision(ownerVelocity / length, length, collision))
+		ownerVelocity *= collision.fraction;
+	ownerCollisionModel->UpdateOrigin();
+}
+
+//***************
+// eMovement::CollisionResponseSlide
+// TODO(?): move this to eCollisionModel
+//***************
+void eMovement::CollisionResponseSlide() {
+	auto & ownerCollisionModel = owner->collisionModel;
+	auto & ownerVelocity = ownerCollisionModel->Velocity();
+	if (ownerVelocity == vec2_zero)
+		return;
+
+	Collision_t collision;
+	eVec2 collisionTangent;
+	float remainingFraction = 0.0f;
+	float length = ownerVelocity.Length();
+
+	if (FindApproachingCollision(ownerVelocity / length, length, collision)) {
+		remainingFraction = 1.0f - collision.fraction;
+		if (remainingFraction < 1.0f) {
+			ownerVelocity *= collision.fraction;
+		} else {
+			// DEBUG: collisions sorted w/edges first for equal fractions
+			collisionTangent = eVec2(-collision.normal.y, collision.normal.x);		// CCW 90 degrees
+			float whichWay = collisionTangent * ownerVelocity;
+			if (whichWay < 0)
+				collisionTangent *= -1.0f;
+		} 
+	}
+
+	if (remainingFraction == 1.0f) {
+		float slide = ownerVelocity * collisionTangent;
+		ownerVelocity = collisionTangent * slide;	
+		if (FindApproachingCollision(collisionTangent, slide, collision))
+			ownerVelocity *= collision.fraction;
 	}
 	ownerCollisionModel->UpdateOrigin();
 }
 
 //***************
 // eMovement::Move
+// sets the velocity based on path predictions
+// FIXME: name this something better
 //***************
 void eMovement::Move() {
-
-	// set the velocity
-	if (pathingState == PATHTYPE_COMPASS)
-		CompassFollow();
-	else if (pathingState == PATHTYPE_WALL)
-		WallFollow();
+	switch(pathingState) {
+		case PATHTYPE_COMPASS: CompassFollow(); return;
+		case PATHTYPE_WALL: WallFollow(); return;
+	}
 }
 
 //******************
@@ -337,13 +313,14 @@ void eMovement::CompassFollow() {
 		}
 
 		// more new tiles always beats better overall weight
-		if (test.stepRatio > best.stepRatio) {
+		if ((test.stepRatio > best.stepRatio) || 
+			(test.stepRatio == best.stepRatio && weight > bestWeight)) {
 			bestWeight = weight;
 			best = test;
-		} else if (test.stepRatio == best.stepRatio && weight > bestWeight) {
+		}/* else if (test.stepRatio == best.stepRatio && weight > bestWeight) {
 			bestWeight = weight;
 			best = test;
-		}
+		}*/
 		test.vector = rotateCounterClockwiseZ * test.vector;
 		rotationAngle += ROTATION_INCREMENT;
 	}
