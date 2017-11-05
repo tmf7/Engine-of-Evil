@@ -56,7 +56,7 @@ void eMovement::Think() {
 		moveInput *= maxMoveSpeed;
 		eMath::IsometricToCartesian(moveInput.x, moveInput.y);
 		ownerVelocity.Set(moveInput.x, moveInput.y);
-		CollisionResponseSlide();
+		ownerCollisionModel->UpdateOrigin();
 	}
 // END FREEHILL DEBUG AI/player control
 
@@ -84,86 +84,6 @@ void eMovement::Think() {
 			ownerCollisionModel->UpdateOrigin();
 		}
 	}
-}
-
-//***************
-// eMovement::FindApproachingCollision
-// returns true and sets result to the nearest non-tangential collision along dir * length
-// returns false and leaves result unmodified otherwise
-// DEBUG: dir must be unit length
-// TODO(?): move this to eCollisionModel
-//***************
-bool eMovement::FindApproachingCollision(const eVec2 & dir, const float length, Collision_t & result) const {
-	static std::vector<Collision_t> collisions;		// FIXME: make this a private data member instead of per-fn
-
-	collisions.clear();	// DEBUG: lazy clearing
-	if(eCollision::BoxCast(collisions, owner->collisionModel->AbsBounds(), dir, length)) {
-		for (auto & collision : collisions) {
-			float movingAway = collision.normal * dir;
-			float movingAwayThreshold = ((abs(collision.normal.x) < 1.0f && abs(collision.normal.y) < 1.0f) ? -0.707f : 0.0f); // vertex : edge
-			if (movingAway >= movingAwayThreshold) {
-				continue;
-			} else {
-				result = collision;
-				return true;
-			}
-		}
-	}
-	return false;
-}
-
-//***************
-// eMovement::CollisionResponseCorrection
-// TODO(?): move this to eCollisionModel
-//***************
-void eMovement::CollisionResponseCorrection() {
-	auto & ownerCollisionModel = owner->collisionModel;
-	auto & ownerVelocity = ownerCollisionModel->Velocity();
-	if (ownerVelocity == vec2_zero)
-		return;	
-
-	Collision_t collision;
-	float length = ownerVelocity.Length();
-	if(FindApproachingCollision(ownerVelocity / length, length, collision))
-		ownerVelocity *= collision.fraction;
-	ownerCollisionModel->UpdateOrigin();
-}
-
-//***************
-// eMovement::CollisionResponseSlide
-// TODO(?): move this to eCollisionModel
-//***************
-void eMovement::CollisionResponseSlide() {
-	auto & ownerCollisionModel = owner->collisionModel;
-	auto & ownerVelocity = ownerCollisionModel->Velocity();
-	if (ownerVelocity == vec2_zero)
-		return;
-
-	Collision_t collision;
-	eVec2 collisionTangent;
-	float remainingFraction = 0.0f;
-	float length = ownerVelocity.Length();
-
-	if (FindApproachingCollision(ownerVelocity / length, length, collision)) {
-		remainingFraction = 1.0f - collision.fraction;
-		if (remainingFraction < 1.0f) {
-			ownerVelocity *= collision.fraction;
-		} else {
-			// DEBUG: collisions sorted w/edges first for equal fractions
-			collisionTangent = eVec2(-collision.normal.y, collision.normal.x);		// CCW 90 degrees
-			float whichWay = collisionTangent * ownerVelocity;
-			if (whichWay < 0)
-				collisionTangent *= -1.0f;
-		} 
-	}
-
-	if (remainingFraction == 1.0f) {
-		float slide = ownerVelocity * collisionTangent;
-		ownerVelocity = collisionTangent * slide;	
-		if (FindApproachingCollision(collisionTangent, slide, collision))
-			ownerVelocity *= collision.fraction;
-	}
-	ownerCollisionModel->UpdateOrigin();
 }
 
 //***************
@@ -348,8 +268,8 @@ void eMovement::CompassFollow() {
 bool eMovement::CheckVectorPath(decision_t & along) {
 	static const float maxSteps = 5.0f;										// how many future steps to test
 
-	auto & ownerBounds = owner->collisionModel->AbsBounds();
-	auto & boundsCenter = ownerBounds.Center();
+	auto & ownerCollisionModel = owner->collisionModel;
+	auto & boundsCenter = ownerCollisionModel->AbsBounds().Center();
 	float castLength = maxMoveSpeed * maxSteps;
 	float nearestFraction = 1.0f;
 	float mapEdgeFraction = 1.0f;
@@ -359,14 +279,14 @@ bool eMovement::CheckVectorPath(decision_t & along) {
 		float movingAway = mapEdges[i].second * along.vector;
 		if (movingAway >= 0.0f) 
 			continue;
-		if (eCollision::MovingAABBAABBTest(ownerBounds, along.vector, castLength, mapEdges[i].first, mapEdgeFraction) &&
+		if (eCollision::MovingAABBAABBTest(ownerCollisionModel->AbsBounds(), along.vector, castLength, mapEdges[i].first, mapEdgeFraction) &&
 			mapEdgeFraction < nearestFraction)
 			nearestFraction = mapEdgeFraction;
 	}
 
 	along.validSteps = 0.0f;
 	Collision_t collision;
-	if (FindApproachingCollision(along.vector, castLength, collision) && 
+	if (ownerCollisionModel->FindApproachingCollision(along.vector, castLength, collision) && 
 		collision.fraction < nearestFraction) {
 		nearestFraction = collision.fraction;
 	} else {
@@ -424,18 +344,15 @@ void eMovement::CheckWalls(float * bias) {
 //******************
 // eMovement::AddUserWaypoint
 // TODO: allow other entities to become waypoints (that move)
-// moving waypoints would need to have their info updated in the deque (hence pointers instead of copies)
-// of course that could be a separate category altogether
-// SOLUTION: if currentWaypoint == &targetOrigin, then this would pursue, until it needed to backtrack on its trail,
-// so use a separate eVec2 * target to set currentWaypoint once MOVETYPE_GOAL resumes (if its non-nullptr)
+// use a separate eVec2 * target = &targetOrigin; to set currentWaypoint during MOVETYPE_GOAL
 //******************
 void eMovement::AddUserWaypoint(const eVec2 & waypoint) {
-	static std::vector<Collision_t> collisions;
+	static std::vector<Collision_t> collisions;		// FIXME(~): make this a private data member instead of per-fn, if more than one fn uses it
 
 	collisions.clear();		// DEBUG: lazy clearing
 	eBounds waypointBounds = owner->collisionModel->LocalBounds() + waypoint;
 	if(!eCollision::AABBContainsAABB(game.GetMap().AbsBounds(), waypointBounds) ||
-		eCollision::BoxCast(collisions, waypointBounds, vec2_zero, 0.0f))		// FIXME: make a straight-aabb vs local contents test (w/ & w/o collisions)
+		eCollision::BoxCast(collisions, waypointBounds, vec2_zero, 0.0f))
 		return;
 
 	goals.PushFront(waypoint);

@@ -369,7 +369,7 @@ void eRenderer::FlushDynamicPool() {
 					return 0;
 			});
 
-// FREEHILL BEGIN 3d quicksort test
+// FREEHILL BEGIN 3d topological sort
 	TopologicalDrawDepthSort(dynamicPoolInserts);	// assign a "localDrawDepth" priority amongst the dynamicPoolInserts
 													// to avoid the need to loop over the same dynamicPool items with each new imageToInsert (maybe)
 	float newPriorityMin = 0.0f;
@@ -396,10 +396,7 @@ void eRenderer::FlushDynamicPool() {
 		// because iter may be pointing to the newly inserted item (or one in front of it) in dynamicPool
 		// or utterly somewhere else if dynamicPool resized (which is unlikely given that it has defaultRenderCapacity[1024] reserved)
 	}
-
-	// FIXME(performance~): also don't clear the rendertarget (and don't call RenderPresent) if nothing moved/changed
-	// FIXME/BUG: mirror this logic for FlushStaticPool
-// FREEHILL END 3d quicksort test
+// FREEHILL END 3d topological sort
 
 	// set the render target, and scale according to camera zoom
 	SDL_SetRenderTarget(internal_renderer, scalableTarget);
@@ -412,9 +409,8 @@ void eRenderer::FlushDynamicPool() {
 	dynamicPool.clear();
 	dynamicPoolInserts.clear();
 
-	// reset the render target to default, 
-	// reset the renderer scale,
-	// and transfer the scalableTarget
+	// default the render target and scale,
+	// then transfer the scalableTarget
 	SDL_SetRenderTarget(internal_renderer, NULL);
 	SDL_RenderSetScale(internal_renderer, 1.0f, 1.0f);
 	SDL_RenderCopy(internal_renderer, scalableTarget, NULL, NULL);
@@ -423,6 +419,7 @@ void eRenderer::FlushDynamicPool() {
 //***************
 // eRenderer::FlushStaticPool
 // DEBUG: this unstable quicksort may put renderImages at random draw orders if they have equal priority
+// FIXME: mirror this logic for FlushDynamicPool's topological sort logic
 //***************
 void eRenderer::FlushStaticPool() {
 	// sort the staticPool for the default render target

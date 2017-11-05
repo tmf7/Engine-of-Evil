@@ -166,7 +166,6 @@ bool eGame::Run() {
 		}
 // END FREEHILL cursor tile highlight test
 
-		// DEBUG: there is a RENDERTYPE_STATIC call for test in here, hence its code position
 		// TODO(!): modify eRenderer shape and text drawing to be on secondary textures to be referenced via renderImages
 		// and added to the static/dynamic-renderPools for more flexible debug (or otherwise) drawing (ie just one ::Draw call here)
 		map.DebugDraw();				// draw the collision bounds of collidable tiles
@@ -180,7 +179,6 @@ bool eGame::Run() {
 
 //	renderer.FlushStaticPool();			// DEBUG: not currently used
 	renderer.Show();
-
 
 	// frame-rate governing delay
 	gameTime = SDL_GetTicks();

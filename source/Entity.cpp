@@ -187,20 +187,12 @@ void eEntity::UpdateRenderImageDisplay() {
 	renderImage.srcRect = &sprite->GetFrameHack();
 	renderImage.layer = 1;		// DEBUG: test starting layer
 
-// FREEHILL BEGIN 3d quicksort test
-	float zChange = 0.0f;
-	auto & input = game.GetInput();			// FIXME/BUG(!): input.Init() not called yet (so numKeys == 0)
-	if (input.KeyPressed(SDL_SCANCODE_H))
-		zChange = 3.0f;
-	else if (input.KeyPressed(SDL_SCANCODE_L))
-		zChange = -9.0f;
-	
-	// translate from old renderBlock pos, to new renderBlock pos
+// FREEHILL BEGIN 3d topological sort
 	// DEBUG: renderBlock and collisionModel currently designed to align, while offsetting renderImage.origin instead
 	eVec2 collisionMins = collisionModel->AbsBounds()[0];
 	eVec3 renderBlockMins = renderImage.renderBlock[0];
-	renderImage.renderBlock += eVec3(collisionMins.x - renderBlockMins.x, collisionMins.y - renderBlockMins.y , zChange);
-// FREEHILL END 3d quicksort test
+	renderImage.renderBlock += eVec3(collisionMins.x - renderBlockMins.x, collisionMins.y - renderBlockMins.y , 0.0f);
+// FREEHILL END 3d topological sort
 }
 
 //*************

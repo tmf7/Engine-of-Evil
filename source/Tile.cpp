@@ -232,7 +232,7 @@ void eTile::SetType(int newType) {
 	impl = &eTileImpl::tileTypes[newType];																	// FIXME(~): doesn't verify the array index
 	game.GetImageManager().GetImage(eTileImpl::tileSet.at(newType).first, renderImage.image);				// which image (tile atlas)
 	renderImage.srcRect = &renderImage.image->GetSubframe(eTileImpl::tileSet.at(newType).second);			// which part of that image
-	renderImage.renderBlock = eBounds3D((eVec3)orthoOrigin, (eVec3)orthoOrigin + impl->renderBlockSize);	// FREEHILL 3d quicksort test
+	renderImage.renderBlock = eBounds3D((eVec3)orthoOrigin, (eVec3)orthoOrigin + impl->renderBlockSize);	// FREEHILL 3d topological sort
 	SetLayer(renderImage.layer);
 
 // FREEHILL BEGIN AABB (eBounds) collisionModel import test (2/2)
@@ -243,7 +243,7 @@ void eTile::SetType(int newType) {
 		collisionModel->SetOrigin(orthoOrigin);
 		
 		// TODO: use an eTransform and offset instead of directly linking visuals and colliders
-		renderImage.renderBlock += (eVec3)collisionModel->LocalBounds()[0];	// FREEHILL 3d quicksort test
+		renderImage.renderBlock += (eVec3)collisionModel->LocalBounds()[0];	// FREEHILL 3d topological sort
 	}
 // FREEHILL END AABB (eBounds) collisionModel import test (2/2)
 

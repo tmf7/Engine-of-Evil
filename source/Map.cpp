@@ -187,7 +187,7 @@ bool eMap::LoadMap(const char * mapFilename) {
 	read.close();
 
 	// initialize the static map images sort order
-	eRenderer::TopologicalDrawDepthSort(sortTiles);		// FREEHILL 3d quicksort test
+	eRenderer::TopologicalDrawDepthSort(sortTiles);		// FREEHILL 3d topological sort
 	return true;
 }
 
@@ -204,7 +204,7 @@ void eMap::ToggleTile(const eVec2 & point) {
 		cell.AddTileOwned(eTile(&cell, origin, 0, 0));	
 	}
 
-	// FIXME/BUG: assumes only one tile exists for toggling in a eGridCell (not always true)
+	// DEBUG: assumes only one tile exists for toggling in a eGridCell (not always true)
 	auto & tile = cell.TilesOwned()[0];
 	int tileType = tile.Type();
 

@@ -28,12 +28,12 @@ typedef struct renderImage_s {
 
 //	eEntity *					owner;			// entity using this renderimage, for secondary renderPool sort if priority causes flicker
 
-// FREEHILL BEGIN 3d quicksort test
+// FREEHILL BEGIN 3d topological sort
 	eBounds						worldClip;		// dstRect in world space (ie: not adjusted with camera position yet) used for occlusion tests
 	eBounds3D					renderBlock;	// determines draw order of visible images
 	std::vector<renderImage_s *> allBehind;		// topological sort
 	bool						visited;		// topological sort
-// FREEHILL END 3d quicksort test
+// FREEHILL END 3d topological sort
 
 								renderImage_s()
 									: image(nullptr),
