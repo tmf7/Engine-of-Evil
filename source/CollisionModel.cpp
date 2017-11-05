@@ -35,7 +35,7 @@ void eCollisionModel::UpdateAreas() {
 	auto & cell = tileMap.IndexValidated(origin);
 	if (cell.AbsBounds() != absBounds) {
 		eCollision::GetAreaCells(absBounds, areas);
-	} else {							// DEBUG: edge case where bounds matches its cell and winds up adding 4 areas instead of 1
+	} else {							// BUGFIX: edge case where bounds matches its cell and winds up adding 4 areas instead of 1
 		areas.push_back(&cell);
 	}
 

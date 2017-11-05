@@ -45,14 +45,16 @@ public:
 	int						MaxLayerZ(const int layer) const;
 	int						CellWidth() const;
 	int						CellHeight() const;
+	void					SetGridSize(const int numRows, const int numColumns);
 	void					SetCellSize(const int cellWidth, const int cellHeight);
 	void					AddLayerDepth(const size_t depth);
 
 	// iterator hooks
-	type *					begin();
-	type *					end();
-	const type *			begin() const;
-	const type *			end() const;
+	// DEBUG: if (usedRows < rows && usedColumns < columns) iteration reads unused cells
+//	type *					begin();
+//	type *					end();
+//	const type *			begin() const;
+//	const type *			end() const;
 
 	int						Rows() const;
 	int						Columns() const;
@@ -66,6 +68,8 @@ private:
 	type					cells[rows][columns];
 	int						cellWidth;
 	int						cellHeight;
+	int						usedRows;
+	int						usedColumns;
 	std::vector<int>		layerDepths;				// 3D world-space increment sets eTile's renderBlock zPos from its layer (and eEntitiy layer from zPos)
 	int						isoCellWidth;				// to visually adjust images
 	int						isoCellHeight;				// to visually adjust images
@@ -81,7 +85,9 @@ inline eSpatialIndexGrid<type, rows, columns>::eSpatialIndexGrid()
 	: cellWidth(1), 
 	  cellHeight(1),
 	  invCellWidth(1.0f),
-	  invCellHeight(1.0f) {
+	  invCellHeight(1.0f),
+	  usedRows(rows),
+	  usedColumns(columns) {
 }
 /*
 //******************
@@ -146,7 +152,7 @@ inline bool eSpatialIndexGrid<type, rows, columns>::IsValid(const eVec2 & point)
 //**************
 template< class type, int rows, int columns>
 inline bool eSpatialIndexGrid<type, rows, columns>::IsValid(const int row, const int column) const {
-	return (row >= 0 && row < rows && column >= 0 && column < columns);
+	return (row >= 0 && row < usedRows && column >= 0 && column < usedColumns);
 }
 
 //******************
@@ -179,13 +185,13 @@ template< class type, int rows, int columns>
 inline void eSpatialIndexGrid<type, rows, columns>::Validate(int & row, int & column) const {
 	if (row < 0)
 		row = 0;
-	else if (row >= rows)
-		row = rows - 1;
+	else if (row >= usedRows)
+		row = usedRows - 1;
 
 	if (column < 0)
 		column = 0;
-	else if (column >= columns)
-		column = columns - 1;
+	else if (column >= usedColumns)
+		column = usedColumns - 1;
 }
 
 /*
@@ -250,7 +256,6 @@ template< class type, int rows, int columns>
 inline type & eSpatialIndexGrid<type, rows, columns>::Index(const eVec2 & point) {
 	int row;
 	int column;
-
 	Index(point, row, column);
 	return cells[row][column];
 }
@@ -264,7 +269,6 @@ template< class type, int rows, int columns>
 inline const type & eSpatialIndexGrid<type, rows, columns>::Index(const eVec2 & point) const {
 	int row;
 	int column;
-
 	Index(point, row, column);
 	return cells[row][column];
 }
@@ -371,6 +375,17 @@ inline int eSpatialIndexGrid<type, rows, columns>::CellHeight() const {
 }
 
 //******************
+// eSpatialIndexGrid::SetGridSize
+// DEBUG: usedRows and usedColumns ranges are [1, rows] and [1, columns], respectively
+//******************
+template< class type, int rows, int columns>
+inline void eSpatialIndexGrid<type, rows, columns>::SetGridSize(const int numRows, const int numColumns) {
+//	ClearAllCells();		// DEBUG: doint this during eMap::LoadMap causes a read access error during eGridCell::AddTileOwned
+	usedRows = numRows > 0 ? (numRows <= rows ? numRows : rows) : 1;
+	usedColumns = numColumns > 0 ? (numColumns <= columns ? numColumns : columns) : 1;
+}
+
+//******************
 // eSpatialIndexGrid::SetCellSize
 // DEBUG: minimum width and height are 1
 //******************
@@ -393,6 +408,7 @@ inline void eSpatialIndexGrid<type, rows, columns>::AddLayerDepth(const size_t d
 	layerDepths.push_back(depth);
 }
 
+/*
 //******************
 // eSpatialIndexGrid::begin
 //******************
@@ -426,13 +442,14 @@ template< class type, int rows, int columns>
 inline const type * eSpatialIndexGrid<type, rows, columns>::end() const {
 	return &cells[rows - 1][columns];
 }
+*/
 
 //******************
 // eSpatialIndexGrid::Rows
 //******************
 template< class type, int rows, int columns>
 inline int eSpatialIndexGrid<type, rows, columns>::Rows() const {
-	return rows;
+	return usedRows;
 }
 
 //******************
@@ -440,7 +457,7 @@ inline int eSpatialIndexGrid<type, rows, columns>::Rows() const {
 //******************
 template< class type, int rows, int columns>
 inline int eSpatialIndexGrid<type, rows, columns>::Columns() const {
-	return columns;
+	return usedColumns;
 }
 
 //******************
@@ -449,7 +466,7 @@ inline int eSpatialIndexGrid<type, rows, columns>::Columns() const {
 //******************
 template< class type, int rows, int columns>
 inline int eSpatialIndexGrid<type, rows, columns>::Width() const {
-	return rows * cellWidth;
+	return usedRows * cellWidth;
 }
 
 //******************
@@ -458,7 +475,7 @@ inline int eSpatialIndexGrid<type, rows, columns>::Width() const {
 //******************
 template< class type, int rows, int columns>
 inline int eSpatialIndexGrid<type, rows, columns>::Height() const {
-	return columns * cellHeight;
+	return usedColumns * cellHeight;
 }
 
 //******************

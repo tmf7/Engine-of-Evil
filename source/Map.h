@@ -8,13 +8,7 @@ template<class type, int rows, int columns>
 class eSpatialIndexGrid;
 typedef eSpatialIndexGrid<eGridCell, MAX_MAP_ROWS, MAX_MAP_COLUMNS> tile_map_t;
 
-typedef std::vector<std::pair<int,int>> pairVector_t;
-
-typedef enum {
-	TRAVERSABLE_MAP,
-	COLLISION_MAP,
-	RANDOM_MAP
-} mapType_t;
+typedef std::vector<std::pair<int,int>> intPairVector_t;
 
 class eMap {
 public:
@@ -28,12 +22,12 @@ public:
 	void						ToggleTile(const eVec2 & point);
 	eVec2						GetMouseWorldPosition() const;
 	tile_map_t &				TileMap();
-	const pairVector_t &		VisibleCells();
+	const intPairVector_t &		VisibleCells();
 
 private:
 
 	tile_map_t					tileMap;
-	pairVector_t				visibleCells;		// the cells currently within the camera's view
+	intPairVector_t				visibleCells;		// the cells currently within the camera's view
 };
 
 //**************
@@ -46,7 +40,7 @@ inline tile_map_t & eMap::TileMap() {
 //**************
 // eMap::VisibleCells
 //**************
-inline const pairVector_t & eMap::VisibleCells() {
+inline const intPairVector_t & eMap::VisibleCells() {
 	return visibleCells;
 }
 

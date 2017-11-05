@@ -81,7 +81,6 @@ void eMovement::Think() {
 		// finalize the move
 		if (ownerVelocity != vec2_zero) {
 			moving = true;
-//			CollisionResponseCorrection();			// BUGFIX: failsafe to disallow overlap in the event of a rounding error for validSteps
 			ownerCollisionModel->UpdateOrigin();
 		}
 	}
@@ -89,20 +88,19 @@ void eMovement::Think() {
 
 //***************
 // eMovement::FindApproachingCollision
-// returns true if dir * length leads to a non-tangential collision
+// returns true and sets result to the nearest non-tangential collision along dir * length
+// returns false and leaves result unmodified otherwise
+// DEBUG: dir must be unit length
 // TODO(?): move this to eCollisionModel
 //***************
 bool eMovement::FindApproachingCollision(const eVec2 & dir, const float length, Collision_t & result) const {
 	static std::vector<Collision_t> collisions;		// FIXME: make this a private data member instead of per-fn
 
-	auto & ownerCollisionModel = owner->collisionModel;
-	auto & ownerVelocity = ownerCollisionModel->Velocity();
-
 	collisions.clear();	// DEBUG: lazy clearing
-	if(eCollision::BoxCast(collisions, ownerCollisionModel->AbsBounds(), dir, length)) {
+	if(eCollision::BoxCast(collisions, owner->collisionModel->AbsBounds(), dir, length)) {
 		for (auto & collision : collisions) {
-			float movingAway = collision.normal * ownerVelocity;
-			float movingAwayThreshold = ((abs(collision.normal.x) < 1.0f && abs(collision.normal.y) < 1.0f) ? -0.707f * length : 0.0f); // vertex : edge
+			float movingAway = collision.normal * dir;
+			float movingAwayThreshold = ((abs(collision.normal.x) < 1.0f && abs(collision.normal.y) < 1.0f) ? -0.707f : 0.0f); // vertex : edge
 			if (movingAway >= movingAwayThreshold) {
 				continue;
 			} else {
@@ -313,14 +311,13 @@ void eMovement::CompassFollow() {
 		}
 
 		// more new tiles always beats better overall weight
-		if ((test.stepRatio > best.stepRatio) || 
-			(test.stepRatio == best.stepRatio && weight > bestWeight)) {
+		if (test.stepRatio > best.stepRatio) {
 			bestWeight = weight;
 			best = test;
-		}/* else if (test.stepRatio == best.stepRatio && weight > bestWeight) {
+		} else if (test.stepRatio == best.stepRatio && weight > bestWeight) {
 			bestWeight = weight;
 			best = test;
-		}*/
+		}
 		test.vector = rotateCounterClockwiseZ * test.vector;
 		rotationAngle += ROTATION_INCREMENT;
 	}
@@ -347,50 +344,40 @@ void eMovement::CompassFollow() {
 // eMovement::CheckVectorPath
 // determines the state of the entity's position for the next few frames
 // returns true if a future position using along is near the waypoint
+// FIXME: using static const values here may be an issue when a new map loads
 //******************
 bool eMovement::CheckVectorPath(decision_t & along) {
 	auto & tileMap = game.GetMap().TileMap();
-	static const float mapWidth = (float)tileMap.CellWidth() * 50.0f;		// FIXME: use used/visible map dimensions (not the full stack area)
-	static const float mapHeight = (float)tileMap.CellHeight() * 50.0f;
+	static const float mapWidth = (float)tileMap.Width();
+	static const float mapHeight = (float)tileMap.Height();
 	static const float maxSteps = 5.0f;										// how many future steps to test
-	static std::vector<Collision_t> collisions;
-	static const std::array<eBounds, 4> mapEdges = { eBounds(vec2_zero, eVec2(0.0f, mapHeight)),					// left
-													 eBounds(eVec2(mapWidth, 0.0f), eVec2(mapWidth, mapHeight)),	// right
-													 eBounds(vec2_zero, eVec2(mapWidth, 0.0f)),						// top
-													 eBounds(eVec2(0.0f, mapHeight), eVec2(mapWidth, mapHeight)) };	// bottom
+	static const std::array<std::pair<eBounds, eVec2>, 4> mapEdges = { 
+					{ {eBounds(vec2_zero, eVec2(0.0f, mapHeight)),					 vec2_oneZero},		// left
+					  {eBounds(eVec2(mapWidth, 0.0f), eVec2(mapWidth, mapHeight)),  -vec2_oneZero},		// right
+					  {eBounds(vec2_zero, eVec2(mapWidth, 0.0f)),					 vec2_zeroOne},		// top
+					  {eBounds(eVec2(0.0f, mapHeight), eVec2(mapWidth, mapHeight)), -vec2_zeroOne} }	// bottom
+	};	
 
 	auto & ownerBounds = owner->collisionModel->AbsBounds();
 	auto & boundsCenter = ownerBounds.Center();
 	float castLength = maxMoveSpeed * maxSteps;
 	float nearestFraction = 1.0f;
-	float newSteps = 0.0f;
-	along.validSteps = 0.0f;
-	along.stepRatio = 0.0f;
+	float mapEdgeFraction = 1.0f;
 
-	// FIXME/BUG: mapEdges are for the spatialIndexGrid<rows, columns> size, not the visible area used
-	// SOLUTION: save the .map file dimensions to be used here
-
-	// FIXME/BUG: the entity seemingly randomly stops during wallfollow 
-	// SOLUTION: WallFollow only StopMoving() if all tests yield validSteps == 0, or NONE are 0.
-	// breakpoint indicates rotationAngle >= 360.0f, meaning ALL validSteps == 0
-	// so, perhaps WallFollow is letting colliders overlap/get stuck (because it starts up again fine if moved away from the edge)
-	// SOLUTION: correct, colliders overlap because at some angle there is just enough of cast.fraction for validSteps to be 1, causing an overlap
-	// ie: rounding error (subtracting 1 step from the final validSteps won't solve it... will it?)
-	// WallFollowing testing for validSteps > 1 (instead of 0) seems to work, but doesn't address the root problem
-	// SOLUTION: since minimizing the factors in the rounding doesn't work, 
-	// try correction-collision-response on the final velocity w/a single MovingAABBAABBTest
-
-	float mapEdgeFraction = 0.0f;
 	for(int i = 0; i < mapEdges.size(); ++i) {
-		if (eCollision::MovingAABBAABBTest(ownerBounds, along.vector, castLength, mapEdges[i], mapEdgeFraction) &&
+		float movingAway = mapEdges[i].second * along.vector;
+		if (movingAway >= 0.0f) 
+			continue;
+		if (eCollision::MovingAABBAABBTest(ownerBounds, along.vector, castLength, mapEdges[i].first, mapEdgeFraction) &&
 			mapEdgeFraction < nearestFraction)
 			nearestFraction = mapEdgeFraction;
 	}
 
-	if (eCollision::BoxCast(collisions, ownerBounds, along.vector, castLength)) {
-		if(collisions[0].fraction < nearestFraction)
-			nearestFraction = collisions[0].fraction;
-		collisions.clear();
+	along.validSteps = 0.0f;
+	Collision_t collision;
+	if (FindApproachingCollision(along.vector, castLength, collision) && 
+		collision.fraction < nearestFraction) {
+		nearestFraction = collision.fraction;
 	} else {
 		eVec2 endPoint = boundsCenter + along.vector * (nearestFraction * castLength);
 		if (moveState == MOVETYPE_GOAL && endPoint.Compare(*currentWaypoint, goalRange)) {
@@ -403,15 +390,15 @@ bool eMovement::CheckVectorPath(decision_t & along) {
 	// DEBUG: eCollision::GetAreaCells using along.vector grabs more cells 
 	// than eMovement will when updating knownMap, so it's not used here
 	eVec2 futureCenter = boundsCenter;
+	float newSteps = 0.0f;
 	for (int i = 0; i < along.validSteps; ++i) {
 		if (knownMap.Index(futureCenter) == UNKNOWN_TILE)
 			++newSteps;
 		futureCenter += along.vector * maxMoveSpeed;
 	}
 
-	if (along.validSteps == 0.0f)
-		along.stepRatio = 0.0f;
-	else
+	along.stepRatio = 0.0f;
+	if (along.validSteps > 0.0f)
 		along.stepRatio = newSteps / along.validSteps;
 
 	return false;
@@ -453,6 +440,11 @@ void eMovement::CheckWalls(float * bias) {
 // of course that could be a separate category altogether
 //******************
 void eMovement::AddUserWaypoint(const eVec2 & waypoint) {
+
+	// TODO: only add the waypoint if a bounds the size of the ownerBounds can be centered on the waypoint
+	// IE: check it doesn't go off the map, and that it doesn't overlap any colliders
+	// similar to CheckVectorPath
+
 	if (!game.GetMap().HitStaticWorldHack(waypoint)) {
 		goals.PushFront(waypoint);
 		UpdateWaypoint();

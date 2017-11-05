@@ -58,6 +58,7 @@ bool eMap::LoadMap(const char * mapFilename) {
 
 	// initialize each tileMap cell absBounds for image and collisionModel cell-occupancy tests
 	sortTiles.reserve(numRows * numColumns * numLayers);
+	tileMap.SetGridSize(numRows, numColumns);					
 	tileMap.SetCellSize(cellWidth, cellHeight);
 	for (column = 0; column < numColumns; ++column) {
 		for (row = 0; row < numRows; ++row) {
