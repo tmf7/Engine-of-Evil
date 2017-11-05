@@ -56,10 +56,19 @@ bool eMap::LoadMap(const char * mapFilename) {
 	if (!VerifyRead(read))
 		return false;
 
-	// initialize each tileMap cell absBounds for image and collisionModel cell-occupancy tests
-	sortTiles.reserve(numRows * numColumns * numLayers);
 	tileMap.SetGridSize(numRows, numColumns);					
 	tileMap.SetCellSize(cellWidth, cellHeight);
+
+	float mapWidth = tileMap.Width();
+	float mapHeight = tileMap.Height();
+	absBounds = eBounds(vec2_zero, eVec2(mapWidth, mapHeight));
+	edgeColliders = { { {eBounds(vec2_zero, eVec2(0.0f, mapHeight)),				   vec2_oneZero},	// left
+						{eBounds(eVec2(mapWidth, 0.0f), eVec2(mapWidth, mapHeight)),  -vec2_oneZero},	// right
+						{eBounds(vec2_zero, eVec2(mapWidth, 0.0f)),					   vec2_zeroOne},	// top
+						{eBounds(eVec2(0.0f, mapHeight), eVec2(mapWidth, mapHeight)), -vec2_zeroOne} }	// bottom
+	};	
+
+	// initialize each tileMap cell absBounds for image and collisionModel cell-occupancy tests
 	for (column = 0; column < numColumns; ++column) {
 		for (row = 0; row < numRows; ++row) {
 			auto & cell = tileMap.Index(row, column);
@@ -87,6 +96,8 @@ bool eMap::LoadMap(const char * mapFilename) {
 		LOADING_PREFABS,
 		SPAWNING_ENTITIES
 	};
+
+	sortTiles.reserve(numRows * numColumns * numLayers);
 
 	int readState = READING_MAP;
 	size_t tallestRenderBlock = 0;
@@ -212,24 +223,6 @@ eVec2 eMap::GetMouseWorldPosition() const {
 	mouseWorldPoint += game.GetCamera().CollisionModel().AbsBounds()[0];
 	eMath::IsometricToCartesian(mouseWorldPoint.x, mouseWorldPoint.y);
 	return mouseWorldPoint;
-}
-
-//**************
-// eMap::HitStaticWorldHack
-// returns true if point lies beyond the map area,
-// or within one of the world's collider's
-// FIXME: this fn is only used by eAI for probing movement (and adding waypoints), move the logic to eCollisionModel/eCollision
-//**************
-bool eMap::HitStaticWorldHack(const eVec2 & point) {
-	if	(!tileMap.IsValid(point))			// TODO: check if an eBounds, line, or point is *fully* within the map's bounding box 
-		return true;						// (ie map collider and test to eCollision)
-		
-	auto & cell = tileMap.Index(point);
-	for (auto & pair : cell.Contents()) {
-		if (eCollision::AABBContainsPoint(pair.second->AbsBounds(), point))
-			return true;
-	}
-	return false;
 }
 
 //***************

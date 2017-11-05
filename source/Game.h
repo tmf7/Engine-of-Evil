@@ -19,7 +19,7 @@ public:
 	struct {
 		bool	GOAL_WAYPOINTS		= true;
 		bool	TRAIL_WAYPOINTS		= true;
-		bool	COLLISION			= false;
+		bool	COLLISION			= true;
 		bool	RENDERBLOCKS		= false;
 		bool	KNOWN_MAP_DRAW		= true;
 		bool	KNOWN_MAP_CLEAR		= true;

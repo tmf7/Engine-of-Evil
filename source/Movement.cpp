@@ -344,19 +344,9 @@ void eMovement::CompassFollow() {
 // eMovement::CheckVectorPath
 // determines the state of the entity's position for the next few frames
 // returns true if a future position using along is near the waypoint
-// FIXME: using static const values here may be an issue when a new map loads
 //******************
 bool eMovement::CheckVectorPath(decision_t & along) {
-	auto & tileMap = game.GetMap().TileMap();
-	static const float mapWidth = (float)tileMap.Width();
-	static const float mapHeight = (float)tileMap.Height();
 	static const float maxSteps = 5.0f;										// how many future steps to test
-	static const std::array<std::pair<eBounds, eVec2>, 4> mapEdges = { 
-					{ {eBounds(vec2_zero, eVec2(0.0f, mapHeight)),					 vec2_oneZero},		// left
-					  {eBounds(eVec2(mapWidth, 0.0f), eVec2(mapWidth, mapHeight)),  -vec2_oneZero},		// right
-					  {eBounds(vec2_zero, eVec2(mapWidth, 0.0f)),					 vec2_zeroOne},		// top
-					  {eBounds(eVec2(0.0f, mapHeight), eVec2(mapWidth, mapHeight)), -vec2_zeroOne} }	// bottom
-	};	
 
 	auto & ownerBounds = owner->collisionModel->AbsBounds();
 	auto & boundsCenter = ownerBounds.Center();
@@ -364,6 +354,7 @@ bool eMovement::CheckVectorPath(decision_t & along) {
 	float nearestFraction = 1.0f;
 	float mapEdgeFraction = 1.0f;
 
+	auto & mapEdges = game.GetMap().EdgeColliders();
 	for(int i = 0; i < mapEdges.size(); ++i) {
 		float movingAway = mapEdges[i].second * along.vector;
 		if (movingAway >= 0.0f) 
@@ -410,11 +401,10 @@ bool eMovement::CheckVectorPath(decision_t & along) {
 // and checks if the range along them has significantly changed
 //**************
 void eMovement::CheckWalls(float * bias) {
+	static const float stepIncreaseThreshold = 2.0f;		// updated validSteps must be larger than the oldValidSteps + this to warrant a bias modification
+	
 	float oldLeftSteps = left.validSteps;
 	float oldRightSteps = right.validSteps;
-
-	static const float stepIncreaseThreshold = 2.0f;		// updated validSteps must be larger than the oldValidSteps + this to warrant a bias modification
-
 	left.vector.Set(-forward.vector.y, forward.vector.x);	// forward rotated 90 degrees counter-clockwise
 	right.vector.Set(forward.vector.y, -forward.vector.x);	// forward rotated 90 degrees clockwise
 
@@ -433,22 +423,23 @@ void eMovement::CheckWalls(float * bias) {
 
 //******************
 // eMovement::AddUserWaypoint
-// TODO: use SpatialIndexGrid::Validate(point) to snap a waypoint onto the nearest
-// in-bounds non-collision map point (like Age of Empires flags)
 // TODO: allow other entities to become waypoints (that move)
 // moving waypoints would need to have their info updated in the deque (hence pointers instead of copies)
 // of course that could be a separate category altogether
+// SOLUTION: if currentWaypoint == &targetOrigin, then this would pursue, until it needed to backtrack on its trail,
+// so use a separate eVec2 * target to set currentWaypoint once MOVETYPE_GOAL resumes (if its non-nullptr)
 //******************
 void eMovement::AddUserWaypoint(const eVec2 & waypoint) {
+	static std::vector<Collision_t> collisions;
 
-	// TODO: only add the waypoint if a bounds the size of the ownerBounds can be centered on the waypoint
-	// IE: check it doesn't go off the map, and that it doesn't overlap any colliders
-	// similar to CheckVectorPath
+	collisions.clear();		// DEBUG: lazy clearing
+	eBounds waypointBounds = owner->collisionModel->LocalBounds() + waypoint;
+	if(!eCollision::AABBContainsAABB(game.GetMap().AbsBounds(), waypointBounds) ||
+		eCollision::BoxCast(collisions, waypointBounds, vec2_zero, 0.0f))		// FIXME: make a straight-aabb vs local contents test (w/ & w/o collisions)
+		return;
 
-	if (!game.GetMap().HitStaticWorldHack(waypoint)) {
-		goals.PushFront(waypoint);
-		UpdateWaypoint();
-	}
+	goals.PushFront(waypoint);
+	UpdateWaypoint();
 }
 
 //******************
