@@ -95,13 +95,11 @@ public:
 	eGridCell *							GetOwner();
 	std::shared_ptr<eCollisionModel>	CollisionModel();
 
-	bool								IsCollidableHack(const eVec2 & point) const;	
-
 private:
 
-	eGridCell *							owner = nullptr;				// responsible for drawing this tile
-	eTileImpl *							impl = nullptr;					// general tile type data
-	std::shared_ptr<eCollisionModel>	collisionModel = nullptr;		// contains position and size of collision bounds
+	eGridCell *							owner			= nullptr;		// responsible for drawing this tile
+	eTileImpl *							impl			= nullptr;		// general tile type data
+	std::shared_ptr<eCollisionModel>	collisionModel	= nullptr;		// contains position and size of collision bounds
 	renderImage_t						renderImage;					// data relevant to the renderer
 };
 

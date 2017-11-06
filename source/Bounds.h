@@ -12,6 +12,7 @@ public:
 					eBounds();
 	explicit		eBounds(const eVec2 & mins, const eVec2 & maxs);
 	explicit		eBounds(const eVec2 & point);
+	explicit		eBounds(const eVec2 * points, const int numPoints);
 
 	const eVec2 &	operator[](const int index) const;
 	eVec2 &			operator[](const int index);

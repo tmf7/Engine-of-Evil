@@ -10,6 +10,9 @@ void eInput::Init() {
 	const Uint32 mouseState = SDL_GetMouseState(&mouseX, &mouseY);
 	const Uint8 * keyboard = SDL_GetKeyboardState(&numKeys);
 
+	oldMouseX = mouseX;
+	oldMouseY = mouseY;
+
 	keys = new Uint8[numKeys];
 	prevKeys = new Uint8[numKeys];
 
@@ -35,14 +38,16 @@ eInput::~eInput() {
 // reads the current state of the keyboard and mouse and saves the previous state
 //***************
 void eInput::Update() {
-	int i;
+	oldMouseX = mouseX;
+	oldMouseY = mouseY;
+
 	const Uint32 mouseState = SDL_GetMouseState(&mouseX, &mouseY);
 	const Uint8 * keyboard = SDL_GetKeyboardState(&numKeys);
 
 	memcpy(prevKeys, keys, sizeof(prevKeys[0]) * numKeys);
 	memcpy(keys, keyboard, sizeof(keys[0]) * numKeys);
 
-	for (i = 1; i <= 3; i++) {
+	for (int i = 1; i <= 3; i++) {
 		prevMouseButtons[i - 1] = mouseButtons[i - 1];
 		mouseButtons[i - 1] = mouseState & SDL_BUTTON(i);
 	}
@@ -112,6 +117,14 @@ int eInput::MouseReleased(int button) const {
 		return -1;
 
 	return (prevMouseButtons[button - 1] & ~mouseButtons[button - 1]);
+}
+
+//***************
+// eInput::MouseMoved
+// returns true if the mouse x or y value has changed, false otherwise
+//***************
+bool eInput::MouseMoved() const {
+	return (mouseX != oldMouseX || mouseY != oldMouseY);
 }
 
 //***************

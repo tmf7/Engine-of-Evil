@@ -2,8 +2,17 @@
 #include "Definitions.h"
 
 //*************
+// eBounds::eBounds
+// constructs fitted AABB from list of random points
+//*************
+eBounds::eBounds(const eVec2 * points, const int numPoints) {
+	FromPoints(points, numPoints);
+}
+
+//*************
 // eBounds::FromPoints
-// fitted AABB from a list of random points 
+// modifies current mins and maxs to from 
+// a fitted AABB from a list of random points 
 //*************
 void eBounds::FromPoints(const eVec2 * points, const int numPoints) {
 	static const eVec2 axes[2] = { eVec2(1.0f, 0.0f), eVec2(0.0f, 1.0f) };
@@ -11,10 +20,10 @@ void eBounds::FromPoints(const eVec2 * points, const int numPoints) {
 	eVec2 maxs;
 
 	// find the max and min projection coordinate along each axis
-	for (int i = 0; i < 2; i++) {
+	for (int i = 0; i < 2; ++i) {
 		float minproj = FLT_MAX;
 		float maxproj = -FLT_MAX;
-		for (int j = 0; j < numPoints; j++) {
+		for (int j = 0; j < numPoints; ++j) {
 			float proj = points[j] * axes[i];
 			if (proj < minproj) {
 				minproj = proj;

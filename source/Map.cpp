@@ -191,50 +191,6 @@ bool eMap::LoadMap(const char * mapFilename) {
 	return true;
 }
 
-//**************
-// eMap::ToggleTile
-// toggles the tile type at tileMap[r][c] closest to the given point
-// TODO: stop using this, its more of a debug test for cursor location than a proper map editor
-//**************
-void eMap::ToggleTile(const eVec2 & point) {
-
-	auto & cell = tileMap.IndexValidated(point);
-	if (cell.TilesOwned().empty()) {
-		auto & origin = cell.AbsBounds()[0];
-		cell.AddTileOwned(eTile(&cell, origin, 0, 0));	
-	}
-
-	// DEBUG: assumes only one tile exists for toggling in a eGridCell (not always true)
-	auto & tile = cell.TilesOwned()[0];
-	int tileType = tile.Type();
-
-	tileType++;
-	if (tileType >= eTileImpl::NumTileTypes())
-		tileType = 0;
-	tile.SetType(tileType);
-}
-
-//**************
-// eMap::GetMouseWorldPosition
-//**************
-eVec2 eMap::GetMouseWorldPosition() const {
-	auto & input = game.GetInput();
-	eVec2 mouseWorldPoint = eVec2((float)input.GetMouseX(), (float)input.GetMouseY());
-	mouseWorldPoint += game.GetCamera().CollisionModel().AbsBounds()[0];
-	eMath::IsometricToCartesian(mouseWorldPoint.x, mouseWorldPoint.y);
-	return mouseWorldPoint;
-}
-
-//***************
-// eMap::Think
-// FIXME: eMap (and eMap shouldn't really have a ::Think())
-//***************
-void eMap::Think() {
-	auto & input = game.GetInput();
-	if (input.MousePressed(SDL_BUTTON_RIGHT))
-		ToggleTile(GetMouseWorldPosition());
-}
-
 //***************
 // eMap::Draw
 //***************

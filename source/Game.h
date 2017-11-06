@@ -13,6 +13,10 @@
 #include "Movement.h"
 #include "Input.h"
 
+//*************************************************
+//					eGame
+// handles all sub-system loading, initialization, and unloading
+//*************************************************
 class eGame {
 public:
 

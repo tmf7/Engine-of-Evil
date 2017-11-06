@@ -20,14 +20,13 @@ public:
 	void				Init(eEntity * const owner);
 	void				Think();
 	void				DebugDraw();
-	void				AddUserWaypoint(const eVec2 & waypoint);		// TODO: ePlayerInput should call this
+	void				AddUserWaypoint(const eVec2 & waypoint);
 	const byte_map_t &	KnownMap() const;
+	void				ClearTrail();
 
 	// debugging
 	void				DrawGoalWaypoints();
 	void				DrawTrailWaypoints();
-//	void				DrawCompassSearchArc();
-//	void				DrawCollisionNormals();			// TODO: move this to eEntity, or ePlayerInput, or eCollision (with a parameter)
 	void				DrawKnownMap() const;
 
 private:

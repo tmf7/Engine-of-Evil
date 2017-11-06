@@ -91,6 +91,7 @@ bool eEntity::Spawn(const int entityPrefabIndex, const eVec3 & worldPosition /*,
 		auto & newEntity = game.GetEntity(spawnID);
 		newEntity->spawnedEntityID = spawnID;			// FIXME/BUG(!): game.RemoveEntity(entityID) will invalidate all indexes above entityID
 														// SOLUTION: make game.entities a HashTable (which also partially solves the movementPlanner &owner update)
+														// SOLUTION(?): or just rehash the current eHashIndex (that uses spawnIDs instead of names)
 														// TODO: the same goes for ImageManager and EntityPrefabManger's HashIndexes into std::vectors
 		
 		// FIXME/BUG(!): &newEntity may move if its container re-allocates, or is otherwise moved

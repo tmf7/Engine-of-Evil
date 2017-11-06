@@ -14,6 +14,7 @@ public:
 	void							SetZoom(float level);
 	bool							Moved() const;
 	eCollisionModel &				CollisionModel();
+	eVec2							ScreenToWorldPosition(const eVec2 & screenPoint) const;
 
 	// FIXME: load these from engine config file
 	static constexpr const float	zoomIncrement = 0.1f;

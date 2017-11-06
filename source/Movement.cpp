@@ -33,38 +33,14 @@ void eMovement::Init(eEntity * owner) {
 // selects and updates a pathfinding type (eg: waypoint+obstacle avoid, A* optimal path, wall follow, Area awareness, raw compass?, etc)
 //***************
 void eMovement::Think() {
-	bool wasStopped;
-
-// BEGIN FREEHILL DEBUG AI/player control
-	auto & input = game.GetInput();
 	auto & ownerCollisionModel = owner->collisionModel;
-	auto & ownerVelocity = ownerCollisionModel->Velocity();
-	if (input.MousePressed(SDL_BUTTON_LEFT))
-		AddUserWaypoint(game.GetMap().GetMouseWorldPosition());
-
-	if (input.KeyPressed(SDL_SCANCODE_M)) {
-		pathingState = (pathingState == PATHTYPE_COMPASS ? PATHTYPE_WALL : PATHTYPE_COMPASS);
-		moveState = MOVETYPE_GOAL;
-	} 
-
-	float xMove = maxMoveSpeed * (float)(input.KeyHeld(SDL_SCANCODE_RIGHT) - input.KeyHeld(SDL_SCANCODE_LEFT));
-	float yMove = maxMoveSpeed * (float)(input.KeyHeld(SDL_SCANCODE_DOWN) - input.KeyHeld(SDL_SCANCODE_UP));
-
-	if (SDL_fabs(xMove) > 0.0f || SDL_fabs(yMove) > 0.0f) {
-		eVec2 moveInput(xMove, yMove);
-		moveInput.Normalize();
-		moveInput *= maxMoveSpeed;
-		eMath::IsometricToCartesian(moveInput.x, moveInput.y);
-		ownerVelocity.Set(moveInput.x, moveInput.y);
-		ownerCollisionModel->UpdateOrigin();
-	}
-// END FREEHILL DEBUG AI/player control
-
+	bool wasStopped = false;
+	
 	// only pathfind with a waypoint
 	if (currentWaypoint != nullptr) {
 		wasStopped = !moving; 
 		Move();
-		UpdateKnownMap();		// FIXME: there is a user-input controlled function in here, it will not be called if UpdateWaypoint returns false
+		UpdateKnownMap();
 
 		// drop a trail waypoint (but never in a deadend that stopped the entity last frame)
 		if (moving && !wasStopped && moveState != MOVETYPE_TRAIL && lastTrailTile != currentTile) {
@@ -79,7 +55,7 @@ void eMovement::Think() {
 		}
 
 		// finalize the move
-		if (ownerVelocity != vec2_zero) {
+		if (ownerCollisionModel->Velocity() != vec2_zero) {
 			moving = true;
 			ownerCollisionModel->UpdateOrigin();
 		}
@@ -220,6 +196,8 @@ void eMovement::CompassFollow() {
 		// FIXME/BUG: trail waypoint orbits or cannot attain sometimes (bad corner, whatever)
 		// SOMEWHAT fixed by putting a trail waypoint on each new tile (its never too far to navigate straight back to)
 		// SOMEWHAT fixed by modulating speed based on waypoint proximity, except backtracking looked weird so that was removed
+		// SOLUTION(?): count how many steps its been on the current tile, if limit exceeded, then set currentTile to VISITED_TILE
+		// SOLUTION(?): modulate speed if lingering on a tile & in given range of latest trail waypoint
 
 		// give the path a bias to help set priority
 		weight = test.validSteps;
@@ -409,14 +387,21 @@ void eMovement::UpdateWaypoint(bool getNext) {
 }
 
 //******************
+// eMovement::ClearTrail
+// resets the knownMap so on the next UpdateKnownMap
+// all trail waypoints are removed
+//******************
+void eMovement::ClearTrail() {
+	knownMap.ClearAllCells();
+	lastTrailTile = nullptr;
+}
+
+//******************
 // eMovement::CheckTrail
 // returns false if the entity should fresh-start goal pathfinding
 //******************
 bool eMovement::CheckTrail() {
-	eInput * input;
-
-	input = &game.GetInput();
-	if (trail.IsEmpty() || game.debugFlags.KNOWN_MAP_CLEAR && input->KeyPressed(SDL_SCANCODE_R)) {
+	if (trail.IsEmpty()) {
 		knownMap.ClearAllCells();
 		lastTrailTile = nullptr;
 		return true;
@@ -450,11 +435,7 @@ void eMovement::UpdateKnownMap() {
 	tileResetRange = 0;
 	if (!CheckTrail()) {
 		
-		// solid-box of tiles at the tileResetRange centered on **the current goal waypoint** to to reset the knownMap
-		// FIXME: this Length() call is very costly and shouldn't run each frame
-		// SOLUTION: find a workaround for using the knownMap at all, and/or prevent the current "orbit" behavior
-		// that the AI displays when attempting to attain a goal (ie sometimes there's an opening that's missed in favor
-		// of maintaining the directional weight)
+		// solid-box of tiles at the tileResetRange centered on the current goal waypoint to reset the knownMap
 		if (!goals.IsEmpty()) {
 			tileResetRange = (int)((goals.Back()->Data() - owner->collisionModel->Origin()).Length() / (knownMap.CellWidth() * 2));
 
@@ -508,8 +489,6 @@ void eMovement::UpdateKnownMap() {
 void eMovement::DebugDraw() {
 	DrawGoalWaypoints();
 	DrawKnownMap();
-//	DrawCompassSearchArc();
-//	DrawCollisionNormals();
 	DrawTrailWaypoints();
 }
 
@@ -548,66 +527,6 @@ void eMovement::DrawTrailWaypoints() {
 		game.GetRenderer().DrawIsometricRect(greenColor, trailBounds, RENDERTYPE_DYNAMIC);
 	}
 }
-
-/*
-std::vector<Collision_t> collisionNormalsDrawTest;		// debugging hack
-//******************
-// eMovement::DrawCollisionNormals
-// DEBUG: this was originally used and populated during the player-control-input logic
-//******************
-void eMovment::DrawCollisionNormals() {
-	float normalDrawLength = 100.0f;
-	float screenCoord = 250.0f;
-	float multiOffset = 30.0f;
-	std::vector<eVec2> points;
-	for (int count = 0; count < collisionNormalsDrawTest.size(); ++count) {
-		auto & normal = collisionNormalsDrawTest[count];
-		points[0] = { screenCoord + (multiOffset * count), screenCoord };
-		points[1] = { points[0].x + normal.x * normalDrawLength * 0.5f, points[0].y + normal.y * normalDrawLength * 0.5f };
-		game.GetRenderer().DrawLines(redColor, points, RENDERTYPE_DYNAMIC);
-
-		points[0] = points[1];
-		points[1] = { points[0].x + normal.x * normalDrawLength * 0.5f, points[0].y + normal.y * normalDrawLength * 0.5f };
-		game.GetRenderer().DrawLines(blueColor, points, RENDERTYPE_DYNAMIC);
-	}
-	collisionNormalsDrawTest.clear();
-}
-
-//******************
-// eMovement::DrawCompassSearchArc
-// draws the forward sweep angle checked for collision prediction in any-angle pathfinding
-// FIXME: draw a partial circle in eRenderer instead
-//******************
-void eMovement::DrawCompassSearchArc() {
-	eVec2 debugVector;
-	eVec2 debugPoint;
-	float rotationAngle;
-	int pink[3] = { 255, 0, 255 };
-	int blue[3] = { 0,0,255 };
-	int * color;
-
-	if (!game.debugFlags.COMPASS_SEARCH)		// TODO: not defined, possibly replace with debugFlags.PATHFINDING to cover all eMovement Debug Drawing
-		return;
-
-	// draws one pixel for each point on the current collision circle 
-	if (moveState == MOVETYPE_GOAL)
-		color = pink;
-	else
-		color = blue;
-
-	debugVector = vec2_oneZero;
-	rotationAngle = 0.0f;
-	while (rotationAngle < 360.0f) {
-		if (collisionModel.Velocity() * debugVector >= 0) {
-			debugPoint = collisionModel.Origin() + (debugVector * collisionRadius) - game.GetCamera().CollisionModel().AbsBounds()[0];
-			debugPoint.SnapInt();
-			game.GetRenderer().DrawPixel(debugPoint, color[0], color[1], color[2]);
-		}
-		debugVector = rotateCounterClockwiseZ * debugVector;
-		rotationAngle += ROTATION_INCREMENT;
-	}
-}
-*/
 
 //******************
 // eMovement::DrawKnownMap

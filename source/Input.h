@@ -27,6 +27,7 @@ public:
 	int					MouseHeld(int button) const;
 	int					MousePressed(int button) const;
 	int					MouseReleased(int button) const;
+	bool				MouseMoved() const;
 	int					GetMouseX() const;
 	int					GetMouseY() const;
 	void				HideCursor(bool hide = true) const;
@@ -41,6 +42,8 @@ private:
 	int					prevMouseButtons[3];
 	int					mouseX;
 	int					mouseY;
+	int					oldMouseX;
+	int					oldMouseY;
 };
 
 //***************

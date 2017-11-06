@@ -92,3 +92,12 @@ void eCamera::SetZoom(float level) {
 	collisionModel.LocalBounds() = eBounds(-screenBottomRight / 2.0f, screenBottomRight / 2.0f);
 }
 
+//**************
+// eCamera::ScreenToWorldPosition
+//**************
+eVec2 eCamera::ScreenToWorldPosition(const eVec2 & screenPoint) const {
+	eVec2 worldPoint = screenPoint + collisionModel.AbsBounds()[0];
+	eMath::IsometricToCartesian(worldPoint.x, worldPoint.y);
+	return worldPoint;
+}
+

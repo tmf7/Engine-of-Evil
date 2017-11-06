@@ -12,12 +12,9 @@ class eMap {
 public:
 
 	bool						Init();
-	void						Think();
 	void						Draw();
 	void						DebugDraw();
 	bool						LoadMap(const char * mapFilename);
-	void						ToggleTile(const eVec2 & point);
-	eVec2						GetMouseWorldPosition() const;
 	tile_map_t &				TileMap();
 
 	const std::vector<std::pair<int, int>> &			VisibleCells();

@@ -49,8 +49,11 @@ public:
 	void						UpdateRenderImageOrigin();
 	void						UpdateRenderImageDisplay();
 	eCollisionModel &			CollisionModel();
+	eMovement &					MovementPlanner();
 	eSprite &					Sprite();
 	const std::string &			GetPrefabFilename() const;
+	int							PrefabManagerIndex() const;
+	int							SpawnID() const;
 
 protected:
 
@@ -84,6 +87,13 @@ inline eCollisionModel & eEntity::CollisionModel() {
 }
 
 //**************
+// eEntity::MovementPlanner
+//**************
+inline eMovement & eEntity::MovementPlanner() {
+	return *movementPlanner;
+}
+
+//**************
 // eEntity::Sprite
 //**************
 inline eSprite & eEntity::Sprite() {
@@ -95,6 +105,20 @@ inline eSprite & eEntity::Sprite() {
 //**************
 inline const std::string & eEntity::GetPrefabFilename() const {
 	return prefabFilename;
+}
+
+//**************
+// eEntity::PrefabManagerIndex
+//**************
+inline int eEntity::PrefabManagerIndex() const {
+	return prefabManagerIndex;
+}
+
+//**************
+// eEntity::SpawnID
+//**************
+inline int eEntity::SpawnID() const {
+	return spawnedEntityID;
 }
 
 #endif /* ENTITY_H */

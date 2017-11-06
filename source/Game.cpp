@@ -139,36 +139,22 @@ bool eGame::Run() {
 		entity->Think();
 
 	camera.Think();
-	map.Think();
 
 	// draw the dynamic/scalable gameplay
 	renderer.Clear();
 	map.Draw();
 	for (auto & entity : entities)
 		entity->Draw();
+
 	renderer.FlushDynamicPool();
 
-	// TODO: write and call these DYNAMIC geometry debug draw calls
-	// draw all debug information as an overlay
-	// TODO(?): use a visitor or observer pattern to execute all DebugDraws with one call
-	// loop over all entities for their collision bounds, and grid occupancy
-	// ALSO: only draw goal/trail_waypoints and known_map for a SINGLE currently SELECTED entity
+	// all debug information is an overlay
 	for (auto & entity : entities)
 		entity->DebugDraw();		
 
-// BEGIN FREEHILL cursor tile highlight test
-		// FIXME: put this somewhere else (like eMap::Draw)
-		eVec2 tilePoint = map.GetMouseWorldPosition();
-		auto & tileMap = map.TileMap();
-		if (tileMap.IsValid(tilePoint)) {
-			auto & tileBounds = tileMap.Index(tilePoint).AbsBounds();
-			game.GetRenderer().DrawIsometricRect(yellowColor, tileBounds, RENDERTYPE_DYNAMIC);
-		}
-// END FREEHILL cursor tile highlight test
-
-		// TODO(!): modify eRenderer shape and text drawing to be on secondary textures to be referenced via renderImages
-		// and added to the static/dynamic-renderPools for more flexible debug (or otherwise) drawing (ie just one ::Draw call here)
-		map.DebugDraw();				// draw the collision bounds of collidable tiles
+	// TODO(!): modify eRenderer shape and text drawing to be on secondary textures to be referenced via renderImages
+	// and added to the static/dynamic-renderPools for more flexible debug (or otherwise) drawing (ie just one ::Draw call here)
+	map.DebugDraw();				// draw the collision bounds of collidable tiles
 
 	// TODO: the HUD would be a static/non-scalable overlay...which should draw with the player...
 	// BUT THAT'S FINE because FlushStaticPool gets called last, whew!

@@ -289,14 +289,3 @@ void eTile::RemoveFromGrid() const {
 	// TODO: implement because if a tileType changes different eGridCells may draw it
 	// otherwise loading a new map just clears the tileMap anyway without using this fn
 }
-
-//************
-// eTile::IsCollidableHack
-// FIXME: this is a hack because a eTile can have a collisionModel that lies beyond its owner cell
-// and eAI currently uses point-wise tests on a cell-by-cell basis, so it ignores this case
-//************
-bool eTile::IsCollidableHack(const eVec2 & point) const {
-	return collisionModel != nullptr ? eCollision::AABBContainsPoint(collisionModel->AbsBounds(), point) 
-									 : false;
-
-}
