@@ -61,7 +61,7 @@ typedef struct renderImage_s {
 // otherwise they will be overwritten by the scalable target
 // and its RENDERTYPE_DYANMIC items
 //****************************************************
-class eRenderer {
+class eRenderer : public eClass {
 public:
 
 						eRenderer();
@@ -85,6 +85,8 @@ public:
 	void				DrawIsometricPrism(const SDL_Color & color, const eBounds3D & rect, bool dynamic) const;
 	void				DrawIsometricRect(const SDL_Color & color, const eBounds & rect, bool dynamic) const;
 	void				DrawCartesianRect(const SDL_Color & color, const eBounds & rect, bool fill, bool dynamic) const;
+
+	virtual int			GetClassType() const override { return CLASS_RENDERER; }
 
 	static void			TopologicalDrawDepthSort(const std::vector<renderImage_t *> & renderImagePool);
 

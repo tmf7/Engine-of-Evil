@@ -6,8 +6,10 @@
 //**********************************
 //			eBox
 // 2D Oriented bounding box
+// TODO: inherit from a eCollider class
+// for more general collision shape assignment
 //**********************************
-class eBox {
+class eBox : public eClass {
 public:
 					eBox();
 	explicit		eBox(const eVec2 & center, const eVec2 & extents, const eVec2 axis[2]);
@@ -28,6 +30,8 @@ public:
 	const eVec2 &	Center() const;
 	const eVec2 &	Extents() const;
 	const eVec2 *	Axes() const;
+
+	virtual int		GetClassType() const override { return CLASS_BOX; }
 
 private:
 

@@ -8,7 +8,11 @@ template<class type, int rows, int columns>
 class eSpatialIndexGrid;
 typedef eSpatialIndexGrid<eGridCell, MAX_MAP_ROWS, MAX_MAP_COLUMNS> tile_map_t;
 
-class eMap {
+//*************************************************
+//					eMap
+// the game environment, draws as observed by eCamera
+//*************************************************
+class eMap : public eClass {
 public:
 
 	bool						Init();
@@ -20,6 +24,8 @@ public:
 	const std::vector<std::pair<int, int>> &			VisibleCells();
 	const std::array<std::pair<eBounds, eVec2>, 4>	&	EdgeColliders() const;
 	const eBounds &										AbsBounds() const;
+
+	virtual int					GetClassType() const override { return CLASS_MAP; }
 
 private:
 

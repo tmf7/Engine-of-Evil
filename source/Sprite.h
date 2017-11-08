@@ -1,17 +1,13 @@
 #ifndef EVIL_SPRITE_H
 #define EVIL_SPRITE_H
 
-//#include "Animation.h"
 #include "Image.h"
-
-// TODO: handle sprite sheets that have multiple different frame sizes (even in a single animation)
-// that use alpha values instead of color keys
 
 //*************************
 //			eSprite
 // Handles animation of image data
 //*************************
-class eSprite {
+class eSprite : public eClass {
 public:
 
 							eSprite();
@@ -23,6 +19,8 @@ public:
 	void					SetAnimation(const int first, const int last, const int frameDelay);
 	void					Pause(bool wantPause = true);
 	const SDL_Rect &		GetFrameHack() const;
+
+	virtual int				GetClassType() const override { return CLASS_SPRITE; }
 
 private:
 

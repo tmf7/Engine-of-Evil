@@ -2,8 +2,8 @@
 #define EVIL_SPATIAL_INDEX_GRID_H
 
 #include <vector>
-
-class eVec2;
+#include "Vector.h"
+#include "Class.h"
 
 //*************************************************
 //				eSpatial Index Grid
@@ -12,7 +12,7 @@ class eVec2;
 //  This class uses stack memory.
 //*************************************************
 template< class type, int rows, int columns>
-class eSpatialIndexGrid {
+class eSpatialIndexGrid : public eClass {
 public:
 
 							eSpatialIndexGrid();
@@ -62,6 +62,8 @@ public:
 	int						Height() const;
 
 	void					ClearAllCells();
+
+	virtual int				GetClassType() const override { return CLASS_SPATIALINDEXGRID; }
 
 private:
 

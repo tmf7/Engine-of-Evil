@@ -3,7 +3,15 @@
 
 #include "CollisionModel.h"
 
-class eCamera {
+//***********************************************
+//				eCamera 
+// Mobile 2D Axis-Aligned box for 
+// rendering alignment and ViewPort culling
+// TODO: inherit from an eGameObject class
+// that has optional eCollisionModel, eSprite, 
+// eMovment, etc components
+//***********************************************
+class eCamera : public eClass {
 public:
 
 									eCamera();
@@ -15,6 +23,11 @@ public:
 	bool							Moved() const;
 	eCollisionModel &				CollisionModel();
 	eVec2							ScreenToWorldPosition(const eVec2 & screenPoint) const;
+	eVec2							MouseWorldPosition() const;
+
+	virtual int						GetClassType() const override { return CLASS_CAMERA; }
+
+public:
 
 	// FIXME: load these from engine config file
 	static constexpr const float	zoomIncrement = 0.1f;
@@ -29,14 +42,6 @@ private:
 	float							zoomLevel;
 	bool							moved;
 };	
-
-//***************
-// eCamera::eCamera
-//***************
-inline eCamera::eCamera()
-	: camSpeed(defaultCamSpeed) {
-	collisionModel.SetActive(false);	// DEBUG: does not participate in normal collision detection (ie UpdateAreas doesn't happen)
-}
 
 //***************
 // eCamera::GetZoom

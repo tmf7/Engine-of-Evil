@@ -2,13 +2,14 @@
 #define EVIL_IMAGE_H
 
 #include "Definitions.h"
+#include "Class.h"
 
 //***************************************
 //				eImage
 // stores access pointer to SDL_Texture 
 // and is handled by eImageManager
 //***************************************
-class eImage {
+class eImage : public eClass {
 public:
 							eImage();
 							eImage(SDL_Texture * source, const char * sourceFilename, int id);
@@ -24,6 +25,8 @@ public:
 	void					SetSubframes(std::vector<SDL_Rect> && frames);
 	const SDL_Rect &		GetSubframe(int subframeIndex) const;
 	bool					HasSubframes() const;
+
+	virtual int				GetClassType() const override { return CLASS_IMAGE; }
 
 private:
 

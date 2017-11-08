@@ -39,7 +39,7 @@ eEntity::eEntity(const entitySpawnArgs_t & spawnArgs)
 	  spawnedEntityID(-1) {
 
 	if (!spawnArgs.localBounds.IsEmpty()) {
-		collisionModel = std::make_shared<eCollisionModel>();
+		collisionModel = std::make_shared<eCollisionModel>(std::shared_ptr<eEntity>(this));
 		collisionModel->LocalBounds() = spawnArgs.localBounds;
 		collisionModel->SetActive(spawnArgs.collisionActive);
 	
@@ -134,9 +134,9 @@ void eEntity::Draw() {
 	UpdateRenderImageOrigin();
 	UpdateRenderImageDisplay();
 
-	auto & cameraBounds = game.GetCamera().CollisionModel().AbsBounds();
 	renderImage.worldClip = eBounds(renderImage.origin, renderImage.origin + eVec2((float)renderImage.srcRect->w, (float)renderImage.srcRect->h));
 
+	auto & cameraBounds = game.GetCamera().CollisionModel().AbsBounds();
 	if (eCollision::AABBAABBTest(cameraBounds, renderImage.worldClip))
 		game.GetRenderer().AddToRenderPool(&renderImage, RENDERTYPE_DYNAMIC, true);
 }

@@ -2,9 +2,12 @@
 #define EVIL_COLLISION_H
 
 #include "Definitions.h"
+#include "Bounds3D.h"
+#include "Bounds.h"
+#include "Box.h"
 
-class eVec2;
-class eBounds3D;
+class eGridCell;
+class eCollisionModel;
 
 // TODO: incorperate the contact point in Collision_t for all geometry 
 // (eg: GJK closest points on convex hulls)
@@ -19,6 +22,9 @@ typedef struct Collision_s {
 //************************************
 //			eCollision
 // utility class for collision tests
+// TODO: move some of these tests to their
+// their respective collider shapes (eg: AABBAABBTest)
+// and use a visitor pattern to call them
 //***********************************
 class eCollision {
 public:

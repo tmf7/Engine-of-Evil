@@ -5,19 +5,18 @@
 #include "Renderer.h"
 #include "ImageManager.h"
 #include "EntityPrefabManager.h"
-//#include "AnimationManager.h"
 #include "Vector.h"
 #include "Map.h"
 #include "Entity.h"
 #include "Camera.h"
-#include "Movement.h"
 #include "Input.h"
+#include "Player.h"
 
 //*************************************************
 //					eGame
 // handles all sub-system loading, initialization, and unloading
 //*************************************************
-class eGame {
+class eGame : public eClass {
 public:
 
 	struct {
@@ -43,6 +42,8 @@ public:
 		INIT_SUCCESS = -1
 	};
 
+public:
+
 								eGame();
 
 	ErrorCode					Init();
@@ -52,7 +53,6 @@ public:
 	eInput &					GetInput();
 	eRenderer &					GetRenderer();
 	eImageManager &				GetImageManager();
-//	eAnimationManager &			GetAnimationManager();
 	eEntityPrefabManager &		GetEntityPrefabManager();
 	eCamera &					GetCamera();
 	eMap &						GetMap();
@@ -70,6 +70,8 @@ public:
 	Uint32						GetGameTime() const;
 	void						DrawFPS();
 
+	virtual int					GetClassType() const override { return CLASS_GAME; }
+
 private:
 
 	void						FreeAssets();
@@ -83,9 +85,9 @@ private:
 	eMap						map;
 	eRenderer					renderer;
 	eImageManager				imageManager;
-//	eAnimationManager			animationManager;
-	eEntityPrefabManager			entityPrefabManager;
+	eEntityPrefabManager		entityPrefabManager;
 	eCamera						camera;
+	ePlayer						player;
 
 	const Uint32				defaultFPS = 60;
 	Uint32						fixedFPS;			// constant framerate

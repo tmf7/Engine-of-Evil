@@ -1,4 +1,3 @@
-#include "Tile.h"
 #include "Game.h"
 
 std::vector<std::pair<int, int>> eTileImpl::tileSet;		// first == index within eImageManager::imageList; second == eImage subframe index;
@@ -237,7 +236,7 @@ void eTile::SetType(int newType) {
 
 // FREEHILL BEGIN AABB (eBounds) collisionModel import test (2/2)
 	if (impl->collider != nullptr) {
-		collisionModel = std::make_shared<eCollisionModel>();
+		collisionModel = std::make_shared<eCollisionModel>(std::shared_ptr<eTile>(this));
 		collisionModel->SetActive(true);
 		collisionModel->LocalBounds() = *(impl->collider);
 		collisionModel->SetOrigin(orthoOrigin);

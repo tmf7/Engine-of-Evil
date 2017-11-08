@@ -2,22 +2,28 @@
 #define EVIL_COLLISION_MODEL_H
 
 #include "Definitions.h"
-#include "Bounds.h"
-#include "Box.h"
+#include "Collision.h"
 
-class eGridCell;
-struct Collision_s;
-typedef Collision_s Collision_t;
+typedef struct Collision_s Collision_t;
 
 //*********************************************
 //			eCollisionModel
 // used for movement and collision detection
+// TODO: either templatize this class, or
+// simplify and derive from it for different
+// colliders (eBounds, eBox, etc) to be used
+// TODO: maintain a bounding volume heierarchy using multiple colliders
 //*********************************************
-class eCollisionModel {
+class eCollisionModel : public eClass {
 public:
 
-										eCollisionModel();
 										~eCollisionModel();
+										eCollisionModel(const std::shared_ptr<eClass> & owner);
+										eCollisionModel() = delete;							// DEBUG: was default
+										eCollisionModel(const eCollisionModel & other) = default;
+										eCollisionModel(eCollisionModel && other) = default;
+	eCollisionModel &					operator=(const eCollisionModel & other) = default;
+	eCollisionModel &					operator=(eCollisionModel && other) = default;
 
 	void								SetOrigin(const eVec2 & point);	
 	const eVec2 &						Origin() const;
@@ -32,7 +38,11 @@ public:
 	bool								IsActive() const;
 	void								SetActive(bool active);
 	const std::vector<eGridCell *> &	Areas() const;
+	const eClass &						Owner() const;
+	eClass &							Owner();
 	bool								FindApproachingCollision(const eVec2 & dir, const float length, Collision_t & result) const;
+
+	virtual int							GetClassType() const override { return CLASS_COLLISIONMODEL; }
 
 private:
 
@@ -43,27 +53,23 @@ private:
 
 private:
 
+	std::shared_ptr<eClass>				owner;					// eClass (FIXME: eGameObject) using this collision model
+
 	eBounds								localBounds;			// using model coordinates
 	eBounds								absBounds;				// using world coordinates	
-	
-//	std::shared_ptr<eCollider>	absBounds;		// TODO: test abstracted collider types...
-//												// TODO: how many colliders can an eEntity be associated with...collision world...disconnected from entities?! (owners)
-	
 	eVec2								origin;					// using world coordinates
 	eVec2								oldOrigin;				// for use with collision response
 	eVec2								velocity;				// DEBUG: never normalized, only rotated and scaled
 	std::vector<eGridCell *>			areas;					// currently occupied tileMap indexes (between 1 and 4)
 	bool								active;					// whether this participates in dynamic or kinematic collision detection
 
-//	eEntity *					owner;					// entity using this collision model, 
-														// FIXME: not all eCollisionModel users are eEntity, eg eCamera and eTile
-														// SOLUTION(~): everything tangible inherits from a base eGameObject interface
 };
 
 //*************
 // eCollisionModel::eCollisionModel
 //************
-inline eCollisionModel::eCollisionModel() {
+inline eCollisionModel::eCollisionModel(const std::shared_ptr<eClass> & owner) 
+	: owner(owner) {
 }
 
 //*************
@@ -74,32 +80,17 @@ inline eCollisionModel::~eCollisionModel() {
 }
 
 //*************
-// eCollisionModel::UpdateOrigin
-// TODO: if getting rid of localBounds (to just calculate it when needed based on origin and absBounds)
-// absBounds += (origin - oldOrigin);		// FIXME: or translation = velocity * deltaTime; (then apply one translation to origin and absBounds)
-// TODO: OR, get rid of velocity as well, and defer that to a physics/rigidbody class (let eMovement use a *placeholder* velocity in the meantime)
-//*************
-inline void eCollisionModel::UpdateOrigin() {
-	if (active)
-		AvoidCollisionSlide();		// TODO: alternatively push the collider away if it can be moved (non-static)
-
-	oldOrigin = origin;
-	origin += velocity;// * game.GetFixedTime();	// FIXME: defined outside this header
-	absBounds = localBounds + origin;
-
-	if (active)
-		UpdateAreas();
+// eCollisionModel::Owner
+//************
+inline const eClass & eCollisionModel::Owner() const {
+	return *owner;
 }
 
 //*************
-// eCollisionModel::SetOrigin
-//*************
-inline void eCollisionModel::SetOrigin(const eVec2 & point) {
-	oldOrigin = origin;
-	origin = point;
-	absBounds = localBounds + origin;
-	if (active)
-		UpdateAreas();
+// eCollisionModel::Owner
+//************
+inline eClass & eCollisionModel::Owner() {
+	return *owner;
 }
 
 //*************

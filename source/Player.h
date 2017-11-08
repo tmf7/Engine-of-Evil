@@ -1,20 +1,24 @@
 #ifndef EVIL_PLAYER_H
 #define EVIL_PLAYER_H
 
-//#include <vector>
-class eEntity;
+#include "Entity.h"
 
 //*************************************************
 //					ePlayer
 // handles all player input controls
 // this is a higher level game-logic class for testing
 // rather than a generic game-engine class
+// TODO: inherit from an eGameObject class
 //*************************************************
-class ePlayer {
+class ePlayer : public eClass {
 
 public:
 
 	void					Think();
+	void					Draw();
+	void					DebugDraw();
+
+	virtual int				GetClassType() const override { return CLASS_PLAYER; }
 
 private:
 
@@ -24,6 +28,7 @@ private:
 private:
 
 	std::vector<eEntity *>	groupSelection;
+	std::array<eVec2, 2>	selectionPoints;
 	bool					beginSelection = false;
 };
 

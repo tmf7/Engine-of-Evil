@@ -1,5 +1,3 @@
-#include <functional>		// std::hash
-//#include "EntityPrefabManager.h"
 #include "Game.h"
 
 //***************

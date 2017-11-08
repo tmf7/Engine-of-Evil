@@ -1,5 +1,3 @@
-#include <functional>		// std::hash
-//#include "ImageManager.h"
 #include "Game.h"
 
 //***************

@@ -1,6 +1,4 @@
 #include "Input.h"
-#include "SDL.h"
-#include <cstring>		// memset
 
 //***************
 // eInput::Init

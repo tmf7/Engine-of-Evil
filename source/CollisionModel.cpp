@@ -1,5 +1,35 @@
 #include "Game.h"
 
+//*************
+// eCollisionModel::UpdateOrigin
+// TODO: if getting rid of localBounds (to just calculate it when needed based on origin and absBounds)
+// absBounds += (origin - oldOrigin);		// FIXME: or translation = velocity * deltaTime; (then apply one translation to origin and absBounds)
+// TODO: OR, get rid of velocity as well, and defer that to a physics/rigidbody class (let eMovement use a *placeholder* velocity in the meantime)
+//*************
+void eCollisionModel::UpdateOrigin() {
+	if (active)
+		AvoidCollisionSlide();		// TODO: alternatively push the collider away if it can be moved (non-static)
+
+	oldOrigin = origin;
+	origin += velocity;// * game.GetFixedTime();	// FIXME: defined outside this header
+	absBounds = localBounds + origin;
+
+	if (active)
+		UpdateAreas();
+}
+
+//*************
+// eCollisionModel::SetOrigin
+//*************
+void eCollisionModel::SetOrigin(const eVec2 & point) {
+	oldOrigin = origin;
+	origin = point;
+	absBounds = localBounds + origin;
+	if (active)
+		UpdateAreas();
+}
+
+
 //***************
 // eCollisionModel::ClearCellReferences
 // removes the tileMap's collisionModel references 

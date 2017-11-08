@@ -2,11 +2,13 @@
 #define EVIL_INPUT_H
 
 #include "Definitions.h"
+#include "Class.h"
 
 //*************************************
 //				eInput
+// handles user input from mouse and keyboard
 //*************************************
-class eInput {
+class eInput : public eClass {
 public:
 
 						eInput();
@@ -31,6 +33,8 @@ public:
 	int					GetMouseX() const;
 	int					GetMouseY() const;
 	void				HideCursor(bool hide = true) const;
+
+	virtual int			GetClassType() const override { return CLASS_INPUT; }
 
 private:
 

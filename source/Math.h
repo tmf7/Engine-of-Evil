@@ -8,7 +8,7 @@
 
 //***********************************
 //			eMath
-// general math functionality
+// general math utilities
 //***********************************
 class eMath {
 public:

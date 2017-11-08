@@ -2,7 +2,6 @@
 #define EVIL_TEXTURE_MANAGER_H
 
 #include "Definitions.h"
-#include "Image.h"
 #include "HashIndex.h"
 #include "Renderer.h"
 
@@ -11,7 +10,7 @@
 // Handles all texture allocation and freeing
 // DEBUG: --no other object/system should allocate/free textures--
 //**********************************
-class eImageManager {
+class eImageManager : public eClass {
 public:
 
 	bool			Init();
@@ -24,6 +23,8 @@ public:
 	bool			BatchLoadSubframes(const char * subframeBatchFile);
 	int				GetNumImages() const;
 	void			Clear();
+
+	virtual int		GetClassType() const override { return CLASS_IMAGEMANAGER; }
 
 private:
 

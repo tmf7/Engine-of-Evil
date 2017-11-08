@@ -1,21 +1,32 @@
 #ifndef EVIL_MOVEMENT_H
 #define EVIL_MOVEMENT_H
 
+#include "Definitions.h"
 #include "Deque.h"
-#include "Vector.h"
 #include "SpatialIndexGrid.h"
 #include "Bounds.h"
-#include "Entity.h"
+
+class eEntity;
 
 typedef unsigned char byte_t;
+
 template <class type, int rows, int columns>
 class eSpatialIndexGrid;
 typedef eSpatialIndexGrid<byte_t, MAX_MAP_ROWS, MAX_MAP_COLUMNS> byte_map_t;
 
-class eMovement {
+
+//*************************************************
+//					eMovement
+// updates owner's velocity to avoid collision
+// and pathfind to goal waypoints
+// TODO: inherit from an eComponent class
+// that can be used by an eGameObject
+//*************************************************
+class eMovement : public eClass {
 public:
 
 						eMovement(const float movementSpeed);
+	virtual				~eMovement() = default;
 
 	void				Init(eEntity * const owner);
 	void				Think();
@@ -23,11 +34,15 @@ public:
 	void				AddUserWaypoint(const eVec2 & waypoint);
 	const byte_map_t &	KnownMap() const;
 	void				ClearTrail();
+	void				TogglePathingState();
+	float				Speed() const;
 
 	// debugging
 	void				DrawGoalWaypoints();
 	void				DrawTrailWaypoints();
 	void				DrawKnownMap() const;
+
+	virtual int			GetClassType() const override { return CLASS_MOVEMENT; }
 
 private:
 
@@ -56,7 +71,9 @@ private:
 		PATHTYPE_WALL
 	} pathfindingType_t;
 
-	eEntity *			owner;	
+private:
+
+	eEntity *			owner;					// back-pointer to user
 
 	byte_map_t			knownMap;				// tracks visited tiles 
 	movementType_t		moveState;
@@ -108,13 +125,19 @@ inline const byte_map_t & eMovement::KnownMap() const {
 	return knownMap;
 }
 
-//******************
-// eMovement::StopMoving
-//******************
-inline void eMovement::StopMoving() {
-	wallSide = nullptr;
-	owner->collisionModel->Velocity().Zero();
-	moving = false;
+//*************
+// eMovement::TogglePathingState
+//*************
+inline void eMovement::TogglePathingState() {
+	pathingState = (pathingState == PATHTYPE_COMPASS ? PATHTYPE_WALL : PATHTYPE_COMPASS);
+	moveState = MOVETYPE_GOAL;
+}
+
+//*************
+// eMovement::Speed
+//*************
+inline float eMovement::Speed() const {
+	return maxMoveSpeed;
 }
 
 #endif /* EVIL_MOVEMENT_H */

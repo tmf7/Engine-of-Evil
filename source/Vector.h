@@ -1,6 +1,7 @@
 #ifndef EVIL_VECTOR_H
 #define EVIL_VECTOR_H
 
+#include <float.h>
 #include "SDL.h"			// for SDL_sqrtf
 #include "Math.h"
 

@@ -1,11 +1,10 @@
 #ifndef ENTITY_H
 #define ENTITY_H
 
-#include "Definitions.h"
 #include "Sprite.h"
 #include "CollisionModel.h"
-#include "Collision.h"
 #include "Renderer.h"
+#include "Movement.h"
 
 // entitySpawnArgs_t
 typedef struct entitySpawnArgs_s {
@@ -25,9 +24,10 @@ typedef struct entitySpawnArgs_s {
 
 //*************************************************
 //					eEntity
-//
+// objects that dynamically interact with the game environment
+// TODO: inherit from an eGameObject class
 //*************************************************
-class eEntity {
+class eEntity : public eClass {
 private:
 
 	friend class				eMovement;
@@ -41,10 +41,11 @@ public:
 	static bool					Spawn(const int entityPrefabIndex, const eVec3 & worldPosition/*, const eVec2 & facingDir*/);
 
 	eEntity &					operator=(eEntity entity);
-	virtual void				Think();
-	virtual void				Draw();
-	virtual void				DebugDraw();
+	void						Think();					// TODO: make virtual from eGameObject				
+	void						Draw();						// TODO: make virtual from eGameObject
+	void						DebugDraw();				// TODO: make virtual from eGameObject
 
+	void						PlayerSelected(bool isSelected);
 	renderImage_t *				GetRenderImage();
 	void						UpdateRenderImageOrigin();
 	void						UpdateRenderImageDisplay();
@@ -55,8 +56,9 @@ public:
 	int							PrefabManagerIndex() const;
 	int							SpawnID() const;
 
-protected:
+	virtual int					GetClassType() const override { return CLASS_ENTITY; }
 
+private:	// DEBUG: was protected
 
 	// DEBUG: collisionModel.Origin(), collisionModel.AbsBounds().Center and renderImage.origin 
 	// are treated different in eEntity compared to eTile. 
@@ -77,7 +79,15 @@ protected:
 	std::string							prefabFilename;
 	int									prefabManagerIndex;		// index of this eEntity's prefab within eEntityPrefabManager::prefabList
 	int									spawnedEntityID;
+	bool								playerSelected;			// player is controlling this eEntity
 };
+
+//**************
+// eEntity::PlayerSelected
+//**************
+inline void eEntity::PlayerSelected(bool isSelected) {
+	playerSelected = isSelected;
+}
 
 //**************
 // eEntity::CollisionModel

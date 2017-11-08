@@ -2,12 +2,15 @@
 #define EVIL_BOUNDS_H
 
 #include "Vector.h"
+#include "Class.h"
 
 //**********************************
 //			eBounds
 // 2D Axis-Aligned bounding box
+// TODO: inherit from a eCollider class
+// for more general collision shape assignment
 //**********************************
-class eBounds {
+class eBounds : public eClass {
 public:
 					eBounds();
 	explicit		eBounds(const eVec2 & mins, const eVec2 & maxs);
@@ -41,6 +44,8 @@ public:
 	void			FromIsometricRotation(const eVec2 & origin);
 	void			FromPoints(const eVec2 * points, const int numPoints);
 	void			ToPoints(eVec2 points[4]) const;
+
+	virtual int		GetClassType() const override { return CLASS_BOUNDS; }
 
 private:
 

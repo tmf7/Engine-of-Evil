@@ -2,7 +2,6 @@
 #define EVIL_TILE_H
 
 #include "CollisionModel.h"
-//#include "Animation.h"
 #include "Renderer.h"
 
 // Flyweight tile design
@@ -10,10 +9,8 @@
 //***********************************************
 //				eTileImpl 
 // general tile type data for use by all tiles
-// TODO: establish better tileSet rules for 
-// tileType connecting rules (pulled from a tileSet format file)
 //***********************************************
-class eTileImpl {
+class eTileImpl : public eClass {
 private:
 
 //	typedef void (*eTileBehavior_f)();
@@ -28,6 +25,8 @@ public:
 	static bool					LoadTileset(const char * tilesetFilename, bool appendNew = false);
 	static int					NumTileTypes();
 	static bool					HasCollider(int type);
+
+	virtual int					GetClassType() const override { return CLASS_TILEIMPL; }
 
 private:
 
@@ -72,11 +71,11 @@ inline int eTileImpl::Type() const {
 
 //***********************************************
 //				eTile 
-// localized tile data
-// TODO(?): have eTile inherit from eEntity to take advantage
-// of the collisionModel and renderImage functionality and avoid code duplication
+// localized tile data that describes the game environment
+// TODO: have eTile inherit from an eGameObject class
+// that has optional eCollisionModel, eSprite, eMovment, etc
 //***********************************************
-class eTile {
+class eTile : public eClass {
 public:
 										eTile(eGridCell * owner, const eVec2 & origin, const int type, const int layer);
 	
@@ -94,6 +93,8 @@ public:
 
 	eGridCell *							GetOwner();
 	std::shared_ptr<eCollisionModel>	CollisionModel();
+
+	virtual int							GetClassType() const override { return CLASS_TILE; }
 
 private:
 

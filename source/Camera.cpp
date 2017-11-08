@@ -1,5 +1,13 @@
-#include "Camera.h"
 #include "Game.h"
+
+//***************
+// eCamera::eCamera
+//***************
+eCamera::eCamera()
+	: collisionModel(std::shared_ptr<eCamera>(this)),
+	  camSpeed(defaultCamSpeed) {
+	collisionModel.SetActive(false);	// DEBUG: does not participate in normal collision detection (ie UpdateAreas doesn't happen)
+}
 
 //***************
 // eCamera::Init
@@ -94,10 +102,21 @@ void eCamera::SetZoom(float level) {
 
 //**************
 // eCamera::ScreenToWorldPosition
+// returns current position of screenPoint over the 2D orthographic game world
 //**************
 eVec2 eCamera::ScreenToWorldPosition(const eVec2 & screenPoint) const {
 	eVec2 worldPoint = screenPoint + collisionModel.AbsBounds()[0];
 	eMath::IsometricToCartesian(worldPoint.x, worldPoint.y);
 	return worldPoint;
+}
+
+//**************
+// eCamera::MouseWorldPosition
+// returns current position of mouse over the isometric game world
+//**************
+eVec2 eCamera::MouseWorldPosition() const {
+	auto & input = game.GetInput();
+	eVec2 screenPoint = eVec2((float)input.GetMouseX(), (float)input.GetMouseY());
+	return ScreenToWorldPosition(screenPoint);
 }
 

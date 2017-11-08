@@ -7,9 +7,10 @@ class eCollisionModel;
 
 //******************************************
 //			eGridCell
-// pathfinding, collision, and tile drawing
-//***************************************
-class eGridCell {
+// container for pathfinding, collision, and tile drawing.
+// DEBUG: data type used by eSpatialIndexGrid
+//*****************************************
+class eGridCell : public eClass {
 public:
 										eGridCell() = default;
 
@@ -30,6 +31,8 @@ public:
 	void								SetGridPosition(const int row, const int column);
 	int									GridRow() const;
 	int									GridColumn() const;
+
+	virtual int							GetClassType() const override { return CLASS_GRIDCELL; }
 
 public:
 

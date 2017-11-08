@@ -10,7 +10,7 @@
 // Handles all entity prefab allocation and freeing
 // DEBUG: --no other object/system should allocate/free entity prefabs--
 //**********************************
-class eEntityPrefabManager {
+class eEntityPrefabManager : public eClass {
 public:
 
 	bool			Init();
@@ -20,6 +20,8 @@ public:
 	bool			LoadPrefab(const char * filename, std::shared_ptr<eEntity> & result);
 	int				GetNumPrefabs() const;
 	void			Clear();
+
+	virtual int		GetClassType() const override { return CLASS_ENTITYPREFABMANAGER; }
 
 private:
 

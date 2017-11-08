@@ -135,6 +135,9 @@ bool eGame::Run() {
 	
 	// system updates
 	input.Update();
+
+	player.Think();
+
 	for (auto & entity : entities)
 		entity->Think();
 
@@ -147,6 +150,7 @@ bool eGame::Run() {
 		entity->Draw();
 
 	renderer.FlushDynamicPool();
+	player.Draw();
 
 	// all debug information is an overlay
 	for (auto & entity : entities)
@@ -155,6 +159,7 @@ bool eGame::Run() {
 	// TODO(!): modify eRenderer shape and text drawing to be on secondary textures to be referenced via renderImages
 	// and added to the static/dynamic-renderPools for more flexible debug (or otherwise) drawing (ie just one ::Draw call here)
 	map.DebugDraw();				// draw the collision bounds of collidable tiles
+	player.DebugDraw();
 
 	// TODO: the HUD would be a static/non-scalable overlay...which should draw with the player...
 	// BUT THAT'S FINE because FlushStaticPool gets called last, whew!

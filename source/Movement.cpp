@@ -20,6 +20,15 @@ eMovement::eMovement(const float movementSpeed)
 	knownMap.ClearAllCells();
 }
 
+//******************
+// eMovement::StopMoving
+//******************
+void eMovement::StopMoving() {
+	wallSide = nullptr;
+	owner->collisionModel->Velocity().Zero();
+	moving = false;
+}
+
 void eMovement::Init(eEntity * owner) {
 	this->owner = owner;
 	collisionRadius = owner->collisionModel->LocalBounds().Radius();

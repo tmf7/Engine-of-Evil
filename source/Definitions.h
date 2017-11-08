@@ -21,11 +21,11 @@
 #include <fstream>
 #include <random>
 #include <limits>
-//#include <stdio.h>
 #include <unordered_map>
 #include <vector>
 #include <array>
 #include <deque>
+#include <functional>		// std::hash
 #include "Math.h"
 
 #define MAX(a,b) (a > b ? a : b)
@@ -42,6 +42,13 @@
 #define MAX_IMAGES 1024
 #define MAX_LAYER 128
 #define INVALID_ID -1
+
+#define REGISTER_ENUM(x) x,
+typedef enum {
+	#include "ClassTypes.h"
+	CLASS_INVALID
+} ClassTypes_t;
+#undef REGISTER_ENUM
 
 
 //#define ONE_GIGABYTE 1073741824

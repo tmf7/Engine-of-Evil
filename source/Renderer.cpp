@@ -1,4 +1,3 @@
-#include "Renderer.h"
 #include "Game.h"
 
 const SDL_Color clearColor		= { 128, 128, 128, SDL_ALPHA_OPAQUE };
@@ -378,7 +377,7 @@ void eRenderer::FlushDynamicPool() {
 
 		auto & iter = dynamicPool.begin();
 		for (/*iter*/; iter != dynamicPool.end() ; ++iter) {
-			if (eCollision::AABBAABBTest(imageToInsert->worldClip, (*iter)->worldClip)) {	// FIXME: this check works for ONE eEntity, but may break for more
+			if (eCollision::AABBAABBTest(imageToInsert->worldClip, (*iter)->worldClip)) {	// FIXME(?): this check works for ONE eEntity, but may break for more
 																							// double-check the logic, and test the reality of it
 				if (eCollision::IsAABB3DInIsometricFront(imageToInsert->renderBlock, (*iter)->renderBlock)) {
 					newPriorityMin = (*iter)->priority;

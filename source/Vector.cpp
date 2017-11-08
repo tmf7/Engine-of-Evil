@@ -1,5 +1,4 @@
 #include "Vector.h"
-#include <float.h>
 
 eVec2 vec2_zero(0.0f, 0.0f);
 eVec2 vec2_oneZero(1.0f, 0.0f);
