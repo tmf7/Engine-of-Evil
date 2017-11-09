@@ -4,6 +4,9 @@
 #include "Definitions.h"
 #include "Collision.h"
 
+class eEntity;
+class eGridCell;
+
 typedef struct Collision_s Collision_t;
 
 //*********************************************
@@ -18,8 +21,7 @@ class eCollisionModel : public eClass {
 public:
 
 										~eCollisionModel();
-										eCollisionModel(const std::shared_ptr<eClass> & owner);
-										eCollisionModel() = delete;							// DEBUG: was default
+										eCollisionModel() = default;
 										eCollisionModel(const eCollisionModel & other) = default;
 										eCollisionModel(eCollisionModel && other) = default;
 	eCollisionModel &					operator=(const eCollisionModel & other) = default;
@@ -38,8 +40,9 @@ public:
 	bool								IsActive() const;
 	void								SetActive(bool active);
 	const std::vector<eGridCell *> &	Areas() const;
-	const eClass &						Owner() const;
-	eClass &							Owner();
+	void								SetOwner(eClass * newOwner);
+	const eClass *						Owner() const;
+	eClass *							Owner();
 	bool								FindApproachingCollision(const eVec2 & dir, const float length, Collision_t & result) const;
 
 	virtual int							GetClassType() const override { return CLASS_COLLISIONMODEL; }
@@ -53,7 +56,18 @@ private:
 
 private:
 
-	std::shared_ptr<eClass>				owner;					// eClass (FIXME: eGameObject) using this collision model
+	eClass *							owner = nullptr;		// eClass (FIXME: eGameObject) using this collision model
+																// FIXME/BUG: std::shared_ptr creates a loop and artificial memory leak because
+																// neither this nor its owner can be destroyed
+																// raw pointer is okay because *this doesn't outlive its owner 
+																// (and all ::CollisionModel() shared_ptr copies are fn-scoped)
+																// FIXME/BUG: *owner may move in memory because of std::vector resizing
+																// SOLTUION(?): use observer pattern w/std::weak_ptr (owner as the subject, *this as observer)
+																// SOLUTION(?): update this->owner whenever ANY of owners ctor/assignments are called [cheaper?]
+																// which means creating rule of 5 for everything with an eCollisionModel (and anything that has an "owner" backpointer, eg: eMovement)
+																// FIXME/BUG(!): eEntity::Spawn creates a copy of a prefab and initializes it, 
+																// so owner == &prefabEntity not the one in use
+																// SOLUTION(~): assign this->owner in eEntity::Spawn, and leave eCamera and eTile collisionModel owners nullptr
 
 	eBounds								localBounds;			// using model coordinates
 	eBounds								absBounds;				// using world coordinates	
@@ -66,13 +80,6 @@ private:
 };
 
 //*************
-// eCollisionModel::eCollisionModel
-//************
-inline eCollisionModel::eCollisionModel(const std::shared_ptr<eClass> & owner) 
-	: owner(owner) {
-}
-
-//*************
 // eCollisionModel::~eCollisionModel
 //************
 inline eCollisionModel::~eCollisionModel() {
@@ -80,17 +87,24 @@ inline eCollisionModel::~eCollisionModel() {
 }
 
 //*************
-// eCollisionModel::Owner
+// eCollisionModel::SetOwner
 //************
-inline const eClass & eCollisionModel::Owner() const {
-	return *owner;
+inline void eCollisionModel::SetOwner(eClass * newOwner) {
+	owner = newOwner;
 }
 
 //*************
 // eCollisionModel::Owner
 //************
-inline eClass & eCollisionModel::Owner() {
-	return *owner;
+inline const eClass * eCollisionModel::Owner() const {
+	return owner;
+}
+
+//*************
+// eCollisionModel::Owner
+//************
+inline eClass * eCollisionModel::Owner() {
+	return owner;
 }
 
 //*************
@@ -170,7 +184,7 @@ inline void eCollisionModel::SetActive(bool active) {
 }
 
 //*************
-// eCollisionModel::SetActive
+// eCollisionModel::Areas
 //*************
 inline const std::vector<eGridCell *> & eCollisionModel::Areas() const {
 	return areas;

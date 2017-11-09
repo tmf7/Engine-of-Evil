@@ -4,9 +4,9 @@
 // eCamera::eCamera
 //***************
 eCamera::eCamera()
-	: collisionModel(std::shared_ptr<eCamera>(this)),
-	  camSpeed(defaultCamSpeed) {
-	collisionModel.SetActive(false);	// DEBUG: does not participate in normal collision detection (ie UpdateAreas doesn't happen)
+	: camSpeed(defaultCamSpeed) {
+	  collisionModel.SetOwner(this);
+	  collisionModel.SetActive(false);	// DEBUG: does not participate in normal collision detection (ie UpdateAreas doesn't happen)
 }
 
 //***************

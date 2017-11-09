@@ -92,7 +92,7 @@ public:
 	void								SetLayer(const int newLayer);
 
 	eGridCell *							GetOwner();
-	std::shared_ptr<eCollisionModel>	CollisionModel();
+	eCollisionModel &					CollisionModel();
 
 	virtual int							GetClassType() const override { return CLASS_TILE; }
 
@@ -149,8 +149,8 @@ inline eGridCell * eTile::GetOwner() {
 //************
 // eTile::CollisionModel
 //************
-inline std::shared_ptr<eCollisionModel> eTile::CollisionModel() {
-	return collisionModel;
+inline eCollisionModel & eTile::CollisionModel() {
+	return *collisionModel;
 }
 
 #endif /* EVIL_TILE_H */

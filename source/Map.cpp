@@ -57,8 +57,8 @@ bool eMap::LoadMap(const char * mapFilename) {
 	tileMap.SetGridSize(numRows, numColumns);					
 	tileMap.SetCellSize(cellWidth, cellHeight);
 
-	float mapWidth = tileMap.Width();
-	float mapHeight = tileMap.Height();
+	float mapWidth = (float)tileMap.Width();
+	float mapHeight = (float)tileMap.Height();
 	absBounds = eBounds(vec2_zero, eVec2(mapWidth, mapHeight));
 	edgeColliders = { { {eBounds(vec2_zero, eVec2(0.0f, mapHeight)),				   vec2_oneZero},	// left
 						{eBounds(eVec2(mapWidth, 0.0f), eVec2(mapWidth, mapHeight)),  -vec2_oneZero},	// right
@@ -234,7 +234,7 @@ void eMap::Draw() {
 				if (tileMap.IsValid(row, column)) {
 					auto & cell = tileMap.Index(row, column);
 					cell.Draw();
-					visibleCells.push_back({row, column});
+					visibleCells.push_back(&cell);
 				} 
 				row++; column--;
 			}
@@ -245,10 +245,8 @@ void eMap::Draw() {
 			column = startCol;
 		}
 	} else {
-		for (auto & visibleCell : visibleCells) {
-			auto & cell = tileMap.Index(visibleCell.first, visibleCell.second);
-			cell.Draw();
-		}
+		for (auto & cell : visibleCells)
+			cell->Draw();
 	}
 }
 
@@ -256,8 +254,6 @@ void eMap::Draw() {
 // eMap::DebugDraw
 //***************
 void eMap::DebugDraw() { 
-	for (auto & visibleCell : visibleCells) {
-		auto & cell = tileMap.Index(visibleCell.first, visibleCell.second);
-		cell.DebugDraw();
-	}
+	for (auto & cell : visibleCells)
+		cell->DebugDraw();
 }

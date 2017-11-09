@@ -45,7 +45,8 @@ public:
 	void						Draw();						// TODO: make virtual from eGameObject
 	void						DebugDraw();				// TODO: make virtual from eGameObject
 
-	void						PlayerSelected(bool isSelected);
+	void						SetPlayerSelected(bool isSelected);
+	bool						GetPlayerSelected() const;
 	renderImage_t *				GetRenderImage();
 	void						UpdateRenderImageOrigin();
 	void						UpdateRenderImageDisplay();
@@ -83,10 +84,17 @@ private:	// DEBUG: was protected
 };
 
 //**************
-// eEntity::PlayerSelected
+// eEntity::SetPlayerSelected
 //**************
-inline void eEntity::PlayerSelected(bool isSelected) {
+inline void eEntity::SetPlayerSelected(bool isSelected) {
 	playerSelected = isSelected;
+}
+
+//**************
+// eEntity::GetPlayerSelected
+//**************
+inline bool eEntity::GetPlayerSelected() const {
+	return playerSelected;
 }
 
 //**************

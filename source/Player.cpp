@@ -3,26 +3,26 @@
 
 void ePlayer::Think() {
 	auto & input = game.GetInput();
-	const eVec2 worldPosition = game.GetCamera().MouseWorldPosition();
+	eVec2 screenPosition = eVec2((float)input.GetMouseX(), (float)input.GetMouseY()); 
 
 	if (input.KeyPressed(SDL_SCANCODE_SPACE))
 		ClearGroupSelection();
 
 	if (input.MouseMoved())
-		selectionPoints[1] = worldPosition;
+		selectionPoints[1] = screenPosition;
 
 	if (input.MousePressed(SDL_BUTTON_LEFT)) {
-		selectionPoints[0] = worldPosition;
+		selectionPoints[0] = screenPosition;
 		beginSelection = groupSelection.empty();
 
 	} else if (input.MouseReleased(SDL_BUTTON_LEFT)) {
 		if (beginSelection) {
 			beginSelection = false;
-			SelectGroup(eBounds(selectionPoints.data(), selectionPoints.size()));
+			SelectGroup();
 
 		} else if (!groupSelection.empty()) {
 			for (auto & entity : groupSelection)
-				entity->MovementPlanner().AddUserWaypoint(worldPosition);
+				entity->MovementPlanner().AddUserWaypoint(game.GetCamera().MouseWorldPosition());
 /*
 			if ("small selection area, so set a chase target for the group if there's an eEntity in the selectionArea") {		// TODO: implement
 			} else { // group pathfinding
@@ -33,6 +33,7 @@ void ePlayer::Think() {
 			}
 */
 		}
+
 	}
 
 	for (auto & entity : groupSelection) {	
@@ -61,29 +62,49 @@ void ePlayer::Think() {
 
 //***************
 // ePlayer::SelectGroup
-// DEBUG: selectionArea must be in world space, not screen space
+// converts selectionPoints to a worldspace bounding box 
+// used to select eEntities
+// returns true of !groupSelection.empty()
+// returns false if selection area has zero area, or groupSelection.empty()
 //***************
-void ePlayer::SelectGroup(const eBounds & selectionArea) {
+bool ePlayer::SelectGroup() {
 	static std::unordered_map<const eEntity *, const eEntity *> alreadyTested;
 	static std::vector<eGridCell *> selectedCells;				// DEBUG(performance): static to reduce dynamic allocations	
 
+	eBounds selectionBounds(selectionPoints.data(), selectionPoints.size());
+	if (selectionBounds.Width() <= 0.0f || selectionBounds.Height() <= 0.0f)
+		return false;
+/*
+	eVec2 corner = selectionBounds[0];
+	eVec2 xAxis(selectionBounds[1].x, selectionBounds[0].y);
+	eVec2 yAxis(selectionBounds[0].x, selectionBounds[1].y);
+	std::array<eVec2, 3> obbPoints = { std::move(corner), std::move(xAxis), std::move(yAxis) };
+	for (auto & point : obbPoints) {
+		point += game.GetCamera().CollisionModel().AbsBounds()[0];
+		eMath::IsometricToCartesian(point.x, point.y);
+	}
+	eBox selectionArea(obbPoints.data());
 	eCollision::GetAreaCells(selectionArea, selectedCells);
-	for (auto & cell : selectedCells) {
+*/
+	auto & visibleCells = game.GetMap().VisibleCells();
+	for (auto & cell : visibleCells) {	// selectedCells
 		for (auto & kvPair : cell->Contents()) {
-			auto & ownerClass = kvPair.second->Owner();		// FIXME/BUG(!): grabbing cells read-access violation (&owner may have moved)
+			auto owner = kvPair.second->Owner();
 			
-			if (ownerClass.GetClassType() != CLASS_ENTITY)
+			if (owner == nullptr || owner->GetClassType() != CLASS_ENTITY)
 				continue;
 
-			const auto & entity = static_cast<eEntity *>(&ownerClass);
+			const auto & entity = static_cast<eEntity *>(owner);
 			
 			// don't test the same entity twice
 			if (alreadyTested.find(entity) != alreadyTested.end())
 				continue;
 
 			alreadyTested[entity] = entity;
-			if (eCollision::AABBAABBTest(entity->GetRenderImage()->worldClip, selectionArea)) {
-				entity->PlayerSelected(true);						// TODO: to draw a highlight around the selected entities
+
+			// entity->CollisionModel().AbsBounds()
+			if (eCollision::AABBAABBTest(entity->GetRenderImage()->worldClip, selectionBounds)) {	// FIXME: make this the worldClip (visual area of sprite)
+				entity->SetPlayerSelected(true);						// TODO: to draw a highlight around the selected entities
 				groupSelection.push_back(entity);
 			}
 		}
@@ -95,6 +116,8 @@ void ePlayer::SelectGroup(const eBounds & selectionArea) {
 	// that indicates the intention was to select a single eEntity
 	// then loop over groupSelection looking for the selected item closest to the camera (ie: localDepthSort)
 	// then grab it, ClearGroupSelection(), and re-add the one eEntity
+
+	return !groupSelection.empty();
 }
 
 //***************
@@ -102,7 +125,7 @@ void ePlayer::SelectGroup(const eBounds & selectionArea) {
 //***************
 void ePlayer::ClearGroupSelection() {
 	for (auto & entity : groupSelection) {
-		entity->PlayerSelected(false);
+		entity->SetPlayerSelected(false);
 	}
 	groupSelection.clear();
 }
@@ -114,12 +137,15 @@ void ePlayer::ClearGroupSelection() {
 void ePlayer::Draw() {
 	// draw the selection box
 	if (beginSelection)
-		game.GetRenderer().DrawIsometricRect(greenColor, eBounds(selectionPoints.data(), selectionPoints.size()), RENDERTYPE_DYNAMIC);
+		game.GetRenderer().DrawCartesianRect(greenColor, eBounds(selectionPoints.data(), selectionPoints.size()) , false, RENDERTYPE_STATIC);
 	else
 		selectionPoints[0] = selectionPoints[1];
 
 	// highlight those selected
 	for (auto & entity : groupSelection) {
+			eBounds worldClip = entity->GetRenderImage()->worldClip;
+			game.GetRenderer().DrawCartesianRect(lightBlueColor, worldClip, false, RENDERTYPE_DYNAMIC);
+
 		game.GetRenderer().DrawIsometricPrism(lightBlueColor, entity->GetRenderImage()->renderBlock, RENDERTYPE_DYNAMIC);
 	}
 }
@@ -133,6 +159,6 @@ void ePlayer::DebugDraw() {
 	const eVec2 worldPosition = game.GetCamera().MouseWorldPosition();
 	if (tileMap.IsValid(worldPosition)) {
 		auto & tileBounds = tileMap.Index(worldPosition).AbsBounds();
-		game.GetRenderer().DrawIsometricRect(yellowColor, tileBounds, RENDERTYPE_DYNAMIC);
+	//	game.GetRenderer().DrawIsometricRect(yellowColor, tileBounds, RENDERTYPE_DYNAMIC);
 	}
 }

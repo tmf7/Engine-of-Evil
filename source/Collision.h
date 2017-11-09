@@ -32,6 +32,7 @@ public:
 	static eBounds			GetBroadPhaseBounds(const eBounds & bounds, const eVec2 & dir, const float length);
 	static void				GetCollisionNormal(const eVec2 & point, const eBounds & bounds, eVec2 & resultNormal);
 	static void				GetCollisionNormal(eBounds self, const eVec2 & dir, const float length, const eBounds & other, Collision_t & collision);
+	static void				GetAreaCells(const eBox & area, std::vector<eGridCell *> & areaCells);
 	static void				GetAreaCells(const eBounds & area, std::vector<eGridCell *> & areaCells);
 	static void				GetAreaCells(const eBounds & bounds, const eVec2 & dir, const float length, std::vector<eGridCell *> & areaCells);
 	static void				GetAreaCells(const eVec2 & begin, const eVec2 & dir, const float length, std::vector<eGridCell *> & areaCells);

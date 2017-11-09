@@ -198,7 +198,7 @@ eTile::eTile(eGridCell * owner, const eVec2 & origin, const int type, const int 
 // eTile::SetLayer
 //************
 void eTile::SetLayer(const int newLayer) {
-	float newRBMinZ = (float)game.GetMap().TileMap().MinLayerZ(newLayer);
+	float newRBMinZ = (float)game.GetMap().TileMap().MinZPositionFromLayer(newLayer);
 	float oldRBMinZ = renderImage.renderBlock[0].z;
 	renderImage.renderBlock += eVec3(0.0f, 0.0f, newRBMinZ - oldRBMinZ);
 	renderImage.layer = newLayer;
@@ -236,7 +236,8 @@ void eTile::SetType(int newType) {
 
 // FREEHILL BEGIN AABB (eBounds) collisionModel import test (2/2)
 	if (impl->collider != nullptr) {
-		collisionModel = std::make_shared<eCollisionModel>(std::shared_ptr<eTile>(this));
+		collisionModel = std::make_shared<eCollisionModel>();
+		collisionModel->SetOwner(this);
 		collisionModel->SetActive(true);
 		collisionModel->LocalBounds() = *(impl->collider);
 		collisionModel->SetOrigin(orthoOrigin);

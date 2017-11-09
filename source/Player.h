@@ -22,13 +22,13 @@ public:
 
 private:
 
-	void					SelectGroup(const eBounds & selectionArea);
+	bool					SelectGroup();
 	void					ClearGroupSelection();
 
 private:
 
 	std::vector<eEntity *>	groupSelection;
-	std::array<eVec2, 2>	selectionPoints;
+	std::array<eVec2, 2>	selectionPoints;			// for drawing on-screen selection box, and conversion to worldspace for eEntity selection
 	bool					beginSelection = false;
 };
 

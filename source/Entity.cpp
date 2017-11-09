@@ -39,7 +39,7 @@ eEntity::eEntity(const entitySpawnArgs_t & spawnArgs)
 	  spawnedEntityID(-1) {
 
 	if (!spawnArgs.localBounds.IsEmpty()) {
-		collisionModel = std::make_shared<eCollisionModel>(std::shared_ptr<eEntity>(this));
+		collisionModel = std::make_shared<eCollisionModel>();
 		collisionModel->LocalBounds() = spawnArgs.localBounds;
 		collisionModel->SetActive(spawnArgs.collisionActive);
 	
@@ -102,9 +102,13 @@ bool eEntity::Spawn(const int entityPrefabIndex, const eVec3 & worldPosition /*,
 			newEntity->movementPlanner->Init(newEntity.get());
 
 		if (newEntity->sprite != nullptr) {
-			// TODO: use worldPosition.z to determine a layer (ie: set a const layer depth, or depth for each layer in eSpatialIndexGrid)
 			newEntity->renderImage.renderBlock += worldPosition;
-			newEntity->collisionModel->SetOrigin(eVec2(worldPosition.x, worldPosition.y));
+
+			// FIXME: remove renderImage/sprite dependency on the collisionModel (and vis versa)
+			if (newEntity->collisionModel != nullptr) {
+				newEntity->collisionModel->SetOrigin(eVec2(worldPosition.x, worldPosition.y));
+				newEntity->collisionModel->SetOwner(newEntity.get());
+			}
 
 			// TODO: eMovement may be opposite facing, and eEntity may not have a eSprite, so only eSpriteController cares about facing
 //			if (newEntity->spriteController != nullptr)	
@@ -186,7 +190,6 @@ void eEntity::UpdateRenderImageOrigin() {
 void eEntity::UpdateRenderImageDisplay() {
 	renderImage.image = sprite->GetImage();
 	renderImage.srcRect = &sprite->GetFrameHack();
-	renderImage.layer = 1;		// DEBUG: test starting layer
 
 // FREEHILL BEGIN 3d topological sort
 	// DEBUG: renderBlock and collisionModel currently designed to align, while offsetting renderImage.origin instead
@@ -194,6 +197,9 @@ void eEntity::UpdateRenderImageDisplay() {
 	eVec3 renderBlockMins = renderImage.renderBlock[0];
 	renderImage.renderBlock += eVec3(collisionMins.x - renderBlockMins.x, collisionMins.y - renderBlockMins.y , 0.0f);
 // FREEHILL END 3d topological sort
+
+	// DEBUG: layer unused, but set for possible future use
+	renderImage.layer = game.GetMap().TileMap().LayerFromZPosition(eMath::NearestInt(renderImage.renderBlock[0].z));
 }
 
 //*************

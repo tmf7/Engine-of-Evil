@@ -544,11 +544,9 @@ void eMovement::DrawTrailWaypoints() {
 void eMovement::DrawKnownMap() const {
 	auto & tileMap = game.GetMap().TileMap();
 	auto & visibleCells = game.GetMap().VisibleCells();
-	for (auto & visibleCell : visibleCells) {
-		if (knownMap.Index(visibleCell.first, visibleCell.second) == VISITED_TILE) {
-				auto cellBounds = tileMap.Index(visibleCell.first, visibleCell.second).AbsBounds();
-				game.GetRenderer().DrawIsometricRect(pinkColor, cellBounds, RENDERTYPE_DYNAMIC);
-		}
+	for (auto & cell : visibleCells) {
+		if (knownMap.Index(cell->GridRow(), cell->GridColumn()) == VISITED_TILE)
+			game.GetRenderer().DrawIsometricRect(pinkColor, cell->AbsBounds(), RENDERTYPE_DYNAMIC);
 	}
 
 }

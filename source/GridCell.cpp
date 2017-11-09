@@ -15,7 +15,10 @@ void eGridCell::Draw() {
 //************
 void eGridCell::AddTileOwned(eTile && tile) {
 	tilesOwned.push_back(std::move(tile));
-	tilesOwned.back().AssignToGrid();
+	auto & newTile = tilesOwned.back();
+	if (&newTile.CollisionModel() != nullptr)
+		newTile.CollisionModel().SetOwner(&newTile);
+	newTile.AssignToGrid();
 }
 
 //************
@@ -24,8 +27,8 @@ void eGridCell::AddTileOwned(eTile && tile) {
 void eGridCell::DebugDraw() {
 	auto & renderer = game.GetRenderer();
 	for (auto & tile : tilesOwned) {
-		if (game.debugFlags.COLLISION && tile.CollisionModel() != nullptr)
-			game.GetRenderer().DrawIsometricRect(pinkColor, tile.CollisionModel()->AbsBounds(), true);
+		if (game.debugFlags.COLLISION && &tile.CollisionModel() != nullptr)
+			game.GetRenderer().DrawIsometricRect(pinkColor, tile.CollisionModel().AbsBounds(), true);
 
 		auto & renderBlock = tile.GetRenderImage()->renderBlock;
 		if (game.debugFlags.RENDERBLOCKS && renderBlock.Depth() > 0)		// DEBUG(performance): for visual clarity, don't draw flat renderBlocks

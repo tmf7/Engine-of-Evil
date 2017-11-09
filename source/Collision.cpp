@@ -162,6 +162,48 @@ bool eCollision::BoxCast(std::vector<Collision_t> & collisions, const eBounds & 
 //***************
 // eCollision::GetAreaCells
 // fills the areaCells vector with pointers to the eGridCells 
+// within the given area box (includes touching)
+// DEBUG(performance): make sure areaCells passed in avoids excessive dynamic allocation by using a reserved/managed vector, or static memory
+//***************
+void eCollision::GetAreaCells(const eBox & area, std::vector<eGridCell *> & areaCells) {
+	auto & tileMap = game.GetMap().TileMap();
+	static std::deque<eGridCell *> openSet;		// first-come-first-served testing
+	static std::vector<eGridCell *> closedSet;
+	static std::vector<eGridCell *> neighbors;
+	
+	auto & initialCell = tileMap.IndexValidated(area.Center());
+	openSet.push_back(&initialCell);
+	initialCell.inOpenSet = true;
+
+	while(!openSet.empty()) {
+		auto cell = openSet.front();
+		openSet.pop_front();		
+		closedSet.push_back(cell);
+		cell->inOpenSet = false;
+		cell->inClosedSet = true;
+
+		if (OBBOBBTest(area, eBox(cell->AbsBounds()))) {
+			areaCells.push_back(cell);
+			tileMap.GetNeighbors(cell->GridRow(), cell->GridColumn(), neighbors);
+
+			for(auto & neighborCell : neighbors) {
+				if (!neighborCell->inClosedSet && !neighborCell->inOpenSet) {
+					openSet.push_back(neighborCell);
+					neighborCell->inOpenSet = true;
+				}
+			}
+			neighbors.clear();
+		}
+	}
+
+	for (auto & cell : closedSet)
+		cell->inClosedSet = false;
+	closedSet.clear();
+}
+
+//***************
+// eCollision::GetAreaCells
+// fills the areaCells vector with pointers to the eGridCells 
 // within the given area bounds (includes touching)
 // DEBUG(performance): make sure areaCells passed in avoids excessive dynamic allocation by using a reserved/managed vector, or static memory
 //***************

@@ -12,10 +12,11 @@
 class eBox : public eClass {
 public:
 					eBox();
-	explicit		eBox(const eVec2 & center, const eVec2 & extents, const eVec2 axis[2]);
+	explicit		eBox(const eVec2 & center, const eVec2 & extents, const eVec2 axes[2]);
 	explicit		eBox(const eVec2 & point);
 	explicit		eBox(const eVec2 points[3]);
 	explicit		eBox(const eBounds & bounds);
+	explicit		eBox(const eBounds & bounds, const eVec2 axes[2]);
 	explicit		eBox(const eVec2 & corner, const eVec2 edges[2]);
 
 	eBox			operator+(const eVec2 & translation) const;
@@ -80,6 +81,16 @@ inline eBox::eBox(const eBounds & bounds) {
 	extents = bounds[1] - center;
 	axes[0] = vec2_oneZero;
 	axes[1] = vec2_zeroOne;
+}
+
+//*************
+// eBox::eBox
+//*************
+inline eBox::eBox(const eBounds & bounds, const eVec2 axes[2]) {
+	center = (bounds[0] + bounds[1]) * 0.5f;
+	extents = bounds[1] - center;
+	this->axes[0] = axes[0];
+	this->axes[1] = axes[1];
 }
 
 //*************

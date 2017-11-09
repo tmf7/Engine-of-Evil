@@ -41,8 +41,9 @@ public:
 	int						IsometricCellWidth() const;
 	int						IsometricCellHeight() const;
 	int						LayerDepth(const int layer) const;
-	int						MinLayerZ(const int layer) const;
-	int						MaxLayerZ(const int layer) const;
+	int						LayerFromZPosition(int zPosition) const;
+	int						MinZPositionFromLayer(const int layer) const;
+	int						MaxZPositionFromLayer(const int layer) const;
 	int						CellWidth() const;
 	int						CellHeight() const;
 	void					SetGridSize(const int numRows, const int numColumns);
@@ -340,11 +341,25 @@ inline int eSpatialIndexGrid<type, rows, columns>::LayerDepth(const int layer) c
 }
 
 //******************
-// eSpatialIndexGrid::MinLayerZ
+// eSpatialIndexGrid::MinLayerFromZPosition
+// DEBUG: z < 0.0f will return 0, z > highest z will return maximum available layer
+//******************
+template< class type, int rows, int columns>
+inline int eSpatialIndexGrid<type, rows, columns>::LayerFromZPosition(int zPosition) const {
+	int layer = 0;
+	const int maxLayer = layerDepths.size();
+	while (layer < maxLayer && (zPosition - layerDepths[layer]) > 0) {
+		zPosition -= layerDepths[layer++];
+	}
+	return layer;
+}
+
+//******************
+// eSpatialIndexGrid::MinZPositionFromLayer
 // DEBUG: layer > 0 && layer < layerDepths.size()
 //******************
 template< class type, int rows, int columns>
-inline int eSpatialIndexGrid<type, rows, columns>::MinLayerZ(const int layer) const {
+inline int eSpatialIndexGrid<type, rows, columns>::MinZPositionFromLayer(const int layer) const {
 	int minLayerZ = 0;
 	for (int i = 0; i < layer; ++i)
 		minLayerZ += (layerDepths[i] + 1);		// DEBUG: +1 to ensure layer depth intervals don't touch
@@ -352,11 +367,11 @@ inline int eSpatialIndexGrid<type, rows, columns>::MinLayerZ(const int layer) co
 }
 
 //******************
-// eSpatialIndexGrid::MaxLayerZ
+// eSpatialIndexGrid::MaxZPositionFromLayer
 // DEBUG: layer > 0 && layer < layerDepths.size()
 //******************
 template< class type, int rows, int columns>
-inline int eSpatialIndexGrid<type, rows, columns>::MaxLayerZ(const int layer) const {
+inline int eSpatialIndexGrid<type, rows, columns>::MaxZPositionFromLayer(const int layer) const {
 	return MinLayerZ(layer) + layerDepths[layer];
 }
 
@@ -382,7 +397,7 @@ inline int eSpatialIndexGrid<type, rows, columns>::CellHeight() const {
 //******************
 template< class type, int rows, int columns>
 inline void eSpatialIndexGrid<type, rows, columns>::SetGridSize(const int numRows, const int numColumns) {
-//	ClearAllCells();		// DEBUG: doint this during eMap::LoadMap causes a read access error during eGridCell::AddTileOwned
+//	ClearAllCells();		// DEBUG: doing this during eMap::LoadMap causes a read access error during eGridCell::AddTileOwned
 	usedRows = numRows > 0 ? (numRows <= rows ? numRows : rows) : 1;
 	usedColumns = numColumns > 0 ? (numColumns <= columns ? numColumns : columns) : 1;
 }
