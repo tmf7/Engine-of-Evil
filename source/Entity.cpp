@@ -56,7 +56,7 @@ eEntity::eEntity(const entitySpawnArgs_t & spawnArgs)
 
 		sprite->SetImage(spriteImage);
 		eVec3 blockMins = (eVec3)spawnArgs.localBounds[0];
-		renderImage.renderBlock = eBounds3D(blockMins, blockMins + spawnArgs.renderBlockSize);
+		renderImage.RenderBlock() = eBounds3D(blockMins, blockMins + spawnArgs.renderBlockSize);
 	}
 }
 
@@ -78,7 +78,7 @@ eEntity & eEntity::operator=(eEntity other) {
 //***************
 // eEntity::Spawn
 // copies a prefab eEntity and adds unique details
-// TODO: position via a single stack eTransform, not the eCollisionModel, or renderImage_t, or eSprite
+// TODO: position via a single stack eTransform, not the eCollisionModel, or eRenderImage, or eSprite
 //***************
 bool eEntity::Spawn(const int entityPrefabIndex, const eVec3 & worldPosition /*, const eVec2 & facingDir*/) {
 	std::shared_ptr<eEntity> prefabEntity = nullptr;
@@ -102,7 +102,7 @@ bool eEntity::Spawn(const int entityPrefabIndex, const eVec3 & worldPosition /*,
 			newEntity->movementPlanner->Init(newEntity.get());
 
 		if (newEntity->sprite != nullptr) {
-			newEntity->renderImage.renderBlock += worldPosition;
+			newEntity->renderImage.RenderBlock() += worldPosition;
 
 			// FIXME: remove renderImage/sprite dependency on the collisionModel (and vis versa)
 			if (newEntity->collisionModel != nullptr) {
@@ -128,21 +128,21 @@ bool eEntity::Spawn(const int entityPrefabIndex, const eVec3 & worldPosition /*,
 
 //***************
 // eEntity::Draw
+// TODO: just update the sprite and add it to the grid (the grid will draw it via eMap::Draw)
+// TODO: rename this fn, or merge it w/eEntity::Think
 //***************
 void eEntity::Draw() {
 	if (sprite == nullptr)
 		return;
 
 	// TODO: make eEntity.renderImage manipulation/drawing part of eSprite
-	// then just call sprite->Draw(); here
+	// then just call sprite->Draw(); here 
+	// TODO: or use eGridCell::Draw to draw *this, and just use eEntity::Think to update this stuff
 	UpdateRenderImageOrigin();
 	UpdateRenderImageDisplay();
 
-	renderImage.worldClip = eBounds(renderImage.origin, renderImage.origin + eVec2((float)renderImage.srcRect->w, (float)renderImage.srcRect->h));
-
-	auto & cameraBounds = game.GetCamera().CollisionModel().AbsBounds();
-	if (eCollision::AABBAABBTest(cameraBounds, renderImage.worldClip))
-		game.GetRenderer().AddToRenderPool(&renderImage, RENDERTYPE_DYNAMIC, true);
+	renderImage.UpdateWorldClip();
+	game.GetRenderer().AddToRenderPool(&renderImage, RENDERTYPE_DYNAMIC, true);		// TODO: make eGridCell::Draw do this instead, and ::UpdateWorldClip in ::Think
 }
 
 //***************
@@ -158,7 +158,7 @@ void eEntity::Think() {
 //***************
 void eEntity::DebugDraw() {
 	if (game.debugFlags.RENDERBLOCKS && sprite != nullptr)
-		game.GetRenderer().DrawIsometricPrism(lightBlueColor, renderImage.renderBlock, RENDERTYPE_DYNAMIC);
+		game.GetRenderer().DrawIsometricPrism(lightBlueColor, renderImage.RenderBlock(), RENDERTYPE_DYNAMIC);
 
 	if (game.debugFlags.COLLISION && collisionModel != nullptr)
 		game.GetRenderer().DrawIsometricRect(yellowColor, collisionModel->AbsBounds(), RENDERTYPE_DYNAMIC);
@@ -173,13 +173,13 @@ void eEntity::DebugDraw() {
 // UpdateRenderImageOrigin ensures only the visuals are isometric
 //*************
 void eEntity::UpdateRenderImageOrigin() {
-	renderImage.origin = collisionModel->AbsBounds()[0];		// FIXME(later): eTile::renderImage::origin is unmoving in iso. world space (regardless of collision)
+	renderImage.Origin() = collisionModel->AbsBounds()[0];		// FIXME(later): eTile::renderImage::origin is unmoving in iso. world space (regardless of collision)
 																// SOLUTION: treat all renderImage-collisionModel relations the same
 																// everthing can have a Transform...position, orientation, scale
 																// then collisionModels have origins at their center w/offset from the transform
 																// and renderImage_ts have origins at their top-left corner w/ offset from the transform
-	eMath::CartesianToIsometric(renderImage.origin.x, renderImage.origin.y);
-	renderImage.origin += imageColliderOffset;
+	eMath::CartesianToIsometric(renderImage.Origin().x, renderImage.Origin().y);
+	renderImage.Origin() += imageColliderOffset;
 }
 
 //*************
@@ -188,24 +188,24 @@ void eEntity::UpdateRenderImageOrigin() {
 // TODO: move this to eEntity::Think, and just call sprite.Update(renderImage);
 //*************
 void eEntity::UpdateRenderImageDisplay() {
-	renderImage.image = sprite->GetImage();
-	renderImage.srcRect = &sprite->GetFrameHack();
+	renderImage.Image() = sprite->GetImage();
+	renderImage.SetImageFrame(sprite->GetFrameHack());
 
 // FREEHILL BEGIN 3d topological sort
 	// DEBUG: renderBlock and collisionModel currently designed to align, while offsetting renderImage.origin instead
 	eVec2 collisionMins = collisionModel->AbsBounds()[0];
-	eVec3 renderBlockMins = renderImage.renderBlock[0];
-	renderImage.renderBlock += eVec3(collisionMins.x - renderBlockMins.x, collisionMins.y - renderBlockMins.y , 0.0f);
+	eVec3 renderBlockMins = renderImage.RenderBlock()[0];
+	renderImage.RenderBlock() += eVec3(collisionMins.x - renderBlockMins.x, collisionMins.y - renderBlockMins.y , 0.0f);
 // FREEHILL END 3d topological sort
 
 	// DEBUG: layer unused, but set for possible future use
-	renderImage.layer = game.GetMap().TileMap().LayerFromZPosition(eMath::NearestInt(renderImage.renderBlock[0].z));
+	renderImage.UpdateLayerFromRenderBlockZ();
 }
 
 //*************
 // eEntity::GetRenderImage
 //*************
-renderImage_t * eEntity::GetRenderImage() {
+eRenderImage * eEntity::GetRenderImage() {
 	return &renderImage;
 }
 

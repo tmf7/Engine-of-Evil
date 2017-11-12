@@ -82,26 +82,26 @@ public:
 	int									Type() const;
 	void								SetType(int newType);
 	
-	void								AssignToGrid();
-	void								RemoveFromGrid() const;
+	void								AssignToWorldGrid();
+	void								RemoveFromWorldGrid();
 
-	renderImage_t *						GetRenderImage();
+	eRenderImage *						GetRenderImage();
 	void								UpdateRenderImageDisplay();
 
 	Uint32								GetLayer() const;
 	void								SetLayer(const int newLayer);
 
-	eGridCell *							GetOwner();
+	eGridCell *							GetCell();
 	eCollisionModel &					CollisionModel();
 
 	virtual int							GetClassType() const override { return CLASS_TILE; }
 
 private:
 
-	eGridCell *							owner			= nullptr;		// responsible for drawing this tile
+	eGridCell *							cell			= nullptr;		// responsible for the lifetime of *this
 	eTileImpl *							impl			= nullptr;		// general tile type data
 	std::shared_ptr<eCollisionModel>	collisionModel	= nullptr;		// contains position and size of collision bounds
-	renderImage_t						renderImage;					// data relevant to the renderer
+	eRenderImage						renderImage;					// data relevant to the renderer
 };
 
 //************
@@ -115,7 +115,7 @@ inline int eTile::Type() const {
 // eTile::GetRenderImage
 // FIXME: very similar to eEntity::UpdateRenderImageDisplay
 //************
-inline renderImage_t * eTile::GetRenderImage() {
+inline eRenderImage * eTile::GetRenderImage() {
 	return &renderImage;
 }
 
@@ -134,16 +134,25 @@ inline void eTile::UpdateRenderImageDisplay() {
 
 //************
 // eTile::GetLayer
+// TODO(?): make this part of eGameObject
 //************
 inline Uint32 eTile::GetLayer() const {
-	return renderImage.layer;
+	return renderImage.GetLayer();
 }
 
 //************
-// eTile::Owner
+// eTile::SetLayer
+// TODO(?): make this part of eGameObject
 //************
-inline eGridCell * eTile::GetOwner() {
-	return owner;
+inline void eTile::SetLayer(const int newLayer) {
+	renderImage.SetRenderBlockZFromLayer(newLayer);
+}
+
+//************
+// eTile::GetCell
+//************
+inline eGridCell * eTile::GetCell() {
+	return cell;
 }
 
 //************

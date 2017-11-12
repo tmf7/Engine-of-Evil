@@ -187,21 +187,11 @@ bool eTileImpl::LoadTileset(const char * tilesetFilename, bool appendNew) {
 // DEBUG: every tile is aligned with at least one cell no matter its size (ie: no freely-aligned tile-image origins)
 //************
 eTile::eTile(eGridCell * owner, const eVec2 & origin, const int type, const int layer) {
-	this->owner = owner;
-	renderImage.layer = layer;
-	renderImage.origin = origin;
-	eMath::CartesianToIsometric(renderImage.origin.x, renderImage.origin.y);
+	cell = owner;
+	renderImage.Origin() = origin;
+	eMath::CartesianToIsometric(renderImage.Origin().x, renderImage.Origin().y);
+	SetLayer(layer);
 	SetType(type);
-}
-
-//************
-// eTile::SetLayer
-//************
-void eTile::SetLayer(const int newLayer) {
-	float newRBMinZ = (float)game.GetMap().TileMap().MinZPositionFromLayer(newLayer);
-	float oldRBMinZ = renderImage.renderBlock[0].z;
-	renderImage.renderBlock += eVec3(0.0f, 0.0f, newRBMinZ - oldRBMinZ);
-	renderImage.layer = newLayer;
 }
 
 //************
@@ -210,28 +200,30 @@ void eTile::SetLayer(const int newLayer) {
 void eTile::SetType(int newType) {
 	const float isoCellWidthAdjustment = (float)game.GetMap().TileMap().IsometricCellWidth() * 0.5f;
 	const float isoCellHeightAdjustment = (float)game.GetMap().TileMap().IsometricCellHeight();
-	float imageWidth = 0;
-	float imageHeight = 0;
 	eVec2 conversionOffset = vec2_zero;
 
 	// type change, so reset the old offset and collisionModel
-	if (renderImage.image != nullptr) {
+	if (renderImage.Image() != nullptr) {
 		if (impl->collider != nullptr) {
 			collisionModel->~eCollisionModel();
 			collisionModel = nullptr;
 		}
-		imageWidth = (float)renderImage.srcRect->w;
-		imageHeight = (float)renderImage.srcRect->h;
-		conversionOffset = eVec2(isoCellWidthAdjustment, imageHeight - isoCellHeightAdjustment);
-		renderImage.origin += conversionOffset;
+		conversionOffset = eVec2(isoCellWidthAdjustment, (float)renderImage.GetImageFrame()->h - isoCellHeightAdjustment);
+		renderImage.Origin() += conversionOffset;
 	}
 
-	eVec2 orthoOrigin = renderImage.origin;
+	eVec2 orthoOrigin = renderImage.Origin();
 	eMath::IsometricToCartesian(orthoOrigin.x, orthoOrigin.y);
+
+
 	impl = &eTileImpl::tileTypes[newType];																	// FIXME(~): doesn't verify the array index
-	game.GetImageManager().GetImage(eTileImpl::tileSet.at(newType).first, renderImage.image);				// which image (tile atlas)
-	renderImage.srcRect = &renderImage.image->GetSubframe(eTileImpl::tileSet.at(newType).second);			// which part of that image
-	renderImage.renderBlock = eBounds3D((eVec3)orthoOrigin, (eVec3)orthoOrigin + impl->renderBlockSize);	// FREEHILL 3d topological sort
+	game.GetImageManager().GetImage(eTileImpl::tileSet.at(newType).first, renderImage.Image());				// which image (tile atlas)
+	renderImage.SetImageFrame(renderImage.Image()->GetSubframe(eTileImpl::tileSet.at(newType).second));		// which part of that image
+
+	eVec3 rbMins = eVec3(orthoOrigin.x, orthoOrigin.y, renderImage.RenderBlock()[0].z);
+	eVec3 rbMaxs = rbMins + impl->renderBlockSize;
+
+	renderImage.RenderBlock() = eBounds3D((eVec3)orthoOrigin, (eVec3)orthoOrigin + impl->renderBlockSize);	// FREEHILL 3d topological sort
 	SetLayer(renderImage.layer);
 
 // FREEHILL BEGIN AABB (eBounds) collisionModel import test (2/2)
@@ -243,49 +235,29 @@ void eTile::SetType(int newType) {
 		collisionModel->SetOrigin(orthoOrigin);
 		
 		// TODO: use an eTransform and offset instead of directly linking visuals and colliders
-		renderImage.renderBlock += (eVec3)collisionModel->LocalBounds()[0];	// FREEHILL 3d topological sort
+		renderImage.RenderBlock() += (eVec3)collisionModel->LocalBounds()[0];	// FREEHILL 3d topological sort
 	}
 // FREEHILL END AABB (eBounds) collisionModel import test (2/2)
 
 	// visual alignment with isometric owner cell
-	imageWidth = (float)renderImage.srcRect->w;
-	imageHeight = (float)renderImage.srcRect->h;
-	conversionOffset = eVec2(-isoCellWidthAdjustment, isoCellHeightAdjustment - imageHeight);
-	renderImage.origin += conversionOffset;
+	conversionOffset = eVec2(-isoCellWidthAdjustment, isoCellHeightAdjustment - (float)renderImage.GetImageFrame()->h);
+	renderImage.Origin() += conversionOffset;
+	renderImage.UpdateWorldClip();
 }
 
 //************
-// eTile::AssignToGrid
-// assign tile drawing responsibility to eGridCells visually overlapped by the renderImage.image's corners
-// TODO: if the eTile::type changes, then so should the eGridCells responsible for drawing *this
-// DEBUG(performance): ensures no tile suddenly dissappears when scrolling the camera
-// for a single tileMap layer this results in each eGridCell::tileToDraw::size of:
-// 4 : 6 : 8, for center : edge : corner on average
-// more layers increases sizes (eg: 3 layers is about 4-6 : 11 : 20, depending on map design)
+// eTile::AssignToWorldGrid
 //************
-void eTile::AssignToGrid() {
-	std::array<eVec2, 4> visualWorldPoints;
-	visualWorldPoints[0] = renderImage.origin;
-	visualWorldPoints[1] = renderImage.origin + eVec2((float)renderImage.srcRect->w, 0.0f);
-	visualWorldPoints[2] = renderImage.origin + eVec2((float)renderImage.srcRect->w, (float)renderImage.srcRect->h);
-	visualWorldPoints[3] = renderImage.origin + eVec2(0.0f, (float)renderImage.srcRect->h);
-
-	// clip rectangle to orthographic world-space for proper grid alignment
-	auto & tileMap = game.GetMap().TileMap();
-	for (auto & point : visualWorldPoints) {
-		eMath::IsometricToCartesian(point.x, point.y);
-		auto & cell = tileMap.IndexValidated(point);
-		auto & searchTiles = cell.TilesToDraw();
-		if (std::find(searchTiles.begin(), searchTiles.end(), this) == searchTiles.end())
-			searchTiles.push_back(this);
-	}
+void eTile::AssignToWorldGrid() {
+	renderImage.AssignToWorldGrid();
 }
 
 //************
-// eTile::RemoveFromGrid
+// eTile::RemoveFromWorldGrid
 // remove all responsibility of drawing this tile from the tileMap
 //************
-void eTile::RemoveFromGrid() const {
+void eTile::RemoveFromWorldGrid() {
+	
 	// TODO: implement because if a tileType changes different eGridCells may draw it
 	// otherwise loading a new map just clears the tileMap anyway without using this fn
 }

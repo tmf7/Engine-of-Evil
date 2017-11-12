@@ -47,7 +47,7 @@ public:
 
 	void						SetPlayerSelected(bool isSelected);
 	bool						GetPlayerSelected() const;
-	renderImage_t *				GetRenderImage();
+	eRenderImage *				GetRenderImage();
 	void						UpdateRenderImageOrigin();
 	void						UpdateRenderImageDisplay();
 	eCollisionModel &			CollisionModel();
@@ -73,8 +73,8 @@ private:	// DEBUG: was protected
 	// for both eTile and eEntity (static and dynamic objects)
 	eVec2								imageColliderOffset;	
 
-	renderImage_t						renderImage;			// data relevant to the renderer
-	std::shared_ptr<eSprite>			sprite;					// TODO: use this to manipulate the renderImage_t
+	eRenderImage						renderImage;			// data relevant to the renderer
+	std::shared_ptr<eSprite>			sprite;					// TODO: use this to manipulate the eRenderImage
 	std::shared_ptr<eCollisionModel>	collisionModel;	
 	std::shared_ptr<eMovement>			movementPlanner;
 	std::string							prefabFilename;

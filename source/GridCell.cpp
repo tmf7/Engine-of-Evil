@@ -6,8 +6,8 @@
 //************
 void eGridCell::Draw() {
 	auto & renderer = game.GetRenderer();
-	for (auto & tile : tilesToDraw)
-		renderer.AddToRenderPool(tile->GetRenderImage(), RENDERTYPE_DYNAMIC);
+	for (auto & contentPair : renderContents)
+		renderer.AddToRenderPool(contentPair.second, RENDERTYPE_DYNAMIC);
 }
 
 //************
@@ -18,7 +18,7 @@ void eGridCell::AddTileOwned(eTile && tile) {
 	auto & newTile = tilesOwned.back();
 	if (&newTile.CollisionModel() != nullptr)
 		newTile.CollisionModel().SetOwner(&newTile);
-	newTile.AssignToGrid();
+	newTile.AssignToGrid();						// FIXME: call eMap::UpdateGridReferencesOf(&newTile, false) instead
 }
 
 //************

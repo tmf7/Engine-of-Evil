@@ -74,7 +74,7 @@ bool ePlayer::SelectGroup() {
 	eBounds selectionBounds(selectionPoints.data(), selectionPoints.size());
 	if (selectionBounds.Width() <= 0.0f || selectionBounds.Height() <= 0.0f)
 		return false;
-/*
+
 	eVec2 corner = selectionBounds[0];
 	eVec2 xAxis(selectionBounds[1].x, selectionBounds[0].y);
 	eVec2 yAxis(selectionBounds[0].x, selectionBounds[1].y);
@@ -84,11 +84,16 @@ bool ePlayer::SelectGroup() {
 		eMath::IsometricToCartesian(point.x, point.y);
 	}
 	eBox selectionArea(obbPoints.data());
+
+	// FIXME: if selectedCells doesn't include the cell where entity->collisionModel is contained (regardless of visual presence over other cells)
+	// then the entity will not be selected (despite a would-be AABBAABB test w/selectionBox and entity->worldClip yielding true)
+	// SOLUTION: just use visibleCells from eMap (the only reason for doing OBB selectedCells is to minimize the #cells to check, and ultimately #tests)
+	// ...this would work fine for eTile's because cells have tilesToDraw based on the tile->worldClip....but eEntity isn't part of that list...why not?
+	// SOLUTION: make eGridCell::tilesToDraw a std::vector<renderImage *> (and rename it itemsToDraw, or toDraw)
+	// then whenever UpdateAreas is called also call an UpdateAreas...that handes eGridcell::toDraw occupancy....INDEPENDENT OF COLLISIONMODEL!!)
 	eCollision::GetAreaCells(selectionArea, selectedCells);
-*/
-	auto & visibleCells = game.GetMap().VisibleCells();
-	for (auto & cell : visibleCells) {	// selectedCells
-		for (auto & kvPair : cell->Contents()) {
+	for (auto & cell : selectedCells) {
+		for (auto & kvPair : cell->RenderContents()) {
 			auto owner = kvPair.second->Owner();
 			
 			if (owner == nullptr || owner->GetClassType() != CLASS_ENTITY)
@@ -101,9 +106,8 @@ bool ePlayer::SelectGroup() {
 				continue;
 
 			alreadyTested[entity] = entity;
-
-			// entity->CollisionModel().AbsBounds()
-			if (eCollision::AABBAABBTest(entity->GetRenderImage()->worldClip, selectionBounds)) {	// FIXME: make this the worldClip (visual area of sprite)
+			const eBounds dstRect = entity->GetRenderImage()->worldClip.Translate(-game.GetCamera().CollisionModel().AbsBounds()[0]);
+			if (eCollision::AABBAABBTest(dstRect, selectionBounds)) {
 				entity->SetPlayerSelected(true);						// TODO: to draw a highlight around the selected entities
 				groupSelection.push_back(entity);
 			}
@@ -136,18 +140,34 @@ void ePlayer::ClearGroupSelection() {
 //***************
 void ePlayer::Draw() {
 	// draw the selection box
-	if (beginSelection)
-		game.GetRenderer().DrawCartesianRect(greenColor, eBounds(selectionPoints.data(), selectionPoints.size()) , false, RENDERTYPE_STATIC);
+	if (beginSelection) {
+	//	game.GetRenderer().DrawCartesianRect(greenColor, eBounds(selectionPoints.data(), selectionPoints.size()) , false, RENDERTYPE_STATIC);
+		static std::vector<eGridCell *> selectedCells;				// DEBUG(performance): static to reduce dynamic allocations	
+		eBounds selectionBounds(selectionPoints.data(), selectionPoints.size());
+		if (selectionBounds.Width() > 0.0f && selectionBounds.Height() > 0.0f){
+			eVec2 corner = selectionBounds[0];
+			eVec2 xAxis(selectionBounds[1].x, selectionBounds[0].y);
+			eVec2 yAxis(selectionBounds[0].x, selectionBounds[1].y);
+			std::array<eVec2, 3> obbPoints = { std::move(corner), std::move(xAxis), std::move(yAxis) };
+			for (auto & point : obbPoints) {
+				point += game.GetCamera().CollisionModel().AbsBounds()[0];
+				eMath::IsometricToCartesian(point.x, point.y);
+			}
+			eBox selectionArea(obbPoints.data());
+
+			eCollision::GetAreaCells(selectionArea, selectedCells);
+			for (auto & cell : selectedCells)
+				game.GetRenderer().DrawIsometricRect(pinkColor, cell->AbsBounds(), RENDERTYPE_DYNAMIC);
+			selectedCells.clear();
+		}
+	}
 	else
 		selectionPoints[0] = selectionPoints[1];
 
 	// highlight those selected
-	for (auto & entity : groupSelection) {
-			eBounds worldClip = entity->GetRenderImage()->worldClip;
-			game.GetRenderer().DrawCartesianRect(lightBlueColor, worldClip, false, RENDERTYPE_DYNAMIC);
-
+	for (auto & entity : groupSelection)
 		game.GetRenderer().DrawIsometricPrism(lightBlueColor, entity->GetRenderImage()->renderBlock, RENDERTYPE_DYNAMIC);
-	}
+
 }
 
 //***************
@@ -155,6 +175,7 @@ void ePlayer::Draw() {
 //***************
 void ePlayer::DebugDraw() {
 	// highlight the cell under the cursor
+	// FIXME: conflicts w/ ePlayerDraw order (because of the immediacy of drawing to the rendertargets)
 	auto & tileMap = game.GetMap().TileMap();
 	const eVec2 worldPosition = game.GetCamera().MouseWorldPosition();
 	if (tileMap.IsValid(worldPosition)) {

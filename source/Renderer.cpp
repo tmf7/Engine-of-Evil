@@ -284,8 +284,8 @@ void eRenderer::DrawCartesianRect(const SDL_Color & color, const eBounds & rect,
 // eRenderer::DrawImage
 // DEBUG: adjusts image origin by camera position ("transform")
 //***************
-void eRenderer::DrawImage(renderImage_t * renderImage) const {
-	auto & cameraAdjustment = game.GetCamera().CollisionModel().AbsBounds()[0];
+void eRenderer::DrawImage(eRenderImage * renderImage) const {
+	const auto & cameraAdjustment = game.GetCamera().CollisionModel().AbsBounds()[0];
 	eVec2 drawPoint = renderImage->origin - cameraAdjustment;
 	drawPoint.SnapInt();
 	renderImage->dstRect = { (int)drawPoint.x, (int)drawPoint.y, renderImage->srcRect->w, renderImage->srcRect->h };
@@ -297,12 +297,12 @@ void eRenderer::DrawImage(renderImage_t * renderImage) const {
 // dynamic == false is used for overlays and/or HUD guis
 // dynamic == true is used for scaling and translating groups of images together based on camera properties
 //***************
-void eRenderer::AddToRenderPool(renderImage_t * renderImage, bool dynamic, bool reprioritize) {
+void eRenderer::AddToRenderPool(eRenderImage * renderImage, bool dynamic, bool reprioritize) {
 	const auto & gameTime = game.GetGameTime();
 	if (renderImage->lastDrawTime == gameTime)
 		return;
 	renderImage->SetDrawnTime(gameTime);
-	std::vector<renderImage_t *> * targetPool = nullptr;
+	std::vector<eRenderImage *> * targetPool = nullptr;
 	if (reprioritize)
 		targetPool = dynamic ? &dynamicPoolInserts : &staticPoolInserts;
 	else
@@ -312,13 +312,13 @@ void eRenderer::AddToRenderPool(renderImage_t * renderImage, bool dynamic, bool 
 
 //***************
 // eRenderer::TopologicalDrawDepthSort
-// assigns draw order priority to the given renderImage_t(s)
+// assigns draw order priority to the given eRenderImage(s)
 // based on their positions relative to the camera
 // DEBUG: this is best used on either an entire eRenderer::staticPool/eRenderer::dynamicPool for a frame
-// or ONCE for all static geometry in game at startup, followed by adjusting the renderImage_t::priority of dynamic geometry separately
+// or ONCE for all static geometry in game at startup, followed by adjusting the eRenderImage::priority of dynamic geometry separately
 // (starting, for example, with calling this with those items to establish a "localDrawDepth" order amongst them)
 //***************
-void eRenderer::TopologicalDrawDepthSort(const std::vector<renderImage_t *> & renderImagePool) {
+void eRenderer::TopologicalDrawDepthSort(const std::vector<eRenderImage *> & renderImagePool) {
 	for (auto & self : renderImagePool) {
 		auto & selfClip = self->worldClip;
 
@@ -336,13 +336,12 @@ void eRenderer::TopologicalDrawDepthSort(const std::vector<renderImage_t *> & re
 	globalDrawDepth = 0;
 	for (auto & renderImage : renderImagePool)
 		VisitTopologicalNode(renderImage);
-
 }
 
 //***************
 // eRenderer::VisitTopologicalNode
 //***************
-void eRenderer::VisitTopologicalNode(renderImage_t * renderImage) {
+void eRenderer::VisitTopologicalNode(eRenderImage * renderImage) {
 	if (!renderImage->visited) {
 		renderImage->visited = true;
 		while (!renderImage->allBehind.empty()) {

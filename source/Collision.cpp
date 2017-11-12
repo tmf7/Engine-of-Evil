@@ -124,7 +124,7 @@ bool eCollision::BoxCast(std::vector<Collision_t> & collisions, const eBounds & 
 	GetAreaCells(bounds, dir, length, broadAreaCells);
 	alreadyTested[&bounds] = &bounds;								// ignore self collision
 	for (auto & cell : broadAreaCells) {
-		for (auto && kvPair : cell->Contents()) {
+		for (auto && kvPair : cell->CollisionContents()) {
 			auto & collider = kvPair.second;
 			const auto & otherBounds = &collider->AbsBounds();
 
@@ -530,7 +530,7 @@ bool eCollision::RayCast(std::vector<Collision_t> & collisions, const eVec2 & be
 
 	GetAreaCells(begin, dir, length, broadAreaCells);
 	for (auto & cell : broadAreaCells) {
-		for (auto & kvPair : cell->Contents()) {
+		for (auto & kvPair : cell->CollisionContents()) {
 			auto & collider = kvPair.second;
 
 			// don't test the same collider twice

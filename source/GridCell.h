@@ -12,51 +12,47 @@ class eCollisionModel;
 //*****************************************
 class eGridCell : public eClass {
 public:
-										eGridCell() = default;
+																	eGridCell() = default;
 
-	void								Draw();
-	void								DebugDraw();
-	void								AddTileOwned(eTile && tile);
-	const std::vector<eTile> &			TilesOwned() const;
-	std::vector<eTile> &				TilesOwned();
-	const std::vector<eTile *> &		TilesToDraw() const;
-	std::vector<eTile *> &				TilesToDraw();
+	void															Draw();
+	void															DebugDraw();
+	void															AddTileOwned(eTile && tile);
+	const std::vector<eTile> &										TilesOwned() const;
+	std::vector<eTile> &											TilesOwned();
+	const std::unordered_map<eRenderImage *, eRenderImage *> &		RenderContents() const;
+	std::unordered_map<eRenderImage *, eRenderImage *> &			RenderContents();
+	std::unordered_map<eCollisionModel *, eCollisionModel *> &		CollisionContents();
+	const eBounds &													AbsBounds() const;
+	const eBounds &													AbsBounds();
+	void															SetAbsBounds(const eBounds & bounds);
+	void															SetGridPosition(const int row, const int column);
+	int																GridRow() const;
+	int																GridColumn() const;
 
-
-	std::unordered_map<eCollisionModel *, eCollisionModel *> & Contents();
-
-	const eBounds &						AbsBounds() const;
-	const eBounds &						AbsBounds();
-	void								SetAbsBounds(const eBounds & bounds);
-	void								SetGridPosition(const int row, const int column);
-	int									GridRow() const;
-	int									GridColumn() const;
-
-	virtual int							GetClassType() const override { return CLASS_GRIDCELL; }
+	virtual int														GetClassType() const override { return CLASS_GRIDCELL; }
 
 public:
 
-	bool								inOpenSet	= false;	// expidites openSet searches
-	bool								inClosedSet = false;	// expidites closedSet searches
+	bool															inOpenSet	= false;	// expidites openSet searches
+	bool															inClosedSet = false;	// expidites closedSet searches
 
 private:
 
-	std::unordered_map<eCollisionModel *, eCollisionModel *> contents;	// all colliders that overlap this
+	std::unordered_map<eCollisionModel *, eCollisionModel *>		collisionContents;	// all eCollisionModel::absBounds that overlap this->absBounds
+	std::unordered_map<eRenderImage *, eRenderImage *>				renderContents;		// all eRenderImage::worldClip that overlap this->absBounds
+	std::vector<eTile>												tilesOwned;			// which eTiles' lifetimes are managed
+	eBounds															absBounds;			// using world-coordinates
+	int																gridRow;			// index within grid
+	int																gridCol;			// index within grid
 
-	std::vector<eTile *>				tilesToDraw;// what to draw
-	std::vector<eTile>					tilesOwned;	// which eTiles' lifetimes are managed
-	eBounds								absBounds;	// using world-coordinates
-
-	// pathfinding and collision queries
 /*
-	// TODO: make part of a separate A* grid
-	eGridCell *							parent		= nullptr;	// originating cell to set the path back from a goal
-	int									gCost		= 0;		// distance from start cell to this cell
-	int									hCost		= 0;		// distance from this cell to a goal
-	int									fCost		= 0;		// sum of gCost and hCost
+	// pathfinding
+	// TODO: make part of a separate A*	grid
+	eGridCell *														parent		= nullptr;	// originating cell to set the path back from a goal
+	int																gCost		= 0;		// distance from start cell to this cell
+	int																hCost		= 0;		// distance from this cell to a goal
+	int																fCost		= 0;		// sum of gCost and hCost
 */
-	int									gridRow;				// index within grid
-	int									gridCol;				// index within grid
 };
 
 //************
@@ -76,22 +72,22 @@ inline const std::vector<eTile> & eGridCell::TilesOwned() const {
 //************
 // eGridCell::TilesToDraw
 //************
-inline std::vector<eTile *> & eGridCell::TilesToDraw() {
-	return tilesToDraw;
+inline std::unordered_map<eRenderImage *, eRenderImage *> & eGridCell::RenderContents() {
+	return renderContents;
 }
 
 //************
 // eGridCell::TilesOwned
 //************
-inline const std::vector<eTile *> & eGridCell::TilesToDraw() const {
-	return tilesToDraw;
+inline const std::unordered_map<eRenderImage *, eRenderImage *> & eGridCell::RenderContents() const {
+	return renderContents;
 }
 
 //************
 // eGridCell::Contents
 //************
-inline std::unordered_map<eCollisionModel *, eCollisionModel *> & eGridCell::Contents() {
-	return contents;
+inline std::unordered_map<eCollisionModel *, eCollisionModel *> & eGridCell::CollisionContents() {
+	return collisionContents;
 }
 
 //******************

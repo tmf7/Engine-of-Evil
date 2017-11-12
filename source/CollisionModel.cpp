@@ -14,8 +14,8 @@ void eCollisionModel::UpdateOrigin() {
 	origin += velocity;// * game.GetFixedTime();	// FIXME: defined outside this header
 	absBounds = localBounds + origin;
 
-	if (active)
-		UpdateAreas();
+	if (active && origin != oldOrigin)
+		UpdateAreas();			// FIXME: call eMap::UpdateGridReferencesOf(this, false) instead
 }
 
 //*************
@@ -25,8 +25,8 @@ void eCollisionModel::SetOrigin(const eVec2 & point) {
 	oldOrigin = origin;
 	origin = point;
 	absBounds = localBounds + origin;
-	if (active)
-		UpdateAreas();
+	if (active && origin != oldOrigin)
+		UpdateAreas();			// FIXME: call eMap::UpdateGridReferencesOf(this, false) instead
 }
 
 
@@ -37,7 +37,7 @@ void eCollisionModel::SetOrigin(const eVec2 & point) {
 //***************
 void eCollisionModel::ClearAreas() {
 	for (auto && cell : areas) {
-		auto & contents = cell->Contents();
+		auto & contents = cell->CollisionContents();
 		if (contents.empty())	// FIXME: necessary to prevent a shutdown crash using std::unordered_map::find (insead of std::find)
 			continue;
 
@@ -70,7 +70,7 @@ void eCollisionModel::UpdateAreas() {
 	}
 
 	for (auto && cell : areas) {
-		cell->Contents()[this] = this;
+		cell->CollisionContents()[this] = this;
 	}
 }
 
