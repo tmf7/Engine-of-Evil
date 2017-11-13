@@ -8,13 +8,13 @@ class eGameObject;
 class eComponent : eClass {
 public:
 
-	void								SetOwner(eGameObject * newOwner)	{ owner = newOwner; }
+	virtual void						SetOwner(eGameObject * newOwner)	{ owner = newOwner; }
 	const eGameObject *					Owner() const						{ return owner; }
 	eGameObject *						Owner()								{ return owner; }
 
 	virtual int							GetClassType() const override		{ return CLASS_COMPONENT; }
 
-private:
+protected:
 
 	eGameObject *						owner;		// back-pointer to user managing the lifetime of *this
 

@@ -6,18 +6,17 @@
 #include "Bounds3D.h"
 #include "Sort.h"
 #include "Image.h"
-
-class eGameObject;
+#include "Component.h"
 
 //**************************************************
 //				eRenderImage
 // data used by eRenderer for draw-order sorting
 // and drawing to the render target
 //**************************************************
-class eRenderImage : public eClass {
+class eRenderImage : public eComponent {
 private:
 
-	friend class eRenderer;				// sets priority, dstRect, lastDrawnTime, allBehind, visited
+	friend class eRenderer;				// directly sets dstRect, priority, lastDrawnTime, allBehind, visited (no other accessors outside *this)
 
 public:
 	
@@ -40,8 +39,6 @@ public:
 	virtual int							GetClassType() const override { return CLASS_RENDERIMAGE; }
 
 private:
-
-	eGameObject *						owner;					// back-pointer to user managing the lifetime of *this
 
 	std::shared_ptr<eImage>				image = nullptr;		// source image (ie texture wrapper)
 	const SDL_Rect *					srcRect = nullptr;		// what part of the source image to draw (nullptr for all of it)

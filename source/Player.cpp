@@ -106,7 +106,7 @@ bool ePlayer::SelectGroup() {
 				continue;
 
 			alreadyTested[entity] = entity;
-			const eBounds dstRect = entity->GetRenderImage()->worldClip.Translate(-game.GetCamera().CollisionModel().AbsBounds()[0]);
+			const eBounds dstRect = entity->RenderImage().GetWorldClip().Translate(-game.GetCamera().CollisionModel().AbsBounds()[0]);
 			if (eCollision::AABBAABBTest(dstRect, selectionBounds)) {
 				entity->SetPlayerSelected(true);						// TODO: to draw a highlight around the selected entities
 				groupSelection.push_back(entity);
@@ -166,7 +166,7 @@ void ePlayer::Draw() {
 
 	// highlight those selected
 	for (auto & entity : groupSelection)
-		game.GetRenderer().DrawIsometricPrism(lightBlueColor, entity->GetRenderImage()->renderBlock, RENDERTYPE_DYNAMIC);
+		game.GetRenderer().DrawIsometricPrism(lightBlueColor, entity->RenderImage().RenderBlock(), RENDERTYPE_DYNAMIC);
 
 }
 

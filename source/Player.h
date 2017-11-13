@@ -8,7 +8,7 @@
 // handles all player input controls
 // this is a higher level game-logic class for testing
 // rather than a generic game-engine class
-// TODO: inherit from an eGameObject class
+// TODO(~): inherit from an eGameObject class
 //*************************************************
 class ePlayer : public eClass {
 

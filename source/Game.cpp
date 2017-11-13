@@ -149,7 +149,7 @@ bool eGame::Run() {
 	for (auto & entity : entities)
 		entity->Draw();
 
-	renderer.FlushDynamicPool();
+	renderer.FlushCameraPool();
 	player.Draw();
 
 	// all debug information is an overlay
@@ -168,7 +168,7 @@ bool eGame::Run() {
 	if (debugFlags.FRAMERATE)
 		DrawFPS();
 
-//	renderer.FlushStaticPool();			// DEBUG: not currently used
+//	renderer.FlushOverlayPool();			// DEBUG: not currently used
 	renderer.Show();
 
 	// frame-rate governing delay

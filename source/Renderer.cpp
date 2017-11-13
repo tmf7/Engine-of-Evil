@@ -304,7 +304,7 @@ void eRenderer::AddToCameraRenderPool(eRenderImage * renderImage) {
 	if (renderImage->lastDrawTime == gameTime)
 		return;
 	renderImage->lastDrawTime = gameTime;
-	auto targetPool = (renderImage->owner->IsStatic() ? &cameraPool : &cameraPoolInserts);
+	auto targetPool = (renderImage->Owner()->IsStatic() ? &cameraPool : &cameraPoolInserts);
 	targetPool->push_back(renderImage);
 }
 
@@ -316,7 +316,7 @@ void eRenderer::AddToOverlayRenderPool(eRenderImage * renderImage) {
 	if (renderImage->lastDrawTime == gameTime)
 		return;
 	renderImage->lastDrawTime = gameTime;
-	auto targetPool = (renderImage->owner->IsStatic() ? &overlayPool : &overlayPoolInserts);
+	auto targetPool = (renderImage->Owner()->IsStatic() ? &overlayPool : &overlayPoolInserts);
 	targetPool->push_back(renderImage);
 }
 

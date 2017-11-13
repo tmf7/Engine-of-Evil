@@ -1,16 +1,16 @@
-#ifndef EVIL_SPRITE_H
-#define EVIL_SPRITE_H
+#ifndef EVIL_ANIMATION_CONTROLLER_H
+#define EVIL_ANIMATION_CONTROLLER_H
 
 #include "Image.h"
 
-//*************************
-//			eSprite
+//*******************************************
+//			eAnimationController
 // Handles animation of image data
-//*************************
-class eSprite : public eClass {
+//*******************************************
+class eAnimationController : public eClass {
 public:
 
-							eSprite();
+							eAnimationController();
 
 	bool					Init(const char * filename);
 	std::shared_ptr<eImage>	GetImage() const;
@@ -20,7 +20,7 @@ public:
 	void					Pause(bool wantPause = true);
 	const SDL_Rect &		GetFrameHack() const;
 
-	virtual int				GetClassType() const override { return CLASS_SPRITE; }
+	virtual int				GetClassType() const override { return CLASS_ANIMATIONCONTROLLER; }
 
 private:
 
@@ -37,51 +37,50 @@ private:
 	int						delayCounter;
 	bool					paused;
 
-	SDL_Rect				spriteFrameHack;		// FIXME: hack for single-frame non-animated sprite (images themselves dont use frames, they just wrap a texture)
+	SDL_Rect				spriteFrameHack;		// FIXME: hack for single-frame non-animated renderImage (images themselves dont use frames, they just wrap a texture)
 
 	// experimental
 	int						drawOrigin;				// TODO: this will be the world-coordinate where drawing begins (must sync with collisionModel origin, even if offset)
-	std::string				name;					// overall name of the sprite relative to its owner "melee_32_sprite"
+	std::string				name;					// overall name of the animationController relative to its owner "melee_32_controller"
 };
 
 //************
-// eSprite::eSprite
+// eAnimationController::eAnimationController
 //************
-inline eSprite::eSprite() 
+inline eAnimationController::eAnimationController() 
 	: firstFrame(NULL), lastFrame(NULL), frameDelay(NULL), currentImage(nullptr),
 	  currentFrame(NULL), delayCounter(NULL), paused(true) {
 }
 
 //************
-// eSprite::Init
-// TODO: parse a sprite def file to load images and their associated frame data
-// pass each image's frame data to each individual image (it tracks its own list of subframes)
+// eAnimationController::Init
 //************
-inline bool eSprite::Init(const char * filename) {
+inline bool eAnimationController::Init(const char * filename) {
+	// TODO: implement
 	return false;
 }
 
 //************
-// eSprite::GetImage
+// eAnimationController::GetImage
 //************
-inline std::shared_ptr<eImage> eSprite::GetImage() const {
+inline std::shared_ptr<eImage> eAnimationController::GetImage() const {
 	return currentImage;
 }
 
 //************
-// eSprite::SetImage
+// eAnimationController::SetImage
 //************
-inline void eSprite::SetImage(std::shared_ptr<eImage> & image) {
+inline void eAnimationController::SetImage(std::shared_ptr<eImage> & image) {
 	currentImage = image;
 	spriteFrameHack = SDL_Rect{ 0, 0, image->GetWidth(), image->GetHeight() };
 }
 
 //************
-// eSprite::NextFrame
+// eAnimationController::NextFrame
 // continues the current state of animation
 // must be unpaused to fully animate
 //************
-inline void eSprite::NextFrame() {
+inline void eAnimationController::NextFrame() {
 	if (paused)
 		return;
 
@@ -96,10 +95,10 @@ inline void eSprite::NextFrame() {
 }
 
 //************
-// eSprite::SetAnimation
-// sets the sprite-specific animation identifiers
+// eAnimationController::SetAnimation
+// sets the eGameobject instance-specific animation identifiers
 //************
-inline void eSprite::SetAnimation(const int first, const int last, const int frameDelay) {
+inline void eAnimationController::SetAnimation(const int first, const int last, const int frameDelay) {
 	firstFrame = first;
 	lastFrame = last;
 	this->frameDelay = frameDelay;
@@ -107,20 +106,20 @@ inline void eSprite::SetAnimation(const int first, const int last, const int fra
 }
 
 //************
-// eSprite::Pause
-// stops sprite animation on the currentFrame
+// eAnimationController::Pause
+// stops animation on the currentFrame
 //************
-inline void eSprite::Pause(bool wantPause) {
+inline void eAnimationController::Pause(bool wantPause) {
 	paused = wantPause;
 }
 
 //************
-// eSprite::GetFrame
-// FIXME: hack function to test single-frame non-animated sprite
+// eAnimationController::GetFrame
+// FIXME: hack function to test single-frame non-animated renderImage
 //************
-inline const SDL_Rect & eSprite::GetFrameHack() const {
+inline const SDL_Rect & eAnimationController::GetFrameHack() const {
 	return spriteFrameHack;
 }
 
-#endif /* EVIL_SPRITE_H */
+#endif /* EVIL_ANIMATION_CONTROLLER_H */
 

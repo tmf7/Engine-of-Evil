@@ -3,8 +3,8 @@
 
 #include "Definitions.h"
 #include "Collision.h"
+#include "Component.h"
 
-class eEntity;
 class eGridCell;
 
 typedef struct Collision_s Collision_t;
@@ -17,15 +17,8 @@ typedef struct Collision_s Collision_t;
 // colliders (eBounds, eBox, etc) to be used
 // TODO: maintain a bounding volume heierarchy using multiple colliders
 //*********************************************
-class eCollisionModel : public eClass {
+class eCollisionModel : public eComponent {
 public:
-
-										~eCollisionModel();
-										eCollisionModel() = default;
-										eCollisionModel(const eCollisionModel & other) = default;
-										eCollisionModel(eCollisionModel && other) = default;
-	eCollisionModel &					operator=(const eCollisionModel & other) = default;
-	eCollisionModel &					operator=(eCollisionModel && other) = default;
 
 	void								SetOrigin(const eVec2 & point);	
 	const eVec2 &						Origin() const;
@@ -40,9 +33,6 @@ public:
 	bool								IsActive() const;
 	void								SetActive(bool active);
 	const std::vector<eGridCell *> &	Areas() const;
-	void								SetOwner(eClass * newOwner);
-	const eClass *						Owner() const;
-	eClass *							Owner();
 	bool								FindApproachingCollision(const eVec2 & dir, const float length, Collision_t & result) const;
 
 	virtual int							GetClassType() const override { return CLASS_COLLISIONMODEL; }
@@ -65,34 +55,6 @@ private:
 	bool								active;					// whether this participates in dynamic or kinematic collision detection
 
 };
-
-//*************
-// eCollisionModel::~eCollisionModel
-//************
-inline eCollisionModel::~eCollisionModel() {
-	ClearAreas();
-}
-
-//*************
-// eCollisionModel::SetOwner
-//************
-inline void eCollisionModel::SetOwner(eClass * newOwner) {
-	owner = newOwner;
-}
-
-//*************
-// eCollisionModel::Owner
-//************
-inline const eClass * eCollisionModel::Owner() const {
-	return owner;
-}
-
-//*************
-// eCollisionModel::Owner
-//************
-inline eClass * eCollisionModel::Owner() {
-	return owner;
-}
 
 //*************
 // eCollisionModel::Origin

@@ -8,8 +8,8 @@
 // Mobile 2D Axis-Aligned box for 
 // rendering alignment and ViewPort culling
 // TODO: inherit from an eGameObject class
-// that has optional eCollisionModel, eSprite, 
-// eMovment, etc components
+// that has optional eCollisionModel, eAnimationController, 
+// eMovement, etc components
 //***********************************************
 class eCamera : public eClass {
 public:

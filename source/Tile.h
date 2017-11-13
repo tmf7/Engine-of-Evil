@@ -1,8 +1,7 @@
 #ifndef EVIL_TILE_H
 #define EVIL_TILE_H
 
-#include "CollisionModel.h"
-#include "Renderer.h"
+#include "GameObject.h"
 
 // Flyweight tile design
 
@@ -72,10 +71,8 @@ inline int eTileImpl::Type() const {
 //***********************************************
 //				eTile 
 // localized tile data that describes the game environment
-// TODO: have eTile inherit from an eGameObject class
-// that has optional eCollisionModel, eSprite, eMovment, etc
 //***********************************************
-class eTile : public eClass {
+class eTile : public eGameObject {
 public:
 										eTile(eGridCell * owner, const eVec2 & origin, const int type, const int layer);
 	
@@ -84,9 +81,6 @@ public:
 	
 	void								AssignToWorldGrid();
 	void								RemoveFromWorldGrid();
-
-	eRenderImage *						GetRenderImage();
-	void								UpdateRenderImageDisplay();
 
 	Uint32								GetLayer() const;
 	void								SetLayer(const int newLayer);
@@ -100,8 +94,6 @@ private:
 
 	eGridCell *							cell			= nullptr;		// responsible for the lifetime of *this
 	eTileImpl *							impl			= nullptr;		// general tile type data
-	std::shared_ptr<eCollisionModel>	collisionModel	= nullptr;		// contains position and size of collision bounds
-	eRenderImage						renderImage;					// data relevant to the renderer
 };
 
 //************
@@ -112,32 +104,12 @@ inline int eTile::Type() const {
 }
 
 //************
-// eTile::GetRenderImage
-// FIXME: very similar to eEntity::UpdateRenderImageDisplay
-//************
-inline eRenderImage * eTile::GetRenderImage() {
-	return &renderImage;
-}
-
-//************
-// eTile::UpdateRenderImageDisplay
-// FIXME: very similar to eEntity::UpdateRenderImageDisplay
-// for animating sprites/tiles, use override virtual functions
-// or call a virtual function within eEntity::UpdateRenderImageDispaly
-// for an animator that decides what to do (or something)
-// OR give the eTile a eSprite proper (...== an animator)
-//************
-inline void eTile::UpdateRenderImageDisplay() {
-	//	eAnimationFrame * currentFrame = &tileSet->GetFirstFrame(impl->Name());
-	//	currentFrame = currentFrame->Next();
-}
-
-//************
 // eTile::GetLayer
 // TODO(?): make this part of eGameObject
+// YES, because a gameObject doesn't have to have a renderImage to be on a layer (ie just a collisionmodel for layer-specific collision)
 //************
 inline Uint32 eTile::GetLayer() const {
-	return renderImage.GetLayer();
+	return renderImage->GetLayer();
 }
 
 //************
@@ -145,7 +117,7 @@ inline Uint32 eTile::GetLayer() const {
 // TODO(?): make this part of eGameObject
 //************
 inline void eTile::SetLayer(const int newLayer) {
-	renderImage.SetRenderBlockZFromLayer(newLayer);
+	renderImage->SetRenderBlockZFromLayer(newLayer);
 }
 
 //************

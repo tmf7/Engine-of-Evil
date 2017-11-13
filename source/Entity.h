@@ -1,10 +1,11 @@
 #ifndef ENTITY_H
 #define ENTITY_H
 
-#include "Sprite.h"
+#include "AnimationController.h"
 #include "CollisionModel.h"
 #include "Renderer.h"
 #include "Movement.h"
+#include "GameObject.h"
 
 // entitySpawnArgs_t
 typedef struct entitySpawnArgs_s {
@@ -25,40 +26,27 @@ typedef struct entitySpawnArgs_s {
 //*************************************************
 //					eEntity
 // objects that dynamically interact with the game environment
-// TODO: inherit from an eGameObject class
 //*************************************************
-class eEntity : public eClass {
-private:
-
-	friend class				eMovementPlanner;
-
+class eEntity : public eGameObject {
 public:
-								eEntity(const eEntity & other);
-								eEntity(eEntity && other);
+
 								eEntity(const entitySpawnArgs_t & spawnArgs);
 
 	static bool					Spawn(const int entityPrefabIndex, const eVec3 & worldPosition/*, const eVec2 & facingDir*/);
 
-	eEntity &					operator=(eEntity entity);
-	void						Think();					// TODO: make virtual from eGameObject				
-	void						Draw();						// TODO: make virtual from eGameObject
-	void						DebugDraw();				// TODO: make virtual from eGameObject
-
 	void						SetPlayerSelected(bool isSelected);
 	bool						GetPlayerSelected() const;
-	eRenderImage *				GetRenderImage();
 	void						UpdateRenderImageOrigin();
 	void						UpdateRenderImageDisplay();
-	eCollisionModel &			CollisionModel();
-	eMovementPlanner &			MovementPlanner();
-	eSprite &					Sprite();
 	const std::string &			GetPrefabFilename() const;
 	int							PrefabManagerIndex() const;
 	int							SpawnID() const;
 
+	virtual void				Think() override;			
+	virtual void				DebugDraw() override;
 	virtual int					GetClassType() const override { return CLASS_ENTITY; }
 
-private:	// DEBUG: was protected
+private:
 
 	// DEBUG: collisionModel.Origin(), collisionModel.AbsBounds().Center and renderImage.origin 
 	// are treated different in eEntity compared to eTile. 
@@ -72,10 +60,6 @@ private:	// DEBUG: was protected
 	// for both eTile and eEntity (static and dynamic objects)
 	eVec2								imageColliderOffset;	
 
-	eRenderImage						renderImage;			// data relevant to the renderer
-	std::shared_ptr<eSprite>			sprite;					// TODO: use this to manipulate the eRenderImage
-	std::shared_ptr<eCollisionModel>	collisionModel;	
-	std::shared_ptr<eMovementPlanner>	movementPlanner;
 	std::string							prefabFilename;
 	int									prefabManagerIndex;		// index of this eEntity's prefab within eEntityPrefabManager::prefabList
 	int									spawnedEntityID;
@@ -94,27 +78,6 @@ inline void eEntity::SetPlayerSelected(bool isSelected) {
 //**************
 inline bool eEntity::GetPlayerSelected() const {
 	return playerSelected;
-}
-
-//**************
-// eEntity::CollisionModel
-//**************
-inline eCollisionModel & eEntity::CollisionModel() {
-	return *collisionModel;
-}
-
-//**************
-// eEntity::MovementPlanner
-//**************
-inline eMovementPlanner & eEntity::MovementPlanner() {
-	return *movementPlanner;
-}
-
-//**************
-// eEntity::Sprite
-//**************
-inline eSprite & eEntity::Sprite() {
-	return *sprite;
 }
 
 //**************

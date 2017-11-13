@@ -5,6 +5,7 @@
 #include "Deque.h"
 #include "SpatialIndexGrid.h"
 #include "Bounds.h"
+#include "Component.h"
 
 class eEntity;
 
@@ -14,21 +15,17 @@ template <class type, int rows, int columns>
 class eSpatialIndexGrid;
 typedef eSpatialIndexGrid<byte_t, MAX_MAP_ROWS, MAX_MAP_COLUMNS> byte_map_t;
 
-
 //*************************************************
 //				eMovementPlanner
 // updates owner's velocity to avoid collision
 // and pathfind to goal waypoints
-// TODO: inherit from an eComponent class
-// that can be used by an eGameObject
+// DEBUG: owner must have a eCollisionModel for this to function
 //*************************************************
-class eMovementPlanner : public eClass {
+class eMovementPlanner : public eComponent {
 public:
 
 						eMovementPlanner(const float movementSpeed);
-	virtual				~eMovementPlanner() = default;
 
-	void				Init(eEntity * const owner);
 	void				Update();
 	void				DebugDraw();							
 	void				AddUserWaypoint(const eVec2 & waypoint);
@@ -42,6 +39,7 @@ public:
 	void				DrawTrailWaypoints();
 	void				DrawKnownMap() const;
 
+	virtual void		SetOwner(eGameObject * newOwner) override;
 	virtual int			GetClassType() const override { return CLASS_MOVEMENT; }
 
 private:
@@ -55,48 +53,45 @@ private:
 	// used to decide on a new movement direction
 	typedef struct decision_s {
 		eVec2			vector		= vec2_zero;
-		float			stepRatio	= 0.0f;		// ratio of valid steps to those that land on previously unvisited tiles
-		float			validSteps	= 0.0f;		// collision-free steps that could be taken along the vector
+		float			stepRatio	= 0.0f;			// ratio of valid steps to those that land on previously unvisited tiles
+		float			validSteps	= 0.0f;			// collision-free steps that could be taken along the vector
 	} decision_t;
 
 	typedef enum {
-		MOVETYPE_NONE,		// TODO: actually integrate this
-		MOVETYPE_GOAL,		// waypoint tracking
-		MOVETYPE_TRAIL		// waypoint tracking
+		MOVETYPE_NONE,								// TODO: actually integrate this
+		MOVETYPE_GOAL,								// waypoint tracking
+		MOVETYPE_TRAIL								// waypoint tracking
 	} movementType_t;
 	
 	typedef enum {
-		PATHTYPE_NONE,		// TODO: actually integrate this
+		PATHTYPE_NONE,								// TODO: actually integrate this
 		PATHTYPE_COMPASS,
 		PATHTYPE_WALL
 	} pathfindingType_t;
 
 private:
 
-	eEntity *			owner;					// back-pointer to user
-
-	byte_map_t			knownMap;				// tracks visited tiles 
-	movementType_t		moveState;
-	pathfindingType_t	pathingState;
+	byte_map_t			knownMap;					// tracks visited tiles 
+	movementType_t		moveState;					// backtracking or heading to a goal
+	pathfindingType_t	pathingState;				// method of deciding velocity
 
 	float				maxMoveSpeed;
-	float				collisionRadius;		// circular collision radius for prediction when using line of sight
-	float				goalRange;				// acceptable range to consider the goal waypoint reached
+	float				goalRange;					// acceptable range to consider the goal waypoint reached
 
-	eDeque<eVec2>		trail;					// AI-defined waypoints for effective backtracking
-	eDeque<eVec2>		goals;					// User-defined waypoints as terminal destinations
-	eVec2 *				currentWaypoint;		// simplifies switching between the deque being tracked
+	eDeque<eVec2>		trail;						// *this defines waypoints for effective backtracking
+	eDeque<eVec2>		goals;						// User-defined waypoints as terminal destinations
+	eVec2 *				currentWaypoint = nullptr;	// simplifies switching between the deque being tracked
 
-	decision_t			forward;				// currently used movement vector
-	decision_t			left;					// perpendicular to forward.vector counter-clockwise
-	decision_t			right;					// perpendicular to forward.vector clockwise
+	decision_t			forward;					// currently used movement vector
+	decision_t			left;						// perpendicular to forward.vector counter-clockwise
+	decision_t			right;						// perpendicular to forward.vector clockwise
 
-	byte_t *			previousTile;			// most recently exited valid tile
-	byte_t *			currentTile;			// tile at the entity's origin
-	byte_t *			lastTrailTile;			// tile on which the last trail waypoint was placed (prevents redundant placement)
+	byte_t *			previousTile	= nullptr;	// most recently exited valid tile
+	byte_t *			currentTile		= nullptr;	// tile at the entity's origin
+	byte_t *			lastTrailTile	= nullptr;	// tile on which the last trail waypoint was placed (prevents redundant placement)
 
 	// pathfinding (wall-follow)
-	decision_t *		wallSide;				// direction to start sweeping from during PATHTYPE_WALL
+	decision_t *		wallSide		= nullptr;	// direction to start sweeping from during PATHTYPE_WALL
 
 	bool				moving;
 

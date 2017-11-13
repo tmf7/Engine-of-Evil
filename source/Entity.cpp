@@ -3,35 +3,6 @@
 //**************
 // eEntity::eEntity
 //**************
-eEntity::eEntity(const eEntity & other) {
-	imageColliderOffset = other.imageColliderOffset;
-	renderImage			= other.renderImage;		// DEBUG: shallow std::shared_ptr<eImage> assignment, and std::vector<renderImage_s *> deep copy ctor
-	sprite				= other.sprite ? std::make_shared<eSprite>(*other.sprite) : nullptr;
-	collisionModel		= other.collisionModel ? std::make_shared<eCollisionModel>(*other.collisionModel) : nullptr;
-	movementPlanner		= other.movementPlanner ? std::make_shared<eMovementPlanner>(*other.movementPlanner) : nullptr;		// FIXME/BUG(!): bad deep copy ???
-	prefabFilename		= other.prefabFilename;
-	prefabManagerIndex	= other.prefabManagerIndex;
-	spawnedEntityID		= other.spawnedEntityID;
-}
-
-//**************
-// eEntity::eEntity
-//**************
-eEntity::eEntity(eEntity && other)
-	: imageColliderOffset(std::move(other.imageColliderOffset)),
-	  renderImage(std::move(other.renderImage)),	// DEBUG: shallow std::shared_ptr<eImage> swap, and std::vector<renderImage_s *> move ctor
-	  sprite(std::move(other.sprite)),
-	  collisionModel(std::move(other.collisionModel)),
-	  movementPlanner(std::move(other.movementPlanner)),		// FIXME/BUG(!): bad deep move ctor ???
-	  prefabFilename(std::move(other.prefabFilename)),
-	  prefabManagerIndex(other.prefabManagerIndex),
-	  spawnedEntityID(other.spawnedEntityID) {
-
-}
-
-//**************
-// eEntity::eEntity
-//**************
 eEntity::eEntity(const entitySpawnArgs_t & spawnArgs)
 	: prefabFilename(spawnArgs.prefabFilename),
 	  imageColliderOffset(spawnArgs.imageColliderOffset),
@@ -39,46 +10,31 @@ eEntity::eEntity(const entitySpawnArgs_t & spawnArgs)
 	  spawnedEntityID(-1) {
 
 	if (!spawnArgs.localBounds.IsEmpty()) {
-		collisionModel = std::make_shared<eCollisionModel>();
+		collisionModel = std::make_unique<eCollisionModel>();
 		collisionModel->LocalBounds() = spawnArgs.localBounds;
 		collisionModel->SetActive(spawnArgs.collisionActive);
 	
 		if (spawnArgs.movementSpeed)
-			movementPlanner = std::make_shared<eMovementPlanner>(spawnArgs.movementSpeed);
+			movementPlanner = std::make_unique<eMovementPlanner>(spawnArgs.movementSpeed);
 	}
 
-	// init sprite and renderBlock for draw order sorting
+	// init renderImage for draw order sorting
 	if (!spawnArgs.spriteFilename.empty()) {
-		sprite = std::make_shared<eSprite>();	// TODO: sprite initialization should be just this one line
+		animationController = std::make_unique<eAnimationController>();	// TODO: animationController initialization should be just this one line
 		std::shared_ptr<eImage> spriteImage = nullptr;
 		if (!game.GetImageManager().LoadImage(spawnArgs.spriteFilename.c_str(), SDL_TEXTUREACCESS_STATIC, spriteImage))
 			throw badEntityCtorException(spawnArgs.spriteFilename.c_str());	
 
-		sprite->SetImage(spriteImage);
+		animationController->SetImage(spriteImage);
 		eVec3 blockMins = (eVec3)spawnArgs.localBounds[0];
-		renderImage.RenderBlock() = eBounds3D(blockMins, blockMins + spawnArgs.renderBlockSize);
+		renderImage->RenderBlock() = eBounds3D(blockMins, blockMins + spawnArgs.renderBlockSize);
 	}
-}
-
-//**************
-// eEntity::operator=
-//**************
-eEntity & eEntity::operator=(eEntity other) {
-	std::swap(imageColliderOffset, other.imageColliderOffset);
-	std::swap(renderImage, other.renderImage);		// DEBUG: shallow std::shared_ptr<eImage> swap, and std::vector<renderImage_s *> move ctor
-	std::swap(sprite, other.sprite);
-	std::swap(collisionModel, other.collisionModel);
-	std::swap(movementPlanner, other.movementPlanner);
-	std::swap(prefabFilename, other.prefabFilename);
-	std::swap(prefabManagerIndex, other.prefabManagerIndex);
-	std::swap(spawnedEntityID, other.spawnedEntityID);
-    return *this;
 }
 
 //***************
 // eEntity::Spawn
 // copies a prefab eEntity and adds unique details
-// TODO: position via a single stack eTransform, not the eCollisionModel, or eRenderImage, or eSprite
+// TODO: position via a single stack eTransform, not the eCollisionModel, or eRenderImage, or eAnimationController
 //***************
 bool eEntity::Spawn(const int entityPrefabIndex, const eVec3 & worldPosition /*, const eVec2 & facingDir*/) {
 	std::shared_ptr<eEntity> prefabEntity = nullptr;
@@ -99,21 +55,21 @@ bool eEntity::Spawn(const int entityPrefabIndex, const eVec3 & worldPosition /*,
 		// SOLUTION: the movementPlanner.owner ptr value must update if &newEntity changes, so make eEntity monitor its oldAddress and newAddress
 		// and push any changes to its movementPlanner
 		if (newEntity->movementPlanner != nullptr)
-			newEntity->movementPlanner->Init(newEntity.get());
+			newEntity->movementPlanner->SetOwner(newEntity.get());
 
-		if (newEntity->sprite != nullptr) {
-			newEntity->renderImage.SetStatic(false);
-			newEntity->renderImage.RenderBlock() += worldPosition;
+		if (newEntity->animationController != nullptr) {
+			newEntity->IsStatic() = false;
+			newEntity->renderImage->RenderBlock() += worldPosition;
 
-			// FIXME: remove renderImage/sprite dependency on the collisionModel (and vis versa)
+			// FIXME: remove renderImage dependency on the collisionModel (and vis versa)
 			if (newEntity->collisionModel != nullptr) {
 				newEntity->collisionModel->SetOrigin(eVec2(worldPosition.x, worldPosition.y));
 				newEntity->collisionModel->SetOwner(newEntity.get());
 			}
 
-			// TODO: eMovementPlanner may be opposite facing, and eEntity may not have a eSprite, so only eSpriteController cares about facing
-//			if (newEntity->spriteController != nullptr)	
-//				newEntity->spriteController->SetFacingDirection(facingDir);		
+			// TODO: eMovementPlanner may be opposite facing, and eEntity may not have a eRenderImage, so only eAnimationController cares about facing
+//			if (newEntity->animationController != nullptr)	
+//				newEntity->animationController->SetFacingDirection(facingDir);		
 
 			newEntity->UpdateRenderImageOrigin();
 			newEntity->UpdateRenderImageDisplay();
@@ -128,27 +84,19 @@ bool eEntity::Spawn(const int entityPrefabIndex, const eVec3 & worldPosition /*,
 }
 
 //***************
-// eEntity::Draw
-// TODO: just update the sprite and add it to the grid (the grid will draw it via eMap::Draw)
-// TODO: rename this fn, or merge it w/eEntity::Think
-//***************
-void eEntity::Draw() {
-	game.GetRenderer().AddToCameraRenderPool(&renderImage);		// TODO: make eGridCell::Draw do this instead, and ::UpdateWorldClip in ::Think
-}
-
-//***************
 // eEntity::Think
 //***************
 void eEntity::Think() {
 	if (movementPlanner != nullptr)
 		movementPlanner->Update();
 
-	// TODO: make eEntity.renderImage manipulation/drawing part of eSprite
-	// then just call sprite->Update(); here 
-	if (sprite != nullptr) {
+	// TODO: make eEntity.renderImage manipulation/drawing part of eAnimationController
+	// then just call animationController->Update(); here 
+	if (animationController != nullptr) {
 		UpdateRenderImageOrigin();
 		UpdateRenderImageDisplay();
-		renderImage.UpdateWorldClip();
+		renderImage->UpdateWorldClip();
+		// TODO(!!): add/update the renderImage on the grid so the map/gridcell can draw it
 	}
 }
 
@@ -156,8 +104,8 @@ void eEntity::Think() {
 // eEntity::DebugDraw
 //***************
 void eEntity::DebugDraw() {
-	if (game.debugFlags.RENDERBLOCKS && sprite != nullptr)
-		game.GetRenderer().DrawIsometricPrism(lightBlueColor, renderImage.RenderBlock(), RENDERTYPE_DYNAMIC);
+	if (game.debugFlags.RENDERBLOCKS && animationController != nullptr)
+		game.GetRenderer().DrawIsometricPrism(lightBlueColor, renderImage->RenderBlock(), RENDERTYPE_DYNAMIC);
 
 	if (game.debugFlags.COLLISION && collisionModel != nullptr)
 		game.GetRenderer().DrawIsometricRect(yellowColor, collisionModel->AbsBounds(), RENDERTYPE_DYNAMIC);
@@ -172,39 +120,31 @@ void eEntity::DebugDraw() {
 // UpdateRenderImageOrigin ensures only the visuals are isometric
 //*************
 void eEntity::UpdateRenderImageOrigin() {
-	renderImage.Origin() = collisionModel->AbsBounds()[0];		// FIXME(later): eTile::renderImage::origin is unmoving in iso. world space (regardless of collision)
+	renderImage->Origin() = collisionModel->AbsBounds()[0];		// FIXME(later): eTile::renderImage::origin is unmoving in iso. world space (regardless of collision)
 																// SOLUTION: treat all renderImage-collisionModel relations the same
 																// everthing can have a Transform...position, orientation, scale
 																// then collisionModels have origins at their center w/offset from the transform
 																// and renderImage_ts have origins at their top-left corner w/ offset from the transform
-	eMath::CartesianToIsometric(renderImage.Origin().x, renderImage.Origin().y);
-	renderImage.Origin() += imageColliderOffset;
+	eMath::CartesianToIsometric(renderImage->Origin().x, renderImage->Origin().y);
+	renderImage->Origin() += imageColliderOffset;
 }
 
 //*************
 // eEntity::UpdateRenderImageDisplay
-// TODO: uses the eSprite to set the animation image and frame data
-// TODO: move this to eEntity::Think, and just call sprite.Update(renderImage);
+// TODO: uses the animationController to set the animation image and frame data
+// TODO: move this to eEntity::Think, and just call animationController.Update();
 //*************
 void eEntity::UpdateRenderImageDisplay() {
-	renderImage.Image() = sprite->GetImage();
-	renderImage.SetImageFrame(sprite->GetFrameHack());
+	renderImage->Image() = animationController->GetImage();
+	renderImage->SetImageFrame(animationController->GetFrameHack());
 
 // FREEHILL BEGIN 3d topological sort
 	// DEBUG: renderBlock and collisionModel currently designed to align, while offsetting renderImage.origin instead
 	eVec2 collisionMins = collisionModel->AbsBounds()[0];
-	eVec3 renderBlockMins = renderImage.RenderBlock()[0];
-	renderImage.RenderBlock() += eVec3(collisionMins.x - renderBlockMins.x, collisionMins.y - renderBlockMins.y , 0.0f);
+	eVec3 renderBlockMins = renderImage->RenderBlock()[0];
+	renderImage->RenderBlock() += eVec3(collisionMins.x - renderBlockMins.x, collisionMins.y - renderBlockMins.y , 0.0f);
 // FREEHILL END 3d topological sort
 
 	// DEBUG: layer unused, but set for possible future use
-	renderImage.UpdateLayerFromRenderBlockZ();
+	renderImage->UpdateLayerFromRenderBlockZ();
 }
-
-//*************
-// eEntity::GetRenderImage
-//*************
-eRenderImage * eEntity::GetRenderImage() {
-	return &renderImage;
-}
-

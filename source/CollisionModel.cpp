@@ -15,7 +15,7 @@ void eCollisionModel::UpdateOrigin() {
 	absBounds = localBounds + origin;
 
 	if (active && origin != oldOrigin)
-		UpdateAreas();			// FIXME: call eMap::UpdateGridReferencesOf(this, false) instead
+		UpdateAreas();			// FIXME: call eMap::UpdateGridReferencesOf(this, false) instead...or eCollisionModel::Update
 }
 
 //*************
