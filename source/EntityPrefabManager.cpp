@@ -111,7 +111,7 @@ bool eEntityPrefabManager::GetPrefab(int prefabID, std::shared_ptr<eEntity> & re
 // renderBlockSize= x y z\n				(floats)
 // imageCollisionOffset= x y\n			(floats)
 // localBounds= xMin yMin xMax yMax\n	(floats, mins = -maxs avoids allocating an eCollisionModel on the eEntity, collisionActive and movementSpeed will be ignored.)
-// movementSpeed= scalarValue\n			(float, set to 0 to avoid allocating an eMovement on the eEntity)
+// movementSpeed= scalarValue\n			(float, set to 0 to avoid allocating an eMovementPlanner on the eEntity)
 // collisionActive= trueOrFalseHere\n	(boolalpha)
 //***************
 bool eEntityPrefabManager::LoadPrefab(const char * filename, std::shared_ptr<eEntity> & result) {

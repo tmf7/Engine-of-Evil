@@ -30,13 +30,12 @@ typedef struct entitySpawnArgs_s {
 class eEntity : public eClass {
 private:
 
-	friend class				eMovement;
+	friend class				eMovementPlanner;
 
 public:
 								eEntity(const eEntity & other);
 								eEntity(eEntity && other);
 								eEntity(const entitySpawnArgs_t & spawnArgs);
-								~eEntity() = default;								
 
 	static bool					Spawn(const int entityPrefabIndex, const eVec3 & worldPosition/*, const eVec2 & facingDir*/);
 
@@ -51,7 +50,7 @@ public:
 	void						UpdateRenderImageOrigin();
 	void						UpdateRenderImageDisplay();
 	eCollisionModel &			CollisionModel();
-	eMovement &					MovementPlanner();
+	eMovementPlanner &			MovementPlanner();
 	eSprite &					Sprite();
 	const std::string &			GetPrefabFilename() const;
 	int							PrefabManagerIndex() const;
@@ -76,7 +75,7 @@ private:	// DEBUG: was protected
 	eRenderImage						renderImage;			// data relevant to the renderer
 	std::shared_ptr<eSprite>			sprite;					// TODO: use this to manipulate the eRenderImage
 	std::shared_ptr<eCollisionModel>	collisionModel;	
-	std::shared_ptr<eMovement>			movementPlanner;
+	std::shared_ptr<eMovementPlanner>	movementPlanner;
 	std::string							prefabFilename;
 	int									prefabManagerIndex;		// index of this eEntity's prefab within eEntityPrefabManager::prefabList
 	int									spawnedEntityID;
@@ -107,7 +106,7 @@ inline eCollisionModel & eEntity::CollisionModel() {
 //**************
 // eEntity::MovementPlanner
 //**************
-inline eMovement & eEntity::MovementPlanner() {
+inline eMovementPlanner & eEntity::MovementPlanner() {
 	return *movementPlanner;
 }
 

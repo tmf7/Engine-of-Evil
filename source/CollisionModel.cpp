@@ -4,7 +4,7 @@
 // eCollisionModel::UpdateOrigin
 // TODO: if getting rid of localBounds (to just calculate it when needed based on origin and absBounds)
 // absBounds += (origin - oldOrigin);		// FIXME: or translation = velocity * deltaTime; (then apply one translation to origin and absBounds)
-// TODO: OR, get rid of velocity as well, and defer that to a physics/rigidbody class (let eMovement use a *placeholder* velocity in the meantime)
+// TODO: OR, get rid of velocity as well, and defer that to a physics/rigidbody class (let eMovementPlanner use a *placeholder* velocity in the meantime)
 //*************
 void eCollisionModel::UpdateOrigin() {
 	if (active)
@@ -75,7 +75,7 @@ void eCollisionModel::UpdateAreas() {
 }
 
 //***************
-// eMovement::FindApproachingCollision
+// eCollisionModel::FindApproachingCollision
 // returns true and sets result to the nearest non-tangential collision along dir * length
 // returns false and leaves result unmodified otherwise
 // DEBUG: dir must be unit length

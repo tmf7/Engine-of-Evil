@@ -33,12 +33,13 @@ public:
 	SDL_Renderer *		GetSDLRenderer() const;
 	SDL_Window *		GetWindow() const;
 
-	void				AddToRenderPool(eRenderImage * renderImage, bool dynamic, bool reprioritize = false);
-	void				FlushDynamicPool();
-	void				FlushStaticPool();
+	void				AddToCameraRenderPool(eRenderImage * renderImage);
+	void				AddToOverlayRenderPool(eRenderImage * renderImage);
+	void				FlushCameraPool();
+	void				FlushOverlayPool();
 
 	void				DrawOutlineText(const char * text, eVec2 & point, const SDL_Color & color, bool constText, bool dynamic);
-	void				DrawImage(eRenderImage * renderImage) const;
+	void				DrawImage(eRenderImage * renderImage, eRenderType_t renderType) const;
 	void				DrawLines(const SDL_Color & color, std::vector<eVec2> points, bool dynamic) const;
 	void				DrawIsometricPrism(const SDL_Color & color, const eBounds3D & rect, bool dynamic) const;
 	void				DrawIsometricRect(const SDL_Color & color, const eBounds & rect, bool dynamic) const;
@@ -56,10 +57,10 @@ private:
 
 	static int							globalDrawDepth;				// for eRenderer::TopologicalDrawDepthSort
 	static const int					defaultRenderCapacity = 1024;	// maximum number of items to draw using each render pool
-	std::vector<eRenderImage *>			staticPoolInserts;				// minimize priority re-calculations	
-	std::vector<eRenderImage *>			dynamicPoolInserts;				// minimize priority re-calculations
-	std::vector<eRenderImage *>			staticPool;					
-	std::vector<eRenderImage *>			dynamicPool;				
+	std::vector<eRenderImage *>			overlayPoolInserts;				// minimize priority re-calculations	
+	std::vector<eRenderImage *>			cameraPoolInserts;				// minimize priority re-calculations
+	std::vector<eRenderImage *>			overlayPool;					// images static to the screen regardless of camera position
+	std::vector<eRenderImage *>			cameraPool;						// game-world that moves and scales with the camera
 
 	SDL_Window *						window;
 	SDL_Renderer *						internal_renderer;
@@ -82,8 +83,8 @@ extern const SDL_Color yellowColor;
 // eRenderer::eRenderer
 //***************
 inline eRenderer::eRenderer() {
-	staticPool.reserve(defaultRenderCapacity);
-	dynamicPool.reserve(defaultRenderCapacity);
+	overlayPool.reserve(defaultRenderCapacity);
+	cameraPool.reserve(defaultRenderCapacity);
 }
 
 //***************

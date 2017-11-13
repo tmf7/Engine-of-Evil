@@ -8,7 +8,7 @@ eEntity::eEntity(const eEntity & other) {
 	renderImage			= other.renderImage;		// DEBUG: shallow std::shared_ptr<eImage> assignment, and std::vector<renderImage_s *> deep copy ctor
 	sprite				= other.sprite ? std::make_shared<eSprite>(*other.sprite) : nullptr;
 	collisionModel		= other.collisionModel ? std::make_shared<eCollisionModel>(*other.collisionModel) : nullptr;
-	movementPlanner		= other.movementPlanner ? std::make_shared<eMovement>(*other.movementPlanner) : nullptr;		// FIXME/BUG(!): bad deep copy ???
+	movementPlanner		= other.movementPlanner ? std::make_shared<eMovementPlanner>(*other.movementPlanner) : nullptr;		// FIXME/BUG(!): bad deep copy ???
 	prefabFilename		= other.prefabFilename;
 	prefabManagerIndex	= other.prefabManagerIndex;
 	spawnedEntityID		= other.spawnedEntityID;
@@ -44,7 +44,7 @@ eEntity::eEntity(const entitySpawnArgs_t & spawnArgs)
 		collisionModel->SetActive(spawnArgs.collisionActive);
 	
 		if (spawnArgs.movementSpeed)
-			movementPlanner = std::make_shared<eMovement>(spawnArgs.movementSpeed);
+			movementPlanner = std::make_shared<eMovementPlanner>(spawnArgs.movementSpeed);
 	}
 
 	// init sprite and renderBlock for draw order sorting
@@ -102,6 +102,7 @@ bool eEntity::Spawn(const int entityPrefabIndex, const eVec3 & worldPosition /*,
 			newEntity->movementPlanner->Init(newEntity.get());
 
 		if (newEntity->sprite != nullptr) {
+			newEntity->renderImage.SetStatic(false);
 			newEntity->renderImage.RenderBlock() += worldPosition;
 
 			// FIXME: remove renderImage/sprite dependency on the collisionModel (and vis versa)
@@ -110,7 +111,7 @@ bool eEntity::Spawn(const int entityPrefabIndex, const eVec3 & worldPosition /*,
 				newEntity->collisionModel->SetOwner(newEntity.get());
 			}
 
-			// TODO: eMovement may be opposite facing, and eEntity may not have a eSprite, so only eSpriteController cares about facing
+			// TODO: eMovementPlanner may be opposite facing, and eEntity may not have a eSprite, so only eSpriteController cares about facing
 //			if (newEntity->spriteController != nullptr)	
 //				newEntity->spriteController->SetFacingDirection(facingDir);		
 
@@ -132,17 +133,7 @@ bool eEntity::Spawn(const int entityPrefabIndex, const eVec3 & worldPosition /*,
 // TODO: rename this fn, or merge it w/eEntity::Think
 //***************
 void eEntity::Draw() {
-	if (sprite == nullptr)
-		return;
-
-	// TODO: make eEntity.renderImage manipulation/drawing part of eSprite
-	// then just call sprite->Draw(); here 
-	// TODO: or use eGridCell::Draw to draw *this, and just use eEntity::Think to update this stuff
-	UpdateRenderImageOrigin();
-	UpdateRenderImageDisplay();
-
-	renderImage.UpdateWorldClip();
-	game.GetRenderer().AddToRenderPool(&renderImage, RENDERTYPE_DYNAMIC, true);		// TODO: make eGridCell::Draw do this instead, and ::UpdateWorldClip in ::Think
+	game.GetRenderer().AddToCameraRenderPool(&renderImage);		// TODO: make eGridCell::Draw do this instead, and ::UpdateWorldClip in ::Think
 }
 
 //***************
@@ -150,7 +141,15 @@ void eEntity::Draw() {
 //***************
 void eEntity::Think() {
 	if (movementPlanner != nullptr)
-		movementPlanner->Think();
+		movementPlanner->Update();
+
+	// TODO: make eEntity.renderImage manipulation/drawing part of eSprite
+	// then just call sprite->Update(); here 
+	if (sprite != nullptr) {
+		UpdateRenderImageOrigin();
+		UpdateRenderImageDisplay();
+		renderImage.UpdateWorldClip();
+	}
 }
 
 //***************

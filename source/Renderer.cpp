@@ -282,31 +282,41 @@ void eRenderer::DrawCartesianRect(const SDL_Color & color, const eBounds & rect,
 
 //***************
 // eRenderer::DrawImage
-// DEBUG: adjusts image origin by camera position ("transform")
+// RENDERTYPE_DYNAMIC adjusts image origin by camera position ("transform")
+// RENDERTYPE_STATIC does not
 //***************
-void eRenderer::DrawImage(eRenderImage * renderImage) const {
-	const auto & cameraAdjustment = game.GetCamera().CollisionModel().AbsBounds()[0];
-	eVec2 drawPoint = renderImage->origin - cameraAdjustment;
+void eRenderer::DrawImage(eRenderImage * renderImage, eRenderType_t renderType) const {
+	eVec2 drawPoint = renderImage->origin;
+	if (renderType == RENDERTYPE_DYNAMIC) {
+		const auto & cameraAdjustment = game.GetCamera().CollisionModel().AbsBounds()[0];
+		drawPoint -= cameraAdjustment;
+	}
 	drawPoint.SnapInt();
 	renderImage->dstRect = { (int)drawPoint.x, (int)drawPoint.y, renderImage->srcRect->w, renderImage->srcRect->h };
 	SDL_RenderCopy(internal_renderer, renderImage->image->Source(), renderImage->srcRect, &renderImage->dstRect);
 }
 
 //***************
-// eRenderer::AddToRenderPool
-// dynamic == false is used for overlays and/or HUD guis
-// dynamic == true is used for scaling and translating groups of images together based on camera properties
+// eRenderer::AddToCameraRenderPool
 //***************
-void eRenderer::AddToRenderPool(eRenderImage * renderImage, bool dynamic, bool reprioritize) {
+void eRenderer::AddToCameraRenderPool(eRenderImage * renderImage) {
 	const auto & gameTime = game.GetGameTime();
 	if (renderImage->lastDrawTime == gameTime)
 		return;
-	renderImage->SetDrawnTime(gameTime);
-	std::vector<eRenderImage *> * targetPool = nullptr;
-	if (reprioritize)
-		targetPool = dynamic ? &dynamicPoolInserts : &staticPoolInserts;
-	else
-		targetPool = dynamic ? &dynamicPool : &staticPool;
+	renderImage->lastDrawTime = gameTime;
+	auto targetPool = (renderImage->owner->IsStatic() ? &cameraPool : &cameraPoolInserts);
+	targetPool->push_back(renderImage);
+}
+
+//***************
+// eRenderer::AddToOverlayRenderPool
+//***************
+void eRenderer::AddToOverlayRenderPool(eRenderImage * renderImage) {
+	const auto & gameTime = game.GetGameTime();
+	if (renderImage->lastDrawTime == gameTime)
+		return;
+	renderImage->lastDrawTime = gameTime;
+	auto targetPool = (renderImage->owner->IsStatic() ? &overlayPool : &overlayPoolInserts);
 	targetPool->push_back(renderImage);
 }
 
@@ -354,13 +364,13 @@ void eRenderer::VisitTopologicalNode(eRenderImage * renderImage) {
 }
 
 //***************
-// eRenderer::FlushDynamicPool
+// eRenderer::FlushCameraPool
 // DEBUG: this unstable quicksort may put renderImages at random draw orders if they have equal priority
 //***************
-void eRenderer::FlushDynamicPool() {
+void eRenderer::FlushCameraPool() {
 	// sort the dynamicPool for the scalableTarget
-	QuickSort(	dynamicPool.data(),
-				dynamicPool.size(),
+	QuickSort(	cameraPool.data(),
+				cameraPool.size(),
 				[](auto && a, auto && b) {
 					if (a->priority < b->priority) return -1;
 					else if (a->priority > b->priority) return 1;
@@ -368,14 +378,14 @@ void eRenderer::FlushDynamicPool() {
 			});
 
 // FREEHILL BEGIN 3d topological sort
-	TopologicalDrawDepthSort(dynamicPoolInserts);	// assign a "localDrawDepth" priority amongst the dynamicPoolInserts
-													// to avoid the need to loop over the same dynamicPool items with each new imageToInsert (maybe)
+	TopologicalDrawDepthSort(cameraPoolInserts);	// assign a "localDrawDepth" priority amongst the cameraPoolInserts
+													// to avoid the need to loop over the same cameraPool items with each new imageToInsert (maybe)
 	float newPriorityMin = 0.0f;
-	for (auto & imageToInsert : dynamicPoolInserts) {
+	for (auto & imageToInsert : cameraPoolInserts) {
 		float newPriorityMax = 0.0f;
 
-		auto & iter = dynamicPool.begin();
-		for (/*iter*/; iter != dynamicPool.end() ; ++iter) {
+		auto & iter = cameraPool.begin();
+		for (/*iter*/; iter != cameraPool.end() ; ++iter) {
 			if (eCollision::AABBAABBTest(imageToInsert->worldClip, (*iter)->worldClip)) {	// FIXME(?): this check works for ONE eEntity, but may break for more
 																							// double-check the logic, and test the reality of it
 				if (eCollision::IsAABB3DInIsometricFront(imageToInsert->renderBlock, (*iter)->renderBlock)) {
@@ -388,7 +398,7 @@ void eRenderer::FlushDynamicPool() {
 		}
 		float newPriority = (newPriorityMin + newPriorityMax) * 0.5f;
 		imageToInsert->priority = newPriority;		// needed in the event this renderImage goes straight to dynamicPool next frame
-		dynamicPool.emplace(iter, imageToInsert);
+		cameraPool.emplace(iter, imageToInsert);
 		newPriorityMin = newPriority;
 		// FIXME/BUG(~): ensure iter is properly positioned for the next imageToInsert search works
 		// because iter may be pointing to the newly inserted item (or one in front of it) in dynamicPool
@@ -401,11 +411,11 @@ void eRenderer::FlushDynamicPool() {
 	SDL_RenderSetScale(internal_renderer, game.GetCamera().GetZoom(), game.GetCamera().GetZoom());
 
 	// draw to the scalableTarget
-	for (auto && renderImage : dynamicPool)
-		DrawImage(renderImage);
+	for (auto && renderImage : cameraPool)
+		DrawImage(renderImage, RENDERTYPE_DYNAMIC);
 
-	dynamicPool.clear();
-	dynamicPoolInserts.clear();
+	cameraPool.clear();
+	cameraPoolInserts.clear();
 
 	// default the render target and scale,
 	// then transfer the scalableTarget
@@ -415,23 +425,23 @@ void eRenderer::FlushDynamicPool() {
 }
 
 //***************
-// eRenderer::FlushStaticPool
+// eRenderer::FlushOverlayPool
 // DEBUG: this unstable quicksort may put renderImages at random draw orders if they have equal priority
 // FIXME: mirror this logic for FlushDynamicPool's topological sort logic
 //***************
-void eRenderer::FlushStaticPool() {
+void eRenderer::FlushOverlayPool() {
 	// sort the staticPool for the default render target
-	QuickSort(	staticPool.data(),
-				staticPool.size(), 
+	QuickSort(	overlayPool.data(),
+				overlayPool.size(), 
 				[](auto && a, auto && b) { 
 					if (a->priority < b->priority) return -1;
 					else if (a->priority > b->priority) return 1;
 					return 0; 
 			});
 
-	for (auto && renderImage : staticPool)
-		DrawImage(renderImage);
+	for (auto && renderImage : overlayPool)
+		DrawImage(renderImage, RENDERTYPE_STATIC);
 
-	staticPool.clear();
+	overlayPool.clear();
 }
 

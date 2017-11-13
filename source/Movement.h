@@ -1,5 +1,5 @@
-#ifndef EVIL_MOVEMENT_H
-#define EVIL_MOVEMENT_H
+#ifndef EVIL_MOVEMENTPLANNER_H
+#define EVIL_MOVEMENTPLANNER_H
 
 #include "Definitions.h"
 #include "Deque.h"
@@ -16,21 +16,21 @@ typedef eSpatialIndexGrid<byte_t, MAX_MAP_ROWS, MAX_MAP_COLUMNS> byte_map_t;
 
 
 //*************************************************
-//					eMovement
+//				eMovementPlanner
 // updates owner's velocity to avoid collision
 // and pathfind to goal waypoints
 // TODO: inherit from an eComponent class
 // that can be used by an eGameObject
 //*************************************************
-class eMovement : public eClass {
+class eMovementPlanner : public eClass {
 public:
 
-						eMovement(const float movementSpeed);
-	virtual				~eMovement() = default;
+						eMovementPlanner(const float movementSpeed);
+	virtual				~eMovementPlanner() = default;
 
 	void				Init(eEntity * const owner);
-	void				Think();
-	void				DebugDraw();
+	void				Update();
+	void				DebugDraw();							
 	void				AddUserWaypoint(const eVec2 & waypoint);
 	const byte_map_t &	KnownMap() const;
 	void				ClearTrail();
@@ -119,26 +119,26 @@ private:
 };
 
 //*************
-// eMovement::KnownMap
+// eMovementPlanner::KnownMap
 //*************
-inline const byte_map_t & eMovement::KnownMap() const {
+inline const byte_map_t & eMovementPlanner::KnownMap() const {
 	return knownMap;
 }
 
 //*************
-// eMovement::TogglePathingState
+// eMovementPlanner::TogglePathingState
 //*************
-inline void eMovement::TogglePathingState() {
+inline void eMovementPlanner::TogglePathingState() {
 	pathingState = (pathingState == PATHTYPE_COMPASS ? PATHTYPE_WALL : PATHTYPE_COMPASS);
 	moveState = MOVETYPE_GOAL;
 }
 
 //*************
-// eMovement::Speed
+// eMovementPlanner::Speed
 //*************
-inline float eMovement::Speed() const {
+inline float eMovementPlanner::Speed() const {
 	return maxMoveSpeed;
 }
 
-#endif /* EVIL_MOVEMENT_H */
+#endif /* EVIL_MOVEMENTPLANNER_H */
 

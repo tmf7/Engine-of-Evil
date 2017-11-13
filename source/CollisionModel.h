@@ -56,19 +56,6 @@ private:
 
 private:
 
-	eClass *							owner = nullptr;		// eClass (FIXME: eGameObject) using this collision model
-																// FIXME/BUG: std::shared_ptr creates a loop and artificial memory leak because
-																// neither this nor its owner can be destroyed
-																// raw pointer is okay because *this doesn't outlive its owner 
-																// (and all ::CollisionModel() shared_ptr copies are fn-scoped)
-																// FIXME/BUG: *owner may move in memory because of std::vector resizing
-																// SOLTUION(?): use observer pattern w/std::weak_ptr (owner as the subject, *this as observer)
-																// SOLUTION(?): update this->owner whenever ANY of owners ctor/assignments are called [cheaper?]
-																// which means creating rule of 5 for everything with an eCollisionModel (and anything that has an "owner" backpointer, eg: eMovement)
-																// FIXME/BUG(!): eEntity::Spawn creates a copy of a prefab and initializes it, 
-																// so owner == &prefabEntity not the one in use
-																// SOLUTION(~): assign this->owner in eEntity::Spawn, and leave eCamera and eTile collisionModel owners nullptr
-
 	eBounds								localBounds;			// using model coordinates
 	eBounds								absBounds;				// using world coordinates	
 	eVec2								origin;					// using world coordinates

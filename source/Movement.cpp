@@ -2,9 +2,9 @@
 #include "Game.h"
 
 //***************
-// eMovement::eMovement
+// eMovementPlanner::eMovementPlanner
 //***************
-eMovement::eMovement(const float movementSpeed)
+eMovementPlanner::eMovementPlanner(const float movementSpeed)
 	: maxMoveSpeed(movementSpeed),
 	  goalRange(movementSpeed),
 	  currentTile(nullptr),
@@ -21,15 +21,18 @@ eMovement::eMovement(const float movementSpeed)
 }
 
 //******************
-// eMovement::StopMoving
+// eMovementPlanner::StopMoving
 //******************
-void eMovement::StopMoving() {
+void eMovementPlanner::StopMoving() {
 	wallSide = nullptr;
 	owner->collisionModel->Velocity().Zero();
 	moving = false;
 }
 
-void eMovement::Init(eEntity * owner) {
+//******************
+// eMovementPlanner::Init
+//******************
+void eMovementPlanner::Init(eEntity * owner) {
 	this->owner = owner;
 	collisionRadius = owner->collisionModel->LocalBounds().Radius();
 	currentTile		= &knownMap.Index(owner->collisionModel->Origin());
@@ -38,10 +41,10 @@ void eMovement::Init(eEntity * owner) {
 }
 
 //***************
-// eMovement::Think
+// eMovementPlanner::Update
 // selects and updates a pathfinding type (eg: waypoint+obstacle avoid, A* optimal path, wall follow, Area awareness, raw compass?, etc)
 //***************
-void eMovement::Think() {
+void eMovementPlanner::Update() {
 	auto & ownerCollisionModel = owner->collisionModel;
 	bool wasStopped = false;
 	
@@ -72,11 +75,11 @@ void eMovement::Think() {
 }
 
 //***************
-// eMovement::Move
+// eMovementPlanner::Move
 // sets the velocity based on path predictions
 // FIXME: name this something better
 //***************
-void eMovement::Move() {
+void eMovementPlanner::Move() {
 	switch(pathingState) {
 		case PATHTYPE_COMPASS: CompassFollow(); return;
 		case PATHTYPE_WALL: WallFollow(); return;
@@ -84,12 +87,12 @@ void eMovement::Move() {
 }
 
 //******************
-// eMovement::WallFollow
+// eMovementPlanner::WallFollow
 // Determines the optimal movement vector to continue following a wall (as if a hand were placed on it)
 // DEBUG: default movement towards waypoint; default search for walls right-to-left using the first-found
 // TODO: incorperate knownMap/stepRatio usage, directional bias usage?, more stopping conditions, goal waypoint short-circuit (like CompassFollow)
 //******************
-void eMovement::WallFollow() {
+void eMovementPlanner::WallFollow() {
 	decision_t	test;					// vector tested for optimal travel decision
 	float		rotationAngle;			// cumulative amount the testVector has rotated in its search
 	eQuat *		rotationDirection;		// wallSide affects the sweep direction that constitutes around-front of the entity
@@ -150,10 +153,10 @@ void eMovement::WallFollow() {
 }
 
 //******************
-// eMovement::CompassFollow
+// eMovementPlanner::CompassFollow
 // Determines the optimal movement vector to reach the current waypoint
 //******************
-void eMovement::CompassFollow() {
+void eMovementPlanner::CompassFollow() {
 	decision_t	waypoint;				// from the sprite to the next waypoint
 	decision_t	test;					// vector tested for optimal travel decision
 	decision_t	best;					// optimal movement
@@ -248,11 +251,11 @@ void eMovement::CompassFollow() {
 }
 
 //******************
-// eMovement::CheckVectorPath
+// eMovementPlanner::CheckVectorPath
 // determines the state of the entity's position for the next few frames
 // returns true if a future position using along is near the waypoint
 //******************
-bool eMovement::CheckVectorPath(decision_t & along) {
+bool eMovementPlanner::CheckVectorPath(decision_t & along) {
 	static const float maxSteps = 5.0f;										// how many future steps to test
 
 	auto & ownerCollisionModel = owner->collisionModel;
@@ -286,7 +289,7 @@ bool eMovement::CheckVectorPath(decision_t & along) {
 	along.validSteps = floor(nearestFraction * maxSteps);
 
 	// DEBUG: eCollision::GetAreaCells using along.vector grabs more cells 
-	// than eMovement will when updating knownMap, so it's not used here
+	// than eMovementPlanner will when updating knownMap, so it's not used here
 	eVec2 futureCenter = boundsCenter;
 	float newSteps = 0.0f;
 	for (int i = 0; i < along.validSteps; ++i) {
@@ -303,11 +306,11 @@ bool eMovement::CheckVectorPath(decision_t & along) {
 }
 
 //**************
-// eMovement::CheckWalls
+// eMovementPlanner::CheckWalls
 // assigns the vectors perpendicular to the forward vector
 // and checks if the range along them has significantly changed
 //**************
-void eMovement::CheckWalls(float * bias) {
+void eMovementPlanner::CheckWalls(float * bias) {
 	static const float stepIncreaseThreshold = 2.0f;		// updated validSteps must be larger than the oldValidSteps + this to warrant a bias modification
 	
 	float oldLeftSteps = left.validSteps;
@@ -329,11 +332,11 @@ void eMovement::CheckWalls(float * bias) {
 }
 
 //******************
-// eMovement::AddUserWaypoint
+// eMovementPlanner::AddUserWaypoint
 // TODO: allow other entities to become waypoints (that move)
 // use a separate eVec2 * target = &targetOrigin; to set currentWaypoint during MOVETYPE_GOAL
 //******************
-void eMovement::AddUserWaypoint(const eVec2 & waypoint) {
+void eMovementPlanner::AddUserWaypoint(const eVec2 & waypoint) {
 	static std::vector<Collision_t> collisions;		// FIXME(~): make this a private data member instead of per-fn, if more than one fn uses it
 
 	collisions.clear();		// DEBUG: lazy clearing
@@ -347,9 +350,9 @@ void eMovement::AddUserWaypoint(const eVec2 & waypoint) {
 }
 
 //******************
-// eMovement::UpdateWaypoint
+// eMovementPlanner::UpdateWaypoint
 //******************
-void eMovement::UpdateWaypoint(bool getNext) {
+void eMovementPlanner::UpdateWaypoint(bool getNext) {
 	switch (moveState) {
 		case MOVETYPE_GOAL: {
 			if (getNext && !goals.IsEmpty()) {
@@ -396,20 +399,20 @@ void eMovement::UpdateWaypoint(bool getNext) {
 }
 
 //******************
-// eMovement::ClearTrail
+// eMovementPlanner::ClearTrail
 // resets the knownMap so on the next UpdateKnownMap
 // all trail waypoints are removed
 //******************
-void eMovement::ClearTrail() {
+void eMovementPlanner::ClearTrail() {
 	knownMap.ClearAllCells();
 	lastTrailTile = nullptr;
 }
 
 //******************
-// eMovement::CheckTrail
+// eMovementPlanner::CheckTrail
 // returns false if the entity should fresh-start goal pathfinding
 //******************
-bool eMovement::CheckTrail() {
+bool eMovementPlanner::CheckTrail() {
 	if (trail.IsEmpty()) {
 		knownMap.ClearAllCells();
 		lastTrailTile = nullptr;
@@ -419,11 +422,11 @@ bool eMovement::CheckTrail() {
 }
 
 //******************
-// eMovement::UpdateKnownMap
+// eMovementPlanner::UpdateKnownMap
 // marks the currentTile as VISITED_TILE, clears out un-needed trail waypoints,
 // and resets tiles around the current goal waypoint to UNKNOWN_TILE
 //******************
-void eMovement::UpdateKnownMap() {
+void eMovementPlanner::UpdateKnownMap() {
 	byte_t * checkTile;
 	int row, column;
 	int startRow, startCol;
@@ -493,18 +496,18 @@ void eMovement::UpdateKnownMap() {
 }
 
 //******************
-// eMovement::DebugDraw
+// eMovementPlanner::DebugDraw
 //******************
-void eMovement::DebugDraw() {
+void eMovementPlanner::DebugDraw() {
 	DrawGoalWaypoints();
 	DrawKnownMap();
 	DrawTrailWaypoints();
 }
 
 //******************
-// eMovement::DrawGoalWaypoints
+// eMovementPlanner::DrawGoalWaypoints
 //******************
-void eMovement::DrawGoalWaypoints() {
+void eMovementPlanner::DrawGoalWaypoints() {
 	eNode<eVec2> * iterator;
 	eVec2 goalPoint;
 
@@ -520,9 +523,9 @@ void eMovement::DrawGoalWaypoints() {
 }
 
 //******************
-// eMovement::DrawTrailWaypoints
+// eMovementPlanner::DrawTrailWaypoints
 //******************
-void eMovement::DrawTrailWaypoints() {
+void eMovementPlanner::DrawTrailWaypoints() {
 	eNode<eVec2> * iterator;
 	eVec2 trailPoint;
 
@@ -538,10 +541,10 @@ void eMovement::DrawTrailWaypoints() {
 }
 
 //******************
-// eMovement::DrawKnownMap
+// eMovementPlanner::DrawKnownMap
 // TODO: check collision/draw layers, and draw debug rects over visited (and visible) tiles instead of entire cells.
 //******************
-void eMovement::DrawKnownMap() const {
+void eMovementPlanner::DrawKnownMap() const {
 	auto & tileMap = game.GetMap().TileMap();
 	auto & visibleCells = game.GetMap().VisibleCells();
 	for (auto & cell : visibleCells) {
