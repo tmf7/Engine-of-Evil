@@ -146,9 +146,6 @@ bool eGame::Run() {
 	// draw the dynamic/scalable gameplay
 	renderer.Clear();
 	map.Draw();
-	for (auto & entity : entities)
-		entity->Draw();
-
 	renderer.FlushCameraPool();
 	player.Draw();
 

@@ -8,6 +8,8 @@
 #include "Image.h"
 #include "Component.h"
 
+class eGridCell;
+
 //**************************************************
 //				eRenderImage
 // data used by eRenderer for draw-order sorting
@@ -19,40 +21,39 @@ private:
 	friend class eRenderer;				// directly sets dstRect, priority, lastDrawnTime, allBehind, visited (no other accessors outside *this)
 
 public:
+
+	virtual								~eRenderImage() override;
 	
 	std::shared_ptr<eImage> &			Image();
 	const std::shared_ptr<eImage> &		Image() const;
 	void								SetImageFrame(const SDL_Rect & imageFrame);
 	const SDL_Rect *					GetImageFrame() const;
-	eVec2 &								Origin();
+	void								SetOrigin(const eVec2 & newOrigin);
 	const eVec2 &						Origin() const;
 	eBounds3D &							RenderBlock();
 	const eBounds3D &					RenderBlock() const;
-	int									GetLayer() const;
-	void								SetRenderBlockZFromLayer(const int newLayer);
-	void								UpdateLayerFromRenderBlockZ();
-	void								UpdateWorldClip();
+	void								SnapRenderBlockToLayer();
 	const eBounds &						GetWorldClip() const;
-
-	void								AssignToWorldGrid();
+	const std::vector<eGridCell *> &	Areas() const;
 
 	virtual int							GetClassType() const override { return CLASS_RENDERIMAGE; }
+
+private:
+
+	void								UpdateWorldClip();
+	void								ClearAreas();
+	void								UpdateAreas();
 
 private:
 
 	std::shared_ptr<eImage>				image = nullptr;		// source image (ie texture wrapper)
 	const SDL_Rect *					srcRect = nullptr;		// what part of the source image to draw (nullptr for all of it)
 	SDL_Rect							dstRect;				// SDL consumable cliprect, where on the screen (adjusted with camera position)
-																// DEBUG: dimensions relative to srcRect will affect scaling
-																// DEBUG: only calculate dstRect from srcRect and origin
-
 	eVec2								origin;					// top-left corner of image using world coordinates (not adjusted with camera position)
+	eVec2								oldOrigin;				// minimizes number of UpdateAreas calls for non-static eGameObjects that aren't moving
 	float								priority;				// determined during topological sort, lower priority draws first
-	Uint32								layer = MAX_LAYER;		// determines (and determined by) lowest z-depth of renderBlock (see: eSpatialIndexGrid::...ZPosition...) 
 	Uint32								lastDrawTime = 0;		// prevent attempts to draw this more than once per frame
-
-
-	std::vector<eGridCell *>			areas;					// TODO: the gridcells responsible for drawing *this
+	std::vector<eGridCell *>			areas;					// the gridcells responsible for drawing *this
 
 // FREEHILL BEGIN 3d topological sort
 	eBounds								worldClip;				// dstRect in world space (ie: not adjusted with camera position yet) used for occlusion tests
@@ -93,13 +94,6 @@ inline const SDL_Rect * eRenderImage::GetImageFrame() const {
 //*************
 // eRenderImage::Origin
 //*************
-inline eVec2 & eRenderImage::Origin() {
-	return origin;
-}
-
-//*************
-// eRenderImage::Origin
-//*************
 inline const eVec2 & eRenderImage::Origin() const {
 	return origin;
 }
@@ -119,13 +113,6 @@ inline const eBounds3D & eRenderImage::RenderBlock() const {
 }
 
 //*************
-// eRenderImage::GetLayer
-//*************
-inline int eRenderImage::GetLayer() const {
-	return layer;
-}
-
-//*************
 // eRenderImage::UpdateWorldClip
 // DEBUG: only call this after ImageFrame has been assigned
 //*************
@@ -138,6 +125,13 @@ inline void eRenderImage::UpdateWorldClip() {
 //*************
 inline const eBounds & eRenderImage::GetWorldClip() const {
 	return worldClip;
+}
+
+//*************
+// eRenderImage::Areas
+//*************
+inline const std::vector<eGridCell *> & eRenderImage::Areas() const {
+	return areas;
 }
 
 #endif /* EVIL_RENDERIMAGE_H */

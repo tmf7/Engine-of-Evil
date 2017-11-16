@@ -1,10 +1,6 @@
 #ifndef ENTITY_H
 #define ENTITY_H
 
-#include "AnimationController.h"
-#include "CollisionModel.h"
-#include "Renderer.h"
-#include "Movement.h"
 #include "GameObject.h"
 
 // entitySpawnArgs_t

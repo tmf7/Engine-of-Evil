@@ -13,8 +13,8 @@ typedef enum {
 //				eRenderer
 // Base class for all window/fullscreen drawing. 
 // Contains the window, renderer, and font handles
-// DynamicPool draws to a scalable target that typically tracks with the camera
-// StaticPool draws so a non-scalable target that typically draws to screen coordinates
+// CameraPool draws to a scalable target that typically tracks with the camera
+// OverlayPool draws so a non-scalable target that typically draws to screen coordinates
 // DEBUG: RENDERTYPE_STATIC items must always be drawn last 
 // otherwise they will be overwritten by the scalable target
 // and its RENDERTYPE_DYANMIC items

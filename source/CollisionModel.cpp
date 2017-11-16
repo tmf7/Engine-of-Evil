@@ -1,6 +1,13 @@
 #include "Game.h"
 
 //*************
+// eCollisionModel::~eCollisionModel
+//*************
+eCollisionModel::~eCollisionModel() {
+	ClearAreas();
+}
+
+//*************
 // eCollisionModel::UpdateOrigin
 // TODO: if getting rid of localBounds (to just calculate it when needed based on origin and absBounds)
 // absBounds += (origin - oldOrigin);		// FIXME: or translation = velocity * deltaTime; (then apply one translation to origin and absBounds)
@@ -15,7 +22,7 @@ void eCollisionModel::UpdateOrigin() {
 	absBounds = localBounds + origin;
 
 	if (active && origin != oldOrigin)
-		UpdateAreas();			// FIXME: call eMap::UpdateGridReferencesOf(this, false) instead...or eCollisionModel::Update
+		UpdateAreas();
 }
 
 //*************
@@ -26,14 +33,14 @@ void eCollisionModel::SetOrigin(const eVec2 & point) {
 	origin = point;
 	absBounds = localBounds + origin;
 	if (active && origin != oldOrigin)
-		UpdateAreas();			// FIXME: call eMap::UpdateGridReferencesOf(this, false) instead
+		UpdateAreas();
 }
 
 
 //***************
-// eCollisionModel::ClearCellReferences
-// removes the tileMap's collisionModel references 
-// and removes the collisonModel's tile references
+// eCollisionModel::ClearAreas
+// removes this from all eMap::tileMap gridcells with pointers to it
+// and clear this->areas gridcell pointers
 //***************
 void eCollisionModel::ClearAreas() {
 	for (auto && cell : areas) {
@@ -50,8 +57,8 @@ void eCollisionModel::ClearAreas() {
 
 //***************
 // eCollisionModel::UpdateAreas
-// adds collisionModel references to the tileMap
-// and adds cell references to the collisonModel
+// adds this to the eMap::tileMap gridcells it overlaps
+// and adds those same gridcell pointers to this->areas
 // DEBUG: called whenever the collisionModel moves
 // FIXME(performance): this is a heavily used function and should be optimized
 // cell.contents as a hashmap only helps for large collisionModels

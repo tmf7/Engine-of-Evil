@@ -20,6 +20,8 @@ typedef struct Collision_s Collision_t;
 class eCollisionModel : public eComponent {
 public:
 
+	virtual								~eCollisionModel() override;
+
 	void								SetOrigin(const eVec2 & point);	
 	const eVec2 &						Origin() const;
 	void								UpdateOrigin();
@@ -52,7 +54,7 @@ private:
 	eVec2								oldOrigin;				// for use with collision response
 	eVec2								velocity;				// DEBUG: never normalized, only rotated and scaled
 	std::vector<eGridCell *>			areas;					// currently occupied tileMap indexes (between 1 and 4)
-	bool								active;					// whether this participates in dynamic or kinematic collision detection
+	bool								active;					// whether this participates in (dynamic or kinematic) collision detection
 
 };
 

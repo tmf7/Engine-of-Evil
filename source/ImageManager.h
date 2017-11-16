@@ -1,7 +1,6 @@
 #ifndef EVIL_TEXTURE_MANAGER_H
 #define EVIL_TEXTURE_MANAGER_H
 
-#include "Definitions.h"
 #include "HashIndex.h"
 #include "Renderer.h"
 

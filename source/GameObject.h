@@ -20,29 +20,29 @@ public:
 	eGameObject &							operator=(eGameObject other);
 
 
-	virtual void							Think()							{};
-	virtual void							DebugDraw()						{};
 	virtual int								GetClassType() const override	{ return CLASS_GAMEOBJECT; }
+	virtual void							Think()							{}
+	virtual void							DebugDraw()						{}
 
-	eVec2 &									TransformPosition()				{ return transformPosition; }
+	eVec2 &									OrthoOrigin()					{ return orthoOrigin; }
+	Uint32 &								WorldLayer()					{ return worldLayer; }
 	eRenderImage &							RenderImage()					{ return *renderImage; }
 	eAnimationController &					AnimationController()			{ return *animationController; }
 	eCollisionModel &						CollisionModel()				{ return *collisionModel; }
 	eMovementPlanner &						MovementPlanner()				{ return *movementPlanner; }
 	bool &									IsStatic() 						{ return isStatic; }		
-	int	&									WorldLayer()					{ return worldLayer; }
 
 protected:
 
-	eVec2									transformPosition;					// orthographic 2D global transfrom coordinates
+	eVec2									orthoOrigin;						// orthographic 2D global transfrom coordinates
 
 	std::unique_ptr<eRenderImage>			renderImage			= nullptr;		// data relevant to the renderer
 	std::unique_ptr<eAnimationController>	animationController = nullptr;		// manipulates the renderImage
 	std::unique_ptr<eCollisionModel>		collisionModel		= nullptr;		// handles collision between bounding volumes
 	std::unique_ptr<eMovementPlanner>		movementPlanner		= nullptr;		// seeks goals by setting collisionModel::velocity
 	
-	bool									isStatic			= true;			// if transformPosition ever changes at runtime, speeds up draw-order sorting
-	int										worldLayer			= MAX_LAYER;	// z-position in the game world (positions renderImage and TODO: filters collision)
+	bool									isStatic			= true;			// if orthoOrigin ever changes at runtime, speeds up draw-order sorting
+	Uint32									worldLayer			= MAX_LAYER;	// z-position in the game world (positions renderBlock and TODO: filters collision)
 
 };
 

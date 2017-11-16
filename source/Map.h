@@ -23,9 +23,6 @@ public:
 	bool												LoadMap(const char * mapFilename);
 	tile_map_t &										TileMap();
 
-	void												UpdateGridReferencesOf(eRenderImage * renderImage, bool remove = false);
-	void												UpdateGridReferencesOf(eCollisionModel * collisionModel, bool remove = false);
-
 	const std::vector<eGridCell *> &					VisibleCells();
 	const std::array<std::pair<eBounds, eVec2>, 4>	&	EdgeColliders() const;
 	const eBounds &										AbsBounds() const;

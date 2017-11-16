@@ -183,14 +183,15 @@ bool eTileImpl::LoadTileset(const char * tilesetFilename, bool appendNew) {
 // owner is the originating eGridCell responsible for this eTile's lifetime
 // origin is the top-left corner of the image position in world-coordinates (on an orthographic 2D grid)
 // type is the index within the master tileSet vector
-// layer sets *this.renderImage.renderBlock's base z-position (for draw order sorting)
+// layer sets *this.renderImage.renderBlock's base z-position (for draw-order sorting)
 // DEBUG: every tile is aligned with at least one cell no matter its size (ie: no freely-aligned tile-image origins)
 //************
-eTile::eTile(eGridCell * owner, const eVec2 & origin, const int type, const int layer) {
-	cell = owner;
-	renderImage.Origin() = origin;
-	eMath::CartesianToIsometric(renderImage.Origin().x, renderImage.Origin().y);
-	SetLayer(layer);
+eTile::eTile(eGridCell * cellOwner, const eVec2 & origin, const int type, const int layer) 
+	: cellOwner(cellOwner) {
+	orthoOrigin = origin;
+	worldLayer = layer;
+	renderImage = std::make_unique<eRenderImage>();		// all tiles currently have a renderimage by default
+	renderImage->SetOwner(this);		// FIXME/BUG: if *this is moved from the renderImage::owner will be a READ ACCESS ERROR
 	SetType(type);
 }
 
@@ -198,66 +199,35 @@ eTile::eTile(eGridCell * owner, const eVec2 & origin, const int type, const int 
 // eTile::SetType
 //************
 void eTile::SetType(int newType) {
-	const float isoCellWidthAdjustment = (float)game.GetMap().TileMap().IsometricCellWidth() * 0.5f;
-	const float isoCellHeightAdjustment = (float)game.GetMap().TileMap().IsometricCellHeight();
-	eVec2 conversionOffset = vec2_zero;
-
-	// type change, so reset the old offset and collisionModel
-	if (renderImage.Image() != nullptr) {
-		if (impl->collider != nullptr) {
-			collisionModel->~eCollisionModel();
-			collisionModel = nullptr;
-		}
-		conversionOffset = eVec2(isoCellWidthAdjustment, (float)renderImage.GetImageFrame()->h - isoCellHeightAdjustment);
-		renderImage.Origin() += conversionOffset;
-	}
-
-	eVec2 orthoOrigin = renderImage.Origin();
-	eMath::IsometricToCartesian(orthoOrigin.x, orthoOrigin.y);
-
+	// type change, so reset the collisionModel, if any
+	if (renderImage->Image() != nullptr && impl->collider != nullptr)
+		collisionModel = nullptr;
 
 	impl = &eTileImpl::tileTypes[newType];																	// FIXME(~): doesn't verify the array index
-	game.GetImageManager().GetImage(eTileImpl::tileSet.at(newType).first, renderImage.Image());				// which image (tile atlas)
-	renderImage.SetImageFrame(renderImage.Image()->GetSubframe(eTileImpl::tileSet.at(newType).second));		// which part of that image
+	game.GetImageManager().GetImage(eTileImpl::tileSet.at(newType).first, renderImage->Image());			// which image (tile atlas)
+	renderImage->SetImageFrame(renderImage->Image()->GetSubframe(eTileImpl::tileSet.at(newType).second));	// which part of that image
 
-	eVec3 rbMins = eVec3(orthoOrigin.x, orthoOrigin.y, renderImage.RenderBlock()[0].z);
-	eVec3 rbMaxs = rbMins + impl->renderBlockSize;
-
-	renderImage.RenderBlock() = eBounds3D((eVec3)orthoOrigin, (eVec3)orthoOrigin + impl->renderBlockSize);	// FREEHILL 3d topological sort
-	SetLayer(renderImage.layer);
+	renderImage->RenderBlock() = eBounds3D((eVec3)orthoOrigin, (eVec3)orthoOrigin + impl->renderBlockSize);	// FREEHILL 3d topological sort
+	renderImage->SnapRenderBlockToLayer();
 
 // FREEHILL BEGIN AABB (eBounds) collisionModel import test (2/2)
 	if (impl->collider != nullptr) {
-		collisionModel = std::make_shared<eCollisionModel>();
+		collisionModel = std::make_unique<eCollisionModel>();
 		collisionModel->SetOwner(this);
 		collisionModel->SetActive(true);
 		collisionModel->LocalBounds() = *(impl->collider);
 		collisionModel->SetOrigin(orthoOrigin);
 		
-		// TODO: use an eTransform and offset instead of directly linking visuals and colliders
-		renderImage.RenderBlock() += (eVec3)collisionModel->LocalBounds()[0];	// FREEHILL 3d topological sort
+		// FIXME: use an eTransform and offset instead of directly linking visuals and colliders
+		renderImage->RenderBlock() += (eVec3)collisionModel->LocalBounds()[0];	// FREEHILL 3d topological sort
 	}
 // FREEHILL END AABB (eBounds) collisionModel import test (2/2)
 
-	// visual alignment with isometric owner cell
-	conversionOffset = eVec2(-isoCellWidthAdjustment, isoCellHeightAdjustment - (float)renderImage.GetImageFrame()->h);
-	renderImage.Origin() += conversionOffset;
-	renderImage.UpdateWorldClip();
-}
-
-//************
-// eTile::AssignToWorldGrid
-//************
-void eTile::AssignToWorldGrid() {
-	renderImage.AssignToWorldGrid();
-}
-
-//************
-// eTile::RemoveFromWorldGrid
-// remove all responsibility of drawing this tile from the tileMap
-//************
-void eTile::RemoveFromWorldGrid() {
-	
-	// TODO: implement because if a tileType changes different eGridCells may draw it
-	// otherwise loading a new map just clears the tileMap anyway without using this fn
+	// visual alignment with isometric grid
+	const float isoCellWidthAdjustment = (float)game.GetMap().TileMap().IsometricCellWidth() * 0.5f;
+	const float isoCellHeightAdjustment = (float)game.GetMap().TileMap().IsometricCellHeight();
+	eVec2 renderImageOrigin = orthoOrigin;
+	eMath::CartesianToIsometric(renderImageOrigin.x, renderImageOrigin.y);
+	renderImageOrigin += eVec2(-isoCellWidthAdjustment, isoCellHeightAdjustment - (float)renderImage->GetImageFrame()->h);
+	renderImage->SetOrigin(renderImageOrigin);
 }

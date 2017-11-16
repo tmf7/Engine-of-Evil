@@ -42,8 +42,8 @@ public:
 	int						IsometricCellHeight() const;
 	int						LayerDepth(const int layer) const;
 	int						LayerFromZPosition(int zPosition) const;
-	int						MinZPositionFromLayer(const int layer) const;
-	int						MaxZPositionFromLayer(const int layer) const;
+	int						MinZPositionFromLayer(const Uint32 layer) const;
+	int						MaxZPositionFromLayer(const Uint32 layer) const;
 	int						CellWidth() const;
 	int						CellHeight() const;
 	void					SetGridSize(const int numRows, const int numColumns);
@@ -359,9 +359,9 @@ inline int eSpatialIndexGrid<type, rows, columns>::LayerFromZPosition(int zPosit
 // DEBUG: layer > 0 && layer < layerDepths.size()
 //******************
 template< class type, int rows, int columns>
-inline int eSpatialIndexGrid<type, rows, columns>::MinZPositionFromLayer(const int layer) const {
+inline int eSpatialIndexGrid<type, rows, columns>::MinZPositionFromLayer(const Uint32 layer) const {
 	int minLayerZ = 0;
-	for (int i = 0; i < layer; ++i)
+	for (Uint32 i = 0; i < layer; ++i)
 		minLayerZ += (layerDepths[i] + 1);		// DEBUG: +1 to ensure layer depth intervals don't touch
 	return minLayerZ;
 }
@@ -371,7 +371,7 @@ inline int eSpatialIndexGrid<type, rows, columns>::MinZPositionFromLayer(const i
 // DEBUG: layer > 0 && layer < layerDepths.size()
 //******************
 template< class type, int rows, int columns>
-inline int eSpatialIndexGrid<type, rows, columns>::MaxZPositionFromLayer(const int layer) const {
+inline int eSpatialIndexGrid<type, rows, columns>::MaxZPositionFromLayer(const Uint32 layer) const {
 	return MinLayerZ(layer) + layerDepths[layer];
 }
 

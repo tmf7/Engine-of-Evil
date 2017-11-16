@@ -4,9 +4,7 @@
 // eMap::Init
 //**************
 bool eMap::Init () {
-	if (!LoadMap("graphics/EvilTown.map"))
-		return false;
-	return true;
+	return LoadMap("graphics/EvilTown.map");
 }
 
 //**************
@@ -123,11 +121,11 @@ bool eMap::LoadMap(const char * mapFilename) {
 				auto & cell = tileMap.Index(row, column);
 				auto & origin = cell.AbsBounds()[0];
 				cell.AddTileOwned(eTile(&cell, origin, tileType, layer));
-				const auto & tileRenderImage = cell.TilesOwned().back().GetRenderImage();
-				if (tileRenderImage->renderBlock.Depth() > tallestRenderBlock)
-					tallestRenderBlock = (size_t)tileRenderImage->renderBlock.Depth();
+				auto & tileRenderImage = cell.TilesOwned().back().RenderImage();
+				if (tileRenderImage.RenderBlock().Depth() > tallestRenderBlock)
+					tallestRenderBlock = (size_t)tileRenderImage.RenderBlock().Depth();
 
-				sortTiles.push_back(tileRenderImage);
+				sortTiles.push_back(&tileRenderImage);
 			}
 
 			if (read.peek() == '\n') {
@@ -257,40 +255,3 @@ void eMap::DebugDraw() {
 		cell->DebugDraw();
 }
 
-//***************
-// eMap::UpdateGridReferencesOf
-// remove == true the renderImage is only removed from the tileMap eGridCells that point to it
-// remove == false the renderImage is removed from the current eGridCells that point to it,
-// then added to the eGridCells that contain the four corners of the renderImage->worldClip
-//***************
-void eMap::UpdateGridReferencesOf(eRenderImage * renderImage, bool remove) {
-
-	// FIXME: if the eMap instance is destroyed before the collisionModel (or eTile, once a RemoveFromGrid is added)
-	// then eCollisionModel::~eCollisionModel { ClearAreas(); } will either be NO-OP, or cause a read access error...or undef behavior
-
-	// TODO: remove the renderImage from all cells it was in...which means giving a renderimage a vector too
-
-	if (!remove) {
-		std::array<eVec2, 4> visualWorldPoints;
-		renderImage->worldClip.ToPoints(visualWorldPoints.data());
-
-		// clip rectangle to orthographic world-space for proper grid alignment
-		for (auto & point : visualWorldPoints) {
-			eMath::IsometricToCartesian(point.x, point.y);
-			auto & cell = tileMap.IndexValidated(point);
-			auto & searchTiles = cell.RenderContents();
-			if (searchTiles.find(renderImage) == searchTiles.end())	// don't add the same renderImage twice
-				searchTiles[renderImage] = renderImage;
-		}
-	}
-}
-
-//***************
-// eMap::UpdateGridReferencesOf
-// remove == true the collisionModel is only removed from the tileMap eGridCells that point to it
-// remove == false the collisionModel is removed from the current eGridCells that point to it,
-// then added to the eGridCells that overlap any part of the collisionModel->absBounds
-//***************
-void eMap::UpdateGridReferencesOf(eCollisionModel * collisionModel, bool remove) {
-
-}

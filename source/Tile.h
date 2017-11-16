@@ -74,25 +74,18 @@ inline int eTileImpl::Type() const {
 //***********************************************
 class eTile : public eGameObject {
 public:
+
 										eTile(eGridCell * owner, const eVec2 & origin, const int type, const int layer);
 	
 	int									Type() const;
 	void								SetType(int newType);
-	
-	void								AssignToWorldGrid();
-	void								RemoveFromWorldGrid();
-
-	Uint32								GetLayer() const;
-	void								SetLayer(const int newLayer);
-
-	eGridCell *							GetCell();
-	eCollisionModel &					CollisionModel();
+	eGridCell *							GetCellOwner();
 
 	virtual int							GetClassType() const override { return CLASS_TILE; }
 
 private:
 
-	eGridCell *							cell			= nullptr;		// responsible for the lifetime of *this
+	eGridCell *							cellOwner		= nullptr;		// responsible for the lifetime of *this
 	eTileImpl *							impl			= nullptr;		// general tile type data
 };
 
@@ -104,34 +97,10 @@ inline int eTile::Type() const {
 }
 
 //************
-// eTile::GetLayer
-// TODO(?): make this part of eGameObject
-// YES, because a gameObject doesn't have to have a renderImage to be on a layer (ie just a collisionmodel for layer-specific collision)
-//************
-inline Uint32 eTile::GetLayer() const {
-	return renderImage->GetLayer();
-}
-
-//************
-// eTile::SetLayer
-// TODO(?): make this part of eGameObject
-//************
-inline void eTile::SetLayer(const int newLayer) {
-	renderImage->SetRenderBlockZFromLayer(newLayer);
-}
-
-//************
 // eTile::GetCell
 //************
-inline eGridCell * eTile::GetCell() {
-	return cell;
-}
-
-//************
-// eTile::CollisionModel
-//************
-inline eCollisionModel & eTile::CollisionModel() {
-	return *collisionModel;
+inline eGridCell * eTile::GetCellOwner() {
+	return cellOwner;
 }
 
 #endif /* EVIL_TILE_H */

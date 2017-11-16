@@ -16,9 +16,8 @@ void eGridCell::Draw() {
 void eGridCell::AddTileOwned(eTile && tile) {
 	tilesOwned.push_back(std::move(tile));
 	auto & newTile = tilesOwned.back();
-	if (&newTile.CollisionModel() != nullptr)
+	if (&(newTile.CollisionModel()) != nullptr)
 		newTile.CollisionModel().SetOwner(&newTile);
-	newTile.AssignToGrid();						// FIXME: call eMap::UpdateGridReferencesOf(&newTile, false) instead
 }
 
 //************
@@ -30,7 +29,7 @@ void eGridCell::DebugDraw() {
 		if (game.debugFlags.COLLISION && &tile.CollisionModel() != nullptr)
 			game.GetRenderer().DrawIsometricRect(pinkColor, tile.CollisionModel().AbsBounds(), true);
 
-		auto & renderBlock = tile.GetRenderImage()->RenderBlock();
+		auto & renderBlock = tile.RenderImage().RenderBlock();
 		if (game.debugFlags.RENDERBLOCKS && renderBlock.Depth() > 0)		// DEBUG(performance): for visual clarity, don't draw flat renderBlocks
 			game.GetRenderer().DrawIsometricPrism(lightBlueColor, renderBlock, RENDERTYPE_DYNAMIC);
 	}
