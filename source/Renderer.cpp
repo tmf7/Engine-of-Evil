@@ -187,29 +187,30 @@ void eRenderer::DrawIsometricPrism(const SDL_Color & color, const eBounds3D & re
 		iPoints[i] = { (int)fPoints[i].x, (int)fPoints[i].y };
 	}
 
-	std::array<SDL_Point, 2> verticals;
 	if (dynamic) {
 		SDL_SetRenderTarget(internal_renderer, scalableTarget);
 		SDL_RenderSetScale(internal_renderer, game.GetCamera().GetZoom(), game.GetCamera().GetZoom());
-		SDL_RenderDrawLines(internal_renderer, iPoints.data(), iPoints.size());
+	}
 
-		verticals[0] = iPoints[6];
-		verticals[1] = iPoints[1];
-		SDL_RenderDrawLines(internal_renderer, verticals.data(), verticals.size());
+	SDL_RenderDrawLines(internal_renderer, iPoints.data(), iPoints.size());
 
-		verticals[0] = iPoints[7];
-		verticals[1] = iPoints[2];
-		SDL_RenderDrawLines(internal_renderer, verticals.data(), verticals.size());
+	std::array<SDL_Point, 2> verticals;
+	verticals[0] = iPoints[6];
+	verticals[1] = iPoints[1];
+	SDL_RenderDrawLines(internal_renderer, verticals.data(), verticals.size());
 
-		verticals[0] = iPoints[8];
-		verticals[1] = iPoints[3];
-		SDL_RenderDrawLines(internal_renderer, verticals.data(), verticals.size());
+	verticals[0] = iPoints[7];
+	verticals[1] = iPoints[2];
+	SDL_RenderDrawLines(internal_renderer, verticals.data(), verticals.size());
 
+	verticals[0] = iPoints[8];
+	verticals[1] = iPoints[3];
+	SDL_RenderDrawLines(internal_renderer, verticals.data(), verticals.size());
+
+	if (dynamic) {
 		SDL_SetRenderTarget(internal_renderer, NULL);
 		SDL_RenderSetScale(internal_renderer, 1.0f, 1.0f);
 		SDL_RenderCopy(internal_renderer, scalableTarget, NULL, NULL);
-	} else {
-		SDL_RenderDrawLines(internal_renderer, iPoints.data(), iPoints.size());
 	}
 	SDL_SetRenderDrawColor(internal_renderer, clearColor.r, clearColor.g, clearColor.b, clearColor.a);
 }
@@ -284,6 +285,8 @@ void eRenderer::DrawCartesianRect(const SDL_Color & color, const eBounds & rect,
 // eRenderer::DrawImage
 // RENDERTYPE_DYNAMIC adjusts image origin by camera position ("transform")
 // RENDERTYPE_STATIC does not
+// FIXME: rendertype doesn't have the same meaning here as in AddTo...RenderPool,
+// but it should (or shouldn't be a parameter)
 //***************
 void eRenderer::DrawImage(eRenderImage * renderImage, eRenderType_t renderType) const {
 	eVec2 drawPoint = renderImage->origin;
@@ -368,6 +371,14 @@ void eRenderer::VisitTopologicalNode(eRenderImage * renderImage) {
 // DEBUG: this unstable quicksort may put renderImages at random draw orders if they have equal priority
 //***************
 void eRenderer::FlushCameraPool() {
+/*
+	auto targetPool = RENDERTYPE_CAMERA ? &cameraPool : &screenPool);
+	auto targetPoolInserts = RENDERTYPE_CAMERA ? &cameraPoolInserts : &screenPoolInserts);
+	// then check for RENDERTYPE_CAMERA again to set/reset the rendertarget
+*/
+
+
+
 	// sort the dynamicPool for the scalableTarget
 	QuickSort(	cameraPool.data(),
 				cameraPool.size(),
@@ -427,7 +438,6 @@ void eRenderer::FlushCameraPool() {
 //***************
 // eRenderer::FlushOverlayPool
 // DEBUG: this unstable quicksort may put renderImages at random draw orders if they have equal priority
-// FIXME: mirror this logic for FlushDynamicPool's topological sort logic
 //***************
 void eRenderer::FlushOverlayPool() {
 	// sort the staticPool for the default render target

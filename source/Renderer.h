@@ -64,7 +64,15 @@ private:
 
 	SDL_Window *						window;
 	SDL_Renderer *						internal_renderer;
-	SDL_Texture *						scalableTarget;
+
+	// swappable render targets
+	// DEBUG: default SDL rendertarget (NULL) is the window texture (ie the "overlayTarget")
+	// and uses draw-order sorting based on eRenderImage::renderBlock
+	SDL_Texture *						cameraTarget;					// move and scale with the camera, with draw-order sorting based on eRenderImage::renderBlock		
+	SDL_Texture *						debugCameraTarget;				// move and scale with the camera, but draw last, without draw-order sorting
+	SDL_Texture *						debugOverlayTarget;				// draw straight on the window (no camera adjustment), last, without draw-order sorting
+	
+	
 	TTF_Font *							font;
 };
 
