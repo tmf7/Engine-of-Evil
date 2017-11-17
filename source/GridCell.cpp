@@ -15,9 +15,17 @@ void eGridCell::Draw() {
 //************
 void eGridCell::AddTileOwned(eTile && tile) {
 	tilesOwned.push_back(std::move(tile));
-	auto & newTile = tilesOwned.back();
-	if (&(newTile.CollisionModel()) != nullptr)
-		newTile.CollisionModel().SetOwner(&newTile);
+}
+
+//************
+// eGridCell::Reset
+//************
+void eGridCell::Reset() {
+	eGridIndex::Reset();
+	collisionContents.clear();
+	renderContents.clear();
+	tilesOwned.clear();
+//	absBounds.Clear();			// if loading new data into the same eSpatialIndexGrid<eGridCell...>, then absBounds should be re-initialized regardless
 }
 
 //************

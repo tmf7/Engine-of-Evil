@@ -36,7 +36,7 @@ void eRenderImage::ClearAreas() {
 }
 
 //***************
-// eRenderImage::UpdateAreas
+// eRenderImage::UpdateAreasWorldClipCorners
 // adds this to the eMap::tileMap gricells that contain the four corners of this->worldClip
 // and adds those same gridcell pointers to this->areas
 // DEBUG(performance): ensures no renderImage suddenly dissappears when scrolling the camera
@@ -44,7 +44,7 @@ void eRenderImage::ClearAreas() {
 // 4 : 6 : 8, for center : edge : corner (parts of the tileMap) on average
 // more layers increases sizes (eg: 3 layers is about 4-6 : 11 : 20, depending on map design)
 //***************
-void eRenderImage::UpdateAreas() {
+void eRenderImage::UpdateAreasWorldClipCorners() {
 	ClearAreas();
 
 	std::array<eVec2, 4> visualWorldPoints;
@@ -63,6 +63,29 @@ void eRenderImage::UpdateAreas() {
 	}
 }
 
+//***************
+// eRenderImage::UpdateAreasWorldClipArea
+// adds this to the eMap::tileMap gricells that this->worldClip overlaps
+// and adds those same gridcell pointers to this->areas
+// DEBUG(performance): only this to more eGridCells as needed (see: eRenderImage::UpdateAreasWorldClipCorners),
+// also this fn relies on the expensive eCollision::OBBOBBTest instead of essentially-no collision test (like eRenderImage::UpdateAreasWorldClipCorners)
+//***************
+void eRenderImage::UpdateAreasWorldClipArea() {
+	ClearAreas();
+
+	eVec2 corner = worldClip[0];
+	eVec2 xAxis(worldClip[1].x, worldClip[0].y);
+	eVec2 yAxis(worldClip[0].x, worldClip[1].y);
+	std::array<eVec2, 3> obbPoints = { std::move(corner), std::move(xAxis), std::move(yAxis) };
+	for (auto & point : obbPoints)
+		eMath::IsometricToCartesian(point.x, point.y);
+
+	const eBox worldClipArea(obbPoints.data());
+	eCollision::GetAreaCells(worldClipArea, areas);
+	for (auto && cell : areas)
+		cell->RenderContents()[this] = this;
+}
+
 //*************
 // eRenderImage::SetOrigin
 // DEBUG: if owner->IsStatic only call this during loadtime initialization, not each frame
@@ -71,8 +94,10 @@ void eRenderImage::SetOrigin(const eVec2 & newOrigin) {
 	oldOrigin = origin;
 	origin = newOrigin;
 	UpdateWorldClip();
-	if (owner->IsStatic() || origin != oldOrigin)
-		UpdateAreas();
+	if (owner->IsStatic() || origin != oldOrigin) {
+		if (isSelectable)
+			UpdateAreasWorldClipArea();
+		else
+			UpdateAreasWorldClipCorners();
+	}
 }
-
-// FIXME/BUG: ClearAreas for eCollisionModel and eRenderImage needs to be called if a eGameObject is destroyed

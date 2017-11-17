@@ -10,18 +10,19 @@ eEntity::eEntity(const entitySpawnArgs_t & spawnArgs)
 	  spawnedEntityID(-1) {
 
 	if (!spawnArgs.localBounds.IsEmpty()) {
-		collisionModel = std::make_unique<eCollisionModel>();
+		collisionModel = std::make_unique<eCollisionModel>(this);
 		collisionModel->LocalBounds() = spawnArgs.localBounds;
 		collisionModel->SetActive(spawnArgs.collisionActive);
 	
-		if (spawnArgs.movementSpeed)
-			movementPlanner = std::make_unique<eMovementPlanner>(spawnArgs.movementSpeed);
+		if (spawnArgs.movementSpeed) {
+			movementPlanner = std::make_unique<eMovementPlanner>(this, spawnArgs.movementSpeed);
+		}
 	}
 
 	// init renderImage for draw order sorting
 	if (!spawnArgs.spriteFilename.empty()) {
-		renderImage = std::make_unique<eRenderImage>();
-		animationController = std::make_unique<eAnimationController>();	// TODO: animationController initialization should be just this one line
+		renderImage = std::make_unique<eRenderImage>(this);
+		animationController = std::make_unique<eAnimationController>(this);	// TODO: animationController initialization should be just this one line
 		std::shared_ptr<eImage> spriteImage = nullptr;
 		if (!game.GetImageManager().LoadImage(spawnArgs.spriteFilename.c_str(), SDL_TEXTUREACCESS_STATIC, spriteImage))
 			throw badEntityCtorException(spawnArgs.spriteFilename.c_str());	
@@ -51,23 +52,15 @@ bool eEntity::Spawn(const int entityPrefabIndex, const eVec3 & worldPosition /*,
 														// SOLUTION(?): or just rehash the current eHashIndex (that uses spawnIDs instead of names)
 														// TODO: the same goes for ImageManager and EntityPrefabManger's HashIndexes into std::vectors
 		
-		// FIXME/BUG(!): &newEntity may move if its container re-allocates, or is otherwise moved
-		// EG: game.entities.RemoveEntity(entityID); shifts all addresses above entityID (game.entities has reserved MAX_ENTITIES so push-resize is unlikely)
-		// SOLUTION: the movementPlanner.owner ptr value must update if &newEntity changes, so make eEntity monitor its oldAddress and newAddress
-		// and push any changes to its movementPlanner
-		if (newEntity->movementPlanner != nullptr)
-			newEntity->movementPlanner->SetOwner(newEntity.get());
 
 		if (newEntity->animationController != nullptr) {
 			newEntity->IsStatic() = false;
-			newEntity->renderImage->SetOwner(newEntity.get());
+			newEntity->renderImage->SetIsSelectable(true);
 			newEntity->renderImage->RenderBlock() += worldPosition;
 
 			// FIXME: remove renderImage dependency on the collisionModel (and vis versa)
-			if (newEntity->collisionModel != nullptr) {
+			if (newEntity->collisionModel != nullptr)
 				newEntity->collisionModel->SetOrigin(eVec2(worldPosition.x, worldPosition.y));
-				newEntity->collisionModel->SetOwner(newEntity.get());
-			}
 
 			// TODO: eMovementPlanner may be opposite facing, and eEntity may not have a eRenderImage, so only eAnimationController cares about facing
 //			if (newEntity->animationController != nullptr)	
@@ -106,6 +99,10 @@ void eEntity::Think() {
 void eEntity::DebugDraw() {
 	if (game.debugFlags.RENDERBLOCKS && animationController != nullptr)
 		game.GetRenderer().DrawIsometricPrism(lightBlueColor, renderImage->RenderBlock(), RENDERTYPE_DYNAMIC);
+
+		game.GetRenderer().DrawCartesianRect(lightBlueColor, renderImage->GetWorldClip(), false, RENDERTYPE_DYNAMIC);
+	for (auto & cell : renderImage->Areas())
+		game.GetRenderer().DrawIsometricRect(yellowColor, cell->AbsBounds(), RENDERTYPE_DYNAMIC);
 
 	if (game.debugFlags.COLLISION && collisionModel != nullptr)
 		game.GetRenderer().DrawIsometricRect(yellowColor, collisionModel->AbsBounds(), RENDERTYPE_DYNAMIC);

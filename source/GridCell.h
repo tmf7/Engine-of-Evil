@@ -10,9 +10,8 @@ class eCollisionModel;
 // container for pathfinding, collision, and tile drawing.
 // DEBUG: data type used by eSpatialIndexGrid
 //*****************************************
-class eGridCell : public eClass {
+class eGridCell : public eGridIndex {
 public:
-																	eGridCell() = default;
 
 	void															Draw();
 	void															DebugDraw();
@@ -25,25 +24,16 @@ public:
 	const eBounds &													AbsBounds() const;
 	const eBounds &													AbsBounds();
 	void															SetAbsBounds(const eBounds & bounds);
-	void															SetGridPosition(const int row, const int column);
-	int																GridRow() const;
-	int																GridColumn() const;
 
+	virtual void													Reset() override;
 	virtual int														GetClassType() const override { return CLASS_GRIDCELL; }
-
-public:
-
-	bool															inOpenSet	= false;	// expidites openSet searches
-	bool															inClosedSet = false;	// expidites closedSet searches
 
 private:
 
 	std::unordered_map<eCollisionModel *, eCollisionModel *>		collisionContents;	// all eCollisionModel::absBounds that overlap this->absBounds
 	std::unordered_map<eRenderImage *, eRenderImage *>				renderContents;		// all eRenderImage::worldClip that overlap this->absBounds
 	std::vector<eTile>												tilesOwned;			// which eTiles' lifetimes are managed
-	eBounds															absBounds;			// using world-coordinates
-	int																gridRow;			// index within grid
-	int																gridCol;			// index within grid
+	eBounds															absBounds;			// using world-coordinates, cached after eSpatialIndexGrid::SetCellSize to expedite collision tests
 
 /*
 	// pathfinding
@@ -112,28 +102,6 @@ inline const eBounds & eGridCell::AbsBounds() {
 //******************
 inline void eGridCell::SetAbsBounds(const eBounds & bounds) {
 	absBounds = bounds;
-}
-
-//******************
-// eGridCell::SetGridPosition
-//******************
-inline void eGridCell::SetGridPosition(const int row, const int column) {
-	gridRow = row;
-	gridCol = column;
-}
-
-//******************
-// eGridCell::GridRow
-//******************
-inline int eGridCell::GridRow() const {
-	return gridRow;
-}
-
-//******************
-// eGridCell::GridColumn
-//******************
-inline int eGridCell::GridColumn() const {
-	return gridCol;
 }
 
 #endif /* EVIL_GRIDCELL_H */

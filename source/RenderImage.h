@@ -22,6 +22,7 @@ private:
 
 public:
 
+										eRenderImage(eGameObject * owner);
 	virtual								~eRenderImage() override;
 	
 	std::shared_ptr<eImage> &			Image();
@@ -35,6 +36,8 @@ public:
 	void								SnapRenderBlockToLayer();
 	const eBounds &						GetWorldClip() const;
 	const std::vector<eGridCell *> &	Areas() const;
+	void								SetIsSelectable(bool isSelectable);
+	bool								IsSelectable() const;
 
 	virtual int							GetClassType() const override { return CLASS_RENDERIMAGE; }
 
@@ -42,26 +45,35 @@ private:
 
 	void								UpdateWorldClip();
 	void								ClearAreas();
-	void								UpdateAreas();
+	void								UpdateAreasWorldClipCorners();
+	void								UpdateAreasWorldClipArea();
 
 private:
 
-	std::shared_ptr<eImage>				image = nullptr;		// source image (ie texture wrapper)
-	const SDL_Rect *					srcRect = nullptr;		// what part of the source image to draw (nullptr for all of it)
-	SDL_Rect							dstRect;				// SDL consumable cliprect, where on the screen (adjusted with camera position)
-	eVec2								origin;					// top-left corner of image using world coordinates (not adjusted with camera position)
-	eVec2								oldOrigin;				// minimizes number of UpdateAreas calls for non-static eGameObjects that aren't moving
-	float								priority;				// determined during topological sort, lower priority draws first
-	Uint32								lastDrawTime = 0;		// prevent attempts to draw this more than once per frame
-	std::vector<eGridCell *>			areas;					// the gridcells responsible for drawing *this
+	std::shared_ptr<eImage>				image			= nullptr;		// source image (ie texture wrapper)
+	const SDL_Rect *					srcRect			= nullptr;		// what part of the source image to draw (nullptr for all of it)
+	SDL_Rect							dstRect;						// SDL consumable cliprect, where on the screen (adjusted with camera position)
+	eVec2								origin;							// top-left corner of image using world coordinates (not adjusted with camera position)
+	eVec2								oldOrigin;						// minimizes number of UpdateAreas calls for non-static eGameObjects that aren't moving
+	float								priority;						// determined during topological sort, lower priority draws first
+	Uint32								lastDrawTime	= 0;			// prevent attempts to draw this more than once per frame
+	std::vector<eGridCell *>			areas;							// the gridcells responsible for drawing *this
+	bool								isSelectable	= false;		// if this should added to all eGridCells its worldClip overlaps, or just its corners
 
 // FREEHILL BEGIN 3d topological sort
-	eBounds								worldClip;				// dstRect in world space (ie: not adjusted with camera position yet) used for occlusion tests
-	eBounds3D							renderBlock;			// determines draw order of visible images
-	std::vector<eRenderImage *>			allBehind;				// topological sort
-	bool								visited = false;		// topological sort
+	eBounds								worldClip;						// dstRect in world space (ie: not adjusted with camera position yet) used for occlusion tests
+	eBounds3D							renderBlock;					// determines draw order of visible images
+	std::vector<eRenderImage *>			allBehind;						// topological sort
+	bool								visited			= false;		// topological sort
 // FREEHILL END 3d topological sort
 };
+
+//*************
+// eRenderImage::eRenderImage
+//*************
+inline eRenderImage::eRenderImage(eGameObject * owner) {
+	this->owner = owner;
+}
 
 //*************
 // eRenderImage::Image
@@ -132,6 +144,20 @@ inline const eBounds & eRenderImage::GetWorldClip() const {
 //*************
 inline const std::vector<eGridCell *> & eRenderImage::Areas() const {
 	return areas;
+}
+
+//*************
+// eRenderImage::SetIsSelectable
+//*************
+inline void eRenderImage::SetIsSelectable(bool isSelectable) {
+	this->isSelectable = isSelectable;
+}
+
+//*************
+// eRenderImage::IsSelectable
+//*************
+inline bool eRenderImage::IsSelectable() const {
+	return isSelectable;
 }
 
 #endif /* EVIL_RENDERIMAGE_H */

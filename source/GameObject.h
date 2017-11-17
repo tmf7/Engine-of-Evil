@@ -8,8 +8,11 @@
 
 //*************************************************
 //				eGameObject
-// base class for all in-game interactive objects
+// base composite-class for isolating eComponent groups
+// and allowing meaningful intra- and inter-group communication
 // handles the lifetime of all eComponent objects
+// TODO: create AddComponent, RemoveComponent, and GetComponent templates
+// to allow more flexible eGameObject extension
 //*************************************************
 class eGameObject : public eClass {
 public:
@@ -30,7 +33,11 @@ public:
 	eAnimationController &					AnimationController()			{ return *animationController; }
 	eCollisionModel &						CollisionModel()				{ return *collisionModel; }
 	eMovementPlanner &						MovementPlanner()				{ return *movementPlanner; }
-	bool &									IsStatic() 						{ return isStatic; }		
+	bool &									IsStatic() 						{ return isStatic; }	
+
+protected:
+
+	void									UpdateComponentsOwner();
 
 protected:
 

@@ -2,15 +2,16 @@
 #define EVIL_ANIMATION_CONTROLLER_H
 
 #include "Image.h"
+#include "Component.h"
 
 //*******************************************
 //			eAnimationController
 // Handles animation of image data
 //*******************************************
-class eAnimationController : public eClass {
+class eAnimationController : public eComponent {
 public:
 
-							eAnimationController();
+							eAnimationController(eGameObject * owner);
 
 	bool					Init(const char * filename);
 	std::shared_ptr<eImage>	GetImage() const;
@@ -25,31 +26,29 @@ public:
 private:
 
 //	typedef std::shared_ptr<eAnimation> Animation_t;
-//	std::vector<Animation_t>	animations;		// all source images and their associated sub-frames (clip-rects) to fully animate this "character"
+//	std::vector<eAnimation>	animations;		// all source images and their associated sub-frames (clip-rects) to fully animate an eRenderImage
 
-	// TODO: first, last, current may be deprecated due to the circular-link list that Animation provides for animation sequences
-	std::shared_ptr<eImage>	currentImage;
-	int						firstFrame;
-	int						lastFrame;
+	// TODO: first, last, current will be deprecated by the sequence that eAnimation will provide
+	std::shared_ptr<eImage>	currentImage	= nullptr;
+	int						firstFrame		= 0;
+	int						lastFrame		= 0;
 
-	int						frameDelay;
-	int						currentFrame;
-	int						delayCounter;
-	bool					paused;
+	int						frameDelay		= 0;
+	int						currentFrame	= 0;
+	int						delayCounter	= 0;
+	bool					paused			= true;
 
 	SDL_Rect				spriteFrameHack;		// FIXME: hack for single-frame non-animated renderImage (images themselves dont use frames, they just wrap a texture)
 
 	// experimental
-	int						drawOrigin;				// TODO: this will be the world-coordinate where drawing begins (must sync with collisionModel origin, even if offset)
 	std::string				name;					// overall name of the animationController relative to its owner "melee_32_controller"
 };
 
 //************
 // eAnimationController::eAnimationController
 //************
-inline eAnimationController::eAnimationController() 
-	: firstFrame(NULL), lastFrame(NULL), frameDelay(NULL), currentImage(nullptr),
-	  currentFrame(NULL), delayCounter(NULL), paused(true) {
+inline eAnimationController::eAnimationController(eGameObject * owner) {
+	this->owner = owner;
 }
 
 //************

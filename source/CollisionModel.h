@@ -20,6 +20,7 @@ typedef struct Collision_s Collision_t;
 class eCollisionModel : public eComponent {
 public:
 
+										eCollisionModel(eGameObject * owner);
 	virtual								~eCollisionModel() override;
 
 	void								SetOrigin(const eVec2 & point);	
@@ -57,6 +58,13 @@ private:
 	bool								active;					// whether this participates in (dynamic or kinematic) collision detection
 
 };
+
+//*************
+// eCollisionModel::eCollisionModel
+//*************
+inline eCollisionModel::eCollisionModel(eGameObject * owner) {
+	this->owner = owner;
+}
 
 //*************
 // eCollisionModel::Origin

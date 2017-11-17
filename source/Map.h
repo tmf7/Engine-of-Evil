@@ -4,8 +4,6 @@
 #include "SpatialIndexGrid.h"
 #include "GridCell.h"
 
-template<class type, int rows, int columns>
-class eSpatialIndexGrid;
 typedef eSpatialIndexGrid<eGridCell, MAX_MAP_ROWS, MAX_MAP_COLUMNS> tile_map_t;
 
 //*************************************************

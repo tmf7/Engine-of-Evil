@@ -66,6 +66,8 @@ void ePlayer::Think() {
 // used to select eEntities
 // returns true of !groupSelection.empty()
 // returns false if selection area has zero area, or groupSelection.empty()
+// TODO: narrow-phase per-pixel collision test between selection area and worldClips collided with
+// to only select eEntities based on opaque pixels (and allow more precise single-eEntity selection)
 //***************
 bool ePlayer::SelectGroup() {
 	static std::unordered_map<const eEntity *, const eEntity *> alreadyTested;
@@ -75,6 +77,7 @@ bool ePlayer::SelectGroup() {
 	if (selectionBounds.Width() <= 0.0f || selectionBounds.Height() <= 0.0f)
 		return false;
 
+	// similar to eRenderImage::UpdateAreasWorldClipArea (except for camera adjustment)
 	eVec2 corner = selectionBounds[0];
 	eVec2 xAxis(selectionBounds[1].x, selectionBounds[0].y);
 	eVec2 yAxis(selectionBounds[0].x, selectionBounds[1].y);
@@ -85,12 +88,6 @@ bool ePlayer::SelectGroup() {
 	}
 	eBox selectionArea(obbPoints.data());
 
-	// FIXME: if selectedCells doesn't include the cell where entity->collisionModel is contained (regardless of visual presence over other cells)
-	// then the entity will not be selected (despite a would-be AABBAABB test w/selectionBox and entity->worldClip yielding true)
-	// SOLUTION: just use visibleCells from eMap (the only reason for doing OBB selectedCells is to minimize the #cells to check, and ultimately #tests)
-	// ...this would work fine for eTile's because cells have tilesToDraw based on the tile->worldClip....but eEntity isn't part of that list...why not?
-	// SOLUTION: make eGridCell::tilesToDraw a std::vector<renderImage *> (and rename it itemsToDraw, or toDraw)
-	// then whenever UpdateAreas is called also call an UpdateAreas...that handes eGridcell::toDraw occupancy....INDEPENDENT OF COLLISIONMODEL!!)
 	eCollision::GetAreaCells(selectionArea, selectedCells);
 	for (auto & cell : selectedCells) {
 		for (auto & kvPair : cell->RenderContents()) {
@@ -115,12 +112,6 @@ bool ePlayer::SelectGroup() {
 	}
 	alreadyTested.clear();
 	selectedCells.clear();
-
-	// TODO: test if selectionArea is below a certain size threshold
-	// that indicates the intention was to select a single eEntity
-	// then loop over groupSelection looking for the selected item closest to the camera (ie: localDepthSort)
-	// then grab it, ClearGroupSelection(), and re-add the one eEntity
-
 	return !groupSelection.empty();
 }
 
@@ -140,27 +131,8 @@ void ePlayer::ClearGroupSelection() {
 //***************
 void ePlayer::Draw() {
 	// draw the selection box
-	if (beginSelection) {
-	//	game.GetRenderer().DrawCartesianRect(greenColor, eBounds(selectionPoints.data(), selectionPoints.size()) , false, RENDERTYPE_STATIC);
-		static std::vector<eGridCell *> selectedCells;				// DEBUG(performance): static to reduce dynamic allocations	
-		eBounds selectionBounds(selectionPoints.data(), selectionPoints.size());
-		if (selectionBounds.Width() > 0.0f && selectionBounds.Height() > 0.0f){
-			eVec2 corner = selectionBounds[0];
-			eVec2 xAxis(selectionBounds[1].x, selectionBounds[0].y);
-			eVec2 yAxis(selectionBounds[0].x, selectionBounds[1].y);
-			std::array<eVec2, 3> obbPoints = { std::move(corner), std::move(xAxis), std::move(yAxis) };
-			for (auto & point : obbPoints) {
-				point += game.GetCamera().CollisionModel().AbsBounds()[0];
-				eMath::IsometricToCartesian(point.x, point.y);
-			}
-			eBox selectionArea(obbPoints.data());
-
-			eCollision::GetAreaCells(selectionArea, selectedCells);
-			for (auto & cell : selectedCells)
-				game.GetRenderer().DrawIsometricRect(pinkColor, cell->AbsBounds(), RENDERTYPE_DYNAMIC);
-			selectedCells.clear();
-		}
-	}
+	if (beginSelection)
+		game.GetRenderer().DrawCartesianRect(greenColor, eBounds(selectionPoints.data(), selectionPoints.size()) , false, RENDERTYPE_STATIC);
 	else
 		selectionPoints[0] = selectionPoints[1];
 
@@ -180,6 +152,6 @@ void ePlayer::DebugDraw() {
 	const eVec2 worldPosition = game.GetCamera().MouseWorldPosition();
 	if (tileMap.IsValid(worldPosition)) {
 		auto & tileBounds = tileMap.Index(worldPosition).AbsBounds();
-	//	game.GetRenderer().DrawIsometricRect(yellowColor, tileBounds, RENDERTYPE_DYNAMIC);
+//		game.GetRenderer().DrawIsometricRect(yellowColor, tileBounds, RENDERTYPE_DYNAMIC);
 	}
 }

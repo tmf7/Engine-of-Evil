@@ -9,27 +9,22 @@
 
 class eEntity;
 
-typedef unsigned char byte_t;
-
-template <class type, int rows, int columns>
-class eSpatialIndexGrid;
-typedef eSpatialIndexGrid<byte_t, MAX_MAP_ROWS, MAX_MAP_COLUMNS> byte_map_t;
-
 //*************************************************
 //				eMovementPlanner
 // updates owner's velocity to avoid collision
 // and pathfind to goal waypoints
 // DEBUG: owner must have a eCollisionModel for this to function
+// TODO: give knownMap multiple layers to match eMap::tileMap,
+// so this->owner can navigate them without blocking itself prematurely
 //*************************************************
 class eMovementPlanner : public eComponent {
 public:
 
-						eMovementPlanner(const float movementSpeed);
+						eMovementPlanner(eGameObject * owner, float movementSpeed);
 
 	void				Update();
 	void				DebugDraw();							
 	void				AddUserWaypoint(const eVec2 & waypoint);
-	const byte_map_t &	KnownMap() const;
 	void				ClearTrail();
 	void				TogglePathingState();
 	float				Speed() const;
@@ -44,54 +39,68 @@ public:
 
 private:
 
-	// values for byte_map_t knownMap;
-	typedef enum {
+	// values for known_map_t knownMap;
+	 typedef enum : unsigned char{
 		UNKNOWN_TILE,
 		VISITED_TILE
 	} tileState_t ;
 
+	// if owner->collisionModel has been on a tile
+	class eTileKnowledge : public eGridIndex {
+		public:
+
+			virtual void	Reset() override				{ eGridIndex::Reset(); value = UNKNOWN_TILE; }
+			virtual int		GetClassType() const override	{ return CLASS_TILEKNOWLEDGE; }
+
+		public:
+
+			unsigned char value = UNKNOWN_TILE;
+	};
+
+	typedef eSpatialIndexGrid<eTileKnowledge, MAX_MAP_ROWS, MAX_MAP_COLUMNS> known_map_t;
+
 	// used to decide on a new movement direction
 	typedef struct decision_s {
 		eVec2			vector		= vec2_zero;
-		float			stepRatio	= 0.0f;			// ratio of valid steps to those that land on previously unvisited tiles
-		float			validSteps	= 0.0f;			// collision-free steps that could be taken along the vector
+		float			stepRatio	= 0.0f;				// ratio of valid steps to those that land on previously unvisited tiles
+		float			validSteps	= 0.0f;				// collision-free steps that could be taken along the vector
 	} decision_t;
 
 	typedef enum {
-		MOVETYPE_NONE,								// TODO: actually integrate this
-		MOVETYPE_GOAL,								// waypoint tracking
-		MOVETYPE_TRAIL								// waypoint tracking
+		MOVETYPE_NONE,									// TODO: actually integrate this
+		MOVETYPE_GOAL,									// waypoint tracking
+		MOVETYPE_TRAIL									// waypoint tracking
 	} movementType_t;
 	
 	typedef enum {
-		PATHTYPE_NONE,								// TODO: actually integrate this
+		PATHTYPE_NONE,									// TODO: actually integrate this
 		PATHTYPE_COMPASS,
 		PATHTYPE_WALL
 	} pathfindingType_t;
 
 private:
 
-	byte_map_t			knownMap;					// tracks visited tiles 
-	movementType_t		moveState;					// backtracking or heading to a goal
-	pathfindingType_t	pathingState;				// method of deciding velocity
+	known_map_t			knownMap;						// tracks visited tiles 
+	movementType_t		moveState;						// backtracking or heading to a goal
+	pathfindingType_t	pathingState;					// method of deciding velocity
 
 	float				maxMoveSpeed;
-	float				goalRange;					// acceptable range to consider the goal waypoint reached
+	float				goalRange;						// acceptable range to consider the goal waypoint reached
 
-	eDeque<eVec2>		trail;						// *this defines waypoints for effective backtracking
-	eDeque<eVec2>		goals;						// User-defined waypoints as terminal destinations
-	eVec2 *				currentWaypoint = nullptr;	// simplifies switching between the deque being tracked
+	eDeque<eVec2>		trail;							// *this defines waypoints for effective backtracking
+	eDeque<eVec2>		goals;							// User-defined waypoints as terminal destinations
+	eVec2 *				currentWaypoint = nullptr;		// simplifies switching between the deque being tracked
 
-	decision_t			forward;					// currently used movement vector
-	decision_t			left;						// perpendicular to forward.vector counter-clockwise
-	decision_t			right;						// perpendicular to forward.vector clockwise
+	decision_t			forward;						// currently used movement vector
+	decision_t			left;							// perpendicular to forward.vector counter-clockwise
+	decision_t			right;							// perpendicular to forward.vector clockwise
 
-	byte_t *			previousTile	= nullptr;	// most recently exited valid tile
-	byte_t *			currentTile		= nullptr;	// tile at the entity's origin
-	byte_t *			lastTrailTile	= nullptr;	// tile on which the last trail waypoint was placed (prevents redundant placement)
+	eTileKnowledge *		previousTile	= nullptr;	// most recently exited valid tile
+	eTileKnowledge *		currentTile		= nullptr;	// tile at the entity's origin
+	eTileKnowledge *		lastTrailTile	= nullptr;	// tile on which the last trail waypoint was placed (prevents redundant placement)
 
 	// pathfinding (wall-follow)
-	decision_t *		wallSide		= nullptr;	// direction to start sweeping from during PATHTYPE_WALL
+	decision_t *		wallSide		= nullptr;		// direction to start sweeping from during PATHTYPE_WALL
 
 	bool				moving;
 
@@ -112,13 +121,6 @@ private:
 	void				UpdateKnownMap();
 	void				StopMoving();
 };
-
-//*************
-// eMovementPlanner::KnownMap
-//*************
-inline const byte_map_t & eMovementPlanner::KnownMap() const {
-	return knownMap;
-}
 
 //*************
 // eMovementPlanner::TogglePathingState

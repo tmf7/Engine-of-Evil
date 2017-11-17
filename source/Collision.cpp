@@ -167,15 +167,15 @@ bool eCollision::BoxCast(std::vector<Collision_t> & collisions, const eBounds & 
 //***************
 void eCollision::GetAreaCells(const eBox & area, std::vector<eGridCell *> & areaCells) {
 	auto & tileMap = game.GetMap().TileMap();
-	static std::deque<eGridCell *> openSet;		// first-come-first-served testing
+	static std::deque<eGridCell *> openSet;							// first-come-first-served testing
 	static std::vector<eGridCell *> closedSet;
 	static std::vector<eGridCell *> neighbors;
 	
-	auto & initialCell = tileMap.IndexValidated(area.Center());
+	auto & initialCell = tileMap.IndexValidated(area.Center());		// guaranteed hit b/t first cell and area
 	openSet.push_back(&initialCell);
 	initialCell.inOpenSet = true;
 
-	while(!openSet.empty()) {
+	while(!openSet.empty()) {			
 		auto cell = openSet.front();
 		openSet.pop_front();		
 		closedSet.push_back(cell);
@@ -231,15 +231,15 @@ void eCollision::GetAreaCells(const eBounds & area, std::vector<eGridCell *> & a
 //***************
 void eCollision::GetAreaCells(const eBounds & bounds, const eVec2 & dir, const float length, std::vector<eGridCell *> & areaCells) {
 	auto & tileMap = game.GetMap().TileMap();
-	static std::deque<eGridCell *> openSet;		// first-come-first-served testing
+	static std::deque<eGridCell *> openSet;							// first-come-first-served testing
 	static std::vector<eGridCell *> closedSet;
 	static std::vector<eGridCell *> neighbors;
 	
-	auto & initialCell = tileMap.IndexValidated(bounds.Center());
+	auto & initialCell = tileMap.IndexValidated(bounds.Center());	// guaranteed hit b/t first cell and area
 	openSet.push_back(&initialCell);
 	initialCell.inOpenSet = true;
 
-	float placeholderFraction;					// DEBUG: not used
+	float placeholderFraction;										// DEBUG: not used
 	while(!openSet.empty()) {
 		auto cell = openSet.front();
 		openSet.pop_front();		
@@ -274,15 +274,15 @@ void eCollision::GetAreaCells(const eBounds & bounds, const eVec2 & dir, const f
 //***************
 void eCollision::GetAreaCells(const eVec2 & begin, const eVec2 & dir, const float length, std::vector<eGridCell *> & areaCells) {
 	auto & tileMap = game.GetMap().TileMap();
-	static std::deque<eGridCell *> openSet;		// first-come-first-served testing
+	static std::deque<eGridCell *> openSet;					// first-come-first-served testing
 	static std::vector<eGridCell *> closedSet;
 	static std::vector<eGridCell *> neighbors;
 	
-	auto & initialCell = tileMap.IndexValidated(begin);
+	auto & initialCell = tileMap.IndexValidated(begin);		// guaranteed hit b/t first cell and directed-segment
 	openSet.push_back(&initialCell);
 	initialCell.inOpenSet = true;
 
-	float placeholderFraction;					// DEBUG: not used
+	float placeholderFraction;								// DEBUG: not used
 	while(!openSet.empty()) {
 		auto cell = openSet.front();
 		openSet.pop_front();		

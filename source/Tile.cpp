@@ -190,8 +190,7 @@ eTile::eTile(eGridCell * cellOwner, const eVec2 & origin, const int type, const 
 	: cellOwner(cellOwner) {
 	orthoOrigin = origin;
 	worldLayer = layer;
-	renderImage = std::make_unique<eRenderImage>();		// all tiles currently have a renderimage by default
-	renderImage->SetOwner(this);		// FIXME/BUG: if *this is moved from the renderImage::owner will be a READ ACCESS ERROR
+	renderImage = std::make_unique<eRenderImage>(this);		// all tiles currently have a renderimage by default
 	SetType(type);
 }
 
@@ -212,8 +211,7 @@ void eTile::SetType(int newType) {
 
 // FREEHILL BEGIN AABB (eBounds) collisionModel import test (2/2)
 	if (impl->collider != nullptr) {
-		collisionModel = std::make_unique<eCollisionModel>();
-		collisionModel->SetOwner(this);
+		collisionModel = std::make_unique<eCollisionModel>(this);
 		collisionModel->SetActive(true);
 		collisionModel->LocalBounds() = *(impl->collider);
 		collisionModel->SetOrigin(orthoOrigin);

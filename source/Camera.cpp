@@ -5,8 +5,7 @@
 //***************
 eCamera::eCamera()
 	: camSpeed(defaultCamSpeed) {
-	collisionModel = std::make_unique<eCollisionModel>();
-	collisionModel->SetOwner(this);
+	collisionModel = std::make_unique<eCollisionModel>(this);
 	collisionModel->SetActive(false);
 }
 

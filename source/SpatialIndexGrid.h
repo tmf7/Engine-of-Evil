@@ -6,10 +6,44 @@
 #include "Class.h"
 
 //*************************************************
-//				eSpatial Index Grid
+//				eGridIndex
+//  base class of types expected by eSpatialIndexGrid
+//*************************************************
+class eGridIndex : public eClass {
+public:
+
+	virtual				~eGridIndex() = default;
+
+	void				SetGridPosition(const int row, const int column)	{ gridRow = row; gridColumn = column; }
+	int					GridRow() const										{ return gridRow; }
+	int					GridColumn() const									{ return gridColumn; }
+
+	virtual	void		Reset()												{ inOpenSet = false; inClosedSet = false; }
+	virtual int			GetClassType() const override						{ return CLASS_GRIDINDEX; }
+
+public:
+
+	// expidites openSet and closedSet vector searches while systematically traversing the eSpatialIndexGrid to which *this belongs (eg: A* search)
+	// DEBUG: always reset these values after use
+	bool				inOpenSet	= false;	
+	bool				inClosedSet = false;
+
+protected:
+
+	int					gridRow;
+	int					gridColumn;
+
+};
+
+//*************************************************
+//				eSpatialIndexGrid
 //  Maps points in 2D space to elements of a 2D array
 //  by dividing the space into an orthographic grid of cells.
-//  This class uses stack memory.
+//  This class uses stack memory, 
+//  and expects an eGridIndex template type (see: eSpatialIndexGrid::ResetAllCells)
+//  TODO(~): possibly use std::vector<std::unique_ptr<eGridIndex>>
+//	to allocate a smaller contiguous memory footprint at runtime (at the cost of slower loadtime),
+//  while still taking advantge of polymorphism
 //*************************************************
 template< class type, int rows, int columns>
 class eSpatialIndexGrid : public eClass {
@@ -62,7 +96,7 @@ public:
 	int						Width() const;
 	int						Height() const;
 
-	void					ClearAllCells();
+	void					ResetAllCells();
 
 	virtual int				GetClassType() const override { return CLASS_SPATIALINDEXGRID; }
 
@@ -89,6 +123,8 @@ inline eSpatialIndexGrid<type, rows, columns>::eSpatialIndexGrid()
 	  cellHeight(1),
 	  invCellWidth(1.0f),
 	  invCellHeight(1.0f),
+	  isoCellWidth(2),
+	  isoCellHeight(1),
 	  usedRows(rows),
 	  usedColumns(columns) {
 }
@@ -397,7 +433,7 @@ inline int eSpatialIndexGrid<type, rows, columns>::CellHeight() const {
 //******************
 template< class type, int rows, int columns>
 inline void eSpatialIndexGrid<type, rows, columns>::SetGridSize(const int numRows, const int numColumns) {
-//	ClearAllCells();		// DEBUG: doing this during eMap::LoadMap causes a read access error during eGridCell::AddTileOwned
+	ResetAllCells();		
 	usedRows = numRows > 0 ? (numRows <= rows ? numRows : rows) : 1;
 	usedColumns = numColumns > 0 ? (numColumns <= columns ? numColumns : columns) : 1;
 }
@@ -496,12 +532,13 @@ inline int eSpatialIndexGrid<type, rows, columns>::Height() const {
 }
 
 //******************
-// eSpatialIndexGrid::ClearAllCells
-// memsets the private 2D cells array to 0-value bytes
+// eSpatialIndexGrid::ResetAllCells
+// calls eGridIndex::Reset on all cells
 //******************
 template< class type, int rows, int columns>
-inline void eSpatialIndexGrid<type, rows, columns>::ClearAllCells() {
-	memset(&cells[0][0], 0, rows * columns * sizeof(cells[0][0]));
+inline void eSpatialIndexGrid<type, rows, columns>::ResetAllCells() {
+	for (auto cell = &cells[0][0]; cell < &cells[rows - 1][columns]; ++cell)
+		cell->Reset();
 }
 
 #endif /* EVIL_SPATIAL_INDEX_GRID_H */

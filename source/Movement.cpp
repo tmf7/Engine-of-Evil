@@ -4,15 +4,16 @@
 //***************
 // eMovementPlanner::eMovementPlanner
 //***************
-eMovementPlanner::eMovementPlanner(const float movementSpeed)
+eMovementPlanner::eMovementPlanner(eGameObject * owner, float movementSpeed)
 	: maxMoveSpeed(movementSpeed),
 	  goalRange(movementSpeed),
 	  pathingState(PATHTYPE_COMPASS),
 	  moveState(MOVETYPE_GOAL) {
+	this->owner = owner;
 	auto & tileMap = game.GetMap().TileMap();
 	knownMap.SetCellSize( tileMap.CellWidth(),
 						  tileMap.CellHeight());
-	knownMap.ClearAllCells();
+	knownMap.ResetAllCells();
 }
 
 //***************
@@ -175,7 +176,7 @@ void eMovementPlanner::CompassFollow() {
 
 		// stuck in a corner (look for the quickest and most waypoint-oriented way out)
 		if ((forward.stepRatio == 0 && right.stepRatio == 0) || (forward.stepRatio == 0 && left.stepRatio == 0))
-			*currentTile = VISITED_TILE;
+			currentTile->value = VISITED_TILE;
 	}
 
 	waypoint.vector = *currentWaypoint - ownerCollisionModel.Origin();
@@ -287,7 +288,7 @@ bool eMovementPlanner::CheckVectorPath(decision_t & along) {
 	eVec2 futureCenter = boundsCenter;
 	float newSteps = 0.0f;
 	for (int i = 0; i < along.validSteps; ++i) {
-		if (knownMap.Index(futureCenter) == UNKNOWN_TILE)
+		if (knownMap.Index(futureCenter).value == UNKNOWN_TILE)
 			++newSteps;
 		futureCenter += along.vector * maxMoveSpeed;
 	}
@@ -398,7 +399,7 @@ void eMovementPlanner::UpdateWaypoint(bool getNext) {
 // all trail waypoints are removed
 //******************
 void eMovementPlanner::ClearTrail() {
-	knownMap.ClearAllCells();
+	knownMap.ResetAllCells();
 	lastTrailTile = nullptr;
 }
 
@@ -408,7 +409,7 @@ void eMovementPlanner::ClearTrail() {
 //******************
 bool eMovementPlanner::CheckTrail() {
 	if (trail.IsEmpty()) {
-		knownMap.ClearAllCells();
+		knownMap.ResetAllCells();
 		lastTrailTile = nullptr;
 		return true;
 	}
@@ -421,7 +422,7 @@ bool eMovementPlanner::CheckTrail() {
 // and resets tiles around the current goal waypoint to UNKNOWN_TILE
 //******************
 void eMovementPlanner::UpdateKnownMap() {
-	byte_t * checkTile;
+	eTileKnowledge * checkTile;
 	int row, column;
 	int startRow, startCol;
 	int endRow, endCol;
@@ -434,7 +435,7 @@ void eMovementPlanner::UpdateKnownMap() {
 	checkTile = &knownMap.Index(owner->CollisionModel().Origin());
 	if (checkTile != currentTile) {
 		previousTile = currentTile;
-		*previousTile = VISITED_TILE;
+		previousTile->value = VISITED_TILE;
 		currentTile = checkTile;
 	}
 
@@ -469,7 +470,7 @@ void eMovementPlanner::UpdateKnownMap() {
 			row = startRow;
 			column = startCol;
 			while (row <= endRow) {
-				knownMap.Index(row, column) = UNKNOWN_TILE;
+				knownMap.Index(row, column).value = UNKNOWN_TILE;
 
 				column++;
 				if (column > endCol) {
@@ -482,7 +483,7 @@ void eMovementPlanner::UpdateKnownMap() {
 
 	// pop all trail waypoints that no longer fall on VISITED_TILEs
 	while (!trail.IsEmpty()) {
-		if (knownMap.Index(trail.Back()->Data()) == UNKNOWN_TILE)
+		if (knownMap.Index(trail.Back()->Data()).value == UNKNOWN_TILE)
 			trail.PopBack();
 		else
 			break;
@@ -542,7 +543,7 @@ void eMovementPlanner::DrawKnownMap() const {
 	auto & tileMap = game.GetMap().TileMap();
 	auto & visibleCells = game.GetMap().VisibleCells();
 	for (auto & cell : visibleCells) {
-		if (knownMap.Index(cell->GridRow(), cell->GridColumn()) == VISITED_TILE)
+		if (knownMap.Index(cell->GridRow(), cell->GridColumn()).value == VISITED_TILE)
 			game.GetRenderer().DrawIsometricRect(pinkColor, cell->AbsBounds(), RENDERTYPE_DYNAMIC);
 	}
 

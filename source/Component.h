@@ -5,10 +5,20 @@
 
 class eGameObject;
 
+//*************************************************
+//				eComponent
+// base class for all in-game interactive objects
+// eGameObjects handle the lifetime of eComponents
+// DEBUG: always define and construct derived classes
+// with an eGameObject-type owner [eg: eRenderImage::eRenderImage(eGameObject * owner)]
+//*************************************************
 class eComponent : eClass {
+private:
+
+	friend class eGameObject;
+
 public:
 
-	virtual void						SetOwner(eGameObject * newOwner)	{ owner = newOwner; }
 	const eGameObject *					Owner() const						{ return owner; }
 	eGameObject *						Owner()								{ return owner; }
 
@@ -16,7 +26,13 @@ public:
 
 protected:
 
-	eGameObject *						owner;		// back-pointer to user managing the lifetime of *this
+										eComponent() = default;		// safety-reminder, disallow outside classes from instantiation without an owner
+
+	virtual void						SetOwner(eGameObject * newOwner)	{ owner = newOwner; }
+
+protected:
+
+	eGameObject *						owner = nullptr;			// back-pointer to user managing the lifetime of *this
 
 	// DEBUG: std::shared_ptr creates a loop and artificial memory leak because neither this nor its owner can be destroyed
 	// DEBUG: raw pointer is okay as long as *this doesn't outlive its owner 
