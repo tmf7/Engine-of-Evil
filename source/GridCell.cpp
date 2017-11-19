@@ -14,7 +14,7 @@ void eGridCell::Draw() {
 // eGridCell::AddTileOwned
 //************
 void eGridCell::AddTileOwned(eTile && tile) {
-	tilesOwned.push_back(std::move(tile));
+	tilesOwned.emplace_back(std::move(tile));
 }
 
 //************

@@ -137,7 +137,7 @@ bool eCollision::BoxCast(std::vector<Collision_t> & collisions, const eBounds & 
 			if (MovingAABBAABBTest(bounds, dir, length, *otherBounds, collision.fraction)) {
 				collision.owner = collider;
 				GetCollisionNormal(bounds, dir, length, *otherBounds, collision);
-				collisions.push_back(collision);
+				collisions.emplace_back(std::move(collision));
 			}
 		}
 	}
@@ -172,23 +172,23 @@ void eCollision::GetAreaCells(const eBox & area, std::vector<eGridCell *> & area
 	static std::vector<eGridCell *> neighbors;
 	
 	auto & initialCell = tileMap.IndexValidated(area.Center());		// guaranteed hit b/t first cell and area
-	openSet.push_back(&initialCell);
+	openSet.emplace_back(&initialCell);
 	initialCell.inOpenSet = true;
 
 	while(!openSet.empty()) {			
 		auto cell = openSet.front();
 		openSet.pop_front();		
-		closedSet.push_back(cell);
+		closedSet.emplace_back(cell);
 		cell->inOpenSet = false;
 		cell->inClosedSet = true;
 
 		if (OBBOBBTest(area, eBox(cell->AbsBounds()))) {
-			areaCells.push_back(cell);
+			areaCells.emplace_back(cell);
 			tileMap.GetNeighbors(cell->GridRow(), cell->GridColumn(), neighbors);
 
 			for(auto & neighborCell : neighbors) {
 				if (!neighborCell->inClosedSet && !neighborCell->inOpenSet) {
-					openSet.push_back(neighborCell);
+					openSet.emplace_back(neighborCell);
 					neighborCell->inOpenSet = true;
 				}
 			}
@@ -218,7 +218,7 @@ void eCollision::GetAreaCells(const eBounds & area, std::vector<eGridCell *> & a
 
 	for (int row = startRow; row <= endRow; ++row) {
 		for (int col = startCol; col <= endCol; ++col) {
-			areaCells.push_back(&tileMap.Index(row, col));
+			areaCells.emplace_back(&tileMap.Index(row, col));
 		}
 	}
 }
@@ -236,24 +236,24 @@ void eCollision::GetAreaCells(const eBounds & bounds, const eVec2 & dir, const f
 	static std::vector<eGridCell *> neighbors;
 	
 	auto & initialCell = tileMap.IndexValidated(bounds.Center());	// guaranteed hit b/t first cell and area
-	openSet.push_back(&initialCell);
+	openSet.emplace_back(&initialCell);
 	initialCell.inOpenSet = true;
 
 	float placeholderFraction;										// DEBUG: not used
 	while(!openSet.empty()) {
 		auto cell = openSet.front();
 		openSet.pop_front();		
-		closedSet.push_back(cell);
+		closedSet.emplace_back(cell);
 		cell->inOpenSet = false;
 		cell->inClosedSet = true;
 
 		if (MovingAABBAABBTest(bounds, dir, length, cell->AbsBounds(), placeholderFraction)) {
-			areaCells.push_back(cell);
+			areaCells.emplace_back(cell);
 			tileMap.GetNeighbors(cell->GridRow(), cell->GridColumn(), neighbors);
 
 			for(auto & neighborCell : neighbors) {
 				if (!neighborCell->inClosedSet && !neighborCell->inOpenSet) {
-					openSet.push_back(neighborCell);
+					openSet.emplace_back(neighborCell);
 					neighborCell->inOpenSet = true;
 				}
 			}
@@ -279,24 +279,24 @@ void eCollision::GetAreaCells(const eVec2 & begin, const eVec2 & dir, const floa
 	static std::vector<eGridCell *> neighbors;
 	
 	auto & initialCell = tileMap.IndexValidated(begin);		// guaranteed hit b/t first cell and directed-segment
-	openSet.push_back(&initialCell);
+	openSet.emplace_back(&initialCell);
 	initialCell.inOpenSet = true;
 
 	float placeholderFraction;								// DEBUG: not used
 	while(!openSet.empty()) {
 		auto cell = openSet.front();
 		openSet.pop_front();		
-		closedSet.push_back(cell);
+		closedSet.emplace_back(cell);
 		cell->inOpenSet = false;
 		cell->inClosedSet = true;
 
 		if (RayAABBTest(begin, dir, length, cell->AbsBounds(), placeholderFraction)) {
-			areaCells.push_back(cell);
+			areaCells.emplace_back(cell);
 			tileMap.GetNeighbors(cell->GridRow(), cell->GridColumn(), neighbors);
 
 			for(auto & neighborCell : neighbors) {
 				if (!neighborCell->inClosedSet && !neighborCell->inOpenSet) {
-					openSet.push_back(neighborCell);
+					openSet.emplace_back(neighborCell);
 					neighborCell->inOpenSet = true;
 				}
 			}
@@ -543,7 +543,7 @@ bool eCollision::RayCast(std::vector<Collision_t> & collisions, const eVec2 & be
 				collision.owner = collider;
 				eVec2 touchPoint = begin + dir * collision.fraction;
 				GetCollisionNormal(touchPoint, collider->AbsBounds(), collision.normal);
-				collisions.push_back(collision);
+				collisions.emplace_back(std::move(collision));
 			}
 		}
 	}

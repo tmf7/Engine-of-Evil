@@ -100,9 +100,22 @@ void eEntity::DebugDraw() {
 	if (game.debugFlags.RENDERBLOCKS && animationController != nullptr)
 		game.GetRenderer().DrawIsometricPrism(lightBlueColor, renderImage->RenderBlock(), RENDERTYPE_DYNAMIC);
 
-		game.GetRenderer().DrawCartesianRect(lightBlueColor, renderImage->GetWorldClip(), false, RENDERTYPE_DYNAMIC);
-	for (auto & cell : renderImage->Areas())
-		game.GetRenderer().DrawIsometricRect(yellowColor, cell->AbsBounds(), RENDERTYPE_DYNAMIC);
+//		game.GetRenderer().DrawCartesianRect(lightBlueColor, renderImage->GetWorldClip(), false, RENDERTYPE_DYNAMIC);		// DEBUG: draw worldclip
+
+	// TODO: better visual difference b/t cells occupied by both renderImage and collisionmodel
+	if (game.debugFlags.GRID_OCCUPANCY) {
+		if (renderImage != nullptr) {
+			for (auto & cell : renderImage->Areas()) {
+				game.GetRenderer().DrawIsometricRect(yellowColor, cell->AbsBounds(), RENDERTYPE_DYNAMIC);
+			}
+		}
+
+		if (collisionModel != nullptr) {
+			for (auto & cell : collisionModel->Areas()) {
+				game.GetRenderer().DrawIsometricRect(lightBlueColor, cell->AbsBounds(), RENDERTYPE_DYNAMIC);
+			}
+		}
+	}
 
 	if (game.debugFlags.COLLISION && collisionModel != nullptr)
 		game.GetRenderer().DrawIsometricRect(yellowColor, collisionModel->AbsBounds(), RENDERTYPE_DYNAMIC);

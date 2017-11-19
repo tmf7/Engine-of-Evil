@@ -65,7 +65,7 @@ void eCamera::SetZoom(float level) {
 	screenBottomRight *= level;
 
 	// variable rectangle with (0, 0) at its center)
-	collisionModel->LocalBounds() = eBounds(-screenBottomRight / 2.0f, screenBottomRight / 2.0f);
+	collisionModel->LocalBounds() = eBounds(-screenBottomRight * 0.5f, screenBottomRight * 0.5f);
 }
 
 //**************

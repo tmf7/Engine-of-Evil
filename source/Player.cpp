@@ -106,7 +106,7 @@ bool ePlayer::SelectGroup() {
 			const eBounds dstRect = entity->RenderImage().GetWorldClip().Translate(-game.GetCamera().CollisionModel().AbsBounds()[0]);
 			if (eCollision::AABBAABBTest(dstRect, selectionBounds)) {
 				entity->SetPlayerSelected(true);						// TODO: to draw a highlight around the selected entities
-				groupSelection.push_back(entity);
+				groupSelection.emplace_back(entity);
 			}
 		}
 	}

@@ -12,7 +12,7 @@ bool eEntityPrefabManager::Init() {
 	auto hasher = std::hash<std::string>{};
 	prefabFilenameHash.Add(hasher("error_prefab_entity"), prefabList.size());
 	try {
-		prefabList.push_back(std::make_shared<eEntity>(defaultSpawnArgs));	// error prefab
+		prefabList.emplace_back(std::make_shared<eEntity>(defaultSpawnArgs));	// error prefab
 	} catch (const badEntityCtorException & e) {
 		// TODO: output to an error log file (popup is fine for now because it's more obvious and immediate)
 		std::string message = e.what + " caused eEntity (0) prefab failure.";
@@ -189,7 +189,7 @@ bool eEntityPrefabManager::LoadPrefab(const char * filename, std::shared_ptr<eEn
 	prefabFilenameHash.Add(hasher(filename), prefabList.size());
 	try {
 		result = std::make_shared<eEntity>(spawnArgs);
-		prefabList.push_back(result);
+		prefabList.emplace_back(result);
 		return true;
 	} catch (const badEntityCtorException & e) {
 		// TODO: output to an error log file (popup is fine for now because it's more obvious and immediate)

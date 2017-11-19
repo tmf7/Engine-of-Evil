@@ -20,15 +20,14 @@ class eGame : public eClass {
 public:
 
 	struct {
-		bool	GOAL_WAYPOINTS		= true;
-		bool	TRAIL_WAYPOINTS		= true;
+		bool	GOAL_WAYPOINTS		= false;
+		bool	TRAIL_WAYPOINTS		= false;
 		bool	COLLISION			= false;
 		bool	RENDERBLOCKS		= false;
-		bool	KNOWN_MAP_DRAW		= true;
+		bool	KNOWN_MAP_DRAW		= false;
 		bool	KNOWN_MAP_CLEAR		= true;
 		bool	FRAMERATE			= true;
-		bool	A_STAR_PATH			= true;
-		bool	GRID_OCCUPANCY		= true;
+		bool	GRID_OCCUPANCY		= false;
 	} debugFlags;
 
 	enum ErrorCode {
@@ -175,7 +174,7 @@ inline eMap & eGame::GetMap() {
 // eGame::AddEntity
 //****************
 inline void eGame::AddEntity(std::shared_ptr<eEntity> & entity) {
-	return entities.push_back(entity);
+	return entities.emplace_back(entity);
 }
 
 //****************

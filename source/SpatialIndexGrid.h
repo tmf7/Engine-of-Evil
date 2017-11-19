@@ -1,7 +1,6 @@
 #ifndef EVIL_SPATIAL_INDEX_GRID_H
 #define EVIL_SPATIAL_INDEX_GRID_H
 
-#include <vector>
 #include "Vector.h"
 #include "Class.h"
 
@@ -74,6 +73,7 @@ public:
 
 	int						IsometricCellWidth() const;
 	int						IsometricCellHeight() const;
+	int						NumLayers() const;
 	int						LayerDepth(const int layer) const;
 	int						LayerFromZPosition(int zPosition) const;
 	int						MinZPositionFromLayer(const Uint32 layer) const;
@@ -335,20 +335,47 @@ inline const type & eSpatialIndexGrid<type, rows, columns>::Index(const int row,
 
 //**************
 // eSpatialIndexGrid::GetNeighbors
+// fills neighbors param with pointers to 0-8 adjacent cells
+// DEBUG: reduced the number of logical condition checks (lcc):
+// [isCenter] == 2 lcc; [isValid] == 1-4 lcc
+// 9[isCenter] + 8[isValid] using nested for loop						= 50 lcc (partially off grid = 26-50 lcc)
+// 8[isValid] using range-based loop on array							= 32 lcc (partially off grid = 8-32 lcc)
+// 8[bitCheck] + 1[offGrid] + 1[totalOnGrid] + 0/8[isValid] on array	= 9 lcc if out, 10 lcc if in (the usual case), 18-42 lcc if partial-in (a rare case)
 //**************
 template< class type, int rows, int columns>
 inline void eSpatialIndexGrid<type, rows, columns>::GetNeighbors(const int row, const int column, std::vector<type *> & neighbors) {
-	for (int r = -1; r <= 1; ++r) {
-		for (int c = -1; c <= 1; ++c) {
-			if (r == 0 && c == 0)
-				continue;
+	const int rmo = row - 1;
+	const int rpo = row + 1;
+	const int cmo = column - 1;
+	const int cpo = column + 1;
+	const std::array<std::pair<int, int>, 8> testNeighbors = { { { rmo, cmo },		// [0]
+																 { rmo, column },	// [1]
+																 { rmo, cpo },		// [2]
+																 { row, cmo },		// [3]
+																 { row, cpo },		// [4]
+																 { rpo, cmo },		// [5]
+																 { rpo, column },	// [6]
+																 { rpo, cpo } } };	// [7]
 
-			int checkRow = row + r;
-			int checkCol = column + c;
-			if (IsValid(checkRow, checkCol))
-				neighbors.push_back(&Index(checkRow, checkCol));
-		}
+	const Uint8 neighborhood = (((rmo < 0) * BIT(0)) | ((rmo >= usedRows) * BIT(1)) |
+							    ((rpo < 0) * BIT(2)) | ((rpo >= usedRows) * BIT(3)) |
+							    ((cmo < 0) * BIT(4)) | ((cmo >= usedColumns) * BIT(5)) |
+							    ((cpo < 0) * BIT(6)) | ((cpo >= usedColumns) * BIT(7)));
+		
+	#define OFF_GRID 0b01100110							// separating axis test, (see: eCollision::GetAreaCells, fn-call avoided so OFF_GRID condition never triggers)
+	if (neighborhood & OFF_GRID) return;
+	#undef OFF_GRID
+
+	#define PARTIALLY_ON_GRID 0b10011001				// opposite of total overlap conditions
+	if (neighborhood & PARTIALLY_ON_GRID) {
+		for (auto & neighbor : testNeighbors)
+			if (IsValid(neighbor.first, neighbor.second))
+				neighbors.emplace_back(&cells[neighbor.first][neighbor.second]);
+	} else {											// total overlap of grid, no need to validate indexes
+		for (auto & neighbor : testNeighbors)
+			neighbors.emplace_back(&cells[neighbor.first][neighbor.second]);
 	}
+	#undef PARTIALLY_ON_GRID
 }
 
 //******************
@@ -458,7 +485,7 @@ inline void eSpatialIndexGrid<type, rows, columns>::SetCellSize(const int cellWi
 //******************
 template< class type, int rows, int columns>
 inline void eSpatialIndexGrid<type, rows, columns>::AddLayerDepth(const size_t depth) {
-	layerDepths.push_back(depth);
+	layerDepths.emplace_back(depth);
 }
 
 /*
@@ -496,6 +523,14 @@ inline const type * eSpatialIndexGrid<type, rows, columns>::end() const {
 	return &cells[rows - 1][columns];
 }
 */
+
+//******************
+// eSpatialIndexGrid::NumLayers
+//******************
+template< class type, int rows, int columns>
+inline int eSpatialIndexGrid<type, rows, columns>::NumLayers() const {
+	return layerDepths.size();
+}
 
 //******************
 // eSpatialIndexGrid::Rows

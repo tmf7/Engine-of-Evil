@@ -73,7 +73,7 @@ void eCollisionModel::UpdateAreas() {
 	if (cell.AbsBounds() != absBounds) {
 		eCollision::GetAreaCells(absBounds, areas);
 	} else {							// BUGFIX: edge case where bounds matches its cell and winds up adding 4 areas instead of 1
-		areas.push_back(&cell);
+		areas.emplace_back(&cell);
 	}
 
 	for (auto && cell : areas) {

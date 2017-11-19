@@ -308,7 +308,7 @@ void eRenderer::AddToCameraRenderPool(eRenderImage * renderImage) {
 		return;
 	renderImage->lastDrawTime = gameTime;
 	auto targetPool = (renderImage->Owner()->IsStatic() ? &cameraPool : &cameraPoolInserts);
-	targetPool->push_back(renderImage);
+	targetPool->emplace_back(renderImage);
 }
 
 //***************
@@ -320,7 +320,7 @@ void eRenderer::AddToOverlayRenderPool(eRenderImage * renderImage) {
 		return;
 	renderImage->lastDrawTime = gameTime;
 	auto targetPool = (renderImage->Owner()->IsStatic() ? &overlayPool : &overlayPoolInserts);
-	targetPool->push_back(renderImage);
+	targetPool->emplace_back(renderImage);
 }
 
 //***************
@@ -341,7 +341,7 @@ void eRenderer::TopologicalDrawDepthSort(const std::vector<eRenderImage *> & ren
 			if (other != self && 
 				eCollision::AABBAABBTest(selfClip, otherClip) && 
 				eCollision::IsAABB3DInIsometricFront(self->renderBlock, other->renderBlock))
-				self->allBehind.push_back(other);
+				self->allBehind.emplace_back(other);
 		}
 		self->visited = false;
 	}

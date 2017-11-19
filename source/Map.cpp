@@ -125,7 +125,7 @@ bool eMap::LoadMap(const char * mapFilename) {
 				if (tileRenderImage.RenderBlock().Depth() > tallestRenderBlock)
 					tallestRenderBlock = (size_t)tileRenderImage.RenderBlock().Depth();
 
-				sortTiles.push_back(&tileRenderImage);
+				sortTiles.emplace_back(&tileRenderImage);
 			}
 
 			if (read.peek() == '\n') {
@@ -187,23 +187,39 @@ bool eMap::LoadMap(const char * mapFilename) {
 
 //***************
 // eMap::Draw
-// TODO: use eCollision::GetAreaCells(eBox(camera.ToPoints[isometric2cartesian]), visibleCells)
+/*
+FIXME: [minimize draw calls]
+1.) at the end of eMap::Load, call an eRenderer fn to create and draw on a mapTexture of the entire map (allocate a texture the size of the map [big big])
+2.) on eMap::Draw, set the visible cells like normal
+3.) on eGridCell::Draw, only add those renderImages in gridcells containing an entity (eRenderImage::isSelectable)
+4.) eRenderer::FlushCameraPool should behave as normal, AND prior to the first RenderCopy, copy the mapTexture to the scalable target (moved with camera)
+RESULTS: does significantly reduce draw calls, but the layering visuals are wrong; also once eMovement pathing starts the fps still drops to 166-200 from 250-500
+(removed this logic)
+*/
 //***************
 void eMap::Draw() {
 	auto & camera = game.GetCamera();
-
-	// reduce re-draw calls
-	// FIXME: change this logic when animated tiles are coded
-	if (camera.Moved() || game.GetGameTime() < 5000) {
+	if (camera.Moved() || game.GetGameTime() < 5000) {		// reduce visibleCells setup, except during startup
 		visibleCells.clear();
 
+/*
 		// use the corner cells of the camera to designate the draw area
+		// same speed in Release, several ms slower in debug
 		auto & camBounds = camera.CollisionModel().AbsBounds();
+		eVec2 corner = camBounds[0];
+		eVec2 xAxis(camBounds[1].x, camBounds[0].y);
+		eVec2 yAxis(camBounds[0].x, camBounds[1].y);
+		std::array<eVec2, 3> obbPoints = { std::move(corner), std::move(xAxis), std::move(yAxis) };
+		for (auto & point : obbPoints) { eMath::IsometricToCartesian(point.x, point.y); }
+		eBox cameraArea(obbPoints.data());
+		eCollision::GetAreaCells(cameraArea, visibleCells);
+	}
+*/
+		// use the corner cells of the camera to designate the draw area
+		const auto & camBounds = camera.CollisionModel().AbsBounds();
 		std::array<eVec2, 4> corners;
 		camBounds.ToPoints(corners.data());
-		for (int i = 0; i < 4; i++)
-			eMath::IsometricToCartesian(corners[i].x, corners[i].y);
-
+		for (auto & point : corners) { eMath::IsometricToCartesian(point.x, point.y); }
 		int startRow, startCol;
 		int endRow, endCol;
 		int finalRow, finalCol;
@@ -231,7 +247,7 @@ void eMap::Draw() {
 				if (tileMap.IsValid(row, column)) {
 					auto & cell = tileMap.Index(row, column);
 					cell.Draw();
-					visibleCells.push_back(&cell);
+					visibleCells.emplace_back(&cell);
 				} 
 				row++; column--;
 			}

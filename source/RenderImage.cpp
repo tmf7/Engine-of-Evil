@@ -58,7 +58,7 @@ void eRenderImage::UpdateAreasWorldClipCorners() {
 		auto & searchContents = cell.RenderContents();
 		if (searchContents.find(this) == searchContents.end()) {	// don't add the same renderImage or cell twice
 			searchContents[this] = this;
-			areas.push_back(&cell);
+			areas.emplace_back(&cell);
 		}
 	}
 }

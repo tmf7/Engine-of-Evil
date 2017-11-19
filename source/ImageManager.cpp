@@ -40,7 +40,7 @@ bool eImageManager::Init() {
 	// register the error_image as the first element of imageList
 	auto hasher = std::hash<std::string>{};
 	imageFilenameHash.Add(hasher("error_image"), imageList.size());
-	imageList.push_back(std::make_shared<eImage>(error_texture, "invalid_file", imageList.size()));	// error image
+	imageList.emplace_back(std::make_shared<eImage>(error_texture, "invalid_file", imageList.size()));	// error image
 	return true;
 }
 
@@ -187,7 +187,7 @@ bool eImageManager::LoadImage(const char * filename, SDL_TextureAccess accessTyp
 	auto hasher = std::hash<std::string>{};
 	imageFilenameHash.Add(hasher(filename), imageList.size());
 	result = std::make_shared<eImage>(texture, filename, imageList.size());
-	imageList.push_back(result);
+	imageList.emplace_back(result);
 	return true;
 }
 
@@ -220,7 +220,7 @@ bool eImageManager::LoadConstantText(TTF_Font * font, const char * text, const S
 	auto hasher = std::hash<std::string>{};
 	imageFilenameHash.Add(hasher(text), imageList.size());
 	result = std::make_shared<eImage>(renderedText, text, imageList.size());
-	imageList.push_back(result);
+	imageList.emplace_back(result);
 	return true;
 }
 
@@ -310,7 +310,7 @@ bool eImageManager::LoadImageSubframes(const char * subframeFilename) {
 			if (!VerifyRead(read))
 				return false;
 		}
-		frameList.push_back(std::move(frame));
+		frameList.emplace_back(std::move(frame));
 		read.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
 	}
 	read.close();

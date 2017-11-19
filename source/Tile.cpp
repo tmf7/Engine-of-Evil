@@ -78,7 +78,7 @@ bool eTileImpl::LoadTileset(const char * tilesetFilename, bool appendNew) {
 			std::shared_ptr<eBounds> aabb = std::make_shared<eBounds>();
 			(*aabb)[1] = eVec2(width, height);
 			(*aabb) += eVec2(xOffset, yOffset);
-			defaultAABBList.push_back(aabb);
+			defaultAABBList.emplace_back(aabb);
 /*  
 	TODO: implement other collision shapes and give them a common eShape/eCollider interface
 	else if (collisionShape == TO_STRING(eBox)) {
@@ -156,7 +156,7 @@ bool eTileImpl::LoadTileset(const char * tilesetFilename, bool appendNew) {
 			if (!VerifyRead(read))
 				return false;
 
-			tileSet.push_back(std::pair<int, int> { imageID, subframeIndex });		// FIXME: verify the subframe exists, 
+			tileSet.emplace_back(std::pair<int, int> { imageID, subframeIndex });		// FIXME: verify the subframe exists, 
 																					// otherwise push an error image handle into this tileSet index
 			int type = tileSet.size() - 1;
 			tileTypes[type].type = type;
