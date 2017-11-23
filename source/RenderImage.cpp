@@ -7,6 +7,14 @@ eRenderImage::~eRenderImage() {
 	ClearAreas();
 }
 
+//*************
+// eRenderImage::SetImage
+// DEBUG: sets to error texture if image doesn't exist
+//*************
+void eRenderImage::SetImage(int imageManagerIndex) {
+	game.GetImageManager().GetImage(imageManagerIndex, image);
+}
+
 //************
 // eRenderImage::SnapRenderBlockToLayer
 // DEBUG: only call this after owner->worldLayer has been assigned

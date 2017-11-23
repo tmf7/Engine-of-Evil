@@ -4,7 +4,7 @@
 #include "Definitions.h"
 
 typedef struct AnimationFrame_s {
-	int		imageListIndex;		// within eImageManager::imageList
+	int		imageManagerIndex;	// within eImageManager::imageList
 	int		subframeIndex;		// within eImage::subfames
 	float	normalizedTime;		// range [0.0f, 1.0f]; when this frame should trigger when traversing this->frames (eg: regular update interval not mandatory) 
 } AnimationFrame_t;
@@ -18,7 +18,7 @@ typedef struct AnimationFrame_s {
 class eAnimation {
 public:
 
-	friend class eAnimationState;		// sole external access to frameInterval
+	friend class eAnimationState;
 
 public:
 	
@@ -28,7 +28,7 @@ public:
 	int									NumFrames() const;
 	int									GetFPS() const;
 	void								SetFPS(int newFPS);
-	Uint32								GetDuration() const;
+	float								Duration() const;
 	const std::string &					Name() const;
 	size_t								NameHash() const;
 
@@ -37,10 +37,9 @@ private:
 	std::vector<AnimationFrame_t>		frames;
 	std::string							name;
 	size_t								nameHash;
-	Uint32								duration;
+	float								duration;
 	int									framesPerSecond;
 	int									animationManagerIndex;			// index within eAnimationManager::animationsList
-	Uint32								frameInterval;					// minimum time between frames (not normalized)
 };
 
 //*******************
@@ -52,8 +51,7 @@ inline eAnimation::eAnimation(const std::string & name, int id, std::vector<Anim
 	: frames(frames),
 	  framesPerSecond(framesPerSecond),
 	  animationManagerIndex(id) {
-	duration = (1000 * frames.size()) / framesPerSecond;
-	frameInterval = (1000 / framesPerSecond) / duration; // == 1 / frames.size?
+	duration = (float)(1000.0f * frames.size()) / (float)framesPerSecond;
 	nameHash = std::hash<std::string>()(name);
 }
 
@@ -87,10 +85,10 @@ inline void eAnimation::SetFPS(int newFPS) {
 }
 
 //*******************
-// eAnimation::GetDuration
+// eAnimation::Duration
 // returns animation's duration in milliseconds
 //*******************
-inline Uint32 eAnimation::GetDuration() const { 
+inline float eAnimation::Duration() const { 
 	return duration;
 }
 

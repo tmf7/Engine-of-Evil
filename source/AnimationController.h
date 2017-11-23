@@ -5,6 +5,21 @@
 #include "Component.h"
 #include "AnimationState.h"
 
+typedef struct transition_s {
+	bool anyState;			// previousState always == "anystate" pseudo-AnimationState
+	eAnimationState *	prevState;
+	eAnimationState *	nextState;
+	std::string			name;
+	size_t				nameHash;
+
+	// TODO: give this a variable list of params w/values that sync up with CONTROLLER param list, but only pay attention to certain ones
+	// (ie TriggerValues to compare to Controller param values)
+	// TODO: one state can have more than one or two transitions, so check them all during Update
+
+} transition_t;
+
+
+
 //*******************************************
 //			eAnimationController
 // Handles sequencing of image data
@@ -13,28 +28,26 @@
 class eAnimationController : public eComponent {
 public:
 
-									eAnimationController(eGameObject * owner);
+														eAnimationController(eGameObject * owner);
 
-	bool							Init(const char * filename);
-	void							Update();
-	void							Pause(bool isPaused = true);
+														// TODO: either start with a vector of loaded animationstates and transitions
+														// or repeatedly call AddState, AddTransition
+	bool												Init(const char * filename);		
+	void												Update();
+	void												Pause(bool isPaused = true);
 
-	virtual int						GetClassType() const override { return CLASS_ANIMATIONCONTROLLER; }
+	virtual int											GetClassType() const override { return CLASS_ANIMATIONCONTROLLER; }
 
 private:
 
-	typedef std::shared_ptr<eAnimationState>	AnimSSPtr_t;
-	std::vector<AnimSSPtr_t>		animationStates;
-	
-	// TODO: this should track a normalized time (or just time) proportional to gameTime (or frameTime) to check against currentAnimationFrame.normalizedTime
-	// to see if it should be pushed into owner->renderImage::image and owner->renderImage::srcRect
+	std::vector<std::shared_ptr<eAnimationState>>		animationStates;
+//	std::vector<transition_t>							stateTransitions;		// TODO: attach transitions to eAnimationStates? (then how would controller params line up?)
 
-	int								currentFrame	= 0;
-	int								delayCounter	= 0;
-	bool							paused			= true;
+	std::shared_ptr<eAnimationState>					currentState	= nullptr;
+	bool												paused			= true;
 
 	// experimental
-	std::string						name;					// unique name relative to owner "melee_32_controller"
+	std::string											name;					// unique name relative to owner "melee_32_controller"
 };
 
 //************
@@ -65,14 +78,10 @@ inline void eAnimationController::Update() {
 	if (paused)
 		return;
 
-	delayCounter++;
-	if (delayCounter > frameDelay) {
-		delayCounter = 0;
-		currentFrame++;
-	}
+	// TODO: check all param values against all transition values ATTACHED to the CURRENT ANIMATIONSTATE ???
+	// to decide if the state should change
 
-	if (currentFrame > lastFrame)
-		currentFrame = firstFrame;
+	currentState->Update();
 }
 
 //************

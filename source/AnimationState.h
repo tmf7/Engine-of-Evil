@@ -3,6 +3,8 @@
 
 #include "Animation.h"
 
+class eAnimationController;
+
 typedef enum {
 	ONCE,					// go to end, then stop
 	REPEAT,					// go to end, the reset to beginning
@@ -19,35 +21,36 @@ typedef enum {
 class eAnimationState {
 public:
 
-										eAnimationState(const std::string & name, 
-														const std::shared_ptr<eAnimation> & animation, 
-														float speed = 1.0f, 
-														AnimationLoopState_t loop = AnimationLoopState_t::ONCE);
+											eAnimationState(const std::string & name, 
+															const std::shared_ptr<eAnimation> & animation, 
+															float speed = 1.0f, 
+															AnimationLoopState_t loop = AnimationLoopState_t::ONCE);
 
-	void								Update();
-	float								GetNormalizedTime() const;
-	void								SetNormalizedTime(float newNormalizedTime);
-	Uint32								Duration() const;
-	Uint32								Time() const;
-	const std::string &					Name() const;
-	size_t								NameHash() const;
-	const AnimationFrame_t &			GetCurrentFrame() const;
+	void									Update();
+	float									GetNormalizedTime() const;
+	void									SetNormalizedTime(float normalizedTime);
+	float									Duration() const;
+	float									Time() const;
+	const std::string &						Name() const;
+	size_t									NameHash() const;
+	const AnimationFrame_t &				GetCurrentFrame() const;
+	void									SetAnimationController(eAnimationController * newStateMachine);
 
 public:
 
-	AnimationLoopState_t				loop			= AnimationLoopState_t::ONCE;
-	float								speed			= 1.0f;
+	AnimationLoopState_t					loop			= AnimationLoopState_t::ONCE;
+	float									speed			= 1.0f;
 
 
 private:
 
-	std::shared_ptr<eAnimation>			animation;				// which animation this state plays
-	std::string							name;
-	size_t								nameHash;
-	Uint32								duration;
-	Uint32								time			= 0;
-	float								normalizedTime	= 0.0f;
-	AnimationFrame_t *					currentFrame	= nullptr;
+	eAnimationController *					stateMachine;			// backpointer to handler, for access to the component's gameobject owner
+	std::shared_ptr<eAnimation>				animation;				// which animation this state plays
+	std::string								name;
+	size_t									nameHash;
+	float									duration;
+	float									time			= 0.0f;
+	AnimationFrame_t *						currentFrame	= nullptr;
 };
 
 //*********************
@@ -59,7 +62,7 @@ inline eAnimationState::eAnimationState(const std::string & name, const std::sha
 	  speed(speed),
 	  loop(loop) {
 	currentFrame = &animation->frames[0];
-	duration = (Uint32)eMath::NearestInt((float)animation->GetDuration() * speed);
+	duration = animation->duration * speed;
 	nameHash = std::hash<std::string>()(name);
 }
 
@@ -69,14 +72,21 @@ inline eAnimationState::eAnimationState(const std::string & name, const std::sha
 // range [0, 1]
 //*********************
 inline float eAnimationState::GetNormalizedTime() const {
-	return normalizedTime;
+	return (time / duration);
+}
+
+//*********************
+// eAnimationState::SetNormalizedTime
+//*********************
+inline void eAnimationState::SetNormalizedTime(float normalizedTime) {
+	time = normalizedTime * duration;
 }
 
 //*********************
 // eAnimationState::Duration
 // returns the duration of this state in milliseconds
 //*********************
-inline Uint32 eAnimationState::Duration() const {
+inline float eAnimationState::Duration() const {
 	return duration;
 }
 
@@ -85,7 +95,7 @@ inline Uint32 eAnimationState::Duration() const {
 // returns the un-normalized time of this state in milliseconds
 // range [0, duration]
 //*********************
-inline Uint32 eAnimationState::Time() const {
+inline float eAnimationState::Time() const {
 	return time;
 }
 
@@ -107,7 +117,14 @@ inline size_t eAnimationState::NameHash() const {
 // eAnimationState::GetCurrentFrame
 //*********************
 inline const AnimationFrame_t & eAnimationState::GetCurrentFrame() const {
-	return *currentFrame; // animation->GetFrame(currentFrame);
+	return *currentFrame;
+}
+
+//*********************
+// eAnimationState::SetAnimationController
+//*********************
+void eAnimationState::SetAnimationController(eAnimationController * newStateMachine) {
+	stateMachine = newStateMachine;
 }
 
 #endif /* EVIL_ANIMATION_STATE_H */

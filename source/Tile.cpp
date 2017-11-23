@@ -199,12 +199,12 @@ eTile::eTile(eGridCell * cellOwner, const eVec2 & origin, const int type, const 
 //************
 void eTile::SetType(int newType) {
 	// type change, so reset the collisionModel, if any
-	if (renderImage->Image() != nullptr && impl->collider != nullptr)
+	if (renderImage->GetImage() != nullptr && impl->collider != nullptr)
 		collisionModel = nullptr;
 
 	impl = &eTileImpl::tileTypes[newType];																	// FIXME(~): doesn't verify the array index
 	game.GetImageManager().GetImage(eTileImpl::tileSet.at(newType).first, renderImage->Image());			// which image (tile atlas)
-	renderImage->SetImageFrame(renderImage->Image()->GetSubframe(eTileImpl::tileSet.at(newType).second));	// which part of that image
+	renderImage->SetImageFrame(eTileImpl::tileSet.at(newType).second);										// which part of that image
 
 	renderImage->RenderBlock() = eBounds3D((eVec3)orthoOrigin, (eVec3)orthoOrigin + impl->renderBlockSize);	// FREEHILL 3d topological sort
 	renderImage->SnapRenderBlockToLayer();

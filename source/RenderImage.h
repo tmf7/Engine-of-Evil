@@ -26,8 +26,9 @@ public:
 	virtual								~eRenderImage() override;
 	
 	std::shared_ptr<eImage> &			Image();
-	const std::shared_ptr<eImage> &		Image() const;
-	void								SetImageFrame(const SDL_Rect & imageFrame);
+	const std::shared_ptr<eImage> &		GetImage() const;
+	void								SetImage(int imageManagerIndex);
+	void								SetImageFrame(int subframeIndex);
 	const SDL_Rect *					GetImageFrame() const;
 	void								SetOrigin(const eVec2 & newOrigin);
 	const eVec2 &						Origin() const;
@@ -83,17 +84,18 @@ inline std::shared_ptr<eImage> & eRenderImage::Image() {
 }
 
 //*************
-// eRenderImage::Image
+// eRenderImage::GetImage
 //*************
-inline const std::shared_ptr<eImage> & eRenderImage::Image() const {
+inline const std::shared_ptr<eImage> & eRenderImage::GetImage() const {
 	return image;
 }
 
 //*************
 // eRenderImage::ImageFrame
+// DEBUG: assumes image has been initialized
 //*************
-inline void eRenderImage::SetImageFrame(const SDL_Rect & imageFrame) {
-	srcRect = &imageFrame;
+inline void eRenderImage::SetImageFrame(int subframeIndex) {
+	srcRect = &image->GetSubframe(subframeIndex);
 }
 
 //*************
