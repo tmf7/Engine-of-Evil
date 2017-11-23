@@ -91,7 +91,7 @@ bool eImageManager::GetImage(const char * filename, std::shared_ptr<eImage> & re
 	}
 
 	// search for pre-existing texture
-	auto hasher = std::hash<std::string>{};
+	const auto hasher = std::hash<std::string>{};
 	int hashkey = hasher(filename);
 	for (int i = imageFilenameHash.First(hashkey); i != -1; i = imageFilenameHash.Next(i)) {
 		if (imageList[i]->GetSourceFilename() == filename) {

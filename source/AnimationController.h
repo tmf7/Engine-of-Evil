@@ -3,45 +3,38 @@
 
 #include "Image.h"
 #include "Component.h"
+#include "AnimationState.h"
 
 //*******************************************
 //			eAnimationController
-// Handles animation of image data
+// Handles sequencing of image data
+// for owner->renderImage
 //*******************************************
 class eAnimationController : public eComponent {
 public:
 
-							eAnimationController(eGameObject * owner);
+									eAnimationController(eGameObject * owner);
 
-	bool					Init(const char * filename);
-	std::shared_ptr<eImage>	GetImage() const;
-	void					SetImage(std::shared_ptr<eImage> & image);
-	void					NextFrame();
-	void					SetAnimation(const int first, const int last, const int frameDelay);
-	void					Pause(bool wantPause = true);
-	const SDL_Rect &		GetFrameHack() const;
+	bool							Init(const char * filename);
+	void							Update();
+	void							Pause(bool isPaused = true);
 
-	virtual int				GetClassType() const override { return CLASS_ANIMATIONCONTROLLER; }
+	virtual int						GetClassType() const override { return CLASS_ANIMATIONCONTROLLER; }
 
 private:
 
-//	typedef std::shared_ptr<eAnimation> Animation_t;
-//	std::vector<eAnimation>	animations;		// all source images and their associated sub-frames (clip-rects) to fully animate an eRenderImage
+	typedef std::shared_ptr<eAnimationState>	AnimSSPtr_t;
+	std::vector<AnimSSPtr_t>		animationStates;
+	
+	// TODO: this should track a normalized time (or just time) proportional to gameTime (or frameTime) to check against currentAnimationFrame.normalizedTime
+	// to see if it should be pushed into owner->renderImage::image and owner->renderImage::srcRect
 
-	// TODO: first, last, current will be deprecated by the sequence that eAnimation will provide
-	std::shared_ptr<eImage>	currentImage	= nullptr;
-	int						firstFrame		= 0;
-	int						lastFrame		= 0;
-
-	int						frameDelay		= 0;
-	int						currentFrame	= 0;
-	int						delayCounter	= 0;
-	bool					paused			= true;
-
-	SDL_Rect				spriteFrameHack;		// FIXME: hack for single-frame non-animated renderImage (images themselves dont use frames, they just wrap a texture)
+	int								currentFrame	= 0;
+	int								delayCounter	= 0;
+	bool							paused			= true;
 
 	// experimental
-	std::string				name;					// overall name of the animationController relative to its owner "melee_32_controller"
+	std::string						name;					// unique name relative to owner "melee_32_controller"
 };
 
 //************
@@ -53,6 +46,10 @@ inline eAnimationController::eAnimationController(eGameObject * owner) {
 
 //************
 // eAnimationController::Init
+// TODO: initialize using both a behavior pattern (for animation switching via parameters)
+// and a vector of eAnimation pointers
+// the vector a new shared_ptr from eAnimationManager, and behavior a new unique_ptr from eAnimationContorllerManager (so different entities don't trigger at the same time)
+// TODO: define ControllerBehaviors as a list of file-defined params and callback functions using those params
 //************
 inline bool eAnimationController::Init(const char * filename) {
 	// TODO: implement
@@ -60,26 +57,11 @@ inline bool eAnimationController::Init(const char * filename) {
 }
 
 //************
-// eAnimationController::GetImage
-//************
-inline std::shared_ptr<eImage> eAnimationController::GetImage() const {
-	return currentImage;
-}
-
-//************
-// eAnimationController::SetImage
-//************
-inline void eAnimationController::SetImage(std::shared_ptr<eImage> & image) {
-	currentImage = image;
-	spriteFrameHack = SDL_Rect{ 0, 0, image->GetWidth(), image->GetHeight() };
-}
-
-//************
 // eAnimationController::NextFrame
 // continues the current state of animation
 // must be unpaused to fully animate
 //************
-inline void eAnimationController::NextFrame() {
+inline void eAnimationController::Update() {
 	if (paused)
 		return;
 
@@ -94,30 +76,11 @@ inline void eAnimationController::NextFrame() {
 }
 
 //************
-// eAnimationController::SetAnimation
-// sets the eGameobject instance-specific animation identifiers
-//************
-inline void eAnimationController::SetAnimation(const int first, const int last, const int frameDelay) {
-	firstFrame = first;
-	lastFrame = last;
-	this->frameDelay = frameDelay;
-	delayCounter = 0;
-}
-
-//************
 // eAnimationController::Pause
 // stops animation on the currentFrame
 //************
-inline void eAnimationController::Pause(bool wantPause) {
-	paused = wantPause;
-}
-
-//************
-// eAnimationController::GetFrame
-// FIXME: hack function to test single-frame non-animated renderImage
-//************
-inline const SDL_Rect & eAnimationController::GetFrameHack() const {
-	return spriteFrameHack;
+inline void eAnimationController::Pause(bool isPaused) {
+	paused = isPaused;
 }
 
 #endif /* EVIL_ANIMATION_CONTROLLER_H */

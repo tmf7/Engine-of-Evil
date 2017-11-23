@@ -4,6 +4,9 @@
 #include "HashIndex.h"
 #include "Renderer.h"
 
+//#undef LoadImage		// FIXME: weird #define in WinUser.h brought in from #include <Windows.h> in main.cpp
+						// SOLUTION: use SDLmain.dll and avoid WinMain [or get rid of main altogether to compile as a library in EngineOfEvil-Core]
+
 //**********************************
 //			eImageManager
 // Handles all texture allocation and freeing
@@ -39,4 +42,3 @@ inline int eImageManager::GetNumImages() const {
 }
 
 #endif /* EVIL_TEXTURE_MANAGER_H */
-
