@@ -6,7 +6,7 @@
 typedef enum {
 	ONCE,					// go to end, then stop
 	REPEAT,					// go to end, the reset to beginning
-	PINGPONG				// go to end, then reverse to beginning
+//	PINGPONG				// TODO: implement go to end, then reverse to beginning, then back again
 } AnimationLoopState_t;
 
 //******************************
@@ -22,7 +22,7 @@ public:
 										eAnimationState(const std::string & name, 
 														const std::shared_ptr<eAnimation> & animation, 
 														float speed = 1.0f, 
-														AnimationLoopState_t loop = AnimationLoopState_t::REPEAT);
+														AnimationLoopState_t loop = AnimationLoopState_t::ONCE);
 
 	void								Update();
 	float								GetNormalizedTime() const;
@@ -31,21 +31,23 @@ public:
 	Uint32								Time() const;
 	const std::string &					Name() const;
 	size_t								NameHash() const;
+	const AnimationFrame_t &			GetCurrentFrame() const;
 
 public:
 
-	AnimationLoopState_t				loop			= AnimationLoopState_t::REPEAT;
+	AnimationLoopState_t				loop			= AnimationLoopState_t::ONCE;
 	float								speed			= 1.0f;
 
 
 private:
 
-	std::shared_ptr<eAnimation>			animation;		// which animation this state plays
+	std::shared_ptr<eAnimation>			animation;				// which animation this state plays
 	std::string							name;
 	size_t								nameHash;
 	Uint32								duration;
 	Uint32								time			= 0;
 	float								normalizedTime	= 0.0f;
+	AnimationFrame_t *					currentFrame	= nullptr;
 };
 
 //*********************
@@ -56,6 +58,7 @@ inline eAnimationState::eAnimationState(const std::string & name, const std::sha
 	  animation(animation),
 	  speed(speed),
 	  loop(loop) {
+	currentFrame = &animation->frames[0];
 	duration = (Uint32)eMath::NearestInt((float)animation->GetDuration() * speed);
 	nameHash = std::hash<std::string>()(name);
 }
@@ -98,6 +101,13 @@ inline const std::string & eAnimationState::Name() const {
 //*********************
 inline size_t eAnimationState::NameHash() const {
 	return nameHash;
+}
+
+//*********************
+// eAnimationState::GetCurrentFrame
+//*********************
+inline const AnimationFrame_t & eAnimationState::GetCurrentFrame() const {
+	return *currentFrame; // animation->GetFrame(currentFrame);
 }
 
 #endif /* EVIL_ANIMATION_STATE_H */

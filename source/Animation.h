@@ -17,6 +17,10 @@ typedef struct AnimationFrame_s {
 //*****************************
 class eAnimation {
 public:
+
+	friend class eAnimationState;		// sole external access to frameInterval
+
+public:
 	
 										eAnimation(const std::string & name, int id, std::vector<AnimationFrame_t> & frames, int framesPerSecond);
 
@@ -36,7 +40,7 @@ private:
 	Uint32								duration;
 	int									framesPerSecond;
 	int									animationManagerIndex;			// index within eAnimationManager::animationsList
-
+	Uint32								frameInterval;					// minimum time between frames (not normalized)
 };
 
 //*******************
@@ -46,8 +50,10 @@ private:
 //*******************
 inline eAnimation::eAnimation(const std::string & name, int id, std::vector<AnimationFrame_t> & frames, int framesPerSecond)
 	: frames(frames),
-	  framesPerSecond(framesPerSecond) {
+	  framesPerSecond(framesPerSecond),
+	  animationManagerIndex(id) {
 	duration = (1000 * frames.size()) / framesPerSecond;
+	frameInterval = (1000 / framesPerSecond) / duration; // == 1 / frames.size?
 	nameHash = std::hash<std::string>()(name);
 }
 
