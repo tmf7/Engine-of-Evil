@@ -6,9 +6,19 @@
 #define RAD2DEG(radians) ( radians * (180.0f/((float)M_PI)) )
 #define DEG2RAD(degrees) ( degrees * ((float)(M_PI)/180.0f) )
 
+enum class COMPARE_ENUM {
+	LESS,
+	LESS_EQUAL,
+	GREATER,
+	GREATER_EQUAL,
+	EQUAL,
+	NOT_EQUAL
+};
+
+
 //***********************************
 //			eMath
-// general math utilities
+//	 general math utilities
 //***********************************
 class eMath {
 public:
@@ -19,6 +29,9 @@ public:
 	static void			CartesianToIsometric(float & x, float & y);
 	static void			CartesianToIsometric(int & x, int & y);
 	static float		GetAngle(float x, float y);
+
+						template<class type>
+	static bool			CompareUtility(const type & lhs, COMPARE_ENUM compare, const type & rhs);
 };
 
 //************
@@ -84,7 +97,7 @@ inline void eMath::CartesianToIsometric(int & x, int & y) {
 }
 
 //*****************
-// GetAngle
+// eMath::GetAngle
 // returns the angle in degrees from the given components
 // DEBUG: assumes components are part of a normalized vector
 //*****************
@@ -101,6 +114,23 @@ inline float eMath::GetAngle(float x, float y) {
 			angle += 180.0f;
 	}
 	return angle;
+}
+
+//*****************
+// eMath::CompareUtility
+// allows for runtime comparision operator changes
+//*****************
+template<class type>
+bool eMath::CompareUtility(const type & lhs, COMPARE_ENUM compare, const type & rhs) {
+	switch (compare) {
+		case COMPARE_ENUM::LESS:			return lhs <  rhs;
+		case COMPARE_ENUM::LESS_EQUAL:		return lhs <= rhs;
+		case COMPARE_ENUM::GREATER:			return lhs >  rhs;
+		case COMPARE_ENUM::GREATER_EQUAL:	return lhs >= rhs;
+		case COMPARE_ENUM::EQUAL:			return lhs == rhs;
+		case COMPARE_ENUM::NOT_EQUAL:		return lhs != rhs;
+		default:							return false;		// invalid comparator
+	}	
 }
 
 #endif /* EVIL_MATH_H */

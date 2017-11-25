@@ -27,7 +27,7 @@ eEntity::eEntity(const entitySpawnArgs_t & spawnArgs)
 		if (!game.GetImageManager().LoadImage(spawnArgs.spriteFilename.c_str(), SDL_TEXTUREACCESS_STATIC, spriteImage))
 			throw badEntityCtorException(spawnArgs.spriteFilename.c_str());	
 
-		animationController->SetImage(spriteImage);
+//		animationController->SetImage(spriteImage);
 		eVec3 blockMins = (eVec3)spawnArgs.localBounds[0];
 		renderImage->RenderBlock() = eBounds3D(blockMins, blockMins + spawnArgs.renderBlockSize);
 	}
@@ -146,8 +146,7 @@ void eEntity::UpdateRenderImageOrigin() {
 // TODO: move this to eEntity::Think, and just call animationController.Update();
 //*************
 void eEntity::UpdateRenderImageDisplay() {
-	renderImage->Image() = animationController->GetImage();
-	renderImage->SetImageFrame(animationController->GetFrameHack());
+	animationController->Update();
 
 // FREEHILL BEGIN 3d topological sort
 	// DEBUG: renderBlock and collisionModel currently designed to align, while offsetting renderImage.origin instead

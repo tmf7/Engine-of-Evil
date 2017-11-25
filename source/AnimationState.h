@@ -15,10 +15,14 @@ typedef enum {
 //		eAnimationState
 // used by eAnimationController
 // as part of its state machine
-// which controlls which animations
+// which controls which animations
 // are updating an eRenderImage
 //*******************************
 class eAnimationState {
+public:
+
+	friend class eAnimationController;		// the only class able to call this->Update()
+
 public:
 
 											eAnimationState(const std::string & name, 
@@ -26,7 +30,6 @@ public:
 															float speed = 1.0f, 
 															AnimationLoopState_t loop = AnimationLoopState_t::ONCE);
 
-	void									Update();
 	float									GetNormalizedTime() const;
 	void									SetNormalizedTime(float normalizedTime);
 	float									Duration() const;
@@ -35,6 +38,10 @@ public:
 	size_t									NameHash() const;
 	const AnimationFrame_t &				GetCurrentFrame() const;
 	void									SetAnimationController(eAnimationController * newStateMachine);
+
+private:
+
+	void									Update();
 
 public:
 
@@ -56,7 +63,7 @@ private:
 //*********************
 // eAnimationState::eAnimationState
 //*********************
-inline eAnimationState::eAnimationState(const std::string & name, const std::shared_ptr<eAnimation> & animation, float speed = 1.0f, AnimationLoopState_t loop = AnimationLoopState_t::REPEAT)
+inline eAnimationState::eAnimationState(const std::string & name, const std::shared_ptr<eAnimation> & animation, float speed, AnimationLoopState_t loop)
 	: name(name),
 	  animation(animation),
 	  speed(speed),
@@ -123,7 +130,7 @@ inline const AnimationFrame_t & eAnimationState::GetCurrentFrame() const {
 //*********************
 // eAnimationState::SetAnimationController
 //*********************
-void eAnimationState::SetAnimationController(eAnimationController * newStateMachine) {
+inline void eAnimationState::SetAnimationController(eAnimationController * newStateMachine) {
 	stateMachine = newStateMachine;
 }
 

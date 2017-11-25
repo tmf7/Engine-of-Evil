@@ -51,13 +51,13 @@ public:
 	// memory management
 	size_t					Allocated() const;
 	void					SetGranularity(const int newGranularity);
-	void					Free();
 	void					Resize(const int newCapacity);
 	void					Clear();
 	void					ClearAndResize(const int newCapacity);
 
 private:
 	
+	void					Free();
 	void					Allocate(const int newCapacity);
 	void					Heapify();
 	void					SiftUp(const int index) noexcept;
