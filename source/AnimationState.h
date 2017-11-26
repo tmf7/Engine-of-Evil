@@ -15,7 +15,7 @@ class eAnimationController;
 class eAnimationState {
 public:
 
-	friend class eAnimationController;		// the only class able to call this->Update()
+	friend class eAnimationController;		// sole access to Update
 
 public:
 
@@ -23,14 +23,14 @@ public:
 															const std::shared_ptr<eAnimation> & animation, 
 															float speed = 1.0f);
 
+	void									SetAnimationController(eAnimationController * newStateMachine);
 	float									GetNormalizedTime() const;
 	void									SetNormalizedTime(float normalizedTime);
 	float									Duration() const;
 	float									Time() const;
 	const std::string &						Name() const;
-	size_t									NameHash() const;
+	int										NameHash() const;
 	const AnimationFrame_t &				GetCurrentFrame() const;
-	void									SetAnimationController(eAnimationController * newStateMachine);
 
 private:
 
@@ -42,10 +42,10 @@ public:
 
 private:
 
-	eAnimationController *					stateMachine;			// backpointer to handler, for access to the component's gameobject owner
+	eAnimationController *					stateMachine;			// back-pointer to handler, for access to the component's gameobject owner->renderImage
 	std::shared_ptr<eAnimation>				animation;				// which animation this state plays
 	std::string								name;
-	size_t									nameHash;
+	int										nameHash;
 	float									duration;
 	float									time			= 0.0f;
 	AnimationFrame_t *						currentFrame	= nullptr;
@@ -106,7 +106,7 @@ inline const std::string & eAnimationState::Name() const {
 //*********************
 // eAnimationState::NameHash
 //*********************
-inline size_t eAnimationState::NameHash() const {
+inline int eAnimationState::NameHash() const {
 	return nameHash;
 }
 

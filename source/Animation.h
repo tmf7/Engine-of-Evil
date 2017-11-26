@@ -25,6 +25,7 @@ class eAnimation {
 public:
 
 	friend class eAnimationState;
+	friend class eBlendState;
 
 public:
 	

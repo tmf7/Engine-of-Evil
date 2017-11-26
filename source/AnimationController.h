@@ -15,7 +15,7 @@
 class eAnimationController : public eComponent {
 public:
 
-	friend class eAnimationControllerManager;		// sole access to non-const Add/Get functionality
+	friend class eAnimationControllerManager;		// sole access to Add/GetXYZParameterIndex functionality
 
 public:
 
@@ -26,6 +26,9 @@ public:
 	void								Pause(bool isPaused = true);
 
 	// returns true if the item exists and can be set, or false if it doesn't exist
+	const eAnimationState &				GetCurrentState() const;
+	eAnimationState &					GetCurrentState();
+
 	bool								SetFloatParameter(const std::string & name, float newValue);
 	bool								SetIntParameter(const std::string & name, int newValue);
 	bool								SetBoolParameter(const std::string & name, bool newValue);
@@ -55,6 +58,7 @@ private:
 	// eStateTransitions however allows hash collisions, because it's indexed by eStateTransition::fromState
 	bool								AddAnimationState(eAnimationState && newState);
 	void								AddTransition(eStateTransition && newTransition);
+
 	bool								AddFloatParameter(const std::string & name, float initialValue = 0.0f);
 	bool								AddIntParameter(const std::string & name, int initialValue = 0);
 	bool								AddBoolParameter(const std::string & name, bool initialValue = false);
@@ -73,7 +77,7 @@ private:
 
 	// eHashIndex allows hash collisions as needed and allows for contiguous memory footprint
 	eHashIndex							transitionsHash;	// indexed by eStateTransition::fromState
-	eHashIndex							animationsHash;		// indexed by eAnimation::name
+	eHashIndex							statesHash;			// indexed by eAnimationState::name
 	std::vector<eAnimationState>		animationStates;
 	std::vector<eStateTransition>		stateTransitions;
 
@@ -115,15 +119,35 @@ inline void eAnimationController::Pause(bool isPaused) {
 // eAnimationController::AddAnimationState
 //***********************
 inline bool eAnimationController::AddAnimationState(eAnimationState && newState) {
-
+	int hashKey = statesHash.GetHashKey(newState.name);
+	statesHash.Add(hashKey, animationStates.size());
+	animationStates.emplace_back(std::move(newState));
 }
 
 //***********************
 // eAnimationController::AddTransition
 //***********************
 inline void eAnimationController::AddTransition(eStateTransition && newTransition) {
-	 
-}	 
+	 int hashKey = statesHash.GetHashKey(newTransition.name);
+	transitionsHash.Add(hashKey, stateTransitions.size());
+	stateTransitions.emplace_back(std::move(newTransition));
+}	
+
+//***********************
+// eAnimationController::GetCurrentState
+// returns the currently active eAnimationState of this eAnimationController
+//***********************
+inline const eAnimationState & eAnimationController::GetCurrentState() const {
+	return animationStates[currentState];
+}
+
+//***********************
+// eAnimationController::GetCurrentState
+// returns the currently active eAnimationState of this eAnimationController
+//***********************
+inline eAnimationState & eAnimationController::GetCurrentState() {
+	return animationStates[currentState];
+}
 
 //***********************
 // eAnimationController::SetFloatParameter
@@ -343,7 +367,7 @@ inline bool eAnimationController::GetTriggerParameter(int nameHash) const {
 // returns -1 if it doesn't exist
 // used by eAnimationControllerManager to initialize eStateTransitions
 //***********************
-int eAnimationController::GetFloatParameterIndex(const std::string & name) const {
+inline int eAnimationController::GetFloatParameterIndex(const std::string & name) const {
 	return floatParamsHash.First(floatParamsHash.GetHashKey(name));
 }
 
@@ -354,7 +378,7 @@ int eAnimationController::GetFloatParameterIndex(const std::string & name) const
 // returns -1 if it doesn't exist
 // used by eAnimationControllerManager to initialize eStateTransitions
 //***********************
-int eAnimationController::GetIntParameterIndex(const std::string & name) const {
+inline int eAnimationController::GetIntParameterIndex(const std::string & name) const {
 	return intParamsHash.First(intParamsHash.GetHashKey(name));
 }
 
@@ -365,7 +389,7 @@ int eAnimationController::GetIntParameterIndex(const std::string & name) const {
 // returns -1 if it doesn't exist
 // used by eAnimationControllerManager to initialize eStateTransitions
 //***********************
-int eAnimationController::GetBoolParameterIndex(const std::string & name) const {
+inline int eAnimationController::GetBoolParameterIndex(const std::string & name) const {
 	return boolParamsHash.First(boolParamsHash.GetHashKey(name));
 
 }
@@ -377,7 +401,7 @@ int eAnimationController::GetBoolParameterIndex(const std::string & name) const 
 // returns -1 if it doesn't exist
 // used by eAnimationControllerManager to initialize eStateTransitions
 //***********************
-int eAnimationController::GetTriggerParameterIndex(const std::string & name) const {
+inline int eAnimationController::GetTriggerParameterIndex(const std::string & name) const {
 	return triggerParamsHash.First(triggerParamsHash.GetHashKey(name));
 }
 

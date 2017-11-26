@@ -84,7 +84,7 @@ void eAnimationController::Update() {
 // does not modify any parameters if name already exists, and returns false
 // otherwise constructs the new parameter in-place and returns true
 //***********************
-bool eAnimationController::AddFloatParameter(const std::string & name, float initialValue = 0.0f) {
+bool eAnimationController::AddFloatParameter(const std::string & name, float initialValue) {
 	const int hashKey = floatParamsHash.GetHashKey(name);
 	if (floatParamsHash.First(hashKey) > -1)
 		return false;
@@ -99,7 +99,7 @@ bool eAnimationController::AddFloatParameter(const std::string & name, float ini
 // does not modify any parameters if name already exists, and returns false
 // otherwise constructs the new parameter in-place and returns true
 //*********************** 
-bool eAnimationController::AddIntParameter(const std::string & name, int initialValue = 0) {
+bool eAnimationController::AddIntParameter(const std::string & name, int initialValue) {
 	const int hashKey = intParamsHash.GetHashKey(name);
 	if (intParamsHash.First(hashKey) > -1)
 		return false;
@@ -114,7 +114,7 @@ bool eAnimationController::AddIntParameter(const std::string & name, int initial
 // does not modify any parameters if name already exists, and returns false
 // otherwise constructs the new parameter in-place and returns true
 //***********************
-bool eAnimationController::AddBoolParameter(const std::string & name, bool initialValue = false) {
+bool eAnimationController::AddBoolParameter(const std::string & name, bool initialValue) {
 	const int hashKey = boolParamsHash.GetHashKey(name);
 	if (boolParamsHash.First(hashKey) > -1)
 		return false;
