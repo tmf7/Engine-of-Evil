@@ -5,12 +5,6 @@
 
 class eAnimationController;
 
-typedef enum {
-	ONCE,					// go to end, then stop
-	REPEAT,					// go to end, the reset to beginning
-//	PINGPONG				// TODO: implement go to end, then reverse to beginning, then back again
-} AnimationLoopState_t;
-
 //******************************
 //		eAnimationState
 // used by eAnimationController
@@ -27,8 +21,7 @@ public:
 
 											eAnimationState(const std::string & name, 
 															const std::shared_ptr<eAnimation> & animation, 
-															float speed = 1.0f, 
-															AnimationLoopState_t loop = AnimationLoopState_t::ONCE);
+															float speed = 1.0f);
 
 	float									GetNormalizedTime() const;
 	void									SetNormalizedTime(float normalizedTime);
@@ -45,9 +38,7 @@ private:
 
 public:
 
-	AnimationLoopState_t					loop			= AnimationLoopState_t::ONCE;
-	float									speed			= 1.0f;
-
+	float									speed;
 
 private:
 
@@ -63,11 +54,10 @@ private:
 //*********************
 // eAnimationState::eAnimationState
 //*********************
-inline eAnimationState::eAnimationState(const std::string & name, const std::shared_ptr<eAnimation> & animation, float speed, AnimationLoopState_t loop)
+inline eAnimationState::eAnimationState(const std::string & name, const std::shared_ptr<eAnimation> & animation, float speed)
 	: name(name),
 	  animation(animation),
-	  speed(speed),
-	  loop(loop) {
+	  speed(speed) {
 	currentFrame = &animation->frames[0];
 	duration = animation->duration * speed;
 	nameHash = std::hash<std::string>()(name);

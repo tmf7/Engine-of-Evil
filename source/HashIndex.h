@@ -2,6 +2,7 @@
 #define EVIL_HASH_INDEX_H
 
 #include <vector>
+#include <functional>
 
 //************************************
 //			HashIndex
@@ -9,6 +10,8 @@
 //	uses std::vector<int> for memory management
 //  DEBUG: resizing the hash while in use invalidates
 //  all the hashMask-dependent keys (no matter the type)
+//  so don't add that functionality, unless
+//  the entire class is redesigned
 //************************************
 class eHashIndex {
 public:
@@ -16,17 +19,11 @@ public:
 						eHashIndex();
 	explicit			eHashIndex(int initialHashSize);
 
-						template <class ForwardIterator, class HashFunction>
-						eHashIndex(ForwardIterator begin, ForwardIterator end, HashFunction hasher);
-
-						template <class ForwardIterator, class HashFunction>
-	void				Rebuild(ForwardIterator begin, ForwardIterator end, HashFunction hasher);
-
 	void				Add(const int hashkey, const int index);
 	void				Remove(const int hashkey, const int index);
 	int					First(const int hashkey) const;
 	int					Next(const int index) const;
-
+	
 	void				InsertIndex(const int hashkey, const int index);
 	void				RemoveIndex(const int hashkey, const int index);
 	void				Clear();
@@ -39,13 +36,16 @@ public:
 	size_t				HashCapacity() const;
 	size_t				IndexCapacity() const;
 
+						template<class Key>
+	size_t				GetHashKey(const Key & key) const;
+
 private:
 
 	std::vector<int>	hash;
 	std::vector<int>	indexChain;
 	int					hashMask;
 
-	static const int	defaultHashSize = 1;
+	static const int	defaultHashSize = 1024;
 	static const int	INVALID_INDEX = -1;
 };
 
@@ -75,29 +75,6 @@ inline eHashIndex::eHashIndex(int initialHashSize) {
 }
 
 //*******************
-// eHashIndex::eHashIndex
-// build using the source array
-// ensuring each index is registered once
-//*******************
-template <class ForwardIterator, class HashFunction>
-inline eHashIndex::eHashIndex(ForwardIterator begin, ForwardIterator end, HashFunction hasher) : eHashIndex(std::distance(begin, end)) {
-	for (ForwardIterator i = begin; i != end; i++)
-		Add(hasher(*i), std::distance(begin, i));
-}
-
-//*******************
-// eHashIndex::Rebuild
-// clear, resize, and build using the source array
-// ensuring each index is registered once
-//*******************
-template <class ForwardIterator, class HashFunction>
-inline void eHashIndex::Rebuild(ForwardIterator begin, ForwardIterator end, HashFunction hasher) {
-	ClearAndResize(std::distance(begin, end));
-	for (ForwardIterator i = begin; i != end; i++)
-		Add(hasher(*i), std::distance(begin, i));
-}
-
-//*******************
 // eHashIndex::Add
 // add an index to the hash
 // --only add unique indexes--
@@ -116,6 +93,7 @@ inline void eHashIndex::Add(const int hashkey, const int index) {
 //*******************
 // eHashIndex::Remove
 // remove an index from the hash
+// useful for statically sized arrays
 // --ensure the input key/index pair exists (even if a duplicate)--
 // DEBUG: assert( index >= 0 && index < indexChain.size() )
 //*******************
@@ -155,7 +133,6 @@ inline int eHashIndex::First(const int hashkey) const {
 inline int eHashIndex::Next(const int index) const {
 	return indexChain[index];
 }
-
 
 //*******************
 // eHashIndex::Insertindex
@@ -290,6 +267,15 @@ inline size_t eHashIndex::HashCapacity() const {
 //*******************
 inline size_t eHashIndex::IndexCapacity() const {
 	return indexChain.capacity();
+}
+
+//*******************
+// eHashIndex::GetHashKey
+// DEBUG: uses std::hash<Key> to hash the key param
+//*******************
+template<class Key>
+inline size_t eHashIndex::GetHashKey(const Key & key) const {
+	return std::hash<Key>()(key);
 }
 
 #endif /* EVIL_HASH_INDEX_H_ */

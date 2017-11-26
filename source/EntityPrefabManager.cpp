@@ -9,8 +9,8 @@ bool eEntityPrefabManager::Init() {
 
 	// register the error_prefab_entity as the first element of prefabList
 	entitySpawnArgs_t defaultSpawnArgs;
-	auto hasher = std::hash<std::string>{};
-	prefabFilenameHash.Add(hasher("error_prefab_entity"), prefabList.size());
+	int hashKey = prefabFilenameHash.GetHashKey(std::string("error_prefab_entity"));
+	prefabFilenameHash.Add(hashKey, prefabList.size());
 	try {
 		prefabList.emplace_back(std::make_shared<eEntity>(defaultSpawnArgs));	// error prefab
 	} catch (const badEntityCtorException & e) {
@@ -71,9 +71,8 @@ bool eEntityPrefabManager::GetPrefab(const char * filename, std::shared_ptr<eEnt
 	}
 
 	// search for pre-existing texture
-	auto hasher = std::hash<std::string>{};
-	int hashkey = hasher(filename);
-	for (int i = prefabFilenameHash.First(hashkey); i != -1; i = prefabFilenameHash.Next(i)) {
+	int hashKey = prefabFilenameHash.GetHashKey(std::string(filename));
+	for (int i = prefabFilenameHash.First(hashKey); i != -1; i = prefabFilenameHash.Next(i)) {
 		if (prefabList[i]->GetPrefabFilename() == filename) {
 			result = prefabList[i];
 			return true;
@@ -185,8 +184,8 @@ bool eEntityPrefabManager::LoadPrefab(const char * filename, std::shared_ptr<eEn
 	spawnArgs.prefabManagerIndex = prefabList.size();
 
 	// register the requested entity prefab
-	auto hasher = std::hash<std::string>{};
-	prefabFilenameHash.Add(hasher(filename), prefabList.size());
+	int hashKey = prefabFilenameHash.GetHashKey(std::string(filename));
+	prefabFilenameHash.Add(hashKey, prefabList.size());
 	try {
 		result = std::make_shared<eEntity>(spawnArgs);
 		prefabList.emplace_back(result);

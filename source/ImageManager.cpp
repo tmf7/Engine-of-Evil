@@ -38,8 +38,8 @@ bool eImageManager::Init() {
 	SDL_UnlockTexture(error_texture);
 
 	// register the error_image as the first element of imageList
-	auto hasher = std::hash<std::string>{};
-	imageFilenameHash.Add(hasher("error_image"), imageList.size());
+	int hashKey = imageFilenameHash.GetHashKey(std::string("error_image"));
+	imageFilenameHash.Add(hashKey, imageList.size());
 	imageList.emplace_back(std::make_shared<eImage>(error_texture, "invalid_file", imageList.size()));	// error image
 	return true;
 }
@@ -91,9 +91,8 @@ bool eImageManager::GetImage(const char * filename, std::shared_ptr<eImage> & re
 	}
 
 	// search for pre-existing texture
-	const auto hasher = std::hash<std::string>{};
-	int hashkey = hasher(filename);
-	for (int i = imageFilenameHash.First(hashkey); i != -1; i = imageFilenameHash.Next(i)) {
+	int hashKey = imageFilenameHash.GetHashKey(std::string(filename));
+	for (int i = imageFilenameHash.First(hashKey); i != -1; i = imageFilenameHash.Next(i)) {
 		if (imageList[i]->GetSourceFilename() == filename) {
 			result = imageList[i];
 			return true;
@@ -184,8 +183,8 @@ bool eImageManager::LoadImage(const char * filename, SDL_TextureAccess accessTyp
 	}
 
 	// register the requested image
-	auto hasher = std::hash<std::string>{};
-	imageFilenameHash.Add(hasher(filename), imageList.size());
+	int hashKey = imageFilenameHash.GetHashKey(std::string(filename));
+	imageFilenameHash.Add(hashKey, imageList.size());
 	result = std::make_shared<eImage>(texture, filename, imageList.size());
 	imageList.emplace_back(result);
 	return true;
@@ -217,8 +216,8 @@ bool eImageManager::LoadConstantText(TTF_Font * font, const char * text, const S
 	SDL_SetTextureBlendMode(renderedText, SDL_BLENDMODE_BLEND);
 
 	// register the requested text image
-	auto hasher = std::hash<std::string>{};
-	imageFilenameHash.Add(hasher(text), imageList.size());
+	int hashKey = imageFilenameHash.GetHashKey(std::string(text));
+	imageFilenameHash.Add(hashKey, imageList.size());
 	result = std::make_shared<eImage>(renderedText, text, imageList.size());
 	imageList.emplace_back(result);
 	return true;

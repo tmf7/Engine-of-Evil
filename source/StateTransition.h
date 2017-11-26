@@ -32,34 +32,39 @@
 class eStateTransition {
 public:
 
-	friend class eAnimationController;		// the only class with access to transition values
+	// the only classes with access to transition values
+	friend class eAnimationControllerManager;
+	friend class eAnimationController;
 
 public:
 
-						eStateTransition(const std::string & name, bool anyState, int fromStateIndex, int toStateIndex, float exitTime = 0.0f, float offset = 0.0f);
+							eStateTransition(const std::string & name, 
+											 bool anyState, int fromStateIndex, 
+											 int toStateIndex,
+											 float exitTime = 0.0f, 
+											 float offset = 0.0f);
 
 private:
 
-	void				AddFloatCondition(const std::string & name, float value, COMPARE_ENUM compare);
-	void				AddIntCondition(const std::string & name, int value, COMPARE_ENUM compare);
-	void				AddBoolCondition(const std::string & name, bool value);
-	void				AddTriggerCondition(const std::string & name);
+	void					AddFloatCondition(int controllerFloatIndex, COMPARE_ENUM compare, float value);
+	void					AddIntCondition(int controllerIntIndex, COMPARE_ENUM compare, int value);
+	void					AddBoolCondition(int controllerBoolIndex, bool value);
+	void					AddTriggerCondition(int controllerTriggerIndex);
 
 private:
-	std::string			name;
-	size_t				nameHash;
-	float				exitTime;			// currentState::normalizedTime to start checking conditions (if <= 0.0f, there MUST be at least one transition param)
-	float				offset;				// the normalizedTime to start playing at in toState
-	bool				anyState;			// all conditions checked regardless of eAnimationController::currentState (DEBUG: ie: ignores fromState)
-	int					fromState;			// index within eAnimationController::animationStates this is attached to  (DEBUG: ignored if anyState == true)
-	int					toState;			//   "     "           "                   "          this modifies eAnimationController::currentState to
 
-	// transition params compared against eAnimationController params of the same name
-	// first == user-defined parameter name, second.first == its value, second.second == how it should be compared
-	std::unordered_map<std::string, std::pair<float, COMPARE_ENUM>>	floatConditions;
-	std::unordered_map<std::string, std::pair<int, COMPARE_ENUM>>	intConditions;		
-	std::unordered_map<std::string, bool>							boolConditions;		// values can be true or false
-	std::unordered_map<std::string, bool>							triggerConditions;  // all values are true
+	std::string				name;
+	size_t					nameHash;
+	float					exitTime;			// currentState::normalizedTime to start checking conditions (if <= 0.0f, there MUST be at least one transition param)
+	float					offset;				// the normalizedTime to start playing at in toState
+	bool					anyState;			// all conditions checked regardless of eAnimationController::currentState (DEBUG: ie: ignores fromState)
+	int						fromState;			// index within eAnimationController::animationStates this is attached to  (DEBUG: ignored if anyState == true)
+	int						toState;			//   "     "           "                   "          this modifies eAnimationController::currentState to
+
+	std::vector<std::tuple<int, COMPARE_ENUM, float>>	floatConditions;
+	std::vector<std::tuple<int, COMPARE_ENUM, int>>		intConditions;		
+	std::vector<std::pair<int, bool>>					boolConditions;		// values can be true or false
+	std::vector<std::pair<int, bool>>					triggerConditions;  // all values are true
 };
 
 //*******************
@@ -77,30 +82,38 @@ inline eStateTransition::eStateTransition(const std::string & name, bool anyStat
 
 //*******************
 // eStateTransition::AddFloatCondition
+// takes the index within eAnimationController::floatParameters to compare
+// to param value according to param compare
 //*******************
-inline void eStateTransition::AddFloatCondition(const std::string & name, float value, COMPARE_ENUM compare) {
-	floatConditions[name] = std::make_pair(value, compare);
+inline void eStateTransition::AddFloatCondition(int controllerFloatIndex, COMPARE_ENUM compare, float value) {
+	floatConditions.emplace_back(std::make_tuple(controllerFloatIndex, compare, value));
 }
 
 //*******************
 // eStateTransition::AddIntCondition
+// takes the index within eAnimationController::intParameters to compare
+// to param value according to param compare
 //*******************
-inline void eStateTransition::AddIntCondition(const std::string & name, int value, COMPARE_ENUM compare) {
-	intConditions[name] = std::make_pair(value, compare);
+inline void eStateTransition::AddIntCondition(int controllerIntIndex, COMPARE_ENUM compare, int value) {
+	intConditions.emplace_back(std::make_tuple(controllerIntIndex, compare, value));
 }
 
 //*******************
 // eStateTransition::AddBoolCondition
+// takes the index within eAnimationController::boolParameters to compare
+// to param value according to a "==" operation
 //*******************
-inline void eStateTransition::AddBoolCondition(const std::string & name, bool value) {
-	boolConditions[name] = value;
+inline void eStateTransition::AddBoolCondition(int controllerBoolIndex, bool value) {
+	boolConditions.emplace_back(std::make_pair(controllerBoolIndex, value));
 }
 
 //*******************
 // eStateTransition::AddTriggerCondition
+// takes the index within eAnimationController::triggerParameters to compare
+// to "true" according to a "==" operation
 //*******************
-inline void eStateTransition::AddTriggerCondition(const std::string & name) {
-	triggerConditions[name] = true;
+inline void eStateTransition::AddTriggerCondition(int controllerTriggerIndex) {
+	triggerConditions.emplace_back(std::make_pair(controllerTriggerIndex, true));
 }
 
 #endif  /* EVIL_STATE_TRANSITION_H */

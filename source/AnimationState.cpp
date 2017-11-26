@@ -7,9 +7,9 @@
 void eAnimationState::Update() {
 	time += (float)game.GetFixedTime();
 	if (time > duration) { 
-		switch (loop) {
-			case AnimationLoopState_t::ONCE:	time = duration; break;
-			case AnimationLoopState_t::REPEAT:	time = 0.0f; break;
+		switch (animation->loop) {
+			case AnimationLoopState::ONCE:		time = duration; break;
+			case AnimationLoopState::REPEAT:	time = 0.0f; break;
 		}
 	}
 

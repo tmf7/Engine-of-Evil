@@ -15,63 +15,371 @@
 class eAnimationController : public eComponent {
 public:
 
-//	friend class eAnimationControllerManager;		// sole access to AddXYZ functions
-													// FIXME(!): why bother with the fns? and not just use the params themselves?
+	friend class eAnimationControllerManager;		// sole access to non-const Add/Get functionality
 
 public:
 
-														eAnimationController(eGameObject * owner);
+										eAnimationController(eGameObject * owner);
 
-	bool												Init(const char * filename);	// have eAnimationControllerManager::LoadController call the private AddXYZ methods		
-	void												Update();
-	void												Pause(bool isPaused = true);
+	bool								Init(const char * filename);	
+	void								Update();
+	void								Pause(bool isPaused = true);
 
-	virtual int											GetClassType() const override { return CLASS_ANIMATIONCONTROLLER; }
+	// returns true if the item exists and can be set, or false if it doesn't exist
+	bool								SetFloatParameter(const std::string & name, float newValue);
+	bool								SetIntParameter(const std::string & name, int newValue);
+	bool								SetBoolParameter(const std::string & name, bool newValue);
+	bool								SetTriggerParameter(const std::string & name);
+	bool								ResetTriggerParameter(const std::string & name);
+	bool								SetFloatParameter(int nameHash, float newValue);
+	bool								SetIntParameter(int nameHash, int newValue);
+	bool								SetBoolParameter(int nameHash, bool newValue);
+	bool								SetTriggerParameter(int nameHash);
+	bool								ResetTriggerParameter(int nameHash);
+
+	// returns the value, or a default if it doesn't exist
+	float								GetFloatParameter(const std::string & name) const;
+	int									GetIntParameter(const std::string & name) const;
+	bool								GetBoolParameter(const std::string & name) const;
+	bool								GetTriggerParameter(const std::string & name) const;
+	float								GetFloatParameter(int nameHash) const;
+	int									GetIntParameter(int nameHash) const;
+	bool								GetBoolParameter(int nameHash) const;
+	bool								GetTriggerParameter(int nameHash) const;
+
+	virtual int							GetClassType() const override { return CLASS_ANIMATIONCONTROLLER; }
 
 private:
 
-	void												AddAnimationState(eAnimationState && newState);
-	void												AddTransition(eStateTransition && newTransition);
-	void												AddIntParameter(std::string, int initialValue);
-	void												AddBoolParameter(std::string, bool initialValue);
-	void												AddFloatParameter(std::string, float initialValue);
-	void												AddTriggerParameter(std::string);					// always constructs w/value == false
-	bool												CheckTransitionConditions(const eStateTransition & transition);
+	// returns true if add was successful, false if the item already exists 
+	// eStateTransitions however allows hash collisions, because it's indexed by eStateTransition::fromState
+	bool								AddAnimationState(eAnimationState && newState);
+	void								AddTransition(eStateTransition && newTransition);
+	bool								AddFloatParameter(const std::string & name, float initialValue = 0.0f);
+	bool								AddIntParameter(const std::string & name, int initialValue = 0);
+	bool								AddBoolParameter(const std::string & name, bool initialValue = false);
+	bool								AddTriggerParameter(const std::string & name);					// always constructs w/value == false
+	bool								CheckTransitionConditions(const eStateTransition & transition);
+
+	// TODO: used to initialize eStateTransitions a load-time, for quick TransitionCondition checks during Update
+	// FIXME/BUG: do not call these until ALL parameters have been initilized, otherwise they may move as std::vector resizes
+	// or use std::vector::reserve(numFloatParams) etc in eAnimationControllerManager::LoadController
+	int									GetFloatParameterIndex(const std::string & name) const;
+	int									GetIntParameterIndex(const std::string & name) const;
+	int									GetBoolParameterIndex(const std::string & name) const;
+	int									GetTriggerParameterIndex(const std::string & name) const;
 
 private:
 
-	std::vector<eAnimationState>						animationStates;
-	eHashIndex											transitionsHash;		// allows hash collisions, indexed by eStateTransition::fromState
-	std::vector<eStateTransition>						stateTransitions;
+	// eHashIndex allows hash collisions as needed and allows for contiguous memory footprint
+	eHashIndex							transitionsHash;	// indexed by eStateTransition::fromState
+	eHashIndex							animationsHash;		// indexed by eAnimation::name
+	std::vector<eAnimationState>		animationStates;
+	std::vector<eStateTransition>		stateTransitions;
+
+	// indexed by user-defined parameter name
+	eHashIndex							floatParamsHash;
+	eHashIndex							intParamsHash;
+	eHashIndex							boolParamsHash;
+	eHashIndex							triggerParamsHash;
 
 	// controller params compared against eStateTransitions and eBlendStates
-	// first == user-defined parameter name, second == its value
-	std::unordered_map<std::string, float>				floatParameters;
-	std::unordered_map<std::string, int>				intParameters;			
-	std::unordered_map<std::string, bool>				boolParameters;			// retians value until changed by user
-	std::unordered_map<std::string, bool>				triggerParameters;		// resets to false after currentState updates
+	std::vector<float>					floatParameters;
+	std::vector<int>					intParameters;			
+	std::vector<bool>					boolParameters;			// retians value until changed by user
+	std::vector<bool>					triggerParameters;		// resets to false after currentState updates
 
-	int													currentState	= 0;
-	bool												paused			= false;
+	int									currentState	= 0;
+	bool								paused			= false;
 
 	// experimental
-	std::string											name;					// unique name relative to owner "melee_32_controller"
+	std::string							name;					// unique name relative to owner "melee_32_controller"
 };
 
-//************
+//***********************
 // eAnimationController::eAnimationController
-//************
+//***********************
 inline eAnimationController::eAnimationController(eGameObject * owner) {
 	this->owner = owner;
 }
 
-//************
+//***********************
 // eAnimationController::Pause
 // stops animation on the currentFrame
-//************
+//***********************
 inline void eAnimationController::Pause(bool isPaused) {
 	paused = isPaused;
 }
 
-#endif /* EVIL_ANIMATION_CONTROLLER_H */
+//***********************
+// eAnimationController::AddAnimationState
+//***********************
+inline bool eAnimationController::AddAnimationState(eAnimationState && newState) {
 
+}
+
+//***********************
+// eAnimationController::AddTransition
+//***********************
+inline void eAnimationController::AddTransition(eStateTransition && newTransition) {
+	 
+}	 
+
+//***********************
+// eAnimationController::SetFloatParameter
+// return true if the parameter exists and can be set
+// returns false if it doesn't exist
+//***********************
+inline bool eAnimationController::SetFloatParameter(const std::string & name, float newValue) {
+	return SetFloatParameter(floatParamsHash.GetHashKey(name), newValue);
+}
+
+//***********************
+// eAnimationController::SetIntParameter
+// return true if the parameter exists and can be set
+// returns false if it doesn't exist
+//***********************
+inline bool eAnimationController::SetIntParameter(const std::string & name, int newValue) {
+	return SetIntParameter(intParamsHash.GetHashKey(name), newValue);
+}
+
+//***********************
+// eAnimationController::SetBoolParameter
+// return true if the parameter exists and can be set
+// returns false if it doesn't exist
+//***********************
+inline bool eAnimationController::SetBoolParameter(const std::string & name, bool newValue) {
+	return SetBoolParameter(boolParamsHash.GetHashKey(name), newValue);
+}
+
+//***********************
+// eAnimationController::SetTriggerParameter
+// return true if the parameter exists and can be set
+// returns false if it doesn't exist
+// setting a trigger always sets its value to true
+// and maintains that value until either
+// its transition completes, 
+// or a user calls ResetTriggerParameter
+//***********************
+inline bool eAnimationController::SetTriggerParameter(const std::string & name) {
+	return SetTriggerParameter(triggerParamsHash.GetHashKey(name));
+}
+
+//***********************
+// eAnimationController::ResetTriggerParameter
+// similar to SetTriggerParameter(std::string)
+// except sets its value to false
+// useful in the event a trigger is set but the transition doesn't occur
+//***********************
+inline bool eAnimationController::ResetTriggerParameter(const std::string & name) {
+	return ResetTriggerParameter(triggerParamsHash.GetHashKey(name));
+}
+
+
+//***********************
+// eAnimationController::SetFloatParameter
+// same as SetFloatParameter(std::string)
+// except assumes the user has chached the hashKey
+//***********************
+inline bool eAnimationController::SetFloatParameter(int nameHash, float newValue) {
+	const int index = floatParamsHash.First(nameHash);
+	if (index == -1)
+		return false;
+	
+	floatParameters[index] = newValue;
+	return true;
+}
+
+//***********************
+// eAnimationController::SetIntParameter
+// same as SetIntParameter(std::string)
+// except assumes the user has chached the hashKey
+//***********************
+inline bool eAnimationController::SetIntParameter(int nameHash, int newValue) {
+	const int index = intParamsHash.First(nameHash);
+	if (index == -1)
+		return false;
+	
+	intParameters[index] = newValue;
+	return true;
+}
+
+//***********************
+// eAnimationController::SetBoolParameter
+// same as SetBoolParameter(std::string)
+// except assumes the user has chached the hashKey
+//***********************
+inline bool eAnimationController::SetBoolParameter(int nameHash, bool newValue) {
+	const int index = boolParamsHash.First(nameHash);
+	if (index == -1)
+		return false;
+	
+	boolParameters[index] = newValue;
+	return true;
+}
+
+//***********************
+// eAnimationController::SetTriggerParameter
+// same as SetTriggerParameter(std::string)
+// except assumes the user has chached the hashKey
+//***********************
+inline bool eAnimationController::SetTriggerParameter(int nameHash) {
+	const int index = triggerParamsHash.First(nameHash);
+	if (index == -1)
+		return false;
+	
+	triggerParameters[index] = true;
+	return true;
+}
+
+//***********************
+// eAnimationController::ResetTriggerParameter
+// similar to SetTriggerParameter(int)
+// except sets its value to false
+// useful in the event a trigger is set but the transition doesn't occur
+// assumes the user has chached the hashKey
+//***********************
+inline bool eAnimationController::ResetTriggerParameter(int nameHash) {
+	const int index = triggerParamsHash.First(nameHash);
+	if (index == -1)
+		return false;
+	
+	triggerParameters[index] = false;
+	return true;
+}
+
+//***********************
+// eAnimationController::GetFloatParameter
+// returns the value of the paramater with the param name if it exists
+// DEBUG: returns default 0.0f if it doesn't exist
+//***********************
+inline float eAnimationController::GetFloatParameter(const std::string & name) const {
+	return GetFloatParameter(floatParamsHash.GetHashKey(name));
+}
+
+//***********************
+// eAnimationController::GetIntParameter
+// returns the value of the paramater with the param name if it exists
+// DEBUG: returns default 0 if it doesn't exist
+//***********************
+inline int eAnimationController::GetIntParameter(const std::string & name) const {
+	return GetIntParameter(intParamsHash.GetHashKey(name));
+}
+
+//***********************
+// eAnimationController::GetBoolParameter
+// returns the value of the paramater with the param name if it exists
+// DEBUG: returns default false if it doesn't exist
+//***********************
+inline bool eAnimationController::GetBoolParameter(const std::string & name) const {
+	return GetBoolParameter(boolParamsHash.GetHashKey(name));
+}
+
+//***********************
+// eAnimationController::GetTriggerParameter
+// returns the value of the paramater with the param name if it exists
+// DEBUG: returns default false if it doesn't exist
+//***********************
+inline bool eAnimationController::GetTriggerParameter(const std::string & name) const {
+	return GetTriggerParameter(triggerParamsHash.GetHashKey(name));
+}
+
+//***********************
+// eAnimationController::GetFloatParameter
+// same as GetFloatParameter(std::string)
+// except assumes the user has chached the hashKey
+//***********************
+inline float eAnimationController::GetFloatParameter(int nameHash) const {
+	const int index = floatParamsHash.First(nameHash);
+	if (index == -1)
+		return 0.0f;
+	
+	return floatParameters[index];
+}
+
+//***********************
+// eAnimationController::GetIntParameter
+// same as GetIntParameter(std::string)
+// except assumes the user has chached the hashKey
+//***********************
+inline int eAnimationController::GetIntParameter(int nameHash) const {
+	const int index = intParamsHash.First(nameHash);
+	if (index == -1)
+		return 0;
+	
+	return intParameters[index];
+}
+
+//***********************
+// eAnimationController::GetBoolParameter
+// same as GetBoolParameter(std::string)
+// except assumes the user has chached the hashKey
+//***********************
+inline bool eAnimationController::GetBoolParameter(int nameHash) const {
+	const int index = boolParamsHash.First(nameHash);
+	if (index == -1)
+		return 0;
+	
+	return boolParameters[index];
+}
+
+//***********************
+// eAnimationController::GetTriggerParameter
+// same as GetTriggerParameter(std::string)
+// except assumes the user has chached the hashKey
+//***********************
+inline bool eAnimationController::GetTriggerParameter(int nameHash) const {
+	const int index = triggerParamsHash.First(nameHash);
+	if (index == -1)
+		return 0;
+	
+	return triggerParameters[index];
+}
+
+//***********************
+// eAnimationController::GetFloatParameterIndex
+// returns the index within eAnimationController::floatParamaters
+// of the named parameter if it exists
+// returns -1 if it doesn't exist
+// used by eAnimationControllerManager to initialize eStateTransitions
+//***********************
+int eAnimationController::GetFloatParameterIndex(const std::string & name) const {
+	return floatParamsHash.First(floatParamsHash.GetHashKey(name));
+}
+
+//***********************
+// eAnimationController::GetIntParameterIndex
+// returns the index within eAnimationController::intParamaters
+// of the named parameter if it exists
+// returns -1 if it doesn't exist
+// used by eAnimationControllerManager to initialize eStateTransitions
+//***********************
+int eAnimationController::GetIntParameterIndex(const std::string & name) const {
+	return intParamsHash.First(intParamsHash.GetHashKey(name));
+}
+
+//***********************
+// eAnimationController::GetBoolParameterIndex
+// returns the index within eAnimationController::boolParamaters
+// of the named parameter if it exists
+// returns -1 if it doesn't exist
+// used by eAnimationControllerManager to initialize eStateTransitions
+//***********************
+int eAnimationController::GetBoolParameterIndex(const std::string & name) const {
+	return boolParamsHash.First(boolParamsHash.GetHashKey(name));
+
+}
+
+//***********************
+// eAnimationController::GetTriggerParameterIndex
+// returns the index within eAnimationController::triggerParamaters
+// of the named parameter if it exists
+// returns -1 if it doesn't exist
+// used by eAnimationControllerManager to initialize eStateTransitions
+//***********************
+int eAnimationController::GetTriggerParameterIndex(const std::string & name) const {
+	return triggerParamsHash.First(triggerParamsHash.GetHashKey(name));
+}
+
+
+#endif /* EVIL_ANIMATION_CONTROLLER_H */

@@ -9,6 +9,12 @@ typedef struct AnimationFrame_s {
 	float	normalizedTime;		// range [0.0f, 1.0f]; when this frame should trigger when traversing this->frames (eg: regular update interval not mandatory) 
 } AnimationFrame_t;
 
+enum class AnimationLoopState {
+	ONCE,					// go to end, then stop
+	REPEAT					// go to end, the reset to beginning
+//	PINGPONG				// TODO: implement go to end, then reverse to beginning, then back again
+};
+
 //*****************************
 //		eAnimation
 // handles designed sequences of 
@@ -22,7 +28,10 @@ public:
 
 public:
 	
-										eAnimation(const std::string & name, int id, std::vector<AnimationFrame_t> & frames, int framesPerSecond);
+										eAnimation(const std::string & name, int id, 
+												   std::vector<AnimationFrame_t> & frames,
+												   int framesPerSecond,
+												   AnimationLoopState loop = AnimationLoopState::ONCE);
 
 	const AnimationFrame_t &			GetFrame(int frameIndex) const;
 	int									NumFrames() const;
@@ -31,6 +40,10 @@ public:
 	float								Duration() const;
 	const std::string &					Name() const;
 	size_t								NameHash() const;
+
+public:
+
+	AnimationLoopState					loop;
 
 private:
 
@@ -44,20 +57,20 @@ private:
 
 //*******************
 // eAnimation::eAnimation
-// TODO: read an animation file, generate a vector, copy that vector, then clear it
+// TODO: have eAnimationManager read an animation file, generate a vector, copy that vector, then clear it
 // to start loading the next animation, if any
 //*******************
-inline eAnimation::eAnimation(const std::string & name, int id, std::vector<AnimationFrame_t> & frames, int framesPerSecond)
+inline eAnimation::eAnimation(const std::string & name, int id, std::vector<AnimationFrame_t> & frames, int framesPerSecond, AnimationLoopState loop)
 	: frames(frames),
 	  framesPerSecond(framesPerSecond),
-	  animationManagerIndex(id) {
+	  animationManagerIndex(id),
+	  loop(loop) {
 	duration = (float)(1000.0f * frames.size()) / (float)framesPerSecond;
 	nameHash = std::hash<std::string>()(name);
 }
 
 //*******************
 // eAnimation::GetFrame
-// TODO: use this to set the image and subframe of a renderImage in eAnimController
 //*******************
 inline const AnimationFrame_t & eAnimation::GetFrame(int frameIndex) const {
 	return frames[frameIndex];

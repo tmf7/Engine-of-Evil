@@ -20,30 +20,30 @@ bool eAnimationController::CheckTransitionConditions(const eStateTransition & tr
 		return false;
 
 	bool updateState = true;
-	for (auto & floatCondition : transition.floatConditions) {
-		auto & controllerValue = floatParameters[floatCondition.first];
-		updateState = eMath::CompareUtility<float>(controllerValue, floatCondition.second.second, floatCondition.second.first);
+	for (auto & conditionTuple : transition.floatConditions) {
+		updateState = eMath::CompareUtility<float>( floatParameters[std::get<0>(conditionTuple)],
+													std::get<COMPARE_ENUM>(conditionTuple), 
+													std::get<2>(conditionTuple)
+												  );
 	}
-	for (auto & intCondition : transition.intConditions) {
-		auto & controllerValue = intParameters[intCondition.first];
-		updateState = eMath::CompareUtility<int>(controllerValue, intCondition.second.second, intCondition.second.first);
-
+	for (auto & conditionTuple : transition.intConditions) {
+		updateState = eMath::CompareUtility<int>( intParameters[std::get<0>(conditionTuple)], 
+												  std::get<COMPARE_ENUM>(conditionTuple), 
+												  std::get<2>(conditionTuple)
+												);
 	}
-	for (auto & boolCondition : transition.boolConditions) {
-		auto & controllerValue = boolParameters[boolCondition.first];
-		updateState = (controllerValue == boolCondition.second);
-					
+	for (auto & conditionPair : transition.boolConditions) {
+		updateState = (boolParameters[conditionPair.first] == conditionPair.second);
 	}
-	for (auto & triggerCondition : transition.triggerConditions) {
-		auto & controllerValue = triggerParameters[triggerCondition.first];
-		updateState = (controllerValue == triggerCondition.second);
+	for (auto & conditionPair : transition.triggerConditions) {
+		updateState = (triggerParameters[conditionPair.first] == conditionPair.second);
 	}
 
 	if (updateState) {
 		currentState = transition.toState;
 		animationStates[currentState].SetNormalizedTime(transition.offset);
 		for (auto & trigger : triggerParameters)
-			trigger.second = false;
+			trigger = false;
 	}
 	return updateState;
 }
@@ -66,8 +66,7 @@ void eAnimationController::Update() {
 	}
 
 	// DEBUG: currentState transition checks are still allowed even if an anyState transition has triggered
-	auto hasher = std::hash<int>{};
-	int hashkey = hasher(currentState);
+	int hashkey = transitionsHash.GetHashKey(currentState);
 	for (int i = transitionsHash.First(hashkey); i != -1; i = transitionsHash.Next(i)) {
 		if ((stateTransitions[i].fromState == currentState) &&
 			 CheckTransitionConditions(stateTransitions[i])) {
@@ -78,4 +77,64 @@ void eAnimationController::Update() {
 	// TODO: handle eBlendStates to flip their active animation and retain normalized time
 
 	 animationStates[currentState].Update();
+}
+
+//***********************
+// eAnimationController::AddFloatParameter
+// does not modify any parameters if name already exists, and returns false
+// otherwise constructs the new parameter in-place and returns true
+//***********************
+bool eAnimationController::AddFloatParameter(const std::string & name, float initialValue = 0.0f) {
+	const int hashKey = floatParamsHash.GetHashKey(name);
+	if (floatParamsHash.First(hashKey) > -1)
+		return false;
+	
+	floatParamsHash.Add(hashKey, floatParameters.size());
+	floatParameters.emplace_back(initialValue);
+	return true;
+}	 
+	 
+//***********************
+// eAnimationController::AddIntParameter
+// does not modify any parameters if name already exists, and returns false
+// otherwise constructs the new parameter in-place and returns true
+//*********************** 
+bool eAnimationController::AddIntParameter(const std::string & name, int initialValue = 0) {
+	const int hashKey = intParamsHash.GetHashKey(name);
+	if (intParamsHash.First(hashKey) > -1)
+		return false;
+	
+	intParamsHash.Add(hashKey, intParameters.size());
+	intParameters.emplace_back(initialValue);
+	return true;
+}	 
+	 
+//***********************
+// eAnimationController::AddBoolarameter
+// does not modify any parameters if name already exists, and returns false
+// otherwise constructs the new parameter in-place and returns true
+//***********************
+bool eAnimationController::AddBoolParameter(const std::string & name, bool initialValue = false) {
+	const int hashKey = boolParamsHash.GetHashKey(name);
+	if (boolParamsHash.First(hashKey) > -1)
+		return false;
+	
+	boolParamsHash.Add(hashKey, boolParameters.size());
+	boolParameters.emplace_back(initialValue);
+	return true;
+}
+
+//***********************
+// eAnimationController::AddTriggerParameter
+// does not modify any parameters if name already exists, and returns false
+// otherwise constructs the new parameter in-place and returns true
+//***********************
+bool eAnimationController::AddTriggerParameter(const std::string & name) {
+	const int hashKey = triggerParamsHash.GetHashKey(name);
+	if (triggerParamsHash.First(hashKey) > -1)
+		return false;
+	
+	triggerParamsHash.Add(hashKey, triggerParameters.size());
+	triggerParameters.emplace_back(false);
+	return true;
 }
