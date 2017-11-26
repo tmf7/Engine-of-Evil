@@ -4,6 +4,7 @@
 #include "Image.h"
 #include "Component.h"
 #include "AnimationState.h"
+#include "BlendState.h"
 #include "StateTransition.h"
 #include "HashIndex.h"
 
@@ -19,15 +20,21 @@ public:
 
 public:
 
+										eAnimationController() = default;
+										eAnimationController(const eAnimationController & other);
+										eAnimationController(eAnimationController && other);
 										eAnimationController(eGameObject * owner);
+
+	eAnimationController &				operator=(eAnimationController other);
+
 
 	bool								Init(const char * filename);	
 	void								Update();
 	void								Pause(bool isPaused = true);
 
 	// returns true if the item exists and can be set, or false if it doesn't exist
-	const eAnimationState &				GetCurrentState() const;
-	eAnimationState &					GetCurrentState();
+	const eStateNode &					GetCurrentState() const;
+	eStateNode &						GetCurrentState();
 
 	bool								SetFloatParameter(const std::string & name, float newValue);
 	bool								SetIntParameter(const std::string & name, int newValue);
@@ -56,7 +63,7 @@ private:
 
 	// returns true if add was successful, false if the item already exists 
 	// eStateTransitions however allows hash collisions, because it's indexed by eStateTransition::fromState
-	bool								AddAnimationState(eAnimationState && newState);
+	bool								AddAnimationState(std::unique_ptr<eStateNode> && newState);
 	void								AddTransition(eStateTransition && newTransition);
 
 	bool								AddFloatParameter(const std::string & name, float initialValue = 0.0f);
@@ -68,6 +75,8 @@ private:
 	// TODO: used to initialize eStateTransitions a load-time, for quick TransitionCondition checks during Update
 	// FIXME/BUG: do not call these until ALL parameters have been initilized, otherwise they may move as std::vector resizes
 	// or use std::vector::reserve(numFloatParams) etc in eAnimationControllerManager::LoadController
+	// TODO: std::sort the stateTransitions vector according to anyState bool AFTER all transitions have been loaded, then update transitionHash (in eAnimController)
+	// TODO: make sure to eHashIndex::ClearAndResize each eAnimationController::XYZParamsHash based on the number of params at load-time to minimize memory footprint
 	int									GetFloatParameterIndex(const std::string & name) const;
 	int									GetIntParameterIndex(const std::string & name) const;
 	int									GetBoolParameterIndex(const std::string & name) const;
@@ -76,10 +85,10 @@ private:
 private:
 
 	// eHashIndex allows hash collisions as needed and allows for contiguous memory footprint
-	eHashIndex							transitionsHash;	// indexed by eStateTransition::fromState
-	eHashIndex							statesHash;			// indexed by eAnimationState::name
-	std::vector<eAnimationState>		animationStates;
-	std::vector<eStateTransition>		stateTransitions;
+	eHashIndex									transitionsHash;	// indexed by eStateTransition::fromState
+	eHashIndex									statesHash;			// indexed by eAnimationState::name
+	std::vector<std::unique_ptr<eStateNode>>	animationStates;
+	std::vector<eStateTransition>				stateTransitions;
 
 	// indexed by user-defined parameter name
 	eHashIndex							floatParamsHash;
@@ -90,8 +99,8 @@ private:
 	// controller params compared against eStateTransitions and eBlendStates
 	std::vector<float>					floatParameters;
 	std::vector<int>					intParameters;			
-	std::vector<bool>					boolParameters;			// retians value until changed by user
-	std::vector<bool>					triggerParameters;		// resets to false after currentState updates
+	std::vector<bool>					boolParameters;			// retains value until changed by user
+	std::vector<bool>					triggerParameters;		// resets to false after currentState changes
 
 	int									currentState	= 0;
 	bool								paused			= false;
@@ -118,9 +127,8 @@ inline void eAnimationController::Pause(bool isPaused) {
 //***********************
 // eAnimationController::AddAnimationState
 //***********************
-inline bool eAnimationController::AddAnimationState(eAnimationState && newState) {
-	int hashKey = statesHash.GetHashKey(newState.name);
-	statesHash.Add(hashKey, animationStates.size());
+inline bool eAnimationController::AddAnimationState(std::unique_ptr<eStateNode> && newState) {
+	statesHash.Add(newState->NameHash(), animationStates.size());
 	animationStates.emplace_back(std::move(newState));
 }
 
@@ -128,8 +136,7 @@ inline bool eAnimationController::AddAnimationState(eAnimationState && newState)
 // eAnimationController::AddTransition
 //***********************
 inline void eAnimationController::AddTransition(eStateTransition && newTransition) {
-	 int hashKey = statesHash.GetHashKey(newTransition.name);
-	transitionsHash.Add(hashKey, stateTransitions.size());
+	transitionsHash.Add(newTransition.fromState, stateTransitions.size());
 	stateTransitions.emplace_back(std::move(newTransition));
 }	
 
@@ -137,16 +144,16 @@ inline void eAnimationController::AddTransition(eStateTransition && newTransitio
 // eAnimationController::GetCurrentState
 // returns the currently active eAnimationState of this eAnimationController
 //***********************
-inline const eAnimationState & eAnimationController::GetCurrentState() const {
-	return animationStates[currentState];
+inline const eStateNode & eAnimationController::GetCurrentState() const {
+	return *animationStates[currentState];
 }
 
 //***********************
 // eAnimationController::GetCurrentState
 // returns the currently active eAnimationState of this eAnimationController
 //***********************
-inline eAnimationState & eAnimationController::GetCurrentState() {
-	return animationStates[currentState];
+inline eStateNode & eAnimationController::GetCurrentState() {
+	return *animationStates[currentState];
 }
 
 //***********************

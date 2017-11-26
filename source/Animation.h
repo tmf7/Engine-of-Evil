@@ -2,6 +2,7 @@
 #define EVIL_ANIMATION_H
 
 #include "Definitions.h"
+#include "Class.h"
 
 typedef struct AnimationFrame_s {
 	int		imageManagerIndex;	// within eImageManager::imageList
@@ -21,11 +22,10 @@ enum class AnimationLoopState {
 // texture sub-frames
 // used to produce animations
 //*****************************
-class eAnimation {
+class eAnimation : public eClass {
 public:
 
-	friend class eAnimationState;
-	friend class eBlendState;
+	friend class eStateNode;
 
 public:
 	
@@ -41,6 +41,8 @@ public:
 	float								Duration() const;
 	const std::string &					Name() const;
 	size_t								NameHash() const;
+
+	virtual int							GetClassType() const override { return CLASS_ANIMATION; }
 
 public:
 

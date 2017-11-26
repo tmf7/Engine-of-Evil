@@ -1,6 +1,71 @@
 #include "AnimationController.h"
 #include "Game.h"
 
+// FREEHILL BEGIN rule of 5 (because of std::vector<std::unique_ptr>>)
+
+eAnimationController::eAnimationController(const eAnimationController & other)
+	: transitionsHash(other.transitionsHash),
+	  statesHash(other.statesHash),
+	  stateTransitions(other.stateTransitions),
+	  floatParamsHash(other.floatParamsHash),
+	  intParamsHash(other.intParamsHash),
+	  boolParamsHash(other.boolParamsHash),
+	  triggerParamsHash(other.triggerParamsHash),
+	  floatParameters(other.floatParameters),
+	  intParameters(other.intParameters),
+	  boolParameters(other.boolParameters),
+	  triggerParameters(other.triggerParameters),
+	  currentState(other.currentState),
+	  paused(other.paused),
+	  name(other.name) {
+	for (auto & state : other.animationStates) {
+		if (state->GetClassType() == CLASS_ANIMATIONSTATE) {
+			animationStates.emplace_back(std::make_unique<eAnimationState>(*static_cast<eAnimationState *>(state.get())));
+		} else if (state->GetClassType() == CLASS_BLENDSTATE){
+			animationStates.emplace_back(std::make_unique<eBlendState>(*static_cast<eBlendState *>(state.get())));
+		}
+	}
+}
+
+
+eAnimationController::eAnimationController(eAnimationController && other)
+	: transitionsHash(std::move(other.transitionsHash)),
+	  statesHash(std::move(other.statesHash)),
+	  animationStates(std::move(other.animationStates)),
+	  stateTransitions(std::move(other.stateTransitions)),
+	  floatParamsHash(std::move(other.floatParamsHash)),
+	  intParamsHash(std::move(other.intParamsHash)),
+	  boolParamsHash(std::move(other.boolParamsHash)),
+	  triggerParamsHash(std::move(other.triggerParamsHash)),
+	  floatParameters(std::move(other.floatParameters)),
+	  intParameters(std::move(other.intParameters)),
+	  boolParameters(std::move(other.boolParameters)),
+	  triggerParameters(std::move(other.triggerParameters)),
+	  currentState(other.currentState),
+	  paused(other.paused),
+	  name(std::move(other.name)) {
+}
+
+eAnimationController & eAnimationController::operator=(eAnimationController other) {
+	std::swap(transitionsHash, other.transitionsHash);
+	std::swap(statesHash, other.statesHash);
+	std::swap(animationStates, other.animationStates);
+	std::swap(stateTransitions, other.stateTransitions);
+	std::swap(floatParamsHash, other.floatParamsHash);
+	std::swap(intParamsHash, other.intParamsHash);
+	std::swap(boolParamsHash, other.boolParamsHash);
+	std::swap(triggerParamsHash, other.triggerParamsHash);
+	std::swap(floatParameters, other.floatParameters);
+	std::swap(intParameters, other.intParameters);
+	std::swap(boolParameters, other.boolParameters);
+	std::swap(triggerParameters, other.triggerParameters);
+	std::swap(currentState, other.currentState);
+	std::swap(paused, other.paused);
+	std::swap(name, other.name);
+}
+
+// FREEHILL END rule of 5
+
 //************
 // eAnimationController::Init
 // TODO: this should take an index or name of a controller
@@ -16,7 +81,7 @@ bool eAnimationController::Init(const char * filename) {
 // all conditions must be met for the transition to trigger
 //************
 bool eAnimationController::CheckTransitionConditions(const eStateTransition & transition) {
-	if (animationStates[currentState].GetNormalizedTime() < transition.exitTime)
+	if (animationStates[currentState]->GetNormalizedTime() < transition.exitTime)
 		return false;
 
 	bool updateState = true;
@@ -41,7 +106,7 @@ bool eAnimationController::CheckTransitionConditions(const eStateTransition & tr
 
 	if (updateState) {
 		currentState = transition.toState;
-		animationStates[currentState].SetNormalizedTime(transition.offset);
+		animationStates[currentState]->SetNormalizedTime(transition.offset);
 		for (auto & trigger : triggerParameters)
 			trigger = false;
 	}
@@ -58,10 +123,7 @@ void eAnimationController::Update() {
 		return;
 
 	for (auto & transition : stateTransitions) {
-		if (!transition.anyState)
-			break;
-
-		if (CheckTransitionConditions(transition))
+		if (!transition.anyState || CheckTransitionConditions(transition))
 			break;
 	}
 
@@ -74,9 +136,7 @@ void eAnimationController::Update() {
 		}
 	}
 
-	// TODO: handle eBlendStates to flip their active animation and retain normalized time
-
-	 animationStates[currentState].Update();
+	 animationStates[currentState]->Update();
 }
 
 //***********************

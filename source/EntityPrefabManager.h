@@ -21,7 +21,7 @@ public:
 	int				GetNumPrefabs() const;
 	void			Clear();
 
-	virtual int		GetClassType() const override { return CLASS_ENTITYPREFABMANAGER; }
+	virtual int		GetClassType() const override { return CLASS_ENTITYPREFAB_MANAGER; }
 
 private:
 

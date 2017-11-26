@@ -26,7 +26,7 @@ public:
 	int				GetNumImages() const;
 	void			Clear();
 
-	virtual int		GetClassType() const override { return CLASS_IMAGEMANAGER; }
+	virtual int		GetClassType() const override { return CLASS_IMAGE_MANAGER; }
 
 private:
 

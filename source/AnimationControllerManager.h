@@ -2,6 +2,8 @@
 
 /*
 // TODO: only eAnimationControllerManager should be able to access eAnimationController::AddTransition and eAnimationController::AddState 
+// [NOTE]: at least one float must be selected during BlendState definition, if not in load-file, then default to first floatParameter in controller
+// TODO(!): don't allow duplicate animations in the same BlendState...it messes with the blendnodes indexing a bit
 
 CONTROLLER SETUP:
 -----------------

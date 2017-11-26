@@ -1,7 +1,7 @@
 #ifndef EVIL_ANIMATION_STATE_H
 #define EVIL_ANIMATION_STATE_H
 
-#include "Animation.h"
+#include "StateNode.h"
 
 class eAnimationController;
 
@@ -9,10 +9,10 @@ class eAnimationController;
 //		eAnimationState
 // used by eAnimationController
 // as part of its state machine
-// which controls which animations
-// are updating an eRenderImage
+// only controls one animation
+// see also: eBlendState
 //*******************************
-class eAnimationState {
+class eAnimationState : public eStateNode {
 public:
 
 	friend class eAnimationController;		// sole access to Update
@@ -23,105 +23,28 @@ public:
 															const std::shared_ptr<eAnimation> & animation, 
 															float speed = 1.0f);
 
-	void									SetAnimationController(eAnimationController * newStateMachine);
-	float									GetNormalizedTime() const;
-	void									SetNormalizedTime(float normalizedTime);
-	float									Duration() const;
-	float									Time() const;
-	const std::string &						Name() const;
-	int										NameHash() const;
-	const AnimationFrame_t &				GetCurrentFrame() const;
+	virtual int								GetClassType() const override { return CLASS_ANIMATIONSTATE; }
 
 private:
 
-	void									Update();
-
-public:
-
-	float									speed;
+	virtual void							Update() override;
 
 private:
 
-	eAnimationController *					stateMachine;			// back-pointer to handler, for access to the component's gameobject owner->renderImage
 	std::shared_ptr<eAnimation>				animation;				// which animation this state plays
-	std::string								name;
-	int										nameHash;
-	float									duration;
-	float									time			= 0.0f;
-	AnimationFrame_t *						currentFrame	= nullptr;
 };
 
 //*********************
 // eAnimationState::eAnimationState
 //*********************
 inline eAnimationState::eAnimationState(const std::string & name, const std::shared_ptr<eAnimation> & animation, float speed)
-	: name(name),
-	  animation(animation),
-	  speed(speed) {
-	currentFrame = &animation->frames[0];
-	duration = animation->duration * speed;
+	: animation(animation) {
+	this->speed = speed;
+	this->name = name;
+
+	currentFrame = &animation->GetFrame(0);
+	duration = animation->Duration() * speed;
 	nameHash = std::hash<std::string>()(name);
-}
-
-//*********************
-// eAnimationState::GetNormalizedTime
-// returns the fraction of its duration that this state is currently at
-// range [0, 1]
-//*********************
-inline float eAnimationState::GetNormalizedTime() const {
-	return (time / duration);
-}
-
-//*********************
-// eAnimationState::SetNormalizedTime
-//*********************
-inline void eAnimationState::SetNormalizedTime(float normalizedTime) {
-	time = normalizedTime * duration;
-}
-
-//*********************
-// eAnimationState::Duration
-// returns the duration of this state in milliseconds
-//*********************
-inline float eAnimationState::Duration() const {
-	return duration;
-}
-
-//*********************
-// eAnimationState::Time
-// returns the un-normalized time of this state in milliseconds
-// range [0, duration]
-//*********************
-inline float eAnimationState::Time() const {
-	return time;
-}
-
-//*********************
-// eAnimationState::Name
-//*********************
-inline const std::string & eAnimationState::Name() const {
-	return name;
-}
-
-//*********************
-// eAnimationState::NameHash
-//*********************
-inline int eAnimationState::NameHash() const {
-	return nameHash;
-}
-
-//*********************
-// eAnimationState::GetCurrentFrame
-//*********************
-inline const AnimationFrame_t & eAnimationState::GetCurrentFrame() const {
-	return *currentFrame;
-}
-
-//*********************
-// eAnimationState::SetAnimationController
-//*********************
-inline void eAnimationState::SetAnimationController(eAnimationController * newStateMachine) {
-	stateMachine = newStateMachine;
 }
 
 #endif /* EVIL_ANIMATION_STATE_H */

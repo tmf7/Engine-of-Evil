@@ -1,7 +1,9 @@
 #ifndef EVIL_BLENDSTATE_H
 #define EVIL_BLENDSTATE_H
 
-#include "Animation.h"
+#include "StateNode.h"
+#include "HashIndex.h"
+#include "Vector.h"
 
 class eAnimationController;
 
@@ -15,59 +17,46 @@ enum class AnimationBlendMode {
 //		eBlendState
 // used by eAnimationController
 // as part of its state machine
-// which controls which animations
-// are updating an eRenderImage
+// controls a vector of animations
+// according to blend paramaters and mode
+// see also: eAnimationState
 //*******************************
-class eBlendState {
+class eBlendState : public eStateNode {
 public:
 
-	friend class eAnimationController;		// sole access to Update
+	friend class eAnimationController;			// sole access to Update
 
 public:
-
+												// FIXME: if blendMode == 2D, then two controller floats MUST be defined at load-time
+												// or just default the second one to equal the first and ignore it during Update
 												eBlendState(const std::string & name, 
-															const std::vector<std::shared_ptr<eAnimation>> & animations, //************DIFFERENT***********//
-															AnimationBlendMode blendMode = AnimationBlendMode::FREEFORM_2D,
+															const std::vector<std::shared_ptr<eAnimation>> & animations,
+															float * xBlendParameter,
+															float * yBlendParameter = nullptr,
+															AnimationBlendMode blendMode = AnimationBlendMode::SIMPLE_1D,
 															float speed = 1.0f);
 
-	void										SetAnimationController(eAnimationController * newStateMachine);
-	float										GetNormalizedTime() const;
-	void										SetNormalizedTime(float normalizedTime);
-	float										Duration() const;
-	float										Time() const;
-	const std::string &							Name() const;
-	int											NameHash() const;
-	const AnimationFrame_t &					GetCurrentFrame() const;
+	virtual int									GetClassType() const override { return CLASS_BLENDSTATE; }
 
 private:
 
-	void										Update();
-
-public:
-
-	float										speed;
+	virtual void								Update() override;
+	void										SwapAnimation(int animationIndex);
 
 private:
 
-	eAnimationController *						stateMachine;			// back-pointer to handler, for access to the component's gameobject owner->renderImage
-	std::vector<std::shared_ptr<eAnimation>>	animations;				// which animations this state plays		//************DIFFERENT***********//
-	std::string									name;
-	int											nameHash;
-	AnimationBlendMode							blendMode;				//************DIFFERENT***********//
-	float										duration;
-	float										time			= 0.0f;
-	AnimationFrame_t *							currentFrame	= nullptr;
+	std::vector<std::shared_ptr<eAnimation>>	animations;				// which animations this state plays
+	AnimationBlendMode							blendMode;
+	int											currentAnimationIndex	= 0;
 
+	// DEBUG: blendNodes' indexes run parallel to animations' indexes
+	eHashIndex									blendNodesHash;		// indexed by eAnimation::name
+	std::vector<eVec2>							blendNodes;
 
-	//************DIFFERENT***********//
-	// FIXME: this needs to be ~ std::vector<std::pair<float, float>> blendNodes[animations.size()]
-	// except... that not every eBlendState will use two parameters, perhaps just use a bool in ctor for BlendMode (1D, 2D)
-	// and just ignore/zero the second float during compare tests
-	std::vector<std::tuple<int, COMPARE_ENUM, float>>	blendNodes;
+	// pointers to eAnimationController::floatParameters index to listen to for blendNodes comparison
+	float *										xBlendParameter;
+	float *										yBlendParameter;
 
-	// TODO: blendNodes' indexes should run parallel to animations' indexes
-	// such that getting an animation by name or nameHash should also return the same index in blendNodes
-	// ... which assumes theres an eHashIndex animationsHash (maybe???)
 	bool										PositionBlendNode(const std::string & animationName, float xPosition, float yPosition = 0.0f);
 	bool										PositionBlendNode(int animationNameHash, float xPosition, float yPosition = 0.0f);
 
@@ -76,75 +65,67 @@ private:
 //*********************
 // eBlendState::eBlendState
 //*********************
-inline eBlendState::eBlendState(const std::string & name, const std::vector<std::shared_ptr<eAnimation>> & animations, AnimationBlendMode blendMode, float speed)
-	: name(name),
-	  animations(animations),
-	  blendMode(blendMode),
-	  speed(speed) {
-	currentFrame = &animations[0]->frames[0];
-	duration = animations[0]->duration * speed;
+inline eBlendState::eBlendState(const std::string & name, const std::vector<std::shared_ptr<eAnimation>> & animations, float * xBlendParameter, float * yBlendParameter, AnimationBlendMode blendMode, float speed)
+	: animations(animations),
+	  xBlendParameter(xBlendParameter),
+	  yBlendParameter(yBlendParameter),
+	  blendMode(blendMode) {
+	this->speed = speed;
+	this->name = name;
+
+	currentFrame = &animations[0]->GetFrame(0);
+	duration = animations[0]->Duration() * speed;
+
 	nameHash = std::hash<std::string>()(name);
+
+	blendNodes.assign(animations.size(), vec2_zero);
+	blendNodesHash.ClearAndResize(animations.size());
+	for (size_t index = 0; index < animations.size(); ++index)
+		blendNodesHash.Add(animations[index]->NameHash(), index);
 }
 
 //*********************
-// eBlendState::GetNormalizedTime
-// returns the fraction of its duration that this state is currently at
-// range [0, 1]
+// eBlendState::PositionBlendNode
+// assigns the values to which the eAnimationController 
+// stateMachine's paramaters will be compared
+// returns true if the animationName is correct and therefore has a corresponding blendNode
+// returns false if animationName is not in eBlendState::animations
 //*********************
-inline float eBlendState::GetNormalizedTime() const {
-	return (time / duration);
+inline bool eBlendState::PositionBlendNode(const std::string & animationName, float xPosition, float yPosition) {
+	const int index = blendNodesHash.First(blendNodesHash.GetHashKey(animationName));
+	if (index == -1)
+		return false;
+
+	blendNodes[index].x = xPosition;
+	blendNodes[index].y = yPosition;
+	return true;
 }
 
 //*********************
-// eBlendState::SetNormalizedTime
+// eBlendState::PositionBlendNode
+// same as PositionBlendNode(std::string)
+// except it assumes the user has cached the hashKey
 //*********************
-inline void eBlendState::SetNormalizedTime(float normalizedTime) {
+inline bool eBlendState::PositionBlendNode(int animationNameHash, float xPosition, float yPosition) {
+	const int index = blendNodesHash.First(animationNameHash);
+	if (index == -1)
+		return false;
+
+	blendNodes[index].x = xPosition;
+	blendNodes[index].y = yPosition;
+	return true;
+}
+
+//*********************
+// eBlendState::SwapAnimation
+// switches which animation this state is playing
+// using the same normalized time
+//*********************
+inline void eBlendState::SwapAnimation(int animationIndex) {
+	const float normalizedTime = (time / duration);
+	currentAnimationIndex = animationIndex;
+	duration = animations[currentAnimationIndex]->Duration() * speed;
 	time = normalizedTime * duration;
-}
-
-//*********************
-// eBlendState::Duration
-// returns the duration of this state in milliseconds
-//*********************
-inline float eBlendState::Duration() const {
-	return duration;
-}
-
-//*********************
-// eBlendState::Time
-// returns the un-normalized time of this state in milliseconds
-// range [0, duration]
-//*********************
-inline float eBlendState::Time() const {
-	return time;
-}
-
-//*********************
-// eBlendState::Name
-//*********************
-inline const std::string & eBlendState::Name() const {
-	return name;
-}
-
-//*********************
-// eBlendState::NameHash
-//*********************
-inline int eBlendState::NameHash() const {
-	return nameHash;
-}
-
-//*********************
-// eBlendState::GetCurrentFrame
-//*********************
-inline const AnimationFrame_t & eBlendState::GetCurrentFrame() const {
-	return *currentFrame;
-}
-
-//*********************
-// eBlendState::SetAnimationController
-//*********************
-inline void eBlendState::SetAnimationController(eAnimationController * newStateMachine) {
-	stateMachine = newStateMachine;
 }
 
 #endif /* EVIL_BLENDSTATE_H */
