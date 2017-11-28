@@ -2,7 +2,6 @@
 //	all engine of evil classes that can have instantiated objects
 //	and are designed to be part of an inheritance chain beyond eClass
 //*******************************************************************
-REGISTER_ENUM(CLASS_CLASS)
 REGISTER_ENUM(CLASS_GAMEOBJECT)
 REGISTER_ENUM(CLASS_COMPONENT)
 REGISTER_ENUM(CLASS_ENTITY)

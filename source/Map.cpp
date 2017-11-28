@@ -4,7 +4,7 @@
 // eMap::Init
 //**************
 bool eMap::Init () {
-	return LoadMap("graphics/EvilTown.map");
+	return LoadMap("Graphics/Maps/EvilTown.map");
 }
 
 //**************

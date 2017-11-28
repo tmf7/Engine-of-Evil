@@ -1,5 +1,0 @@
-#name	x	y	w	h	collisionHack	#ensure the last line doesn't have a \n or \r
-stone1	0	0	64	32	0
-stone2	64	0	64	32	0
-stone3	128	0	64	32	0
-stone4	192	0	64	32	1

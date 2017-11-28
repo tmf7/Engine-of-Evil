@@ -72,7 +72,7 @@ private:
 	bool								AddTriggerParameter(const std::string & name);					// always constructs w/value == false
 	bool								CheckTransitionConditions(const eStateTransition & transition);
 
-	// TODO: used to initialize eStateTransitions a load-time, for quick TransitionCondition checks during Update
+	// TODO: these fns used to initialize eStateTransitions a load-time, for quick TransitionCondition checks during Update
 	// FIXME/BUG: do not call these until ALL parameters have been initilized, otherwise they may move as std::vector resizes
 	// or use std::vector::reserve(numFloatParams) etc in eAnimationControllerManager::LoadController
 	// TODO: std::sort the stateTransitions vector according to anyState bool AFTER all transitions have been loaded, then update transitionHash (in eAnimController)

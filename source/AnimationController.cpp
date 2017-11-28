@@ -1,8 +1,11 @@
 #include "AnimationController.h"
 #include "Game.h"
 
-// FREEHILL BEGIN rule of 5 (because of std::vector<std::unique_ptr>>)
-
+//************
+// eAnimationController::eAnimationController
+// copy ctor needs to allocate new state unique_ptrs
+// because animationStates is a std::vector<std::unique_ptr>
+//************
 eAnimationController::eAnimationController(const eAnimationController & other)
 	: transitionsHash(other.transitionsHash),
 	  statesHash(other.statesHash),
@@ -27,7 +30,9 @@ eAnimationController::eAnimationController(const eAnimationController & other)
 	}
 }
 
-
+//************
+// eAnimationController::eAnimationController
+//************
 eAnimationController::eAnimationController(eAnimationController && other)
 	: transitionsHash(std::move(other.transitionsHash)),
 	  statesHash(std::move(other.statesHash)),
@@ -46,6 +51,10 @@ eAnimationController::eAnimationController(eAnimationController && other)
 	  name(std::move(other.name)) {
 }
 
+//************
+// eAnimationController::operator=
+// copy-and-swap
+//************
 eAnimationController & eAnimationController::operator=(eAnimationController other) {
 	std::swap(transitionsHash, other.transitionsHash);
 	std::swap(statesHash, other.statesHash);
@@ -63,8 +72,6 @@ eAnimationController & eAnimationController::operator=(eAnimationController othe
 	std::swap(paused, other.paused);
 	std::swap(name, other.name);
 }
-
-// FREEHILL END rule of 5
 
 //************
 // eAnimationController::Init

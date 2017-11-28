@@ -30,6 +30,8 @@ public:
 
 private:
 
+	// FIXME (performance): make these std::vectors because most map sizes are small (0-30)
+	// be sure to update eCollisionModel and eRenderImage's ::UpdateAreas fns accordingly
 	std::unordered_map<eCollisionModel *, eCollisionModel *>		collisionContents;	// all eCollisionModel::absBounds that overlap this->absBounds
 	std::unordered_map<eRenderImage *, eRenderImage *>				renderContents;		// all eRenderImage::worldClip that overlap this->absBounds
 	std::vector<eTile>												tilesOwned;			// which eTiles' lifetimes are managed

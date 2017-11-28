@@ -89,7 +89,7 @@ bool eEntityPrefabManager::GetPrefab(const char * filename, std::shared_ptr<eEnt
 // then it result fills with an error eEntity pointer
 //***************
 bool eEntityPrefabManager::GetPrefab(int prefabID, std::shared_ptr<eEntity> & result) {
-	if (prefabID < 0 && prefabID > prefabList.size()) {		// DEBUG: prefabID will never be larger than max signed int
+	if (prefabID < 0 || prefabID > prefabList.size()) {		// DEBUG: prefabID will never be larger than max signed int
 		result = prefabList[0]; // error prefab
 		return false;
 	}

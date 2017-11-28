@@ -1,3 +1,0 @@
-#name	x	y	w	h	collisionHack	#ensure the last line doesn't have a \n or \r (needs y-16, x-16)
-grass	0	0	64	64	0
-water	192	320	64	64	1

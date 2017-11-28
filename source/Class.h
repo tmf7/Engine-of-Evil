@@ -12,14 +12,14 @@
 class eClass{
 public:
 
-	virtual			~eClass() = default;
+	virtual		   ~eClass() = default;
 					eClass() = default;
 					eClass(const eClass & other) = default;
 					eClass(eClass && other) = default;
 	eClass &		operator=(const eClass & other) = default;
 	eClass &		operator=(eClass && other) = default;
-	
-	virtual	int		GetClassType() const { return CLASS_CLASS; }
+
+	virtual	int		GetClassType() const = 0;
 };
 
 #endif /* EVIL_CLASS_H */

@@ -34,17 +34,4 @@ private:
 	std::shared_ptr<eAnimation>				animation;				// which animation this state plays
 };
 
-//*********************
-// eAnimationState::eAnimationState
-//*********************
-inline eAnimationState::eAnimationState(const std::string & name, const std::shared_ptr<eAnimation> & animation, float speed)
-	: animation(animation) {
-	this->speed = speed;
-	this->name = name;
-
-	currentFrame = &animation->GetFrame(0);
-	duration = animation->Duration() * speed;
-	nameHash = std::hash<std::string>()(name);
-}
-
 #endif /* EVIL_ANIMATION_STATE_H */

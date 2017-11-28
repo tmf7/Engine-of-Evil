@@ -29,12 +29,13 @@ public:
 
 public:
 	
-										eAnimation(const std::string & name, int id, 
+										eAnimation(const std::string & name, int animationManagerIndex, 
 												   std::vector<AnimationFrame_t> & frames,
 												   int framesPerSecond,
 												   AnimationLoopState loop = AnimationLoopState::ONCE);
 
 	const AnimationFrame_t &			GetFrame(int frameIndex) const;
+	int									GetAnimationManagerIndex() const;
 	int									NumFrames() const;
 	int									GetFPS() const;
 	void								SetFPS(int newFPS);
@@ -63,10 +64,10 @@ private:
 // TODO: have eAnimationManager read an animation file, generate a vector, copy that vector, then clear it
 // to start loading the next animation, if any
 //*******************
-inline eAnimation::eAnimation(const std::string & name, int id, std::vector<AnimationFrame_t> & frames, int framesPerSecond, AnimationLoopState loop)
+inline eAnimation::eAnimation(const std::string & name, int animationManagerIndex, std::vector<AnimationFrame_t> & frames, int framesPerSecond, AnimationLoopState loop)
 	: frames(frames),
 	  framesPerSecond(framesPerSecond),
-	  animationManagerIndex(id),
+	  animationManagerIndex(animationManagerIndex),
 	  loop(loop) {
 	duration = (float)(1000.0f * frames.size()) / (float)framesPerSecond;
 	nameHash = std::hash<std::string>()(name);
@@ -77,6 +78,14 @@ inline eAnimation::eAnimation(const std::string & name, int id, std::vector<Anim
 //*******************
 inline const AnimationFrame_t & eAnimation::GetFrame(int frameIndex) const {
 	return frames[frameIndex];
+}
+
+//*******************
+// eAnimation::GetAnimationManagerIndex
+// returns this animation's index within eAnimationManager::animationsList
+//*******************
+inline int eAnimation::GetAnimationManagerIndex() const {
+	return animationManagerIndex;
 }
 
 //*******************

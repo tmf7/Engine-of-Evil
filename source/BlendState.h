@@ -63,28 +63,6 @@ private:
 };
 
 //*********************
-// eBlendState::eBlendState
-//*********************
-inline eBlendState::eBlendState(const std::string & name, const std::vector<std::shared_ptr<eAnimation>> & animations, float * xBlendParameter, float * yBlendParameter, AnimationBlendMode blendMode, float speed)
-	: animations(animations),
-	  xBlendParameter(xBlendParameter),
-	  yBlendParameter(yBlendParameter),
-	  blendMode(blendMode) {
-	this->speed = speed;
-	this->name = name;
-
-	currentFrame = &animations[0]->GetFrame(0);
-	duration = animations[0]->Duration() * speed;
-
-	nameHash = std::hash<std::string>()(name);
-
-	blendNodes.assign(animations.size(), vec2_zero);
-	blendNodesHash.ClearAndResize(animations.size());
-	for (size_t index = 0; index < animations.size(); ++index)
-		blendNodesHash.Add(animations[index]->NameHash(), index);
-}
-
-//*********************
 // eBlendState::PositionBlendNode
 // assigns the values to which the eAnimationController 
 // stateMachine's paramaters will be compared
@@ -114,18 +92,6 @@ inline bool eBlendState::PositionBlendNode(int animationNameHash, float xPositio
 	blendNodes[index].x = xPosition;
 	blendNodes[index].y = yPosition;
 	return true;
-}
-
-//*********************
-// eBlendState::SwapAnimation
-// switches which animation this state is playing
-// using the same normalized time
-//*********************
-inline void eBlendState::SwapAnimation(int animationIndex) {
-	const float normalizedTime = (time / duration);
-	currentAnimationIndex = animationIndex;
-	duration = animations[currentAnimationIndex]->Duration() * speed;
-	time = normalizedTime * duration;
 }
 
 #endif /* EVIL_BLENDSTATE_H */

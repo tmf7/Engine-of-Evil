@@ -12,7 +12,7 @@
 class eImage : public eClass {
 public:
 							eImage();
-							eImage(SDL_Texture * source, const char * sourceFilename, int id);
+							eImage(SDL_Texture * source, const char * sourceFilename, int imageManagerIndex);
 	virtual					~eImage();
 
 	bool					IsValid() const;
@@ -52,10 +52,10 @@ inline eImage::eImage()
 // eImage::eImage
 // frame is the size of the texture
 //**************
-inline eImage::eImage(SDL_Texture * source, const char * sourceFilename, int id)
+inline eImage::eImage(SDL_Texture * source, const char * sourceFilename, int imageManagerIndex)
 	: source(source), 
 	  sourceFilename(sourceFilename), 
-	  imageManagerIndex(id) {
+	  imageManagerIndex(imageManagerIndex) {
 	SDL_QueryTexture(source, NULL, NULL, &size.x, &size.y);
 }
 
@@ -118,9 +118,10 @@ inline void eImage::SetSubframes(std::vector<SDL_Rect> && frames) {
 
 //**************
 // eImage::GetSubframe
+// DEBUG: does no range checking
 //**************
 inline const SDL_Rect & eImage::GetSubframe(int subframeIndex) const {
-	return subframes.at(subframeIndex);
+	return subframes[subframeIndex];
 }
 
 //**************

@@ -3,6 +3,7 @@
 
 #include "HashIndex.h"
 #include "Renderer.h"
+#include "ResourceManager.h"
 
 //#undef LoadImage		// FIXME: weird #define in WinUser.h brought in from #include <Windows.h> in main.cpp
 						// SOLUTION: use SDLmain.dll and avoid WinMain [or get rid of main altogether to compile as a library in EngineOfEvil-Core]
@@ -15,18 +16,19 @@
 class eImageManager : public eClass {
 public:
 
-	bool			Init();
-	bool			BatchLoadImages(const char * imageBatchFile);
-	bool			GetImage(const char * filename, std::shared_ptr<eImage> & result);
-	bool			GetImage(int imageID, std::shared_ptr<eImage> & result);
-	bool			LoadImage(const char * filename, SDL_TextureAccess accessType, std::shared_ptr<eImage> & result);
-	bool			LoadConstantText(TTF_Font * font, const char * text, const SDL_Color & color, std::shared_ptr<eImage> & result);
-	bool			LoadImageSubframes(const char * filename);
-	bool			BatchLoadSubframes(const char * subframeBatchFile);
-	int				GetNumImages() const;
-	void			Clear();
+	bool										Init();
+	bool										BatchLoadImages(const char * imageBatchFile);
+	bool										GetImage(const char * filename, std::shared_ptr<eImage> & result);
+	bool										GetImage(int imageID, std::shared_ptr<eImage> & result);
+	std::shared_ptr<eImage> &					GetImage(int imageID);
+	bool										LoadImage(const char * filename, SDL_TextureAccess accessType, std::shared_ptr<eImage> & result);
+	bool										LoadConstantText(TTF_Font * font, const char * text, const SDL_Color & color, std::shared_ptr<eImage> & result);
+	bool										LoadImageSubframes(const char * filename);
+	bool										BatchLoadSubframes(const char * subframeBatchFile);
+	int											GetNumImages() const;
+	void										Clear();
 
-	virtual int		GetClassType() const override { return CLASS_IMAGE_MANAGER; }
+	virtual int									GetClassType() const override { return CLASS_IMAGE_MANAGER; }
 
 private:
 
