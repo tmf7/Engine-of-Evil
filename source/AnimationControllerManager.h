@@ -5,6 +5,9 @@
 // [NOTE]: at least one float must be selected during BlendState definition, if not in load-file, then default to first floatParameter in controller
 // TODO(!): don't allow duplicate animations in the same BlendState...it messes with the blendnodes indexing a bit
 
+// [[IMPORTANT]] resourceFilename will be the .eimg file path (with contained .png path and subframe data)
+// FIXME(!): what does that mean for, say, .anim files that index by image name....just change the extensions from .png to .eimg
+
 CONTROLLER SETUP:
 -----------------
 1) read the file for controller params: name type initialValue 

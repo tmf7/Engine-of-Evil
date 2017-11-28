@@ -6,7 +6,7 @@
 // entitySpawnArgs_t
 typedef struct entitySpawnArgs_s {
 	eBounds			localBounds;
-	std::string		prefabFilename		= "";
+	std::string		sourceFilename		= "";
 	std::string		spriteFilename		= "";
 	eVec3			renderBlockSize		= vec3_zero;
 	eVec2			imageColliderOffset = vec2_zero;
@@ -34,7 +34,7 @@ public:
 	bool						GetPlayerSelected() const;
 	void						UpdateRenderImageOrigin();
 	void						UpdateRenderImageDisplay();
-	const std::string &			GetPrefabFilename() const;
+	const std::string &			GetSourceFilename() const;
 	int							PrefabManagerIndex() const;
 	int							SpawnID() const;
 
@@ -56,7 +56,7 @@ private:
 	// for both eTile and eEntity (static and dynamic objects)
 	eVec2								imageColliderOffset;	
 
-	std::string							prefabFilename;
+	std::string							sourceFilename;
 	int									prefabManagerIndex;		// index of this eEntity's prefab within eEntityPrefabManager::prefabList
 	int									spawnedEntityID;
 	bool								playerSelected;			// player is controlling this eEntity
@@ -79,8 +79,8 @@ inline bool eEntity::GetPlayerSelected() const {
 //**************
 // eEntity::GetPrefabFilename
 //**************
-inline const std::string & eEntity::GetPrefabFilename() const {
-	return prefabFilename;
+inline const std::string & eEntity::GetSourceFilename() const {
+	return sourceFilename;
 }
 
 //**************

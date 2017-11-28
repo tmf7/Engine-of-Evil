@@ -1,46 +1,32 @@
-#ifndef EVIL_TEXTURE_MANAGER_H
-#define EVIL_TEXTURE_MANAGER_H
+#ifndef EVIL_IMAGE_MANAGER_H
+#define EVIL_IMAGE_MANAGER_H
 
-#include "HashIndex.h"
 #include "Renderer.h"
 #include "ResourceManager.h"
 
-//#undef LoadImage		// FIXME: weird #define in WinUser.h brought in from #include <Windows.h> in main.cpp
-						// SOLUTION: use SDLmain.dll and avoid WinMain [or get rid of main altogether to compile as a library in EngineOfEvil-Core]
-
-//**********************************
+//******************************************
 //			eImageManager
 // Handles all texture allocation and freeing
-// DEBUG: --no other object/system should allocate/free textures--
-//**********************************
-class eImageManager : public eClass {
+// see also: eResourceManager template
+//******************************************
+class eImageManager : public eResourceManager<eImage> {
 public:
 
-	bool										Init();
-	bool										BatchLoadImages(const char * imageBatchFile);
-	bool										GetImage(const char * filename, std::shared_ptr<eImage> & result);
-	bool										GetImage(int imageID, std::shared_ptr<eImage> & result);
-	std::shared_ptr<eImage> &					GetImage(int imageID);
-	bool										LoadImage(const char * filename, SDL_TextureAccess accessType, std::shared_ptr<eImage> & result);
-	bool										LoadConstantText(TTF_Font * font, const char * text, const SDL_Color & color, std::shared_ptr<eImage> & result);
-	bool										LoadImageSubframes(const char * filename);
-	bool										BatchLoadSubframes(const char * subframeBatchFile);
-	int											GetNumImages() const;
-	void										Clear();
+	virtual bool							Load(const char * resourceFilename) override;
+	virtual bool							Init() override;
+	virtual bool							BatchLoad(const char * resourceBatchFilename) override;
+	virtual bool							LoadAndGet(const char * resourceFilename, std::shared_ptr<eImage> & result) override;
 
-	virtual int									GetClassType() const override { return CLASS_IMAGE_MANAGER; }
+	virtual int								GetClassType() const override { return CLASS_IMAGE_MANAGER; }
+
+	// subclass extensions, does not obscure base functions
+	bool									Load(const char * resourceFilename, SDL_TextureAccess accessType);
+	bool									LoadAndGet(const char * resourceFilename, SDL_TextureAccess accessType, std::shared_ptr<eImage> & result);
+	bool									LoadAndGetConstantText(TTF_Font * font, const char * text, const SDL_Color & color, std::shared_ptr<eImage> & result);
 
 private:
 
-	std::vector<std::shared_ptr<eImage>>		imageList;			// dynamically allocated image resources
-	eHashIndex									imageFilenameHash;	// quick access to imageList
+	bool									LoadSubframes(std::ifstream & read, std::shared_ptr<eImage> & result);
 };
 
-//***************
-// eImageManager::GetNumImages
-//***************
-inline int eImageManager::GetNumImages() const {
-	return imageList.size();
-}
-
-#endif /* EVIL_TEXTURE_MANAGER_H */
+#endif /* EVIL_IMAGE_MANAGER_H */
