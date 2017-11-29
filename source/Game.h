@@ -97,20 +97,6 @@ private:
 
 extern eGame	game;								// one instance used by all objects
 
-//*****************
-// VerifyRead 
-// global file I/O utility
-// tests for unrecoverable read error or improperly formatted file
-//*****************
-inline bool VerifyRead(std::ifstream & read) {
-	if (read.bad() || read.fail()) {
-		read.clear();
-		read.close();
-		return false;
-	}
-	return true;
-}
-
 //****************
 // eGame::eGame
 //****************

@@ -27,6 +27,7 @@
 #include <deque>
 #include <functional>		// std::hash
 #include "Math.h"
+#include "FileIO.h"
 
 #define MAX(a,b) (a > b ? a : b)
 #define MIN(a,b) (a < b ? a : b)
@@ -40,6 +41,8 @@
 #define MAX_MAP_COLUMNS 256
 #define MAX_ENTITIES 4096
 #define MAX_IMAGES 1024
+#define MAX_ANIMATIONS 1024
+#define MAX_ANIMATION_CONTROLLERS 512
 #define MAX_LAYER 128
 #define INVALID_ID -1
 

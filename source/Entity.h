@@ -2,6 +2,7 @@
 #define ENTITY_H
 
 #include "GameObject.h"
+#include "Resource.h"
 
 // entitySpawnArgs_t
 typedef struct entitySpawnArgs_s {
@@ -23,7 +24,7 @@ typedef struct entitySpawnArgs_s {
 //					eEntity
 // objects that dynamically interact with the game environment
 //*************************************************
-class eEntity : public eGameObject {
+class eEntity : public eGameObject, public eResource {
 public:
 
 								eEntity(const entitySpawnArgs_t & spawnArgs);
@@ -34,8 +35,6 @@ public:
 	bool						GetPlayerSelected() const;
 	void						UpdateRenderImageOrigin();
 	void						UpdateRenderImageDisplay();
-	const std::string &			GetSourceFilename() const;
-	int							PrefabManagerIndex() const;
 	int							SpawnID() const;
 
 	virtual void				Think() override;			
@@ -54,12 +53,9 @@ private:
 	// TODO: update eAI logic to work from a universal eTransform::origin, and make
 	// renderImage::origin, and collisionModel::origin positioned via offsets from that shared eTransform::origin
 	// for both eTile and eEntity (static and dynamic objects)
-	eVec2								imageColliderOffset;	
-
-	std::string							sourceFilename;
-	int									prefabManagerIndex;		// index of this eEntity's prefab within eEntityPrefabManager::prefabList
-	int									spawnedEntityID;
-	bool								playerSelected;			// player is controlling this eEntity
+	eVec2						imageColliderOffset;	
+	int							spawnedEntityID;
+	bool						playerSelected;			// player is controlling this eEntity
 };
 
 //**************
@@ -74,20 +70,6 @@ inline void eEntity::SetPlayerSelected(bool isSelected) {
 //**************
 inline bool eEntity::GetPlayerSelected() const {
 	return playerSelected;
-}
-
-//**************
-// eEntity::GetPrefabFilename
-//**************
-inline const std::string & eEntity::GetSourceFilename() const {
-	return sourceFilename;
-}
-
-//**************
-// eEntity::PrefabManagerIndex
-//**************
-inline int eEntity::PrefabManagerIndex() const {
-	return prefabManagerIndex;
 }
 
 //**************

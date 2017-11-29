@@ -20,7 +20,7 @@ eBlendState::eBlendState(const std::string & name, const std::vector<std::shared
 	blendNodes.assign(animations.size(), vec2_zero);
 	blendNodesHash.ClearAndResize(animations.size());
 	for (size_t index = 0; index < animations.size(); ++index)
-		blendNodesHash.Add(animations[index]->NameHash(), index);
+		blendNodesHash.Add(animations[index]->GetNameHash(), index);
 }
 
 //*********************

@@ -3,32 +3,35 @@
 
 #include "Image.h"
 #include "Component.h"
+#include "Resource.h"
 #include "AnimationState.h"
 #include "BlendState.h"
 #include "StateTransition.h"
 #include "HashIndex.h"
+
 
 //*******************************************
 //			eAnimationController
 // Handles sequencing of image data
 // for owner->renderImage through eStateNodes
 //*******************************************
-class eAnimationController : public eComponent {
+class eAnimationController : public eComponent, public eResource {
 public:
 
 	friend class eAnimationControllerManager;		// sole access to Add/GetXYZParameterIndex functionality
 
 public:
 
+	virtual							   ~eAnimationController() = default;
 										eAnimationController() = default;
 										eAnimationController(const eAnimationController & other);
 										eAnimationController(eAnimationController && other);
-										eAnimationController(eGameObject * owner);
+										eAnimationController(eGameObject * owner);					// FIXME: possibly do a SetOwner call upon COPYING a prefab
 
 	eAnimationController &				operator=(eAnimationController other);
 
 
-	bool								Init(const char * filename);	
+	bool								Init(const char * filename);								// FIXME: possibly do a SetOwner call upon COPYING a prefab
 	void								Update();
 	void								Pause(bool isPaused = true);
 
@@ -105,8 +108,6 @@ private:
 	int									currentState	= 0;
 	bool								paused			= false;
 
-	// experimental
-	std::string							name;					// unique name relative to owner "melee_32_controller"
 };
 
 //***********************

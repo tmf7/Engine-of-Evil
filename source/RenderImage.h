@@ -91,14 +91,6 @@ inline const std::shared_ptr<eImage> & eRenderImage::GetImage() const {
 }
 
 //*************
-// eRenderImage::SetImage
-// DEBUG: no range checking for faster assignment
-//*************
-inline void eRenderImage::SetImage(int imageManagerIndex) {
-	image = game.GetImageManager().GetImage(imageManagerIndex);
-}
-
-//*************
 // eRenderImage::ImageFrame
 // DEBUG: assumes image has been initialized
 // DEBUG: no range checking for faster assignment

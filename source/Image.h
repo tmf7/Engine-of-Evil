@@ -3,48 +3,42 @@
 
 #include "Definitions.h"
 #include "Class.h"
+#include "Resource.h"
 
 //***************************************
 //				eImage
 // stores access pointer to SDL_Texture 
 // and is handled by eImageManager
 //***************************************
-class eImage : public eClass {
+class eImage : public eClass , public eResource {
 public:
 							eImage();
 							eImage(SDL_Texture * source, const char * sourceFilename, int imageManagerIndex);
 	virtual					~eImage();
 
-	bool					IsValid() const;
 	SDL_Texture *			Source() const;
 	int						GetWidth() const;
 	int						GetHeight() const;
-	const std::string &		GetSourceFilename() const;
-	int						GetImageManagerIndex() const;
 	
-	void					SetSubframes(std::vector<SDL_Rect> && frames);
+	void					SetSubframes(const std::vector<SDL_Rect> & frames);
 	const SDL_Rect &		GetSubframe(int subframeIndex) const;
-	bool					HasSubframes() const;
+	int						NumSubframes() const;
 
 	virtual int				GetClassType() const override { return CLASS_IMAGE; }
 
 private:
 
+	std::vector<SDL_Rect>	subframes;				// sub-sections of image to focus on
 	SDL_Texture *			source;
 	SDL_Point				size;
-	std::string				sourceFilename;
-	int						imageManagerIndex;		// index within eImageManager::imageList
-
-	std::vector<SDL_Rect>	subframes;				// sub-sections of image to focus on, if any
 };
 
 //**************
 // eImage::eImage
 //**************
 inline eImage::eImage()
-	: source(nullptr),
-	  sourceFilename("invalid_file"), 
-	  imageManagerIndex(INVALID_ID) {
+	: eResource("invalid_file", INVALID_ID),
+	  source(nullptr) {
 	size = SDL_Point{ 0, 0 };
 }
 
@@ -53,9 +47,8 @@ inline eImage::eImage()
 // frame is the size of the texture
 //**************
 inline eImage::eImage(SDL_Texture * source, const char * sourceFilename, int imageManagerIndex)
-	: source(source), 
-	  sourceFilename(sourceFilename), 
-	  imageManagerIndex(imageManagerIndex) {
+	: eResource(sourceFilename, imageManagerIndex),
+	  source(source) {
 	SDL_QueryTexture(source, NULL, NULL, &size.x, &size.y);
 }
 
@@ -64,14 +57,6 @@ inline eImage::eImage(SDL_Texture * source, const char * sourceFilename, int ima
 //**************
 inline eImage::~eImage() {
 	SDL_DestroyTexture(source);
-}
-
-//**************
-// eImage::IsValid
-// returns true if source != NULL
-//**************
-inline bool eImage::IsValid() const {
-	return source != nullptr;
 }
 
 //**************
@@ -96,24 +81,10 @@ inline int eImage::GetHeight() const {
 }
 
 //**************
-// eImage::GetFilename
-//**************
-inline const std::string & eImage::GetSourceFilename() const {
-	return sourceFilename;
-}
-
-//**************
-// eImage::GetImageManagerIndex
-//**************
-inline int eImage::GetImageManagerIndex() const {
-	return imageManagerIndex;
-}
-
-//**************
 // eImage::SetSubframes
 //**************
-inline void eImage::SetSubframes(std::vector<SDL_Rect> && frames) {
-	subframes = std::move(frames);
+inline void eImage::SetSubframes(const std::vector<SDL_Rect> & frames) {
+	subframes = frames;
 }
 
 //**************
@@ -125,10 +96,10 @@ inline const SDL_Rect & eImage::GetSubframe(int subframeIndex) const {
 }
 
 //**************
-// eImage::HasSubframes
+// eImage::NumSubframes
 //**************
-inline bool eImage::HasSubframes() const {
-	return !subframes.empty();
+inline int eImage::NumSubframes() const {
+	return subframes.size();
 }
 
 #endif /* EVIL_IMAGE_H */

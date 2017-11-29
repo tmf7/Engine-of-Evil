@@ -4,18 +4,18 @@
 // eMap::Init
 //**************
 bool eMap::Init () {
-	return LoadMap("Graphics/Maps/EvilTown.map");
+	return LoadMap("Graphics/Maps/EvilTown.emap");
 }
 
 //**************
 // eMap::LoadMap
 // Populates tileMap's matrix for future collision and redraw
 // using a file
-// DEBUG (.map file format):
+// DEBUG (.emap file format):
 // # first line comment\n
 // numColumns numRows cellWidth cellHeight numLayers\n
 // # third line comment\n
-// tileSetFilename.tls\n
+// tileSetFilename.etls\n
 // master-tileSet-index, master-tileSet-index, ... master-tileSet-index\n
 // # end of layer 1 comment\n
 // master-tileSet-index, master-tileSet-index, ... master-tileSet-index\n
@@ -24,7 +24,7 @@ bool eMap::Init () {
 // (also note that ALL read values are reduced by 1 before loading into an eTileImpl::type here)
 // # end of layer n comment\n
 // # batch-load eEntity prefabs used on this map (defines prefabList indexes used below)\n
-// entityPrefabBatchFilename.bepf\n
+// entityPrefabBatchFilename.bprf\n
 // # spawn unique eEntities\n
 // prefabListIndex xPos yPos zPos	# eEntity::collisionModel::origin in orthographic 2D world-space, zPos of eEntity::renderImage::renderBlock's bottom in 3D world-space\n
 // prefabListIndex xPos yPos zPos	# int float float float (everything past the last float is ignored)\n
@@ -153,7 +153,7 @@ bool eMap::LoadMap(const char * mapFilename) {
 			if (!VerifyRead(read))
 				return false;
 
-			if (!game.GetEntityPrefabManager().BatchLoadPrefabs(buffer))
+			if (!game.GetEntityPrefabManager().BatchLoad(buffer))
 				return false;
 
 			read.ignore(std::numeric_limits<std::streamsize>::max(), '\n');

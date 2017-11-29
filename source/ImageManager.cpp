@@ -40,39 +40,7 @@ bool eImageManager::Init() {
 	// register the error_image as the first element of imageList
 	int hashKey = resourceHash.GetHashKey(std::string("error_image"));
 	resourceHash.Add(hashKey, resourceList.size());
-	resourceList.emplace_back(std::make_shared<eImage>(error_texture, "invalid_file", resourceList.size()));	// error image
-	return true;
-}
-
-//***************************
-// eImageManager::BatchLoad
-// loads a batch of image resources
-// user can optionally call Clear() or Unload()
-// prior to this to facilitate starting with a fresh set of images
-// DEBUG (.bimg file format):
-// imageFilename\n
-// imageFilename\n
-// (repeat)
-//***************************
-bool eImageManager::BatchLoad(const char * imageBatchFilename) {
-	std::ifstream	read(imageBatchFilename);
-	
-	// unable to find/open file
-	if(!read.good())
-		return false;
-
-	char resourceFilename[MAX_ESTRING_LENGTH];
-	while (!read.eof()) {
-		read >> resourceFilename;
-		if (!VerifyRead(read))
-			return false;
-
-		if (!Load(resourceFilename, SDL_TEXTUREACCESS_STATIC))
-			return false;
-
-		read.ignore(std::numeric_limits<std::streamsize>::max(), '\n'); // skip the rest of the line
-	}
-	read.close();
+	resourceList.emplace_back(std::make_shared<eImage>(error_texture, "invalid_file", resourceList.size()));	// default error image
 	return true;
 }
 
@@ -81,23 +49,23 @@ bool eImageManager::BatchLoad(const char * imageBatchFilename) {
 // cache unchanging text images
 // TODO: update to use a glyph atlas texture
 // instead of loading a new texture each time
+// and make it part of its own eTextAtlasManager
 //***************************
 bool eImageManager::LoadAndGetConstantText(TTF_Font * font, const char * text, const SDL_Color & color, std::shared_ptr<eImage> & result) {
-	// check if the image already exists 
-	// and set result to that if it does
-	if ((result = Get(text)) != resourceList[0])
+	// image already loaded
+	if ((result = Get(text))->IsValid())
 		return true;
 
 	SDL_Surface * surfaceText = TTF_RenderText_Solid(font, text, color);
 	if (surfaceText == NULL) {
-		result = resourceList[0]; // error image
+		result = resourceList[0]; // default error image
 		return false;
 	}
 
 	SDL_Texture * renderedText = SDL_CreateTextureFromSurface(game.GetRenderer().GetSDLRenderer(), surfaceText);
 	SDL_FreeSurface(surfaceText);
 	if (renderedText == NULL) {
-		result = resourceList[0]; // error image
+		result = resourceList[0]; // default error image
 		return false;
 	}
 
@@ -114,17 +82,18 @@ bool eImageManager::LoadAndGetConstantText(TTF_Font * font, const char * text, c
 //***************************
 // eImageManager::LoadSubframes
 // helper function for Loading .eimg files
+// see also LoadAndGet
 //***************************
 bool eImageManager::LoadSubframes(std::ifstream & read, std::shared_ptr<eImage> & result) {
-	std::vector<SDL_Rect> frameList;
-
-	// minimize dynamic allocations
 	int numFrames = 0;
 	read >> numFrames;
+	read.ignore(std::numeric_limits<std::streamsize>::max(), '\n');			// skip the rest of the line comment
 	if (!VerifyRead(read))
 		return false;
 
-	frameList.reserve(numFrames);
+	static std::vector<SDL_Rect> frameList;		// static to reduce dynamic allocations
+	frameList.clear();							// lazy clearing
+//	frameList.reserve(numFrames);				// DEBUG: commented out to take advantage of exponential growth if needed
 
 	// default subframe
 	if (numFrames == 0) {
@@ -152,60 +121,7 @@ bool eImageManager::LoadSubframes(std::ifstream & read, std::shared_ptr<eImage> 
 		read.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
 	}
 	read.close();
-	result->SetSubframes(std::move(frameList));
-
-	// register the requested image
-	const int hashKey = resourceHash.GetHashKey(std::string(result->GetSourceFilename()));
-	resourceHash.Add(hashKey, resourceList.size());
-	return true;
-}
-
-//***************************
-// eImageManager::Load
-// attempts to load the given .eimg file and
-// returns true if the image was successfully loaded
-// returns false otherwise
-// DEBUG (.eimg file format):
-// imageFilepath\n
-// number of subframes to expect\n
-// x y w h # frame number 0 comment for reference\n
-// x y w h # this is ignored 1 this is ignored\n
-// x y w h # ditto 2 ditto\n
-// (repeat)
-// DEBUG: if "number of subframes to expect" == 0, then the default subframe is the size of the image itself
-// DEBUG: defaults the loaded SDL_Texture to SDL_TEXTUREACCESS_STATIC
-//***************************
-bool eImageManager::Load(const char * resourceFilename) {
-	std::shared_ptr<eImage> result;
-
-	// image already loaded
-	if ((result = Get(resourceFilename)) != resourceList[0])
-		return true;
-
-	std::ifstream	read(resourceFilename);
-	if (!read.good()) 
-		return false;
-
-	char imageFilepath[MAX_ESTRING_LENGTH];
-	memset(imageFilepath, 0, sizeof(imageFilepath));
-	read.getline(imageFilepath, sizeof(imageFilepath), '\n');
-	if(!VerifyRead(read))
-		return false;
-
-	SDL_Texture * texture = NULL;
-	texture = IMG_LoadTexture(game.GetRenderer().GetSDLRenderer(), imageFilepath);
-
-	// unable to initialize texture
-	if (texture == NULL)
-		return false;
-
-	result = std::make_shared<eImage>(texture, resourceFilename, resourceList.size());
-	if (!LoadSubframes(read, result)) {
-		result = nullptr;		// destroy recently allocated result
-		return false;
-	}
-
-	resourceList.emplace_back(std::move(result));
+	result->SetSubframes(frameList);
 	return true;
 }
 
@@ -214,16 +130,25 @@ bool eImageManager::Load(const char * resourceFilename) {
 // attempts to load the given .eimg file and sets result to
 // either the found image and returns true, 
 // or default image and returns false
-// param accessType can be:
-// SDL_TEXTUREACCESS_STATIC,    /**< Changes rarely, not lockable */
-// SDL_TEXTUREACCESS_STREAMING, /**< Changes frequently, lockable */
-// SDL_TEXTUREACCESS_TARGET     /**< Texture can be used as a render target */
-// see also eImageManager::Load for file format
+// DEBUG (.eimg file format):
+// imageFilepath\n
+// textureAccessType numSubframes\n	
+// x y w h # frame number 0 comment for reference\n
+// x y w h # this is ignored 1 this is ignored\n
+// x y w h # ditto 2 ditto\n
+// (repeat)
+// DEBUG: if numSubframes == 0, then the default subframe is the size of the image itself
+// DEBUG: two .eimg files using the same texture file but different textureAccessTypes
+// will generate a two eImages in eImageManager::resourceList (with unique names and values)
+// textureAccessType can be:
+// 0 for SDL_TEXTUREACCESS_STATIC,    /**< Changes rarely, not lockable */
+// 1 for SDL_TEXTUREACCESS_STREAMING, /**< Changes frequently, lockable */
+// 2 for SDL_TEXTUREACCESS_TARGET     /**< Texture can be used as a render target */
+// [NOTE]: batch image files are .bimg
 //***************************
-bool eImageManager::LoadAndGet(const char * resourceFilename, SDL_TextureAccess accessType, std::shared_ptr<eImage> & result) {
-
+bool eImageManager::LoadAndGet(const char * resourceFilename, std::shared_ptr<eImage> & result) {
 	// image already loaded
-	if ((result = Get(resourceFilename)) != resourceList[0])
+	if ((result = Get(resourceFilename))->IsValid())
 		return true;
 
 	std::ifstream	read(resourceFilename);
@@ -236,8 +161,18 @@ bool eImageManager::LoadAndGet(const char * resourceFilename, SDL_TextureAccess 
 	if(!VerifyRead(read))
 		return false;
 
-	if (accessType < SDL_TEXTUREACCESS_STATIC || accessType > SDL_TEXTUREACCESS_TARGET)
-		accessType = SDL_TEXTUREACCESS_STATIC;
+	int accessInt = 0;
+	SDL_TextureAccess accessType;
+	read >> accessInt;
+	if (!VerifyRead(read))
+		return false;
+
+	switch(accessInt) {
+		case 0: accessType = SDL_TEXTUREACCESS_STATIC; break;
+		case 1: accessType = SDL_TEXTUREACCESS_STREAMING; break;
+		case 2: accessType = SDL_TEXTUREACCESS_TARGET; break;
+		default: accessType = SDL_TEXTUREACCESS_STATIC; break;
+	}
 		
 	SDL_Texture * texture = NULL;
 	if (accessType != SDL_TEXTUREACCESS_STATIC) {
@@ -245,7 +180,7 @@ bool eImageManager::LoadAndGet(const char * resourceFilename, SDL_TextureAccess 
 
 		// unable to load file
 		if (source == NULL) {
-			result = resourceList[0]; // error image
+			result = resourceList[0]; // default error image
 			return false;
 		}
 
@@ -256,7 +191,7 @@ bool eImageManager::LoadAndGet(const char * resourceFilename, SDL_TextureAccess 
 												  source->h);
 		// unable to initialize texture
 		if (texture == NULL) {
-			result = resourceList[0]; // error image
+			result = resourceList[0]; // default error image
 			SDL_FreeSurface(source);
 			return false;
 		}
@@ -265,7 +200,7 @@ bool eImageManager::LoadAndGet(const char * resourceFilename, SDL_TextureAccess 
 		if (SDL_UpdateTexture(texture, NULL, source->pixels, source->pitch)) {
 			SDL_DestroyTexture(texture);
 			SDL_FreeSurface(source);
-			result = resourceList[0]; // error image
+			result = resourceList[0]; // default error image
 			return false;
 		}
 		SDL_FreeSurface(source);
@@ -275,38 +210,19 @@ bool eImageManager::LoadAndGet(const char * resourceFilename, SDL_TextureAccess 
 
 		// unable to initialize texture
 		if (texture == NULL) {
-			result = resourceList[0]; // error image
+			result = resourceList[0]; // default error image
 			return false;
 		}
 	}
 
 	result = std::make_shared<eImage>(texture, resourceFilename, resourceList.size());
 	if (!LoadSubframes(read, result)) {
-		result = resourceList[0];	// error image, and destroy recently allocated result
+		result = resourceList[0];	// default error image, and destroy recently allocated result
 		return false;
 	}
 
+	// register the requested image
+	resourceHash.Add(result->GetNameHash(), resourceList.size());
 	resourceList.emplace_back(result);
 	return true;
-}
-
-//***************************
-// eImageManager::Load
-// convenience function, 
-// same as LoadAndGet w/accessType except 
-// it only checks load success/failure
-//***************************
-bool eImageManager::Load(const char * resourceFilename, SDL_TextureAccess accessType)  {
-	std::shared_ptr<eImage> tempResult = nullptr;
-	return LoadAndGet(resourceFilename, accessType, tempResult);
-}
-
-//***************************
-// eImageManager::Load
-// convenience function, 
-// same as LoadAndGet except 
-// defaults param accessType to SDL_TEXTUREACCESS_STATIC
-//***************************
-bool eImageManager::LoadAndGet(const char * resourceFilename, std::shared_ptr<eImage> & result) {
-	return LoadAndGet(resourceFilename, SDL_TEXTUREACCESS_STATIC, result);
 }

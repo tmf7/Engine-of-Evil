@@ -5,7 +5,8 @@ as well as Simple Directmedia layer 2.0.3 and a few of its extensions.
 
 Master branch tracks the current stable build.
 Updates branch tracks changes in progress (not necessarily a stable build)
-Both include my original source code and assets used.
+Both include my original source code.
+Art assets are from opengameart.org.
 
 To get the program running:
 1) Pull or clone this repository

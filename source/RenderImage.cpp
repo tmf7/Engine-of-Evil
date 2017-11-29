@@ -7,6 +7,14 @@ eRenderImage::~eRenderImage() {
 	ClearAreas();
 }
 
+//*************
+// eRenderImage::SetImage
+// DEBUG: no range checking for faster assignment
+//*************
+void eRenderImage::SetImage(int imageManagerIndex) {
+	image = game.GetImageManager().Get(imageManagerIndex);
+}
+
 //************
 // eRenderImage::SnapRenderBlockToLayer
 // DEBUG: only call this after owner->worldLayer has been assigned

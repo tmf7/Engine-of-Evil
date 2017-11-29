@@ -3,17 +3,18 @@
 
 #include "Definitions.h"
 #include "Class.h"
+#include "Resource.h"
 
 typedef struct AnimationFrame_s {
-	int		imageManagerIndex;	// within eImageManager::imageList
-	int		subframeIndex;		// within eImage::subfames
-	float	normalizedTime;		// range [0.0f, 1.0f]; when this frame should trigger when traversing this->frames (eg: regular update interval not mandatory) 
+	int		imageManagerIndex	= 0;	// within eImageManager::resourceList
+	int		subframeIndex		= 0;	// within eImage::subfames
+	float	normalizedTime		= 0.0f;	// range [0.0f, 1.0f]; when this frame should trigger when traversing this->frames (eg: regular update interval not mandatory) 
 } AnimationFrame_t;
 
 enum class AnimationLoopState {
-	ONCE,					// go to end, then stop
-	REPEAT					// go to end, the reset to beginning
-//	PINGPONG				// TODO: implement go to end, then reverse to beginning, then back again
+	ONCE,								// go to end, then stop
+	REPEAT								// go to end, then reset to beginning
+//	PINGPONG							// TODO: implement go to end, then reverse to beginning, then back again
 };
 
 //*****************************
@@ -22,26 +23,23 @@ enum class AnimationLoopState {
 // texture sub-frames
 // used to produce animations
 //*****************************
-class eAnimation : public eClass {
+class eAnimation : public eClass, public eResource {
 public:
 
 	friend class eStateNode;
 
 public:
 	
-										eAnimation(const std::string & name, int animationManagerIndex, 
+										eAnimation(const std::string & sourceFilename, int animationManagerIndex, 
 												   std::vector<AnimationFrame_t> & frames,
 												   int framesPerSecond,
 												   AnimationLoopState loop = AnimationLoopState::ONCE);
 
 	const AnimationFrame_t &			GetFrame(int frameIndex) const;
-	int									GetAnimationManagerIndex() const;
 	int									NumFrames() const;
 	int									GetFPS() const;
 	void								SetFPS(int newFPS);
 	float								Duration() const;
-	const std::string &					Name() const;
-	size_t								NameHash() const;
 
 	virtual int							GetClassType() const override { return CLASS_ANIMATION; }
 
@@ -52,25 +50,19 @@ public:
 private:
 
 	std::vector<AnimationFrame_t>		frames;
-	std::string							name;
-	size_t								nameHash;
 	float								duration;
 	int									framesPerSecond;
-	int									animationManagerIndex;			// index within eAnimationManager::animationsList
 };
 
 //*******************
 // eAnimation::eAnimation
-// TODO: have eAnimationManager read an animation file, generate a vector, copy that vector, then clear it
-// to start loading the next animation, if any
 //*******************
-inline eAnimation::eAnimation(const std::string & name, int animationManagerIndex, std::vector<AnimationFrame_t> & frames, int framesPerSecond, AnimationLoopState loop)
-	: frames(frames),
+inline eAnimation::eAnimation(const std::string & sourceFilename, int animationManagerIndex, std::vector<AnimationFrame_t> & frames, int framesPerSecond, AnimationLoopState loop)
+	: eResource(sourceFilename, animationManagerIndex),
+	  frames(frames),
 	  framesPerSecond(framesPerSecond),
-	  animationManagerIndex(animationManagerIndex),
 	  loop(loop) {
 	duration = (float)(1000.0f * frames.size()) / (float)framesPerSecond;
-	nameHash = std::hash<std::string>()(name);
 }
 
 //*******************
@@ -78,14 +70,6 @@ inline eAnimation::eAnimation(const std::string & name, int animationManagerInde
 //*******************
 inline const AnimationFrame_t & eAnimation::GetFrame(int frameIndex) const {
 	return frames[frameIndex];
-}
-
-//*******************
-// eAnimation::GetAnimationManagerIndex
-// returns this animation's index within eAnimationManager::animationsList
-//*******************
-inline int eAnimation::GetAnimationManagerIndex() const {
-	return animationManagerIndex;
 }
 
 //*******************
@@ -115,20 +99,6 @@ inline void eAnimation::SetFPS(int newFPS) {
 //*******************
 inline float eAnimation::Duration() const { 
 	return duration;
-}
-
-//*******************
-// eAnimation::Name
-//*******************
-inline const std::string & eAnimation::Name() const { 
-	return name; 
-}
-
-//*******************
-// eAnimation::NameHash
-//*******************
-inline size_t eAnimation::NameHash() const { 
-	return nameHash; 
 }
 
 #endif /* EVIL_ANIMATION_H */

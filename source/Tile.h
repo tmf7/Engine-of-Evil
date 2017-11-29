@@ -31,7 +31,7 @@ private:
 
 	static const int								invalidTileType = -1;
 	static const int								maxTileTypes = 256;
-	static std::vector<std::pair<int, int>>			tileSet;		// first == index within eImageManager::imageList; second == eImage subframe index;
+	static std::vector<std::pair<int, int>>			tileSet;		// first == index within eImageManager::resourceList; second == eImage subframe index;
 	static std::array<eTileImpl, maxTileTypes>		tileTypes;
 	
 	eVec3						renderBlockSize;		// draw order sorting

@@ -94,7 +94,7 @@ void eRenderer::DrawOutlineText(const char * text, eVec2 & point, const SDL_Colo
 	if (constText) {
 		// check if the image already exists, if not then load it and set result
 		std::shared_ptr<eImage> result;
-		game.GetImageManager().LoadConstantText(font, text, color, result);
+		game.GetImageManager().LoadAndGetConstantText(font, text, color, result);
 		renderedText = result->Source();
 	} else {
 		SDL_Surface * surfaceText = TTF_RenderText_Solid(font, text, color);

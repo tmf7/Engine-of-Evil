@@ -1,15 +1,15 @@
 #include "Game.h"
 
-std::vector<std::pair<int, int>> eTileImpl::tileSet;		// first == index within eImageManager::imageList; second == eImage subframe index;
+std::vector<std::pair<int, int>> eTileImpl::tileSet;		// first == index within eImageManager::resourceList; second == eImage subframe index;
 std::array<eTileImpl, eTileImpl::maxTileTypes> eTileImpl::tileTypes;
 
 //************
 // eTileImpl::LoadTileset
 // returns false on failure to load, true otherwise
 // pairs image file ids and subframe indexes therein
-// DEBUG (.tls file format):
-// # tileset subframes master .bsub filename comment\n
-// allTilesSubframes.bsub\n
+// DEBUG (.etls file format):
+// # tileset image master .bimg filename comment\n
+// allTileImages.bimg\n
 // # comment explaining default collider reference list numbering rules\n
 // eBounds: width height xOffset yOffset	# 0 index comment\n
 // eBounds: width height xOffset yOffset	# 1\n
@@ -33,19 +33,19 @@ bool eTileImpl::LoadTileset(const char * tilesetFilename, bool appendNew) {
 	if (!appendNew)
 		tileSet.clear();
 
-	char buffer[MAX_ESTRING_LENGTH];
 	std::ifstream	read(tilesetFilename);
 	// unable to find/open file
 	if (!read.good())
 		return false;
 
 	read.ignore(std::numeric_limits<std::streamsize>::max(), '\n');			// skip the first line comment
+	char buffer[MAX_ESTRING_LENGTH];
 	memset(buffer, 0, sizeof(buffer));
 	read.getline(buffer, sizeof(buffer), '\n');
 	if (!VerifyRead(read))
 		return false;
 
-	if (!game.GetImageManager().BatchLoadSubframes(buffer))
+	if (!game.GetImageManager().BatchLoad(buffer))
 		return false;
 
 	enum {
@@ -141,10 +141,10 @@ bool eTileImpl::LoadTileset(const char * tilesetFilename, bool appendNew) {
 
 		// get a pointer to a source image (or try to load it if it doesn't exist yet)
 		std::shared_ptr<eImage> sourceImage = nullptr;
-		if (!game.GetImageManager().LoadImage(buffer, SDL_TEXTUREACCESS_STATIC, sourceImage)) 
+		if (!(sourceImage = game.GetImageManager().Get(buffer))->IsValid())
 			return false;
 
-		int imageID = sourceImage->GetImageManagerIndex();
+		int imageID = sourceImage->GetManagerIndex();
 
 		// get all subframe indexes for the eImage (separated by spaces), everything after '#' is ignored
 		while (read.peek() != '#') {
@@ -203,7 +203,7 @@ void eTile::SetType(int newType) {
 		collisionModel = nullptr;
 
 	impl = &eTileImpl::tileTypes[newType];																	// FIXME(~): doesn't verify the array index
-	game.GetImageManager().GetImage(eTileImpl::tileSet.at(newType).first, renderImage->Image());			// which image (tile atlas)
+	renderImage->Image() = game.GetImageManager().Get(eTileImpl::tileSet.at(newType).first);				// which image (tile atlas)
 	renderImage->SetImageFrame(eTileImpl::tileSet.at(newType).second);										// which part of that image
 
 	renderImage->RenderBlock() = eBounds3D((eVec3)orthoOrigin, (eVec3)orthoOrigin + impl->renderBlockSize);	// FREEHILL 3d topological sort

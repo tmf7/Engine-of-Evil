@@ -7,7 +7,8 @@
 // because animationStates is a std::vector<std::unique_ptr>
 //************
 eAnimationController::eAnimationController(const eAnimationController & other)
-	: transitionsHash(other.transitionsHash),
+	: eResource(other), eComponent(other),
+	  transitionsHash(other.transitionsHash),
 	  statesHash(other.statesHash),
 	  stateTransitions(other.stateTransitions),
 	  floatParamsHash(other.floatParamsHash),
@@ -19,8 +20,7 @@ eAnimationController::eAnimationController(const eAnimationController & other)
 	  boolParameters(other.boolParameters),
 	  triggerParameters(other.triggerParameters),
 	  currentState(other.currentState),
-	  paused(other.paused),
-	  name(other.name) {
+	  paused(other.paused) {
 	for (auto & state : other.animationStates) {
 		if (state->GetClassType() == CLASS_ANIMATIONSTATE) {
 			animationStates.emplace_back(std::make_unique<eAnimationState>(*static_cast<eAnimationState *>(state.get())));
@@ -34,7 +34,8 @@ eAnimationController::eAnimationController(const eAnimationController & other)
 // eAnimationController::eAnimationController
 //************
 eAnimationController::eAnimationController(eAnimationController && other)
-	: transitionsHash(std::move(other.transitionsHash)),
+	: eResource(std::move(other)), eComponent(std::move(other)),
+	  transitionsHash(std::move(other.transitionsHash)),
 	  statesHash(std::move(other.statesHash)),
 	  animationStates(std::move(other.animationStates)),
 	  stateTransitions(std::move(other.stateTransitions)),
@@ -47,8 +48,7 @@ eAnimationController::eAnimationController(eAnimationController && other)
 	  boolParameters(std::move(other.boolParameters)),
 	  triggerParameters(std::move(other.triggerParameters)),
 	  currentState(other.currentState),
-	  paused(other.paused),
-	  name(std::move(other.name)) {
+	  paused(other.paused) {
 }
 
 //************
@@ -56,6 +56,8 @@ eAnimationController::eAnimationController(eAnimationController && other)
 // copy-and-swap
 //************
 eAnimationController & eAnimationController::operator=(eAnimationController other) {
+	eResource::operator=(other);
+	eComponent::operator=(other);
 	std::swap(transitionsHash, other.transitionsHash);
 	std::swap(statesHash, other.statesHash);
 	std::swap(animationStates, other.animationStates);
@@ -70,7 +72,6 @@ eAnimationController & eAnimationController::operator=(eAnimationController othe
 	std::swap(triggerParameters, other.triggerParameters);
 	std::swap(currentState, other.currentState);
 	std::swap(paused, other.paused);
-	std::swap(name, other.name);
 }
 
 //************

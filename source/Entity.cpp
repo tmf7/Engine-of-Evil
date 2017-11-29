@@ -4,9 +4,8 @@
 // eEntity::eEntity
 //**************
 eEntity::eEntity(const entitySpawnArgs_t & spawnArgs)
-	: prefabFilename(spawnArgs.prefabFilename),
+	: eResource(spawnArgs.sourceFilename, spawnArgs.prefabManagerIndex),
 	  imageColliderOffset(spawnArgs.imageColliderOffset),
-	  prefabManagerIndex(spawnArgs.prefabManagerIndex),
 	  spawnedEntityID(-1) {
 
 	if (!spawnArgs.localBounds.IsEmpty()) {
@@ -24,7 +23,7 @@ eEntity::eEntity(const entitySpawnArgs_t & spawnArgs)
 		renderImage = std::make_unique<eRenderImage>(this);
 		animationController = std::make_unique<eAnimationController>(this);	// TODO: animationController initialization should be just this one line
 		std::shared_ptr<eImage> spriteImage = nullptr;
-		if (!game.GetImageManager().LoadImage(spawnArgs.spriteFilename.c_str(), SDL_TEXTUREACCESS_STATIC, spriteImage))
+		if (!game.GetImageManager().LoadAndGet(spawnArgs.spriteFilename.c_str(), spriteImage))
 			throw badEntityCtorException(spawnArgs.spriteFilename.c_str());	
 
 //		animationController->SetImage(spriteImage);
@@ -40,7 +39,7 @@ eEntity::eEntity(const entitySpawnArgs_t & spawnArgs)
 //***************
 bool eEntity::Spawn(const int entityPrefabIndex, const eVec3 & worldPosition /*, const eVec2 & facingDir*/) {
 	std::shared_ptr<eEntity> prefabEntity = nullptr;
-	if (!game.GetEntityPrefabManager().GetPrefab(entityPrefabIndex, prefabEntity))
+	if (!(prefabEntity = game.GetEntityPrefabManager().Get(entityPrefabIndex))->IsValid())
 		return false;
 
 	int spawnID = game.NumEntities();
