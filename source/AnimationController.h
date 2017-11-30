@@ -84,6 +84,7 @@ private:
 	int									GetIntParameterIndex(const std::string & name) const;
 	int									GetBoolParameterIndex(const std::string & name) const;
 	int									GetTriggerParameterIndex(const std::string & name) const;
+	int									GetStateIndex(const std::string & name) const;
 
 private:
 
@@ -370,7 +371,7 @@ inline bool eAnimationController::GetTriggerParameter(int nameHash) const {
 
 //***********************
 // eAnimationController::GetFloatParameterIndex
-// returns the index within eAnimationController::floatParamaters
+// returns the index within eAnimationController::floatParameters
 // of the named parameter if it exists
 // returns -1 if it doesn't exist
 // used by eAnimationControllerManager to initialize eStateTransitions
@@ -381,7 +382,7 @@ inline int eAnimationController::GetFloatParameterIndex(const std::string & name
 
 //***********************
 // eAnimationController::GetIntParameterIndex
-// returns the index within eAnimationController::intParamaters
+// returns the index within eAnimationController::intParameters
 // of the named parameter if it exists
 // returns -1 if it doesn't exist
 // used by eAnimationControllerManager to initialize eStateTransitions
@@ -392,7 +393,7 @@ inline int eAnimationController::GetIntParameterIndex(const std::string & name) 
 
 //***********************
 // eAnimationController::GetBoolParameterIndex
-// returns the index within eAnimationController::boolParamaters
+// returns the index within eAnimationController::boolParameters
 // of the named parameter if it exists
 // returns -1 if it doesn't exist
 // used by eAnimationControllerManager to initialize eStateTransitions
@@ -404,7 +405,7 @@ inline int eAnimationController::GetBoolParameterIndex(const std::string & name)
 
 //***********************
 // eAnimationController::GetTriggerParameterIndex
-// returns the index within eAnimationController::triggerParamaters
+// returns the index within eAnimationController::triggerParameters
 // of the named parameter if it exists
 // returns -1 if it doesn't exist
 // used by eAnimationControllerManager to initialize eStateTransitions
@@ -413,5 +414,15 @@ inline int eAnimationController::GetTriggerParameterIndex(const std::string & na
 	return triggerParamsHash.First(triggerParamsHash.GetHashKey(name));
 }
 
+//***********************
+// eAnimationController::GetStateIndex
+// returns the index within eAnimationController::animationStates
+// of the named state if it exists
+// returns -1 if it doesn't exist
+// used by eAnimationControllerManager to initialize eStateTransitions
+//***********************
+inline int eAnimationController::GetStateIndex(const std::string & name) const {
+	return statesHash.First(statesHash.GetHashKey(name));
+}
 
 #endif /* EVIL_ANIMATION_CONTROLLER_H */

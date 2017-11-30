@@ -1,0 +1,47 @@
+imagesUsedBatchFilename				(filename order matters here: first images, then animations)
+animationsUsedBatchFilename
+Controller_Parameters {
+initialStateName				(to be used at load time to set initial currentState index)
+paramName paramType paramInitialValue
+paramName1 paramType1 paramInitialValue1
+(repeat adding parameters)
+}
+
+Animation_States {
+stateName singleAnimationName stateSpeed
+stateName1 singleAnimationName1 stateSpeed1
+(repeat adding states)
+}
+
+Blend_States {
+	{
+	stateName numAnimationsInState stateSpeed
+	controllerFloatParam1 controllerFloatParam2				(max of 2, min of 0, but it defaults to 1)
+	animationName controllerFloatParam1Value controllerFloatParam2Value	(max of 2, min of 0, but it defaults to evenly distributed values)
+	animationName1 controllerFloatParam1Value1 controllerFloatParam2Value1
+	(repeat adding animations)
+	}
+	{
+	stateName1 numAnimationsInState1 stateSpeed1
+	controllerFloatParam11 controllerFloatParam21
+	animationName1 controllerFloatParam1Value1 controllerFloatParam2Value1
+	animationName11 controllerFloatParam1Value11 controllerFloatParam2Value11
+	}
+	(repeat adding states)
+}
+
+State_Transitions {
+	{
+	transitionName anyStateBool fromStateName toStateName exitTimeNormalized offsetNormalized	(names get converted to indexes)
+	controllerParamName controllerParamType transitionValue compareEnumName				(type will be int/float/bool/trigger, if bool then don't look for compareEnumName)
+	controllerParamName1 controllerParamType1 transitionValue1 compareEnumName1
+	(repeat adding parameter-value-compare tuples)
+	}
+	{
+	transitionName1 anyStateBool1 fromStateName1 toStateName1 exitTimeNormalized1 offsetNormalized1
+	controllerParamName1 controllerParamType1 transitionValue1 compareEnumName1
+	controllerParamName11 controllerParamType11 transitionValue11 compareEnumName11
+	(repeat adding parameter-value-compare tuples)
+	}
+	(repeat adding transitions)
+}

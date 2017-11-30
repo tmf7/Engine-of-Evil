@@ -38,7 +38,7 @@ CONTROLLER SETUP:
 
 ANIMATION_STATES SETUP:
 -------------
-4) read the file for animation states: stateName animationName stateSpeed stateLoop 
+4) read the file for animation states: stateName animationName stateSpeed 
 [NOTE] call eAnimationManager::GetAnimation(animationName, animationPtr),
 if animationPtr errors because animationName doesn't exist, the state is invalid ==> LOAD-TIME FAILURE (for now)
 5) call eAnimationController::AddState(eStateNode &&)
@@ -46,11 +46,11 @@ if animationPtr errors because animationName doesn't exist, the state is invalid
 
 BLEND_STATES SETUP:
 -------------
-7) read the file for blend states: stateName numAnimations stateSpeed stateLoop
+7) read the file for blend states: stateName numAnimations stateSpeed
 read the file for which controller params to watch: controllerParamNameFromEarlier_1 controllerParamNameFromEarlier_2 (always float_type, max 2)
 [NOTE] at least one controller float must be selected, if not in load-file, then default to first floatParameter
 read the file for eAnimations and their associated threshold values: animationName floatValue_1 floatValue_2\n [repeat] (always float_type, max 2 parallel to controllerParams used)
-[NOTE] if no floats are listed (just an animationName\n) then default to (1.0f / numAnimations) * currentAnimationLoadedCount
+[NOTE] if no floats are listed (just an animationName\n) then default to (1.0f / numAnimations) * currentAnimationLoadedCount for the default value to evenly distribute their thresholds
 [NOTE] call eAnimationManager::GetAnimation(animationName, animationPtr),
 if animationPtr errors because animationName doesn't exist, the state is invalid ==> LOAD-TIME FAILURE (for now)
 8) call eAnimationController::AddState(eStateNode &&)
