@@ -139,9 +139,9 @@ bool eTileImpl::LoadTileset(const char * tilesetFilename, bool appendNew) {
 		if(!VerifyRead(read))
 			return false;
 
-		// get a pointer to a source image (or try to load it if it doesn't exist yet)
-		std::shared_ptr<eImage> sourceImage = nullptr;
-		if (!(sourceImage = game.GetImageManager().Get(buffer))->IsValid())
+		// get a pointer to a source image
+		auto & sourceImage = game.GetImageManager().Get(buffer);
+		if (!sourceImage->IsValid())
 			return false;
 
 		int imageID = sourceImage->GetManagerIndex();

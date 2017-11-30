@@ -1,9 +1,9 @@
 imagesUsedBatchFilename				(filename order matters here: first images, then animations)
 animationsUsedBatchFilename
-Controller_Parameters {
 initialStateName				(to be used at load time to set initial currentState index)
-paramName paramType paramInitialValue
-paramName1 paramType1 paramInitialValue1
+Controller_Parameters {
+paramType paramName paramInitialValue
+paramType1 paramName1 paramInitialValue1
 (repeat adding parameters)
 }
 
@@ -22,10 +22,10 @@ Blend_States {
 	(repeat adding animations)
 	}
 	{
-	stateName1 numAnimationsInState1 stateSpeed1
-	controllerFloatParam11 controllerFloatParam21
+	stateName numAnimationsInState stateSpeed
+	controllerFloatParam1 controllerFloatParam2
+	animationName controllerFloatParam1Value1 controllerFloatParam2Value
 	animationName1 controllerFloatParam1Value1 controllerFloatParam2Value1
-	animationName11 controllerFloatParam1Value11 controllerFloatParam2Value11
 	}
 	(repeat adding states)
 }
@@ -33,14 +33,14 @@ Blend_States {
 State_Transitions {
 	{
 	transitionName anyStateBool fromStateName toStateName exitTimeNormalized offsetNormalized	(names get converted to indexes)
-	controllerParamName controllerParamType transitionValue compareEnumName				(type will be int/float/bool/trigger, if bool then don't look for compareEnumName)
-	controllerParamName1 controllerParamType1 transitionValue1 compareEnumName1
+	controllerParamType controllerParamName compareEnumName	transitionValue				(type will be: int/float/bool/trigger, if bool then don't look for compareEnumName)
+	controllerParamType1 controllerParamName1 compareEnumName1 transitionValue1			(compare will be: greater/greaterEqual/less/lessEqual/equal/notEqual)
 	(repeat adding parameter-value-compare tuples)
 	}
 	{
 	transitionName1 anyStateBool1 fromStateName1 toStateName1 exitTimeNormalized1 offsetNormalized1
-	controllerParamName1 controllerParamType1 transitionValue1 compareEnumName1
-	controllerParamName11 controllerParamType11 transitionValue11 compareEnumName11
+	controllerParamType controllerParamName compareEnumName	transitionValue
+	controllerParamType1 controllerParamName1 compareEnumName1 transitionValue
 	(repeat adding parameter-value-compare tuples)
 	}
 	(repeat adding transitions)

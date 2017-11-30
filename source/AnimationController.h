@@ -14,6 +14,7 @@
 //			eAnimationController
 // Handles sequencing of image data
 // for owner->renderImage through eStateNodes
+// FIXME: call eComponent::SetOwner call upon COPYING (ie std::make_unique) a prefab into an eGameObject
 //*******************************************
 class eAnimationController : public eComponent, public eResource {
 public:
@@ -26,12 +27,11 @@ public:
 										eAnimationController() = default;
 										eAnimationController(const eAnimationController & other);
 										eAnimationController(eAnimationController && other);
-										eAnimationController(eGameObject * owner);					// FIXME: possibly do a SetOwner call upon COPYING a prefab
+										eAnimationController(const std::string & sourceFilename, int managerIndex);
 
 	eAnimationController &				operator=(eAnimationController other);
 
 
-	bool								Init(const char * filename);								// FIXME: possibly do a SetOwner call upon COPYING a prefab
 	void								Update();
 	void								Pause(bool isPaused = true);
 
@@ -72,7 +72,7 @@ private:
 	bool								AddFloatParameter(const std::string & name, float initialValue = 0.0f);
 	bool								AddIntParameter(const std::string & name, int initialValue = 0);
 	bool								AddBoolParameter(const std::string & name, bool initialValue = false);
-	bool								AddTriggerParameter(const std::string & name);					// always constructs w/value == false
+	bool								AddTriggerParameter(const std::string & name, bool initialValue = false);
 	bool								CheckTransitionConditions(const eStateTransition & transition);
 
 	// TODO: these fns used to initialize eStateTransitions a load-time, for quick TransitionCondition checks during Update
@@ -111,11 +111,11 @@ private:
 
 };
 
-//***********************
+//**************
 // eAnimationController::eAnimationController
-//***********************
-inline eAnimationController::eAnimationController(eGameObject * owner) {
-	this->owner = owner;
+//**************
+inline eAnimationController::eAnimationController(const std::string & sourceFilename, int animationControllerManagerIndex)
+	: eResource(sourceFilename, animationControllerManagerIndex) {
 }
 
 //***********************

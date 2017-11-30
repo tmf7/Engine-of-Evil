@@ -1,13 +1,11 @@
 #ifndef EVIL_GAME_H
 #define EVIL_GAME_H
 
-#include "Definitions.h"
-#include "Renderer.h"
 #include "ImageManager.h"
+#include "AnimationManager.h"
+#include "AnimationControllerManager.h"
 #include "EntityPrefabManager.h"
-#include "Vector.h"
 #include "Map.h"
-#include "Entity.h"
 #include "Camera.h"
 #include "Input.h"
 #include "Player.h"
@@ -43,56 +41,60 @@ public:
 
 public:
 
-								eGame();
+											eGame();
 
-	ErrorCode					Init();
-	void						Shutdown(ErrorCode error);
-	bool						Run();
+	ErrorCode								Init();
+	void									Shutdown(ErrorCode error);
+	bool									Run();
 
-	eInput &					GetInput();
-	eRenderer &					GetRenderer();
-	eImageManager &				GetImageManager();
-	eEntityPrefabManager &		GetEntityPrefabManager();
-	eCamera &					GetCamera();
-	eMap &						GetMap();
-	void						AddEntity(std::shared_ptr<eEntity> & entity);
-	void						RemoveEntity(int entityID);
-	std::shared_ptr<eEntity>	GetEntity(int entityID);
-	int							NumEntities() const;
+	eInput &								GetInput();
+	eRenderer &								GetRenderer();
+	eImageManager &							GetImageManager();
+	eAnimationManager &						GetAnimationManager();
+	eAnimationControllerManager &			GetAnimationControllerManager();
+	eEntityPrefabManager &					GetEntityPrefabManager();
+	eCamera &								GetCamera();
+	eMap &									GetMap();
+	void									AddEntity(std::shared_ptr<eEntity> & entity);
+	void									RemoveEntity(int entityID);
+	std::shared_ptr<eEntity>				GetEntity(int entityID);
+	int										NumEntities() const;
 
 	// frame-rate metrics
-	void						SetFixedFPS(const Uint32 newFPS);
-	Uint32						GetFixedFPS() const;
-	Uint32						GetFixedTime() const;
-	Uint32						GetDynamicFPS() const;
-	Uint32						GetDeltaTime() const;
-	Uint32						GetGameTime() const;
-	void						DrawFPS();
+	void									SetFixedFPS(const Uint32 newFPS);
+	Uint32									GetFixedFPS() const;
+	Uint32									GetFixedTime() const;
+	Uint32									GetDynamicFPS() const;
+	Uint32									GetDeltaTime() const;
+	Uint32									GetGameTime() const;
+	void									DrawFPS();
 
-	virtual int					GetClassType() const override { return CLASS_GAME; }
+	virtual int								GetClassType() const override { return CLASS_GAME; }
 
 private:
 
-	void						FreeAssets();
+	void									FreeAssets();
 
 private:
 
 	std::vector<std::shared_ptr<eEntity>>	entities;
 	eHashIndex								entityHash;
 
-	eInput						input;
-	eMap						map;
-	eRenderer					renderer;
-	eImageManager				imageManager;
-	eEntityPrefabManager		entityPrefabManager;
-	eCamera						camera;
-	ePlayer						player;
+	eInput									input;
+	eMap									map;
+	eRenderer								renderer;
+	eImageManager							imageManager;
+	eAnimationManager						animationManager;
+	eAnimationControllerManager				animationControllerManager;
+	eEntityPrefabManager					entityPrefabManager;
+	eCamera									camera;
+	ePlayer									player;
 
-	const Uint32				defaultFPS = 60;
-	Uint32						fixedFPS;			// constant framerate
-	Uint32						frameTime;			// constant framerate governing time interval (depends on FixedFPS)
-	Uint32						deltaTime;			// actual time a frame takes to execute (to the nearest millisecond)
-	Uint32						gameTime;			// time elapsed since execution began (updated at the end of each frame)
+	const Uint32							defaultFPS = 60;
+	Uint32									fixedFPS;			// constant framerate
+	Uint32									frameTime;			// constant framerate governing time interval (depends on FixedFPS)
+	Uint32									deltaTime;			// actual time a frame takes to execute (to the nearest millisecond)
+	Uint32									gameTime;			// time elapsed since execution began (updated at the end of each frame)
 };
 
 extern eGame	game;								// one instance used by all objects
@@ -126,14 +128,20 @@ inline eImageManager & eGame::GetImageManager() {
 	return imageManager;
 }
 
-/*
 //*****************
 // eGame::GetAnimationManager
 //*****************
 inline eAnimationManager & eGame::GetAnimationManager() {
 	return animationManager;
 }
-*/
+
+//*****************
+// eGame::GetAnimationControllerManager
+//*****************
+inline eAnimationControllerManager & eGame::GetAnimationControllerManager() {
+	return animationControllerManager;
+}
+
 
 //*****************
 // eGame::GetEntityPrefabManager

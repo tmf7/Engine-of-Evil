@@ -75,16 +75,6 @@ eAnimationController & eAnimationController::operator=(eAnimationController othe
 }
 
 //************
-// eAnimationController::Init
-// TODO: this should take an index or name of a controller
-// in eAnimationControllerManager that this can COPY (as in prefabs)
-//************
-bool eAnimationController::Init(const char * filename) {
-	// TODO: implement
-	return false;
-}
-
-//************
 // eAnimationController::CheckTransitionConditions
 // all conditions must be met for the transition to trigger
 //************
@@ -197,12 +187,12 @@ bool eAnimationController::AddBoolParameter(const std::string & name, bool initi
 // does not modify any parameters if name already exists, and returns false
 // otherwise constructs the new parameter in-place and returns true
 //***********************
-bool eAnimationController::AddTriggerParameter(const std::string & name) {
+bool eAnimationController::AddTriggerParameter(const std::string & name, bool initialValue) {
 	const int hashKey = triggerParamsHash.GetHashKey(name);
 	if (triggerParamsHash.First(hashKey) > -1)
 		return false;
 	
 	triggerParamsHash.Add(hashKey, triggerParameters.size());
-	triggerParameters.emplace_back(false);
+	triggerParameters.emplace_back(initialValue);
 	return true;
 }

@@ -38,8 +38,8 @@ eEntity::eEntity(const entitySpawnArgs_t & spawnArgs)
 // TODO: position via a single stack eTransform, not the eCollisionModel, or eRenderImage, or eAnimationController
 //***************
 bool eEntity::Spawn(const int entityPrefabIndex, const eVec3 & worldPosition /*, const eVec2 & facingDir*/) {
-	std::shared_ptr<eEntity> prefabEntity = nullptr;
-	if (!(prefabEntity = game.GetEntityPrefabManager().Get(entityPrefabIndex))->IsValid())
+	auto & prefabEntity = game.GetEntityPrefabManager().Get(entityPrefabIndex);
+	if (!prefabEntity->IsValid())
 		return false;
 
 	int spawnID = game.NumEntities();

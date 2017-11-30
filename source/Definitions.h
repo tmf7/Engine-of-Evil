@@ -26,6 +26,7 @@
 #include <array>
 #include <deque>
 #include <functional>		// std::hash
+#include <regex>
 #include "Math.h"
 #include "FileIO.h"
 
