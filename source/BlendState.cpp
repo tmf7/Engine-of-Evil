@@ -4,23 +4,49 @@
 //*********************
 // eBlendState::eBlendState
 //*********************
-eBlendState::eBlendState(const std::string & name, const std::vector<std::shared_ptr<eAnimation>> & animations, float * xBlendParameter, float * yBlendParameter, AnimationBlendMode blendMode, float speed)
-	: animations(animations),
-	  xBlendParameter(xBlendParameter),
+eBlendState::eBlendState(const std::string & name, int numAnimations, float * xBlendParameter, float * yBlendParameter, AnimationBlendMode blendMode, float speed)
+	: xBlendParameter(xBlendParameter),
 	  yBlendParameter(yBlendParameter),
-	  blendMode(blendMode) {
+	  blendMode(blendMode),
+	  currentAnimationIndex(0) {
 	this->speed = speed;
 	this->name = name;
 
-	currentFrame = &animations[0]->GetFrame(0);
-	duration = (animations[0]->Duration() * speed) + (float)game.GetFixedTime();	// BUGFIX: + FixedTime() prevents skipping the last animation frame during playback
-
 	nameHash = std::hash<std::string>()(name);
+	blendNodesHash.ClearAndResize(numAnimations);
+	animations.reserve(numAnimations);
+	blendNodes.reserve(numAnimations);
+}
 
-	blendNodes.assign(animations.size(), vec2_zero);
-	blendNodesHash.ClearAndResize(animations.size());
-	for (size_t index = 0; index < animations.size(); ++index)
-		blendNodesHash.Add(animations[index]->GetNameHash(), index);
+//*********************
+// eBlendState::Init
+// DEBUG: called after all BlendNodes have been added to *this
+//*********************
+void eBlendState::Init() {
+	currentFrame = &animations[currentAnimationIndex]->GetFrame(0);
+	duration = (animations[currentAnimationIndex]->Duration() * speed) + (float)game.GetFixedTime();	// BUGFIX: + FixedTime() prevents skipping the last animation frame during playback
+}
+
+//*********************
+// eBlendState::AddBlendNode
+// assigns the values to which the eAnimationController 
+// stateMachine's paramaters will be compared
+// returns true if the animation is already loaded and can be added
+// with corresponding blendNode (x,y) values
+// returns false if the animation hasn't been loaded yet
+// DEBUG: the same animation can be added multiple times with
+// different (x,y) blendNode values
+//*********************
+bool eBlendState::AddBlendNode(const std::string & animationName, float xPosition, float yPosition) {
+	const int index = animations.size();
+	auto & animation = game.GetAnimationManager().Get(animationName.c_str());
+	if (!animation->IsValid())
+		return false;
+
+	animations.emplace_back(animation);
+	blendNodesHash.Add(animation->GetNameHash(), index);
+	blendNodes.emplace_back(eVec2(xPosition, yPosition));
+	return true;
 }
 
 //*********************

@@ -30,6 +30,7 @@ eAnimationController::eAnimationController(const eAnimationController & other)
 	}
 }
 
+/*
 //************
 // eAnimationController::eAnimationController
 //************
@@ -73,6 +74,7 @@ eAnimationController & eAnimationController::operator=(eAnimationController othe
 	std::swap(currentState, other.currentState);
 	std::swap(paused, other.paused);
 }
+*/
 
 //************
 // eAnimationController::CheckTransitionConditions
@@ -135,6 +137,19 @@ void eAnimationController::Update() {
 	}
 
 	 animationStates[currentState]->Update();
+}
+
+//**************
+// eAnimationController::InitHashIndexes
+// minimizes memory footprint, while minimizing hash collisions
+//**************
+void eAnimationController::InitHashIndexes(int numStates, int numTransitions, int numInts, int numFloats, int numBools, int numTriggers) {
+	statesHash.ClearAndResize(numStates);
+	transitionsHash.ClearAndResize(numTransitions);
+	intParamsHash.ClearAndResize(numInts);
+	floatParamsHash.ClearAndResize(numFloats);
+	boolParamsHash.ClearAndResize(numBools);
+	triggerParamsHash.ClearAndResize(numTriggers);
 }
 
 //***********************

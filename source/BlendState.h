@@ -24,13 +24,13 @@ enum class AnimationBlendMode {
 class eBlendState : public eStateNode {
 public:
 
-	friend class eAnimationController;			// sole access to Update
+	friend class eAnimationController;			// for direct access to Update
+	friend class eAnimationControllerManager;	// for direct access to AddBlendNode
+
 
 public:
-												// FIXME: if blendMode == 2D, then two controller floats MUST be defined at load-time
-												// or just default the second one to equal the first and ignore it during Update
-												eBlendState(const std::string & name, 
-															const std::vector<std::shared_ptr<eAnimation>> & animations,
+												eBlendState(const std::string & name,
+															int numAnimations,
 															float * xBlendParameter,
 															float * yBlendParameter = nullptr,
 															AnimationBlendMode blendMode = AnimationBlendMode::SIMPLE_1D,
@@ -40,6 +40,8 @@ public:
 
 private:
 
+	void										Init();
+	bool										AddBlendNode(const std::string & animationName, float xPosition, float yPosition = 0.0f);
 	virtual void								Update() override;
 	void										SwapAnimation(int animationIndex);
 
@@ -47,9 +49,10 @@ private:
 
 	std::vector<std::shared_ptr<eAnimation>>	animations;				// which animations this state plays
 	AnimationBlendMode							blendMode;
-	int											currentAnimationIndex	= 0;
+	int											currentAnimationIndex;
 
-	// DEBUG: blendNodes' indexes run parallel to animations' indexes
+	// DEBUG: blendNodes' indexes run parallel to animations' indexes,
+	// however the blendNodes are (x,y) pairs of blendParameter values
 	eHashIndex									blendNodesHash;		// indexed by eAnimation::name
 	std::vector<eVec2>							blendNodes;
 
@@ -57,41 +60,6 @@ private:
 	float *										xBlendParameter;
 	float *										yBlendParameter;
 
-	bool										PositionBlendNode(const std::string & animationName, float xPosition, float yPosition = 0.0f);
-	bool										PositionBlendNode(int animationNameHash, float xPosition, float yPosition = 0.0f);
-
 };
-
-//*********************
-// eBlendState::PositionBlendNode
-// assigns the values to which the eAnimationController 
-// stateMachine's paramaters will be compared
-// returns true if the animationName is correct and therefore has a corresponding blendNode
-// returns false if animationName is not in eBlendState::animations
-//*********************
-inline bool eBlendState::PositionBlendNode(const std::string & animationName, float xPosition, float yPosition) {
-	const int index = blendNodesHash.First(blendNodesHash.GetHashKey(animationName));
-	if (index == -1)
-		return false;
-
-	blendNodes[index].x = xPosition;
-	blendNodes[index].y = yPosition;
-	return true;
-}
-
-//*********************
-// eBlendState::PositionBlendNode
-// same as PositionBlendNode(std::string)
-// except it assumes the user has cached the hashKey
-//*********************
-inline bool eBlendState::PositionBlendNode(int animationNameHash, float xPosition, float yPosition) {
-	const int index = blendNodesHash.First(animationNameHash);
-	if (index == -1)
-		return false;
-
-	blendNodes[index].x = xPosition;
-	blendNodes[index].y = yPosition;
-	return true;
-}
 
 #endif /* EVIL_BLENDSTATE_H */

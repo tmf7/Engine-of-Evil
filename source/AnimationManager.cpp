@@ -21,14 +21,12 @@ bool eAnimationManager::Init() {
 // eAnimationManager::LoadAndGet
 // DEBUG (.eanim file format):
 // numTotalAnimationFrames framesPerSecond loopMode\n	(int int int, where the third int == 1 for ONCE and 2 for REPEAT)
-// imageFilepath\n	(defines the eImageManager::resourceList index to use, by name, for the frames that follow)
-// {\n				(indicates beginning of all subframe indexes of the above image to use)
+// imageFilepath {\n	(defines the eImageManager::resourceList index to use, by name, for the frames that follow; '{' is the delimiter)
 // imageSubframeIndex normalizedTime\t\t# frameNumber comment\n
 // imageSubframeIndex1 normalizedTim12\t\t# frameNumber1 comment\n
 // (repeat for all subframes used for this image file)
 // }\n				(indicates end of all subframe indexes of the above image to use)
-// imageFilepath2\n	
-// {\n
+// imageFilepath2 {\n
 // imageSubframeIndexN normalizedTimeN\t\t# frameNumberN comment\n
 // imageSubframeIndexN1 normalizedTimeN1\t\t# frameNumberN1 comment\n
 // (repeat for all subframes used for this image file)
@@ -73,16 +71,13 @@ bool eAnimationManager::LoadAndGet(const char * resourceFilename, std::shared_pt
 	while (!read.eof()) {
 		char imageFilepath[MAX_ESTRING_LENGTH];
 		memset(imageFilepath, 0, sizeof(imageFilepath));
-		read.getline(imageFilepath, sizeof(imageFilepath), '\n');
+		read.getline(imageFilepath, sizeof(imageFilepath), '{');
 		if(!VerifyRead(read)){
 			result = resourceList[0];			// default error animation
 			return false;
 		}
 		
 		const int imageManagerIndex = game.GetImageManager().Get(imageFilepath)->GetManagerIndex();
-
-		read.ignore(std::numeric_limits<std::streamsize>::max(), '{');
-		read.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
 
 		while (!read.eof() && read.peek() != '}') {
 			AnimationFrame_t newAnimFrame;

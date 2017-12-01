@@ -28,24 +28,9 @@ public:
 // [[IMPORTANT]] resourceFilename will be the .eimg file path (with contained .png path and subframe data)
 // FIXME(!): what does that mean for, say, .anim files that index by image name....just change the extensions from .png to .eimg
 
-CONTROLLER SETUP:
------------------
-1) read the file for controller params: name type initialValue 
-1.5) use type string via if-else to read initialValue as intended type
-[NOTE] if the type is not int/float/bool/trigger, then the param is invalid ==> unable to add, so skip the rest of the param def
-2) call eAnimationController::Add_TYPE_Parameter(name, initialValue)
-3) repeat for all controller params
-
-ANIMATION_STATES SETUP:
--------------
-4) read the file for animation states: stateName animationName stateSpeed 
-[NOTE] call eAnimationManager::GetAnimation(animationName, animationPtr),
-if animationPtr errors because animationName doesn't exist, the state is invalid ==> LOAD-TIME FAILURE (for now)
-5) call eAnimationController::AddState(eStateNode &&)
-6) repeat for all animation states
 
 BLEND_STATES SETUP:
--------------
+-------------------
 7) read the file for blend states: stateName numAnimations stateSpeed
 read the file for which controller params to watch: controllerParamNameFromEarlier_1 controllerParamNameFromEarlier_2 (always float_type, max 2)
 [NOTE] at least one controller float must be selected, if not in load-file, then default to first floatParameter

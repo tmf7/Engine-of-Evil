@@ -25,11 +25,13 @@ public:
 
 	virtual							   ~eAnimationController() = default;
 										eAnimationController() = default;
+										eAnimationController(eAnimationController && other) = default;
+	eAnimationController &				operator=(const eAnimationController & other) = default;
+	eAnimationController &				operator=(eAnimationController && other) = default;								
+//	eAnimationController &				operator=(eAnimationController other);
 										eAnimationController(const eAnimationController & other);
-										eAnimationController(eAnimationController && other);
 										eAnimationController(const std::string & sourceFilename, int managerIndex);
 
-	eAnimationController &				operator=(eAnimationController other);
 
 
 	void								Update();
@@ -65,7 +67,7 @@ public:
 private:
 
 	// returns true if add was successful, false if the item already exists 
-	// eStateTransitions however allows hash collisions, because it's indexed by eStateTransition::fromState
+	// however, transitionHash allows collisions, because it's indexed by eStateTransition::fromState
 	bool								AddAnimationState(std::unique_ptr<eStateNode> && newState);
 	void								AddTransition(eStateTransition && newTransition);
 
@@ -80,6 +82,8 @@ private:
 	// or use std::vector::reserve(numFloatParams) etc in eAnimationControllerManager::LoadController
 	// TODO: std::sort the stateTransitions vector according to anyState bool AFTER all transitions have been loaded, then update transitionHash (in eAnimController)
 	// TODO: make sure to eHashIndex::ClearAndResize each eAnimationController::XYZParamsHash based on the number of params at load-time to minimize memory footprint
+	void								InitHashIndexes(int numStates, int numTransitions, int numInts, int numFloats, int numBools, int numTriggers);
+
 	int									GetFloatParameterIndex(const std::string & name) const;
 	int									GetIntParameterIndex(const std::string & name) const;
 	int									GetBoolParameterIndex(const std::string & name) const;

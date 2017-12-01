@@ -19,7 +19,8 @@ public:
 public:
 
 									eStateTransition(const std::string & name, 
-													 bool anyState, int fromStateIndex, 
+													 bool anyState, 
+													 int fromStateIndex, 
 													 int toStateIndex,
 													 float exitTime = 0.0f, 
 													 float offset = 0.0f);
