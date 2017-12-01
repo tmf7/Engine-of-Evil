@@ -31,7 +31,7 @@ void eMovementPlanner::SetOwner(eGameObject * newOwner) {
 //******************
 void eMovementPlanner::StopMoving() {
 	wallSide = nullptr;
-	owner->CollisionModel().Velocity().Zero();
+	owner->CollisionModel().SetVelocity(vec2_zero);
 	moving = false;
 }
 
@@ -62,7 +62,7 @@ void eMovementPlanner::Update() {
 		}
 
 		// finalize the move
-		if (ownerCollisionModel.Velocity() != vec2_zero) {
+		if (ownerCollisionModel.GetVelocity() != vec2_zero) {
 			moving = true;
 			ownerCollisionModel.UpdateOrigin();
 		}
@@ -142,7 +142,7 @@ void eMovementPlanner::WallFollow() {
 	if (wallSide != nullptr && (!nearWall || rotationAngle >= 360.0f))
 		StopMoving();
 	else 
-		owner->CollisionModel().Velocity() = forward.vector * maxMoveSpeed;
+		owner->CollisionModel().SetVelocity(forward.vector * maxMoveSpeed);
 	// moveState may have changed, track the correct waypoint
 //	UpdateWaypoint();
 }
@@ -196,7 +196,7 @@ void eMovementPlanner::CompassFollow() {
 
 			// initilize the new left and right, and their validSteps that'll be used next frame
 			CheckWalls(nullptr);
-			ownerCollisionModel.Velocity() = forward.vector * maxMoveSpeed;
+			ownerCollisionModel.SetVelocity(forward.vector * maxMoveSpeed);
 			return;
 		}
 
@@ -239,7 +239,7 @@ void eMovementPlanner::CompassFollow() {
 		forward = best;
 		// initilize the new left and right, and their validSteps that'll be used next frame
 		CheckWalls(nullptr);
-		ownerCollisionModel.Velocity() = forward.vector * maxMoveSpeed;
+		ownerCollisionModel.SetVelocity(forward.vector * maxMoveSpeed);
 	}
 	// moveState may have changed, track the correct waypoint
 	UpdateWaypoint();

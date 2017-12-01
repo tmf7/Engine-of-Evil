@@ -54,7 +54,7 @@ void ePlayer::Think() {
 			moveInput *= moveSpeed;
 			eMath::IsometricToCartesian(moveInput.x, moveInput.y);
 			auto & entityCollisionModel = entity->CollisionModel();
-			entityCollisionModel.Velocity().Set(moveInput.x, moveInput.y);
+			entityCollisionModel.SetVelocity(eVec2(moveInput.x, moveInput.y));
 			entityCollisionModel.UpdateOrigin();
 		}
 	}

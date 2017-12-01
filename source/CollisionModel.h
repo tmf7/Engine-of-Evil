@@ -31,8 +31,9 @@ public:
 	eBounds &							AbsBounds();
 	const eBounds &						LocalBounds() const;
 	const eBounds &						AbsBounds() const;
-	eVec2 &								Velocity();
-	const eVec2 &						Velocity() const;
+	void								SetVelocity(const eVec2 & newVelocity);
+	const eVec2 &						GetVelocity() const;
+	const eVec2 &						GetOldVelocity() const;
 	bool								IsActive() const;
 	void								SetActive(bool active);
 	const std::vector<eGridCell *> &	Areas() const;
@@ -53,6 +54,7 @@ private:
 	eBounds								absBounds;				// using world coordinates	
 	eVec2								origin;					// using world coordinates
 	eVec2								oldOrigin;				// for use with collision response
+	eVec2								oldVelocity;			// velocity of the prior frame
 	eVec2								velocity;				// DEBUG: never normalized, only rotated and scaled
 	std::vector<eGridCell *>			areas;					// currently occupied tileMap indexes (between 1 and 4)
 	bool								active;					// whether this participates in (dynamic or kinematic) collision detection
@@ -115,17 +117,25 @@ inline const eBounds & eCollisionModel::AbsBounds() const {
 }
 
 //*************
-// eCollisionModel::Velocity
+// eCollisionModel::SetVelocity
 //*************
-inline eVec2 & eCollisionModel::Velocity() {
+inline void eCollisionModel::SetVelocity(const eVec2 & newVelocity) {
+	oldVelocity = velocity;
+	velocity = newVelocity;
+}
+
+//*************
+// eCollisionModel::GetVelocity
+//*************
+inline const eVec2 & eCollisionModel::GetVelocity() const {
 	return velocity;
 }
 
 //*************
-// eCollisionModel::Velocity
+// eCollisionModel::GetOldVelocity
 //*************
-inline const eVec2 & eCollisionModel::Velocity() const {
-	return velocity;
+inline const eVec2 & eCollisionModel::GetOldVelocity() const {
+	return oldVelocity;
 }
 
 //*************

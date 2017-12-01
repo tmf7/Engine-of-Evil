@@ -25,6 +25,7 @@ public:
 
 	virtual int								GetClassType() const override	{ return CLASS_GAMEOBJECT; }
 	virtual void							Think()							{}
+	virtual void							ExtendedThink()					{}
 	virtual void							DebugDraw()						{}
 
 	eVec2 &									OrthoOrigin()					{ return orthoOrigin; }

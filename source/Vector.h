@@ -26,7 +26,7 @@ public:
 	void		Set(const float x, const float y);
 	void		Zero();
 	float		Normalize();
-	eVec2		Normalized();
+	eVec2		Normalized() const;
 	float		Length() const;
 	float		LengthSquared() const;
 	void		Rotate(float degrees, const eVec2 & origin);
@@ -189,7 +189,7 @@ inline float eVec2::Normalize() {
 // eVec2::Normalized
 // scales a copy of x,y to unit length vector
 //******************
-inline eVec2 eVec2::Normalized() {
+inline eVec2 eVec2::Normalized() const {
 	float sqrLength;
 	float invLength;
 
