@@ -28,8 +28,12 @@ bool eEntityPrefabManager::Init() {
 // returns true if the prefab was successfully loaded
 // returns false otherwise
 // DEBUG (.eprf file format):
-// # first line comment\n 
-// spriteFilename=filename.png\n		(leave spriteFilename, renderBlockSize, and imageColliderOffset empty if entity has no visuals)
+// # first line comment\n
+// # second line comment\n
+// # any number of line comments above the definition\n
+// spriteFilename=filename.eimg\n		(leave spriteFilename, renderBlockSize, and imageColliderOffset empty if entity has no visuals)
+// initialSpriteFrame= int\n			(which subframe of spriteFilename to start on, defaults to 0 if out-of-bounds, gets ignored if spriteFilename is blank)
+// animationController=filename.ectrl	(spriteFilename and renderBlockSize must be set if animationController is set)
 // renderBlockSize= x y z\n				(floats)
 // imageCollisionOffset= x y\n			(floats)
 // localBounds= xMin yMin xMax yMax\n	(floats, mins = -maxs avoids allocating an eCollisionModel on the eEntity, collisionActive and movementSpeed will be ignored.)
@@ -45,33 +49,49 @@ bool eEntityPrefabManager::LoadAndGet(const char * resourceFilename, std::shared
 	std::ifstream	read(resourceFilename);
 	// unable to find/open file
 	if (!read.good()) {
-		result = resourceList[0];		// default error prefab
-		return false;
-	}
-
-	read.ignore(std::numeric_limits<std::streamsize>::max(), '\n');		// skip first line comment
-
-	entitySpawnArgs_t spawnArgs;
-	spawnArgs.sourceFilename = resourceFilename;
-
-	char spriteFilename[MAX_ESTRING_LENGTH];
-	read.ignore(std::numeric_limits<std::streamsize>::max(), '=');		// spriteFilename
-	memset(spriteFilename, 0, sizeof(spriteFilename));
-	read.getline(spriteFilename, sizeof(spriteFilename), '\n');
-	if (!VerifyRead(read)) {
 		result = resourceList[0];			// default error prefab
 		return false;
 	}
 
-	spawnArgs.spriteFilename = spriteFilename;
+	entitySpawnArgs_t spawnArgs;
+	spawnArgs.sourceFilename = resourceFilename;
+
+	char buffer[MAX_ESTRING_LENGTH];
+	read.ignore(std::numeric_limits<std::streamsize>::max(), '=');		// spriteFilename	(skips all line comments '#')
+	memset(buffer, 0, sizeof(buffer));
+	read.getline(buffer, sizeof(buffer), '\n');
+	if (!VerifyRead(read)) {
+		result = resourceList[0];
+		return false;
+	}
+
+	spawnArgs.spriteFilename = buffer;
 	if (!spawnArgs.spriteFilename.empty()) {
+
+		read.ignore(std::numeric_limits<std::streamsize>::max(), '=');	// initialSpriteFrame
+		read >> spawnArgs.initialSpriteFrame;
+		if (!VerifyRead(read)) {
+			result = resourceList[0];
+			return false;
+		}
+
+		read.ignore(std::numeric_limits<std::streamsize>::max(), '=');	// animationController
+		memset(buffer, 0, sizeof(buffer));
+		read.getline(buffer, sizeof(buffer), '\n');
+		if (!VerifyRead(read)) {
+			result = resourceList[0];
+			return false;
+		}
+
+		spawnArgs.animationControllerFilename = buffer;
+
 		read.ignore(std::numeric_limits<std::streamsize>::max(), '=');	// renderBlockSize
 		read >> spawnArgs.renderBlockSize.x;
 		read >> spawnArgs.renderBlockSize.y;
 		read >> spawnArgs.renderBlockSize.z;
 		read.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
 		if (!VerifyRead(read)) {
-			result = resourceList[0];		// default error prefab
+			result = resourceList[0];
 			return false;
 		}
 
@@ -80,11 +100,13 @@ bool eEntityPrefabManager::LoadAndGet(const char * resourceFilename, std::shared
 		read >> spawnArgs.imageColliderOffset.y;
 		read.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
 		if (!VerifyRead(read)){
-			result = resourceList[0];		// default error prefab
+			result = resourceList[0];
 			return false;
 		}
 
 	} else {
+		read.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+		read.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
 		read.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
 		read.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
 	}
@@ -96,7 +118,7 @@ bool eEntityPrefabManager::LoadAndGet(const char * resourceFilename, std::shared
 	read >> spawnArgs.localBounds[1][1];
 	read.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
 	if (!VerifyRead(read)) {
-		result = resourceList[0];			// default error prefab
+		result = resourceList[0];
 		return false;
 	}
 
@@ -105,7 +127,7 @@ bool eEntityPrefabManager::LoadAndGet(const char * resourceFilename, std::shared
 		read >> spawnArgs.movementSpeed;
 		read.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
 		if (!VerifyRead(read)){
-			result = resourceList[0];		// default error prefab
+			result = resourceList[0];
 			return false;
 		}
 
@@ -113,7 +135,7 @@ bool eEntityPrefabManager::LoadAndGet(const char * resourceFilename, std::shared
 		read >> std::boolalpha >> spawnArgs.collisionActive;
 //		read.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
 		if (!VerifyRead(read)){
-			result = resourceList[0];		// default error prefab
+			result = resourceList[0];
 			return false;
 		}
 	}

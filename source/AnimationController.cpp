@@ -141,7 +141,7 @@ void eAnimationController::Update() {
 	}
 
 	// DEBUG: currentState transition checks are still allowed even if an anyState transition has triggered
-	int hashkey = transitionsHash.GetHashKey(currentState);
+	const int hashkey = animationStates[currentState]->nameHash;
 	for (int i = transitionsHash.First(hashkey); i != -1; i = transitionsHash.Next(i)) {
 		if ((stateTransitions[i].fromState == currentState) &&
 			 CheckTransitionConditions(stateTransitions[i])) {
@@ -270,4 +270,15 @@ bool eAnimationController::AddTriggerParameter(const std::string & name, bool in
 	triggerParamsHash.Add(hashKey, triggerParameters.size());
 	triggerParameters.emplace_back(initialValue);
 	return true;
+}
+
+//***********************
+// eAnimationController::SetOwner
+// ensures that if *this was copied or moved that
+// all owner and stateMachine backpointers are valid
+//***********************
+void eAnimationController::SetOwner(eGameObject * newOwner) {
+	owner = newOwner;
+	for (auto & state : animationStates)
+		state->SetAnimationController(this);
 }

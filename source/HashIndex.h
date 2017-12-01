@@ -6,12 +6,14 @@
 
 //************************************
 //			HashIndex
-//	Fast hash table for indexes and arrays
-//	uses std::vector<int> for memory management
-//  DEBUG: resizing the hash while in use invalidates
-//  all the hashMask-dependent keys (no matter the type)
-//  so don't add that functionality, unless
-//  the entire class is redesigned
+// Fast hash table for indexes and arrays
+// uses std::vector<int> for memory management
+// DEBUG: always call ClearAndResize before first use
+// because default capacity is 1
+// DEBUG: resizing the hash while in use invalidates
+// all the hashMask-dependent keys (no matter the type)
+// so don't add that functionality, unless
+// the entire class is redesigned
 //************************************
 class eHashIndex {
 public:
@@ -45,7 +47,7 @@ private:
 	std::vector<int>	indexChain;
 	int					hashMask;
 
-	static const int	defaultHashSize = 1024;
+	static const int	defaultHashSize = 1;
 	static const int	INVALID_INDEX = -1;
 };
 

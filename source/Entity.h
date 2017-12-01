@@ -7,15 +7,17 @@
 // entitySpawnArgs_t
 typedef struct entitySpawnArgs_s {
 	eBounds			localBounds;
-	std::string		sourceFilename		= "";
-	std::string		spriteFilename		= "";
-	eVec3			renderBlockSize		= vec3_zero;
-	eVec2			imageColliderOffset = vec2_zero;
-	float			movementSpeed		= 0.0f;
-	int				prefabManagerIndex	= 0;
-	bool			collisionActive		= false;
-//	int				colliderType;		// TODO: AABB/OBB/Circle/Line/Polyline
-//	int				colliderMask;		// TODO: solid, liquid, enemy, player, etc
+	std::string		sourceFilename				= "";
+	std::string		spriteFilename				= "";
+	std::string		animationControllerFilename = "";
+	eVec3			renderBlockSize				= vec3_zero;
+	eVec2			imageColliderOffset			= vec2_zero;
+	float			movementSpeed				= 0.0f;
+	int				prefabManagerIndex			= 0;
+	int				initialSpriteFrame			= 0;
+	bool			collisionActive				= false;
+//	int				colliderType;				// TODO: AABB/OBB/Circle/Line/Polyline
+//	int				colliderMask;				// TODO: solid, liquid, enemy, player, etc
 		
 					entitySpawnArgs_s() { localBounds.Clear(); };
 } entitySpawnArgs_t;
@@ -54,7 +56,7 @@ private:
 	// renderImage::origin, and collisionModel::origin positioned via offsets from that shared eTransform::origin
 	// for both eTile and eEntity (static and dynamic objects)
 	eVec2						imageColliderOffset;	
-	int							spawnedEntityID;
+	int							spawnedEntityID;		// index within eGame::entities
 	bool						playerSelected;			// player is controlling this eEntity
 };
 

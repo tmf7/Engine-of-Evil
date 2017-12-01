@@ -34,6 +34,7 @@ public:
 		RENDERER_ERROR,
 		IMAGE_MANAGER_ERROR,
 		ANIMATION_MANAGER_ERROR,
+		ANIMATION_CONTROLLER_MANAGER_ERROR,
 		ENTITY_PREFAB_MANAGER_ERROR,
 		MAP_ERROR,
 		INIT_SUCCESS = -1
@@ -55,9 +56,9 @@ public:
 	eEntityPrefabManager &					GetEntityPrefabManager();
 	eCamera &								GetCamera();
 	eMap &									GetMap();
-	void									AddEntity(std::shared_ptr<eEntity> & entity);
+	int										AddEntity(std::unique_ptr<eEntity> && entity);
 	void									RemoveEntity(int entityID);
-	std::shared_ptr<eEntity>				GetEntity(int entityID);
+	std::unique_ptr<eEntity> &				GetEntity(int entityID);
 	int										NumEntities() const;
 
 	// frame-rate metrics
@@ -77,8 +78,7 @@ private:
 
 private:
 
-	std::vector<std::shared_ptr<eEntity>>	entities;
-	eHashIndex								entityHash;
+	std::vector<std::unique_ptr<eEntity>>	entities;
 
 	eInput									input;
 	eMap									map;
@@ -165,25 +165,18 @@ inline eMap & eGame::GetMap() {
 }
 
 //****************
-// eGame::AddEntity
-//****************
-inline void eGame::AddEntity(std::shared_ptr<eEntity> & entity) {
-	return entities.emplace_back(entity);
-}
-
-//****************
 // eGame::RemoveEntity
 // DEBUG: ASSERT (entityID >= 0 && entityID < numEntities)
 //****************
 inline void eGame::RemoveEntity(int entityID) {
-	entities.erase(entities.begin() + entityID);
+	entities[entityID] = nullptr;
 }
 
 //****************
 // eGame::GetEntity
 // DEBUG: ASSERT (entityID >= 0 && entityID < numEntities)
 //****************
-inline std::shared_ptr<eEntity> eGame::GetEntity(int entityID) {
+inline std::unique_ptr<eEntity> & eGame::GetEntity(int entityID) {
 	return entities[entityID];
 }
 

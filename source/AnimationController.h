@@ -14,7 +14,8 @@
 //			eAnimationController
 // Handles sequencing of image data
 // for owner->renderImage through eStateNodes
-// FIXME: call eComponent::SetOwner call upon COPYING (ie std::make_unique) a prefab into an eGameObject
+// DEBUG: always call eComponent::SetOwner(eGameObject * newOwner)
+// after COPYING *this (eg: std::make_unique<eAnimationController>)
 //*******************************************
 class eAnimationController : public eComponent, public eResource {
 public:
@@ -32,15 +33,13 @@ public:
 										eAnimationController(const eAnimationController & other);
 										eAnimationController(const std::string & sourceFilename, int managerIndex);
 
-
-
 	void								Update();
 	void								Pause(bool isPaused = true);
 
-	// returns true if the item exists and can be set, or false if it doesn't exist
 	const eStateNode &					GetCurrentState() const;
 	eStateNode &						GetCurrentState();
 
+	// returns true if the item exists and can be set, or false if it doesn't exist
 	bool								SetFloatParameter(const std::string & name, float newValue);
 	bool								SetIntParameter(const std::string & name, int newValue);
 	bool								SetBoolParameter(const std::string & name, bool newValue);
@@ -62,13 +61,15 @@ public:
 	bool								GetBoolParameter(int nameHash) const;
 	bool								GetTriggerParameter(int nameHash) const;
 
+	virtual void						SetOwner(eGameObject * newOwner) override;
+
 	virtual int							GetClassType() const override { return CLASS_ANIMATIONCONTROLLER; }
 
 private:
 
 	// returns true if add was successful, false if the item already exists 
-	// however, transitionHash allows collisions, because it's indexed by eStateTransition::fromState
 	bool								AddAnimationState(std::unique_ptr<eStateNode> && newState);
+	// transitionHash allows collisions, because it's indexed by eStateTransition::fromState
 	void								AddTransition(eStateTransition && newTransition);
 	void								SortAndHashTransitions();
 

@@ -1,5 +1,5 @@
 15 30 2			# numAnimationFrames,framesPerSecond, loop [1 = once, 2 = repeat]
-Graphics/Animations/sHero/sHero_Run/Textures/sHero_Run_1.png {
+Graphics/Animations/sHero/sHero_Run/Textures/Image_defs/sHero_Run_13.eimg{
 0 0.0			# subframe index within image, normalizedTime	# animationFrame 0
 1 0.071			# 1
 2 0.143			# 2

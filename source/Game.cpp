@@ -39,8 +39,11 @@ eGame::ErrorCode eGame::Init() {
 	if (!imageManager.Init())
 		return IMAGE_MANAGER_ERROR;
 
-//	if (!animationManager.Init())
-//		return ANIMATION_MANAGER_ERROR;
+	if (!animationManager.Init())
+		return ANIMATION_MANAGER_ERROR;
+
+	if (!animationControllerManager.Init())
+		return ANIMATION_CONTROLLER_MANAGER_ERROR;
 
 //	try {
 		input.Init();
@@ -89,6 +92,9 @@ void eGame::Shutdown(eGame::ErrorCode error) {
 			case ANIMATION_MANAGER_ERROR:
 				SDL_strlcpy(message, "ANIMATION MANAGER INIT FAILURE", 64);
 				break;
+			case ANIMATION_CONTROLLER_MANAGER_ERROR:
+				SDL_strlcpy(message, "ANIMATION CONTROLER MANAGER INIT FAILURE", 64);
+				break;
 			case ENTITY_PREFAB_MANAGER_ERROR:
 				SDL_strlcpy(message, "ENTITY PREFAB MANAGER INIT FAILURE", 64);
 				break;
@@ -109,6 +115,32 @@ void eGame::Shutdown(eGame::ErrorCode error) {
 void eGame::FreeAssets() {
 	renderer.Free();
 }
+
+//****************
+// eGame::AddEntity
+// finds the first unused slot in game::entities to move param entity
+// and assigns it a spawnID
+// returns the new spawnID index within game::entities
+// returns -1 if something went wrong
+//****************
+int eGame::AddEntity(std::unique_ptr<eEntity> && entity) {
+	int spawnID = 0;
+	for (auto & entitySlot : entities) {
+		if (entitySlot == nullptr) {
+			entitySlot = std::move(entity);
+			return spawnID;
+		} else {
+			++spawnID;
+		}
+	}
+
+	if (spawnID == entities.size()) {
+		entities.emplace_back(std::move(entity));
+		return spawnID;
+	}
+	return -1;
+}
+
 //****************
 // eGame::DrawFPS
 // add fps text to the renderPool

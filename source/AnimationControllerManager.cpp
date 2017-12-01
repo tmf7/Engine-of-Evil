@@ -8,11 +8,15 @@ bool eAnimationControllerManager::Init() {
 	// prepare the hashindex
 	resourceHash.ClearAndResize(MAX_ANIMATION_CONTROLLERS);
 
-	// TODO: register the error_animation as the first element of resourceList
-	// FIXME: the make_shared needs the proper ctor arguments
-//	int hashKey = resourceHash.GetHashKey(std::string("error_animation_controller"));
-//	resourceHash.Add(hashKey, resourceList.size());
-//	resourceList.emplace_back(std::make_shared<eAnimationController>("error_animation_controller", 0));	// default error animation controller
+	auto & error_animation_controller = std::make_shared<eAnimationController>("error_animation_controller", resourceList.size());	
+	error_animation_controller->Init(1, 0, 0, 0, 0, 0);
+	if (!error_animation_controller->AddAnimationState(std::make_unique<eAnimationState>("error_state", game.GetAnimationManager().Get(0), 1.0f)))
+		return false;
+
+	// TODO: register the error_animation_controller as the first element of resourceList
+	int hashKey = resourceHash.GetHashKey(std::string("error_animation_controller"));
+	resourceHash.Add(hashKey, resourceList.size());
+	resourceList.emplace_back(error_animation_controller);	// default error animation controller
 	return true;
 }
 
@@ -178,11 +182,14 @@ bool eAnimationControllerManager::LoadAndGet(const char * resourceFilename, std:
 			result->AddTriggerParameter(parameterName, initialTriggerValue);
 		} 
 
+		read.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
 		if (!VerifyRead(read)) {
 			result = resourceList[0];
 			return false;
 		}
 	}
+
+	loadState = LoadState::ANIMATION_STATES;
 
 	while (!read.eof() && loadState != LoadState::FINISHED) {
 		read.ignore(std::numeric_limits<std::streamsize>::max(), '{');	
@@ -237,6 +244,7 @@ bool eAnimationControllerManager::LoadAndGet(const char * resourceFilename, std:
 					int animationBlendMode = 0;
 					float stateSpeed = 0.0f;
 					read >> numAnimations >> animationBlendMode >> stateSpeed;
+					read.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
 					if (!VerifyRead(read)) {
 						result = resourceList[0];
 						return false;
@@ -282,7 +290,12 @@ bool eAnimationControllerManager::LoadAndGet(const char * resourceFilename, std:
 						yBlendParameter = &result->floatParameters[yParameterIndex];
 					}
 
-					auto newBlendState = std::make_unique<eBlendState>(stateName, numAnimations, xBlendParameter, yBlendParameter, blendMode, stateSpeed);
+
+					// TODO: if no floats values are listed (just an animationName\n) then default values to 
+					// (1.0f / numAnimations) * currentAnimationLoadedCount so they are evenly distributed
+					// OR: add a "distribute" boolean at the top of the blend state file-definition
+					// to indicate how to affect/ignore the values in the file
+					auto & newBlendState = std::make_unique<eBlendState>(stateName, numAnimations, xBlendParameter, yBlendParameter, blendMode, stateSpeed);
 					while (read.peek() != '}') {							// adding blend nodes
 						read.getline(buffer, sizeof(buffer), ' ');			// animation name
 						std::string animationName(buffer);
@@ -298,11 +311,13 @@ bool eAnimationControllerManager::LoadAndGet(const char * resourceFilename, std:
 							read >> nodeValue_Y;
 						
 						read.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-						newBlendState->AddBlendNode(animationName, nodeValue_X, nodeValue_Y);
+						if (!newBlendState->AddBlendNode(animationName, nodeValue_X, nodeValue_Y))
+							return false;									// bad animation name	// TODO: just log an error and let the error_animation play
 					}
 
 					read.ignore(std::numeric_limits<std::streamsize>::max(), '\n');	// skip past blend state delimiter "}\n"
 					newBlendState->Init();
+					// FIXME(?): blendNodesHash ClearAndResize to numAnimations may cause too many collisions
 					result->AddAnimationState(std::move(newBlendState));
 				}
 				loadState = LoadState::STATE_TRANSITIONS;
@@ -321,13 +336,6 @@ bool eAnimationControllerManager::LoadAndGet(const char * resourceFilename, std:
 						return false;
 					}
 
-					bool anyState = false;									// transition occurs from any eStateNode
-					read >> anyState;
-					if (!VerifyRead(read)) {
-						result = resourceList[0];
-						return false;
-					}
-
 					memset(buffer, 0, sizeof(buffer));
 					read.getline(buffer, sizeof(buffer), ' ');				// from state
 					std::string fromState(buffer);
@@ -336,16 +344,11 @@ bool eAnimationControllerManager::LoadAndGet(const char * resourceFilename, std:
 						return false;
 					}
 
-					// skip this transition if its fromState is invalid
+					// fromState is allow to be invalid for anyState == true
 					int fromStateIndex = result->GetStateIndex(fromState);
-					if (!anyState && fromStateIndex < 0) {
-						read.ignore(std::numeric_limits<std::streamsize>::max(), '}');
-						read.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-						continue;
-					}
 
 					memset(buffer, 0, sizeof(buffer));
-					read.getline(buffer, sizeof(buffer), '\n');				// to state
+					read.getline(buffer, sizeof(buffer), ' ');				// to state
 					std::string toState(buffer);
 					if (!VerifyRead(read)) {
 						result = resourceList[0];
@@ -360,17 +363,26 @@ bool eAnimationControllerManager::LoadAndGet(const char * resourceFilename, std:
 						continue;
 					}
 
-					float exitTime = 0.0f;
-					float offset = 0.0f;
-					read >> exitTime >> offset;
+					float exitTime = 0.0f;									// when to check conditions (in normalizedTime)
+					float offset = 0.0f;									// where to start toState (in normalizedTime)
+					bool anyState = false;									// transition occurs from any eStateNode
+					read >> anyState >> exitTime >> offset;
+					read.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
 					if (!VerifyRead(read)) {
 						result = resourceList[0];
 						return false;
 					}
 					
+					// skip this transition if its fromState is invalid
+					if (!anyState && fromStateIndex < 0) {
+						read.ignore(std::numeric_limits<std::streamsize>::max(), '}');
+						read.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+						continue;
+					}
+
 					if (offset < 0.0f)
 						offset = 0.0f;
-					
+
 					eStateTransition newTransition(transitionName, anyState, fromStateIndex, toStateIndex, exitTime, offset);
 					while (read.peek() != '}') {							// adding transition conditions
 						read.getline(buffer, sizeof(buffer), ' ');			// condition type (from named controller param's type)

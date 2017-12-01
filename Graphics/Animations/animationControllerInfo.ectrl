@@ -1,7 +1,7 @@
 imagesUsedBatchFilename										(filename order matters here: first images, then animations)
 animationsUsedBatchFilename
 initialStateName										(used to set initial currentState index)
-numStateNodes numTransitions numFloatParams numIntParams numBoolParams numTriggerParams		(used initialize the eHashIndexes, numStateNodes == num Animation_States + num Blend_States)
+numStateNodes numTransitions numIntParams numFloatParams numBoolParams numTriggerParams		(used initialize the eHashIndexes, numStateNodes == num Animation_States + num Blend_States)
 
 Controller_Parameters {
 paramType paramName paramInitialValue								(always list 1 or 2 params if theres at least one Blend_state)
@@ -34,13 +34,13 @@ animationName1 controllerFloatParam1Value1 controllerFloatParam2Value1
 
 State_Transitions {
 {
-transitionName anyStateBool fromStateName toStateName exitTimeNormalized offsetNormalized	(names get converted to indexes)
+transitionName fromStateName toStateName anyStateBool exitTimeNormalized offsetNormalized	(names get converted to indexes, last three params are int float float)
 controllerParamType controllerParamName compareEnumName	transitionValue				(type will be: int/float/bool/trigger, if bool then don't look for compareEnumName)
 controllerParamType1 controllerParamName1 compareEnumName1 transitionValue1			(compare will be: greater/greaterEqual/less/lessEqual/equal/notEqual)
 (repeat adding parameter-value-compare tuples)
 }
 {
-transitionName1 anyStateBool1 fromStateName1 toStateName1 exitTimeNormalized1 offsetNormalized1
+transitionName1 fromStateName1 toStateName1 anyStateBool1 exitTimeNormalized1 offsetNormalized1
 controllerParamType controllerParamName compareEnumName	transitionValue
 controllerParamType1 controllerParamName1 compareEnumName1 transitionValue
 (repeat adding parameter-value-compare tuples)

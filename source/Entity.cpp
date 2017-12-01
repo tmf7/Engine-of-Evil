@@ -18,17 +18,31 @@ eEntity::eEntity(const entitySpawnArgs_t & spawnArgs)
 		}
 	}
 
-	// init renderImage for draw order sorting
 	if (!spawnArgs.spriteFilename.empty()) {
+
+		// init renderImage draw order sorting
 		renderImage = std::make_unique<eRenderImage>(this);
-//		animationController = std::make_unique<eAnimationController>(this);	// TODO: animationController initialization should be just this one line
 		std::shared_ptr<eImage> spriteImage = nullptr;
 		if (!game.GetImageManager().LoadAndGet(spawnArgs.spriteFilename.c_str(), spriteImage))
-			throw badEntityCtorException(spawnArgs.spriteFilename.c_str());	
+			throw badEntityCtorException(spawnArgs.spriteFilename.c_str());
 
-//		animationController->SetImage(spriteImage);
+		renderImage->SetImage(spriteImage->GetManagerIndex());
+		int initialSpriteFrame = 0;
+		if (spawnArgs.initialSpriteFrame < 0 || spawnArgs.initialSpriteFrame > spriteImage->NumSubframes())
+			initialSpriteFrame = 0;
+
+		renderImage->SetImageFrame(initialSpriteFrame);
 		eVec3 blockMins = (eVec3)spawnArgs.localBounds[0];
 		renderImage->RenderBlock() = eBounds3D(blockMins, blockMins + spawnArgs.renderBlockSize);
+
+		// init animationController, if any
+		if (!spawnArgs.animationControllerFilename.empty()) {
+			std::shared_ptr<eAnimationController> prefabAnimationController = nullptr;
+			if (!game.GetAnimationControllerManager().LoadAndGet(spawnArgs.animationControllerFilename.c_str(), prefabAnimationController))
+				throw badEntityCtorException(spawnArgs.spriteFilename.c_str());	
+
+			animationController = std::make_unique<eAnimationController>(*prefabAnimationController);
+		}
 	}
 }
 
@@ -41,40 +55,40 @@ bool eEntity::Spawn(const int entityPrefabIndex, const eVec3 & worldPosition /*,
 	auto & prefabEntity = game.GetEntityPrefabManager().Get(entityPrefabIndex);
 	if (!prefabEntity->IsValid())
 		return false;
-
-	int spawnID = game.NumEntities();
+	
+	int spawnID = -1;
 	try {
-		game.AddEntity(std::make_shared<eEntity>(*prefabEntity));
-		auto & newEntity = game.GetEntity(spawnID);
-		newEntity->spawnedEntityID = spawnID;			// FIXME/BUG(!): game.RemoveEntity(entityID) will invalidate all indexes above entityID
-														// SOLUTION: make game.entities a HashTable (which also partially solves the movementPlanner &owner update)
-														// SOLUTION(?): or just rehash the current eHashIndex (that uses spawnIDs instead of names)
-														// TODO: the same goes for ImageManager and EntityPrefabManger's HashIndexes into std::vectors
-		
-
-		if (newEntity->animationController != nullptr) {
-			newEntity->IsStatic() = false;
-			newEntity->renderImage->SetIsSelectable(true);
-			newEntity->renderImage->RenderBlock() += worldPosition;
-
-			// FIXME: remove renderImage dependency on the collisionModel (and vis versa)
-			if (newEntity->collisionModel != nullptr)
-				newEntity->collisionModel->SetOrigin(eVec2(worldPosition.x, worldPosition.y));
-
-			// TODO: eMovementPlanner may be opposite facing, and eEntity may not have a eRenderImage, so only eAnimationController cares about facing
-//			if (newEntity->animationController != nullptr)	
-//				newEntity->animationController->SetFacingDirection(facingDir);		
-
-			newEntity->UpdateRenderImageDisplay();
-			newEntity->UpdateRenderImageOrigin();
-		}
-		return true;
+		spawnID = game.AddEntity(std::make_unique<eEntity>(*prefabEntity));
 	} catch (const badEntityCtorException & e) {
 		// TODO: output to an error log file (popup is fine for now because it's more obvious and immediate)
 		std::string message = e.what + " caused eEntity (" + std::to_string(spawnID) + ") spawn failure.";
 		SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_INFORMATION, "Error", message.c_str(), NULL);
 		return false;
 	}
+
+	if (spawnID < 0)
+		return false;
+
+	auto & newEntity = game.GetEntity(spawnID);
+	newEntity->spawnedEntityID = spawnID;
+														
+	if (newEntity->animationController != nullptr) {
+		newEntity->IsStatic() = false;
+		newEntity->renderImage->SetIsSelectable(true);
+		newEntity->renderImage->RenderBlock() += worldPosition;
+
+		// FIXME: remove renderImage dependency on the collisionModel (and vis versa)
+		if (newEntity->collisionModel != nullptr)
+			newEntity->collisionModel->SetOrigin(eVec2(worldPosition.x, worldPosition.y));
+
+		// TODO: eMovementPlanner may be opposite facing, and eEntity may not have a eRenderImage, so only eAnimationController cares about facing
+//			if (newEntity->animationController != nullptr)	
+//				newEntity->animationController->SetFacingDirection(facingDir);		
+
+		newEntity->UpdateRenderImageDisplay();
+		newEntity->UpdateRenderImageOrigin();
+	}
+	return true;
 }
 
 //***************

@@ -37,10 +37,15 @@ bool eImageManager::Init() {
 		((Uint32*)pixels)[i] = redPixel;
 	SDL_UnlockTexture(error_texture);
 
+	auto & error_image = std::make_shared<eImage>(error_texture, "error_image", resourceList.size());
+	std::vector<SDL_Rect> oneDefaultFrame;
+	oneDefaultFrame.emplace_back(SDL_Rect{ 0, 0, error_image->GetWidth(), error_image->GetHeight() });
+	error_image->SetSubframes(std::move(oneDefaultFrame));
+
 	// register the error_image as the first element of imageList
 	int hashKey = resourceHash.GetHashKey(std::string("error_image"));
 	resourceHash.Add(hashKey, resourceList.size());
-	resourceList.emplace_back(std::make_shared<eImage>(error_texture, "invalid_file", resourceList.size()));	// default error image
+	resourceList.emplace_back(error_image);	// default error image
 	return true;
 }
 

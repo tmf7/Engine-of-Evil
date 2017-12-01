@@ -1,4 +1,4 @@
 1 30 2			# numAnimationFrames,framesPerSecond, loop [1 = once, 2 = repeat]
-Graphics/Animations/sHero/sHero_Idle/Textures/sHero_Idle_All.png {
+Graphics/Animations/sHero/sHero_Idle/Textures/Image_defs/sHero_Idle_All.eimg{
 15 0.0			# subframe index within image, normalizedTime	# animationFrame 0
 }

@@ -20,11 +20,11 @@ std::array<eTileImpl, eTileImpl::maxTileTypes> eTileImpl::tileTypes;
 // (repeat for all default renderBlock sizes)
 // # begin tile type definitions comment\n
 // num_tiles: number of tiles\n
-// imageFilename\n
+// imageFilename.eimg\n
 // subframeIndex colliderType # master tile index comment\n
 // (repeat tile property definitions for this file)
 // # (end of tileset definition comment)\n
-// imageFilename\n
+// imageFilename.eimg\n
 // subframeIndex colliderType # master tile index comment\n
 // # (end of tileset definition comment)\n
 // (repeat image and corresponding tile definition pattern)
