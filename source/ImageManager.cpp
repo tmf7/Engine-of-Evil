@@ -87,7 +87,6 @@ bool eImageManager::LoadAndGetConstantText(TTF_Font * font, const char * text, c
 bool eImageManager::LoadSubframes(std::ifstream & read, std::shared_ptr<eImage> & result) {
 	int numFrames = 0;
 	read >> numFrames;
-	read.ignore(std::numeric_limits<std::streamsize>::max(), '\n');			// skip the rest of the line comment
 	if (!VerifyRead(read))
 		return false;
 
@@ -131,7 +130,7 @@ bool eImageManager::LoadSubframes(std::ifstream & read, std::shared_ptr<eImage> 
 // either the found image and returns true, 
 // or default image and returns false
 // DEBUG (.eimg file format):
-// imageFilepath\n
+// textureFilepath\n
 // textureAccessType numSubframes\n	
 // x y w h # frame number 0 comment for reference\n
 // x y w h # this is ignored 1 this is ignored\n
@@ -155,9 +154,9 @@ bool eImageManager::LoadAndGet(const char * resourceFilename, std::shared_ptr<eI
 	if (!read.good()) 
 		return false;
 
-	char imageFilepath[MAX_ESTRING_LENGTH];
-	memset(imageFilepath, 0, sizeof(imageFilepath));
-	read.getline(imageFilepath, sizeof(imageFilepath), '\n');
+	char textureFilepath[MAX_ESTRING_LENGTH];
+	memset(textureFilepath, 0, sizeof(textureFilepath));
+	read.getline(textureFilepath, sizeof(textureFilepath), '\n');				// texture file
 	if(!VerifyRead(read))
 		return false;
 
@@ -176,7 +175,7 @@ bool eImageManager::LoadAndGet(const char * resourceFilename, std::shared_ptr<eI
 		
 	SDL_Texture * texture = NULL;
 	if (accessType != SDL_TEXTUREACCESS_STATIC) {
-		SDL_Surface * source = IMG_Load(imageFilepath);
+		SDL_Surface * source = IMG_Load(textureFilepath);
 
 		// unable to load file
 		if (source == NULL) {
@@ -206,7 +205,7 @@ bool eImageManager::LoadAndGet(const char * resourceFilename, std::shared_ptr<eI
 		SDL_FreeSurface(source);
 		SDL_SetTextureBlendMode(texture, SDL_BLENDMODE_BLEND);
 	} else {
-		texture = IMG_LoadTexture(game.GetRenderer().GetSDLRenderer(), imageFilepath);
+		texture = IMG_LoadTexture(game.GetRenderer().GetSDLRenderer(), textureFilepath);
 
 		// unable to initialize texture
 		if (texture == NULL) {
@@ -216,7 +215,7 @@ bool eImageManager::LoadAndGet(const char * resourceFilename, std::shared_ptr<eI
 	}
 
 	result = std::make_shared<eImage>(texture, resourceFilename, resourceList.size());
-	if (!LoadSubframes(read, result)) {
+	if (!LoadSubframes(read, result)) {											// load subframes
 		result = resourceList[0];	// default error image, and destroy recently allocated result
 		return false;
 	}

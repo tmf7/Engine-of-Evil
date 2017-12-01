@@ -90,27 +90,40 @@ bool eAnimationController::CheckTransitionConditions(const eStateTransition & tr
 													std::get<COMPARE_ENUM>(conditionTuple), 
 													std::get<2>(conditionTuple)
 												  );
+		if (!updateState)
+			return false;
 	}
+
 	for (auto & conditionTuple : transition.intConditions) {
 		updateState = eMath::CompareUtility<int>( intParameters[std::get<0>(conditionTuple)], 
 												  std::get<COMPARE_ENUM>(conditionTuple), 
 												  std::get<2>(conditionTuple)
 												);
+		if (!updateState)
+			return false;
 	}
+
 	for (auto & conditionPair : transition.boolConditions) {
 		updateState = (boolParameters[conditionPair.first] == conditionPair.second);
 	}
-	for (auto & conditionPair : transition.triggerConditions) {
+
+	static std::vector<size_t> resetTriggers;						// static to reduce dynamic allocations
+	resetTriggers.clear();										// lazy clearing
+	for (size_t i = 0; i < transition.triggerConditions.size(); ++i) {
+		const auto & conditionPair = transition.triggerConditions[i];
 		updateState = (triggerParameters[conditionPair.first] == conditionPair.second);
+		if (updateState)
+			resetTriggers.emplace_back(i);
+		else
+			return false;
 	}
 
-	if (updateState) {
-		currentState = transition.toState;
-		animationStates[currentState]->SetNormalizedTime(transition.offset);
-		for (auto & trigger : triggerParameters)
-			trigger = false;
-	}
-	return updateState;
+	currentState = transition.toState;
+	animationStates[currentState]->SetNormalizedTime(transition.offset);
+	for (auto & triggerIndex : resetTriggers)					// reset only consumed triggers
+		triggerParameters[triggerIndex] = false;
+
+	return true;
 }
 
 //************
@@ -141,15 +154,62 @@ void eAnimationController::Update() {
 
 //**************
 // eAnimationController::InitHashIndexes
-// minimizes memory footprint, while minimizing hash collisions
+// minimizes memory footprint, and hash collisions, and number of dynamic allocation calls
 //**************
-void eAnimationController::InitHashIndexes(int numStates, int numTransitions, int numInts, int numFloats, int numBools, int numTriggers) {
+void eAnimationController::Init(int numStates, int numTransitions, int numInts, int numFloats, int numBools, int numTriggers) {
 	statesHash.ClearAndResize(numStates);
 	transitionsHash.ClearAndResize(numTransitions);
 	intParamsHash.ClearAndResize(numInts);
 	floatParamsHash.ClearAndResize(numFloats);
 	boolParamsHash.ClearAndResize(numBools);
 	triggerParamsHash.ClearAndResize(numTriggers);
+	animationStates.reserve(numStates);
+	stateTransitions.reserve(numTransitions);
+	intParameters.reserve(numInts);
+	floatParameters.reserve(numFloats);
+	boolParameters.reserve(numBools);
+	triggerParameters.reserve(numTriggers);
+}
+
+//***********************
+// eAnimationController::AddAnimationState
+// does not modify any states if newState::name already exists, and returns false
+// otherwise adds the new state to *this and returns true
+//***********************
+bool eAnimationController::AddAnimationState(std::unique_ptr<eStateNode> && newState) {
+	if (statesHash.First(newState->nameHash) > -1)
+		return false;
+	
+	statesHash.Add(newState->nameHash, animationStates.size());
+	animationStates.emplace_back(std::move(newState));
+	return true;
+}
+
+//***********************
+// eAnimationController::AddTransition
+// DEBUG: always adds the transition, even if it has the same fromState, or fromState::nameHash
+//***********************
+void eAnimationController::AddTransition(eStateTransition && newTransition) {
+	stateTransitions.emplace_back(std::move(newTransition));
+}	
+
+//***********************
+// eAnimationController::SortAndHashTransitions
+// transitions that occur from anyState are arranged so their conditions are checked first
+//***********************
+void eAnimationController::SortAndHashTransitions() {
+	QuickSort( stateTransitions.data(), 
+			   stateTransitions.size(),
+				[](auto && a, auto && b) { 
+					if (a.anyState && !b.anyState) return -1;
+					else if (!a.anyState && b.anyState) return 1;
+					return 0; 
+	});
+
+	for (size_t i = 0; i < stateTransitions.size(); ++i) {
+		const int hashKey = animationStates[stateTransitions[i].fromState]->nameHash;
+		transitionsHash.Add(hashKey, i);
+	}
 }
 
 //***********************

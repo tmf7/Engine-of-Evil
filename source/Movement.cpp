@@ -260,7 +260,7 @@ bool eMovementPlanner::CheckVectorPath(decision_t & along) {
 	float mapEdgeFraction = 1.0f;
 
 	auto & mapEdges = game.GetMap().EdgeColliders();
-	for(int i = 0; i < mapEdges.size(); ++i) {
+	for(size_t i = 0; i < mapEdges.size(); ++i) {
 		float movingAway = mapEdges[i].second * along.vector;
 		if (movingAway >= 0.0f) 
 			continue;

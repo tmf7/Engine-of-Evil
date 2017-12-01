@@ -42,11 +42,12 @@ eGame::ErrorCode eGame::Init() {
 //	if (!animationManager.Init())
 //		return ANIMATION_MANAGER_ERROR;
 
-	try {
+//	try {
 		input.Init();
-	} catch (const std::bad_alloc & e) {
-		return INPUT_ERROR;
-	}
+//	} catch (const std::bad_alloc & e) {
+//		throw;
+//		return INPUT_ERROR;						// TODO: log a proper error
+//	}
 
 	camera.Init();
 

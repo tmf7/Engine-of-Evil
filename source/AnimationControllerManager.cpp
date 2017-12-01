@@ -17,9 +17,66 @@ bool eAnimationControllerManager::Init() {
 }
 
 //***********************
-// eAnimationManager::LoadAndGet
+// eAnimationControllerManager::LoadAndGet
 // DEBUG (.ectrl file format):
-// TODO(!!): ***********define the file format here**************
+// DEBUG: group order is always Controller_Parameters -> Animation_States -> Blend_States -> State_Transitions
+// DEBUG: all major-group closing braces '}' must happen at the start of a newline,
+// while opening braces '{' are on the same line as the major-group header
+// DEBUG: fill out all fields, unless the group is empty then just have a closing brace '}'
+// DEBUG: if one eBlendState is in "Blend_States {", then there must be at least one float parameter in "Controller_Parameters {"
+// DEBUG: if SIMPLE_1D blendMode with one controller parameter, just list the same parameter twice on a blendState
+/*
+imagesUsedBatchFilename\n																		(filename order matters here: first images, then animations)
+animationsUsedBatchFilename\n
+initialStateName\n																				(used to set initial currentState index)
+numStateNodes numTransitions numFloatParams numIntParams numBoolParams numTriggerParams\n		(used initialize the eHashIndexes, numStateNodes == num Animation_States + num Blend_States)
+---ANY_NUMBER_OF_NEWLINES HERE----
+Controller_Parameters {\n
+paramType paramName paramInitialValue\n															(always list 1 or 2 params if there's at least one Blend_state)
+paramType1 paramName1 paramInitialValue1\n														(type will be: int/float/bool/trigger)
+(repeat adding parameters)
+}\n
+---ANY_NUMBER_OF_NEWLINES HERE----
+Animation_States {\n
+stateName singleAnimationName stateSpeed\n
+stateName1 singleAnimationName1 stateSpeed1\n
+(repeat adding states)
+}\n
+---ANY_NUMBER_OF_NEWLINES HERE----
+Blend_States {\n
+{\n
+stateName numAnimationsInState dimension stateSpeed\n											(dimension will be: 1 or 2 for SIMPLE_1D or FREEFORM_2D, which dictates the number of float param(s) used)
+controllerFloatParam1 controllerFloatParam\n													(always list two param names here, even if repeated)
+animationName controllerFloatParam1Value controllerFloatParam2Value\n							(max of 2, min of 0, but it defaults to evenly distributed values)
+animationName1 controllerFloatParam1Value1 controllerFloatParam2Value1\n
+(repeat adding animations)
+}\n
+{\n
+stateName numAnimationsInState dimension stateSpeed\n
+controllerFloatParam1 controllerFloatParam2\n
+animationName controllerFloatParam1Value controllerFloatParam2Value\n	
+animationName1 controllerFloatParam1Value1 controllerFloatParam2Value1\n	
+}\n
+(repeat adding states)
+}\n
+---ANY_NUMBER_OF_NEWLINES HERE----
+State_Transitions {\n
+{\n
+transitionName anyStateBool fromStateName toStateName exitTimeNormalized offsetNormalized\n			(anystateBool will be: 0/1)
+controllerParamType controllerParamName compareEnumName	transitionValue\n							(type will be: int/float/bool/trigger)
+controllerParamType1 controllerParamName1 compareEnumName1 transitionValue1\n						(compare will be: greater/greaterEqual/less/lessEqual/equal/notEqual)
+(repeat adding parameter-value-compare tuples)
+}\n
+{\n
+transitionName1 anyStateBool1 fromStateName1 toStateName1 exitTimeNormalized1 offsetNormalized1\n
+controllerParamType controllerParamName compareEnumName	transitionValue\n
+controllerParamType1 controllerParamName1 compareEnumName1 transitionValue\n
+(repeat adding parameter-value-compare tuples)
+}\n
+(repeat adding transitions)
+}\n 
+---END_OF_FILE---
+*/
 // [NOTE]: batch animation files are .bctrl
 //***********************
 bool eAnimationControllerManager::LoadAndGet(const char * resourceFilename, std::shared_ptr<eAnimationController> & result) {
@@ -59,7 +116,7 @@ bool eAnimationControllerManager::LoadAndGet(const char * resourceFilename, std:
 		return false;
 	}
 
-	int numStateNodes = 0;												// initialize hashindex sizes
+	int numStateNodes = 0;												// controller configuration
 	int numTransitions = 0;
 	int numIntParams = 0;
 	int numFloatParams = 0;
@@ -71,7 +128,7 @@ bool eAnimationControllerManager::LoadAndGet(const char * resourceFilename, std:
 		return false;
 	}
 
-	result->InitHashIndexes(numStateNodes, numTransitions, numIntParams, numFloatParams, numBoolParams, numTriggerParams);
+	result->Init(numStateNodes, numTransitions, numIntParams, numFloatParams, numBoolParams, numTriggerParams);
 
 	enum class LoadState {
 		CONTROLLER_PARAMETERS,
@@ -253,7 +310,6 @@ bool eAnimationControllerManager::LoadAndGet(const char * resourceFilename, std:
 			}
 			
 			case LoadState::STATE_TRANSITIONS: { 
-/*
 				while (read.peek() != '}') {								// adding blend states
 					read.ignore(std::numeric_limits<std::streamsize>::max(), '\n');		// skip past implicit "{\n"
 
@@ -280,12 +336,28 @@ bool eAnimationControllerManager::LoadAndGet(const char * resourceFilename, std:
 						return false;
 					}
 
+					// skip this transition if its fromState is invalid
+					int fromStateIndex = result->GetStateIndex(fromState);
+					if (!anyState && fromStateIndex < 0) {
+						read.ignore(std::numeric_limits<std::streamsize>::max(), '}');
+						read.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+						continue;
+					}
+
 					memset(buffer, 0, sizeof(buffer));
 					read.getline(buffer, sizeof(buffer), '\n');				// to state
 					std::string toState(buffer);
 					if (!VerifyRead(read)) {
 						result = resourceList[0];
 						return false;
+					}
+
+					// skip this transition if its toState is invalid
+					int toStateIndex = result->GetStateIndex(toState);
+					if (toStateIndex < 0) {
+						read.ignore(std::numeric_limits<std::streamsize>::max(), '}');
+						read.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+						continue;
 					}
 
 					float exitTime = 0.0f;
@@ -296,11 +368,10 @@ bool eAnimationControllerManager::LoadAndGet(const char * resourceFilename, std:
 						return false;
 					}
 					
+					if (offset < 0.0f)
+						offset = 0.0f;
+					
 					eStateTransition newTransition(transitionName, anyState, fromStateIndex, toStateIndex, exitTime, offset);
-
-
-
-
 					while (read.peek() != '}') {							// adding transition conditions
 						read.getline(buffer, sizeof(buffer), ' ');			// condition type (from named controller param's type)
 						std::string conditionType(buffer);
@@ -309,20 +380,94 @@ bool eAnimationControllerManager::LoadAndGet(const char * resourceFilename, std:
 							return false;
 						}
 
-						
-						// controller param name		(use to lookup its index)
-						// compareString				(if-else to set COMPARE_ENUM
-						// value						(getline up to '\n' for this one.... >> wont do that...)
+						read.getline(buffer, sizeof(buffer), ' ');			// controller parameter name
+						std::string controllerParameterName(buffer);
+						if (!VerifyRead(read)) {
+							result = resourceList[0];
+							return false;
+						}
 
-						
-						newTransition->Add_XYZ_Condition(controllerFloatIndex, compareEnum, value);		// unless trigger, then no value needed
+						read.getline(buffer, sizeof(buffer), ' ');			// comparision operator name
+						std::string compareOperatorName(buffer);
+						if (!VerifyRead(read)) {
+							result = resourceList[0];
+							return false;
+						}
+
+						// DEBUG: compareEnum will be ignored for bools and triggers because they're always COMPARE_ENUM::EQUAL
+						COMPARE_ENUM compareEnum;
+						if (compareOperatorName == "greater")			compareEnum = COMPARE_ENUM::GREATER;
+						else if (compareOperatorName == "greaterEqual") compareEnum = COMPARE_ENUM::GREATER_EQUAL;
+						else if (compareOperatorName == "less")			compareEnum = COMPARE_ENUM::LESS;
+						else if (compareOperatorName == "lessEqual")	compareEnum = COMPARE_ENUM::LESS_EQUAL;
+						else if (compareOperatorName == "equal")		compareEnum = COMPARE_ENUM::EQUAL;
+						else if (compareOperatorName == "notEqual")		compareEnum = COMPARE_ENUM::NOT_EQUAL;
+
+						if (conditionType == "int") {						// condition value, and validating parameter names
+
+							const int controllerIntIndex = result->GetIntParameterIndex(controllerParameterName);
+							if (controllerIntIndex >= 0) {
+								int intValue = 0;
+								read >> intValue;
+								read.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+								if (!VerifyRead(read)) {
+									result = resourceList[0];
+									return false;
+								}
+
+								newTransition.AddIntCondition(controllerIntIndex, compareEnum, intValue);
+							} else {
+								read.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+							}
+
+						} else if (conditionType == "float") {
+
+							const int controllerFloatIndex = result->GetFloatParameterIndex(controllerParameterName);
+							if (controllerFloatIndex >= 0) {
+								float floatValue = 0.0f;
+								read >> floatValue;
+								read.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+								if (!VerifyRead(read)) {
+									result = resourceList[0];
+									return false;
+								}
+
+								newTransition.AddFloatCondition(controllerFloatIndex, compareEnum, floatValue);
+							} else {
+								read.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+							}
+
+						} else if (conditionType == "bool") {
+
+							const int controllerBoolIndex = result->GetBoolParameterIndex(controllerParameterName);
+							if (controllerBoolIndex >= 0) {	
+								bool boolValue = false;
+								read >> boolValue;
+								read.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+								if (!VerifyRead(read)) {
+									result = resourceList[0];
+									return false;
+								}
+
+								newTransition.AddBoolCondition(controllerBoolIndex, boolValue);
+							} else {
+								read.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+							}
+
+						} else if (conditionType == "trigger") {
+
+							const int controllerTriggerIndex = result->GetBoolParameterIndex(controllerParameterName);
+							if (controllerTriggerIndex >= 0)
+								newTransition.AddTriggerCondition(controllerTriggerIndex);
+							else
+								read.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+						} 
 					}
 
 					read.ignore(std::numeric_limits<std::streamsize>::max(), '\n');	// skip past blend state delimiter "}\n"
-
-//					result->AddTransition(std::move(newTransition));
+					result->AddTransition(std::move(newTransition));
 				}
-*/
+				result->SortAndHashTransitions();
 				loadState = LoadState::FINISHED;
 				break;
 			}

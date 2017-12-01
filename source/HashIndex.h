@@ -82,7 +82,7 @@ inline eHashIndex::eHashIndex(int initialHashSize) {
 // DEBUG: assert (index >= 0)
 //*******************
 inline void eHashIndex::Add(const int hashkey, const int index) {
-	if (index >= indexChain.size())		// DEBUG: std::vector may allocate more than max-signed-int values, but not for my purposes
+	if (index >= (int)indexChain.size())		// DEBUG: std::vector may allocate more than max-signed-int values, but not for my purposes
 		indexChain.resize(index + 1);	// DEBUG: indexChain.size() need not be a power of 2, it doesn't affect hashkey spread
 
 	int k = hashkey & hashMask;
@@ -159,7 +159,7 @@ inline void eHashIndex::InsertIndex(const int hashkey, const int index) {
 			}
 		}
 	}
-	if (max >= indexChain.size()) {
+	if (max >= (int)indexChain.size()) {
 		indexChain.resize(max + 1);		// DEBUG: indexChain.size() need not be a power of 2, it doesn't affect hashkey spread
 	}
 	for (int i = max; i > index; i--) {

@@ -72,7 +72,7 @@ void eBlendState::Update() {
 	int bestAnimationIndex = -1;
 
 	// blendNode weights based on squared-distance to observed eAnimationController::floatParameters
-	for (int i = 0; i < blendNodes.size(); ++i) {
+	for (size_t i = 0; i < blendNodes.size(); ++i) {
 		float distSqr = (blendNodes[i] - controllerNode).LengthSquared();
 		if (distSqr < lowestDistSqr) {
 			lowestDistSqr = distSqr;

@@ -21,7 +21,7 @@ eEntity::eEntity(const entitySpawnArgs_t & spawnArgs)
 	// init renderImage for draw order sorting
 	if (!spawnArgs.spriteFilename.empty()) {
 		renderImage = std::make_unique<eRenderImage>(this);
-		animationController = std::make_unique<eAnimationController>(this);	// TODO: animationController initialization should be just this one line
+//		animationController = std::make_unique<eAnimationController>(this);	// TODO: animationController initialization should be just this one line
 		std::shared_ptr<eImage> spriteImage = nullptr;
 		if (!game.GetImageManager().LoadAndGet(spawnArgs.spriteFilename.c_str(), spriteImage))
 			throw badEntityCtorException(spawnArgs.spriteFilename.c_str());	
