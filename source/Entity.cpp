@@ -51,7 +51,7 @@ eEntity::eEntity(const entitySpawnArgs_t & spawnArgs)
 // copies a prefab eEntity and adds unique details
 // TODO: position via a single stack eTransform, not the eCollisionModel, or eRenderImage, or eAnimationController
 //***************
-bool eEntity::Spawn(const int entityPrefabIndex, const eVec3 & worldPosition /*, const eVec2 & facingDir*/) {
+bool eEntity::Spawn(const int entityPrefabIndex, const eVec3 & worldPosition) {
 	auto & prefabEntity = game.GetEntityPrefabManager().Get(entityPrefabIndex);
 	if (!prefabEntity->IsValid())
 		return false;
@@ -80,10 +80,6 @@ bool eEntity::Spawn(const int entityPrefabIndex, const eVec3 & worldPosition /*,
 		// FIXME: remove renderImage dependency on the collisionModel (and vis versa)
 		if (newEntity->collisionModel != nullptr)
 			newEntity->collisionModel->SetOrigin(eVec2(worldPosition.x, worldPosition.y));
-
-		// TODO: eMovementPlanner may be opposite facing, and eEntity may not have a eRenderImage, so only eAnimationController cares about facing
-//			if (newEntity->animationController != nullptr)	
-//				newEntity->animationController->SetFacingDirection(facingDir);		
 
 		newEntity->UpdateRenderImageDisplay();
 		newEntity->UpdateRenderImageOrigin();

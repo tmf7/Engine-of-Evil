@@ -31,7 +31,7 @@ public:
 
 								eEntity(const entitySpawnArgs_t & spawnArgs);
 
-	static bool					Spawn(const int entityPrefabIndex, const eVec3 & worldPosition/*, const eVec2 & facingDir*/);
+	static bool					Spawn(const int entityPrefabIndex, const eVec3 & worldPosition);
 
 	void						SetPlayerSelected(bool isSelected);
 	bool						GetPlayerSelected() const;
