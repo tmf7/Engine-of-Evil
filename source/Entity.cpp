@@ -104,6 +104,23 @@ void eEntity::Think() {
 		UpdateRenderImageDisplay();
 		UpdateRenderImageOrigin();
 	}
+
+// FREEHILL BEGIN logic test
+	auto & velocity = collisionModel->GetVelocity();
+	eVec2 facingDirection;
+	if (velocity != vec2_zero) {
+		facingDirection = velocity.Normalized();
+		eMath::CartesianToIsometric(facingDirection.x, facingDirection.y);
+		facingDirection.Normalize();
+		oldFacingDirection = facingDirection;
+	} else {
+		facingDirection = oldFacingDirection * 0.25f;
+	}
+			
+	animationController->SetFloatParameter(xSpeedParameterHash, facingDirection.x);
+	animationController->SetFloatParameter(ySpeedParameterHash, facingDirection.y);
+	animationController->SetFloatParameter(magnitudeParameterHash, facingDirection.Length());
+// FREEHILL END logic test
 }
 
 //***************

@@ -31,8 +31,8 @@ public:
 public:
 												eBlendState(const std::string & name,
 															int numAnimations,
-															float * xBlendParameter,
-															float * yBlendParameter = nullptr,
+															int xBlendParameterHash,
+															int yBlendParameterHash,
 															AnimationBlendMode blendMode = AnimationBlendMode::SIMPLE_1D,
 															float speed = 1.0f);
 
@@ -56,9 +56,9 @@ private:
 	eHashIndex									blendNodesHash;		// indexed by eAnimation::name
 	std::vector<eVec2>							blendNodes;
 
-	// pointers to eAnimationController::floatParameters index to listen to for blendNodes comparison
-	float *										xBlendParameter;
-	float *										yBlendParameter;
+	// eAnimationController::floatParameters of this->stateMachine to listen to for blendNodes comparison
+	int											xBlendParameterHash;
+	int											yBlendParameterHash;
 
 };
 

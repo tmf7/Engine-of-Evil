@@ -58,6 +58,13 @@ private:
 	eVec2						imageColliderOffset;	
 	int							spawnedEntityID;		// index within eGame::entities
 	bool						playerSelected;			// player is controlling this eEntity
+
+// FREEHILL BEGIN logic test
+	eVec2 oldFacingDirection			= vec2_oneZero;
+	const int xSpeedParameterHash		= std::hash<std::string>()("xSpeed");
+	const int ySpeedParameterHash		= std::hash<std::string>()("ySpeed");
+	const int magnitudeParameterHash	= std::hash<std::string>()("magnitude");
+// FREEHILL END logic test
 };
 
 //**************

@@ -11,7 +11,10 @@
 #include "Game.h"
 #include <Windows.h>
 
- int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR lpCmdLine, INT nCmdShow) {
+// DEBUG: no using SDL_main
+#undef main
+
+ int main() {
 	eGame::ErrorCode initCode;
 
 	initCode = game.Init();

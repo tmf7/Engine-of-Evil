@@ -48,13 +48,14 @@ void ePlayer::Think() {
 		const float xMove = moveSpeed * (float)(input.KeyHeld(SDL_SCANCODE_RIGHT) - input.KeyHeld(SDL_SCANCODE_LEFT));
 		const float yMove = moveSpeed * (float)(input.KeyHeld(SDL_SCANCODE_DOWN) - input.KeyHeld(SDL_SCANCODE_UP));
 
-		if (SDL_fabs(xMove) > 0.0f || SDL_fabs(yMove) > 0.0f) {
-			eVec2 moveInput(xMove, yMove);
-			moveInput.Normalize();
-			moveInput *= moveSpeed;
-			eMath::IsometricToCartesian(moveInput.x, moveInput.y);
-			auto & entityCollisionModel = entity->CollisionModel();
-			entityCollisionModel.SetVelocity(eVec2(moveInput.x, moveInput.y));
+		eVec2 moveInput(xMove, yMove);
+		moveInput.Normalize();
+		moveInput *= moveSpeed;
+		eMath::IsometricToCartesian(moveInput.x, moveInput.y);
+		auto & entityCollisionModel = entity->CollisionModel();
+		entityCollisionModel.SetVelocity(eVec2(moveInput.x, moveInput.y));
+
+		if (entityCollisionModel.GetVelocity() != vec2_zero) {
 			entityCollisionModel.UpdateOrigin();
 		}
 	}
@@ -138,7 +139,7 @@ void ePlayer::Draw() {
 
 	// highlight those selected
 	for (auto & entity : groupSelection)
-		game.GetRenderer().DrawIsometricPrism(lightBlueColor, entity->RenderImage().RenderBlock(), RENDERTYPE_DYNAMIC);
+		;//game.GetRenderer().DrawIsometricPrism(lightBlueColor, entity->RenderImage().RenderBlock(), RENDERTYPE_DYNAMIC);
 
 }
 

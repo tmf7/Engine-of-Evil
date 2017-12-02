@@ -141,6 +141,7 @@ void eAnimationController::Update() {
 	}
 
 	// DEBUG: currentState transition checks are still allowed even if an anyState transition has triggered
+	// FIXME(performance): the same transition will get checked twice if its also an anyState and a transition hasn't occured yet
 	const int hashkey = animationStates[currentState]->nameHash;
 	for (int i = transitionsHash.First(hashkey); i != -1; i = transitionsHash.Next(i)) {
 		if ((stateTransitions[i].fromState == currentState) &&
@@ -149,7 +150,7 @@ void eAnimationController::Update() {
 		}
 	}
 
-	 animationStates[currentState]->Update();
+	animationStates[currentState]->Update();
 }
 
 //**************

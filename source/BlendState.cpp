@@ -4,9 +4,9 @@
 //*********************
 // eBlendState::eBlendState
 //*********************
-eBlendState::eBlendState(const std::string & name, int numAnimations, float * xBlendParameter, float * yBlendParameter, AnimationBlendMode blendMode, float speed)
-	: xBlendParameter(xBlendParameter),
-	  yBlendParameter(yBlendParameter),
+eBlendState::eBlendState(const std::string & name, int numAnimations, int xBlendParameterHash, int yBlendParameterHash, AnimationBlendMode blendMode, float speed)
+	: xBlendParameterHash(xBlendParameterHash),
+	  yBlendParameterHash(yBlendParameterHash),
 	  blendMode(blendMode),
 	  currentAnimationIndex(0) {
 	this->speed = speed;
@@ -67,7 +67,9 @@ void eBlendState::SwapAnimation(int animationIndex) {
 // should being playing
 //*********************
 void eBlendState::Update() {
-	eVec2 controllerNode(*xBlendParameter, (blendMode == AnimationBlendMode::SIMPLE_1D ? 0.0f : *yBlendParameter));
+	const float xBlend = stateMachine->GetFloatParameter(xBlendParameterHash);
+	const float yBlend = stateMachine->GetFloatParameter(yBlendParameterHash);
+	eVec2 controllerNode(xBlend, (blendMode == AnimationBlendMode::SIMPLE_1D ? 0.0f : yBlend));
 	float lowestDistSqr = FLT_MAX;
 	int bestAnimationIndex = -1;
 

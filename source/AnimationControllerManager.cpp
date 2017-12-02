@@ -142,6 +142,8 @@ bool eAnimationControllerManager::LoadAndGet(const char * resourceFilename, std:
 		FINISHED
 	};
 	LoadState loadState = LoadState::CONTROLLER_PARAMETERS;
+	int defaultFloatNameHash = 0;
+	bool firstFloatNameHashSaved = false;
 
 	// DEBUG: always put a major-section's closing brace '}' on a new line below the last entry
 	read.ignore(std::numeric_limits<std::streamsize>::max(), '{');		// jump to Controller_Parameters {\n
@@ -172,6 +174,10 @@ bool eAnimationControllerManager::LoadAndGet(const char * resourceFilename, std:
 			float initialFloatValue = 0.0f;
 			read >> initialFloatValue;
 			result->AddFloatParameter(parameterName, initialFloatValue);
+			if (!firstFloatNameHashSaved) {								// saved first hashkey to use for blendState default parameters, if needed
+				firstFloatNameHashSaved = true;
+				defaultFloatNameHash = result->floatParamsHash.GetHashKey(parameterName);
+			}
 		} else if (parameterType == "bool") {
 			bool initialBoolValue = false;
 			read >> initialBoolValue;
@@ -265,14 +271,14 @@ bool eAnimationControllerManager::LoadAndGet(const char * resourceFilename, std:
 						return false;
 					}
 
-					// DEBUG: .ectrl format demands if one blend state exists at least one float param exists
-					int xParameterIndex = result->GetFloatParameterIndex(xBlendParameterName);
-					if (xParameterIndex < 0)
-						xParameterIndex = 0;
+					// DEBUG: .ectrl format demands that if one blend state exists, then at least one float param exists
+					int xBlendParameterHash = result->floatParamsHash.GetHashKey(xBlendParameterName);
+					int xBlendParameterIndex = result->GetFloatParameterIndex(xBlendParameterName);
+					if (xBlendParameterIndex < 0)							// invalid parameter name, use default
+						xBlendParameterHash = defaultFloatNameHash;
 
-					float * xBlendParameter = &result->floatParameters[xParameterIndex];
-					float * yBlendParameter = nullptr;
 
+					int yBlendParameterHash = defaultFloatNameHash;
 					if (blendMode == AnimationBlendMode::FREEFORM_2D) {
 						memset(buffer, 0, sizeof(buffer));
 						read.getline(buffer, sizeof(buffer), '\n');			// y-axis blending parameter name
@@ -283,11 +289,10 @@ bool eAnimationControllerManager::LoadAndGet(const char * resourceFilename, std:
 						}
 
 						// DEBUG: .ectrl format demands if blendMode == FREEFORM_2D that two parameters be listed
-						int yParameterIndex = result->GetFloatParameterIndex(yBlendParameterName);
-						if (yParameterIndex < 0)
-							yParameterIndex = 0;
-
-						yBlendParameter = &result->floatParameters[yParameterIndex];
+						int yBlendParameterIndex = result->GetFloatParameterIndex(yBlendParameterName);
+						yBlendParameterHash = result->floatParamsHash.GetHashKey(yBlendParameterName);
+						if (yBlendParameterIndex < 0)
+							yBlendParameterHash = defaultFloatNameHash;
 					}
 
 
@@ -295,7 +300,7 @@ bool eAnimationControllerManager::LoadAndGet(const char * resourceFilename, std:
 					// (1.0f / numAnimations) * currentAnimationLoadedCount so they are evenly distributed
 					// OR: add a "distribute" boolean at the top of the blend state file-definition
 					// to indicate how to affect/ignore the values in the file
-					auto & newBlendState = std::make_unique<eBlendState>(stateName, numAnimations, xBlendParameter, yBlendParameter, blendMode, stateSpeed);
+					auto & newBlendState = std::make_unique<eBlendState>(stateName, numAnimations, xBlendParameterHash, yBlendParameterHash, blendMode, stateSpeed);
 					while (read.peek() != '}') {							// adding blend nodes
 						read.getline(buffer, sizeof(buffer), ' ');			// animation name
 						std::string animationName(buffer);
