@@ -171,8 +171,10 @@ bool eGame::Run() {
 
 	player.Think();
 
-	for (auto & entity : entities)
+	for (auto & entity : entities) {
+		entity->UpdateComponents();
 		entity->Think();
+	}
 
 	camera.Think();
 

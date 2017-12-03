@@ -29,25 +29,24 @@ void eCamera::Init() {
 void eCamera::Think() {
 	auto & input = game.GetInput();
 	float oldZoomLevel = zoomLevel;
-	eVec2 oldOrigin = collisionModel->Origin();
+	eVec2 oldOrigin = collisionModel->Center();
 	if (input.KeyPressed(SDL_SCANCODE_EQUALS))
 		SetZoom(zoomLevel + zoomIncrement);
 	else if (input.KeyPressed(SDL_SCANCODE_MINUS))
 		SetZoom(zoomLevel - zoomIncrement);
 
 	if (input.KeyHeld(SDL_SCANCODE_SPACE)) {
-		eVec2 snapFocus = game.GetEntity(0)->CollisionModel().Origin();		// FIXME: 0th eEntity should not be the default thing to snap focus to
+		eVec2 snapFocus = game.GetEntity(0)->CollisionModel().Center();		// FIXME: 0th eEntity should not be the default thing to snap focus to
 		eMath::CartesianToIsometric(snapFocus.x, snapFocus.y);
 		collisionModel->SetOrigin(snapFocus);
 	} else {
 		float x = camSpeed * (float)(input.KeyHeld(SDL_SCANCODE_D) - input.KeyHeld(SDL_SCANCODE_A));
 		float y = camSpeed * (float)(input.KeyHeld(SDL_SCANCODE_S) - input.KeyHeld(SDL_SCANCODE_W));
 		collisionModel->SetVelocity(eVec2(x, y));
-		if (collisionModel->GetVelocity() != vec2_zero)
-			collisionModel->Update();
 	}
 
-	moved = (zoomLevel != oldZoomLevel || collisionModel->Origin() != oldOrigin);
+	UpdateComponents();
+	moved = (zoomLevel != oldZoomLevel || collisionModel->Center() != oldOrigin);
 }
 
 //***************
@@ -65,7 +64,7 @@ void eCamera::SetZoom(float level) {
 	screenBottomRight *= level;
 
 	// variable rectangle with (0, 0) at its center)
-	collisionModel->LocalBounds() = eBounds(-screenBottomRight * 0.5f, screenBottomRight * 0.5f);
+	collisionModel->SetLocalBounds(eBounds(-screenBottomRight * 0.5f, screenBottomRight * 0.5f));
 }
 
 //**************

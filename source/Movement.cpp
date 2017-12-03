@@ -21,7 +21,7 @@ eMovementPlanner::eMovementPlanner(eGameObject * owner, float movementSpeed)
 //***************
 void eMovementPlanner::SetOwner(eGameObject * newOwner) {
 	owner = newOwner;
-	currentTile		= &knownMap.Index(owner->CollisionModel().Origin());
+	currentTile		= &knownMap.Index(owner->CollisionModel().Center());
 	previousTile	= currentTile;
 	StopMoving();
 }
@@ -51,21 +51,18 @@ void eMovementPlanner::Update() {
 
 		// drop a trail waypoint (but never in a deadend that stopped the entity last frame)
 		if (moving && !wasStopped && moveState != MOVETYPE_TRAIL && lastTrailTile != currentTile) {
-			trail.PushFront(ownerCollisionModel.Origin());
+			trail.PushFront(ownerCollisionModel.Center());
 			lastTrailTile = currentTile;
 		}
 
 		// check if goal is close enough to stop
-		if (ownerCollisionModel.Origin().Compare(*currentWaypoint, goalRange)) {
+		if (ownerCollisionModel.Center().Compare(*currentWaypoint, goalRange)) {
 			StopMoving();
 			UpdateWaypoint(true);
 		}
 
 		// finalize the move
-		if (ownerCollisionModel.GetVelocity() != vec2_zero) {
-			moving = true;
-			ownerCollisionModel.Update();
-		}
+		moving = (ownerCollisionModel.GetVelocity() != vec2_zero);
 	}
 }
 
@@ -95,7 +92,7 @@ void eMovementPlanner::WallFollow() {
 	bool		nearWall;
 
 	if (!moving) { 
-		forward.vector = *currentWaypoint - owner->CollisionModel().Origin();
+		forward.vector = *currentWaypoint - owner->CollisionModel().Center();
 		forward.vector.Normalize();
 		moving = true;
 	}
@@ -179,7 +176,7 @@ void eMovementPlanner::CompassFollow() {
 			currentTile->value = VISITED_TILE;
 	}
 
-	waypoint.vector = *currentWaypoint - ownerCollisionModel.Origin();
+	waypoint.vector = *currentWaypoint - ownerCollisionModel.Center();
 	waypoint.vector.Normalize();
 
 	bestWeight = 0.0f;
@@ -432,7 +429,7 @@ void eMovementPlanner::UpdateKnownMap() {
 	// DEBUG: only needs to be more than **half-way** onto a new tile
 	// to set the currentTile as previousTile and VISITED_TILE,
 	// instead of completely off the tile (via a full absBounds check against the eGridCell bounds)
-	checkTile = &knownMap.Index(owner->CollisionModel().Origin());
+	checkTile = &knownMap.Index(owner->CollisionModel().Center());
 	if (checkTile != currentTile) {
 		previousTile = currentTile;
 		previousTile->value = VISITED_TILE;
@@ -444,7 +441,7 @@ void eMovementPlanner::UpdateKnownMap() {
 		
 		// solid-box of tiles at the tileResetRange centered on the current goal waypoint to reset the knownMap
 		if (!goals.IsEmpty()) {
-			tileResetRange = (int)((goals.Back()->Data() - owner->CollisionModel().Origin()).Length() / (knownMap.CellWidth() * 2));
+			tileResetRange = (int)((goals.Back()->Data() - owner->CollisionModel().Center()).Length() / (knownMap.CellWidth() * 2));
 
 			// find the knownMap row and column of the current goal waypoint
 			knownMap.Index(goals.Back()->Data(), row, column);

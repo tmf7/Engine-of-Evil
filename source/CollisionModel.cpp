@@ -16,13 +16,13 @@ void eCollisionModel::Update() {
 		AvoidCollisionSlide();		// TODO: alternatively push the collider away if it can be moved (non-static)
 
 	oldOrigin = origin;
-	owner->orthoOrigin += velocity; // * game.GetFixedTime();
+	origin = owner->orthoOrigin;
+	origin += velocity; // * game.GetFixedTime();
+	absBounds = localBounds + origin + orthoOriginOffset;
+	center = absBounds.Center();
 
-	// FIXME/BUG(!!): this extra push can cause collision overlap (because absBounds was used to detect and avoid collisions)
-	origin = owner->orthoOrigin + orthoOriginOffset;
-
-
-	absBounds = localBounds + origin;
+	// The engines don't move the ship at all. The ship stays where it is and the engines move the universe around it.
+	owner->orthoOrigin = origin;
 
 	if (active && origin != oldOrigin)
 		UpdateAreas();
@@ -31,8 +31,8 @@ void eCollisionModel::Update() {
 //*************
 // eCollisionModel::SetOrigin
 //*************
-void eCollisionModel::SetOrigin(const eVec2 & point) {
-	owner->SetOrigin(point);
+void eCollisionModel::SetOrigin(const eVec2 & newOrigin) {
+	owner->SetOrigin(newOrigin);
 }
 
 //***************

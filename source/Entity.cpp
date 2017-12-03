@@ -9,7 +9,7 @@ eEntity::eEntity(const entitySpawnArgs_t & spawnArgs)
 
 	if (!spawnArgs.localBounds.IsEmpty()) {
 		collisionModel = std::make_unique<eCollisionModel>(this);
-		collisionModel->LocalBounds() = spawnArgs.localBounds;
+		collisionModel->SetLocalBounds(spawnArgs.localBounds);
 		collisionModel->SetOffset(spawnArgs.colliderOffset);
 		collisionModel->SetActive(spawnArgs.collisionActive);
 	
@@ -76,27 +76,10 @@ bool eEntity::Spawn(const int entityPrefabIndex, const eVec3 & worldPosition) {
 	}
 
 	newEntity->SetWorldLayer(worldPosition.z);
-
-	// DEBUG: updates both the renderimage and collisionModel, if any
 	newEntity->SetOrigin(eVec2(worldPosition.x, worldPosition.y));
+
+	newEntity->UpdateComponents();
 	return true;
-}
-
-//***************
-// eEntity::Think
-// FIXME: leave this base-class definition blank
-// but still call Update() on all non-nullptr components owned by *this
-//***************
-void eEntity::Think() {
-	if (movementPlanner != nullptr)
-		movementPlanner->Update();
-	else if (collisionModel != nullptr)
-		collisionModel->Update();
-
-	if (animationController != nullptr)
-		animationController->Update();
-	else if (renderImage != nullptr)
-		renderImage->Update();
 }
 
 //***************

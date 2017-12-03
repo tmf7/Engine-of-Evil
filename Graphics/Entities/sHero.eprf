@@ -10,6 +10,6 @@ animationController=Graphics/Animations/sHero/Controller_defs/sHero.ectrl
 renderBlockSize= 16.0 16.0 64.0
 renderImageOffset= -32.0 -45.0
 localBounds= -8.0 -8.0 8.0 8.0
-colliderOffset= 0 0
+colliderOffset= 10 10
 movementSpeed= 4.0
 collisionActive= true

@@ -23,14 +23,13 @@ public:
 										eCollisionModel(eGameObject * owner);
 	virtual								~eCollisionModel() override;
 
-	void								SetOrigin(const eVec2 & point);	
-	const eVec2 &						Origin() const;
+	void								SetOrigin(const eVec2 & newOrigin);	
+	const eVec2 &						Center() const;
 	void								Update();
 	eVec2								GetOriginDelta() const;
 	const eVec2 &						Offset() const;
 	void								SetOffset(const eVec2 & newOffset);
-	eBounds &							LocalBounds();
-	eBounds &							AbsBounds();
+	void								SetLocalBounds(const eBounds & newLocalBounds);
 	const eBounds &						LocalBounds() const;
 	const eBounds &						AbsBounds() const;
 	void								SetVelocity(const eVec2 & newVelocity);
@@ -56,6 +55,7 @@ private:
 	eBounds								absBounds;				// using world coordinates	
 	eVec2								origin;					// using world coordinates
 	eVec2								oldOrigin;				// for use with collision response
+	eVec2								center;					// cached absBounds.Center() for faster updates
 	eVec2								orthoOriginOffset;		// offset from (eGameObject)owner::orthoOrigin (default: (0,0))
 	eVec2								oldVelocity;			// velocity of the prior frame
 	eVec2								velocity;				// DEBUG: never normalized, only rotated and scaled
@@ -72,12 +72,11 @@ inline eCollisionModel::eCollisionModel(eGameObject * owner) {
 }
 
 //*************
-// eCollisionModel::Origin
+// eCollisionModel::Center
 // world-position of the collision center
-// DEBUG: NOT equivalent to absBounds.Center() if localBounds isn't centered on (0,0)
 //*************
-inline const eVec2 & eCollisionModel::Origin() const {
-	return origin;
+inline const eVec2 & eCollisionModel::Center() const {
+	return center;
 }
 
 //*************
@@ -104,25 +103,17 @@ inline void eCollisionModel::SetOffset(const eVec2 & newOffset) {
 }
 
 //*************
-// eCollisionModel::LocalBounds
+// eCollisionModel::SetLocalBounds
 // model coordinate axis-aligned bounding box
-// with center at 0,0
 //*************
-inline eBounds & eCollisionModel::LocalBounds() {
-	return localBounds;
+inline void eCollisionModel::SetLocalBounds(const eBounds & newLocalBounds) {
+	localBounds = newLocalBounds;
 }
-//*************
-// eCollisionModel::AbsBounds
-// globally positioned axis-aligned bounding box
-//*************
-inline eBounds & eCollisionModel::AbsBounds() {
-	return absBounds;
-}
+
 
 //*************
 // eCollisionModel::LocalBounds
 // model coordinate axis-aligned bounding box
-// with center at 0,0
 //*************
 inline const eBounds & eCollisionModel::LocalBounds() const {
 	return localBounds;

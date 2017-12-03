@@ -24,7 +24,8 @@ public:
 	friend class eMovement;
 
 public:
-									
+	
+	virtual								   ~eGameObject() = default;
 											eGameObject() = default;
 											eGameObject(const eGameObject & other);
 											eGameObject(eGameObject && other);
@@ -35,6 +36,7 @@ public:
 	virtual void							Think()									{}
 	virtual void							DebugDraw()								{}
 
+	void									UpdateComponents();	
 	const eVec2 &							GetOrigin()								{ return orthoOrigin; }
 	void									SetOrigin(const eVec2 & newOrigin);
 	Uint32									GetWorldLayer()							{ return worldLayer; }

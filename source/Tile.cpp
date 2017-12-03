@@ -187,6 +187,7 @@ eTile::eTile(eGridCell * cellOwner, const eVec2 & origin, const int type, const 
 	renderImage = std::make_unique<eRenderImage>(this);		// all tiles currently have a renderimage by default
 	SetType(type);
 	SetOrigin(origin);
+	UpdateComponents();
 }
 
 //************
@@ -209,7 +210,7 @@ void eTile::SetType(int newType) {
 	if (impl->collider != nullptr) {
 		collisionModel = std::make_unique<eCollisionModel>(this);
 		collisionModel->SetActive(true);
-		collisionModel->LocalBounds() = *(impl->collider);
+		collisionModel->SetLocalBounds(*(impl->collider));
 //		collisionModel->SetOffset(vec2_zero);
 	}
 }

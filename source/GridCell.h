@@ -22,7 +22,6 @@ public:
 	std::unordered_map<eRenderImage *, eRenderImage *> &			RenderContents();
 	std::unordered_map<eCollisionModel *, eCollisionModel *> &		CollisionContents();
 	const eBounds &													AbsBounds() const;
-	const eBounds &													AbsBounds();
 	void															SetAbsBounds(const eBounds & bounds);
 
 	virtual void													Reset() override;
@@ -87,14 +86,6 @@ inline std::unordered_map<eCollisionModel *, eCollisionModel *> & eGridCell::Col
 // DEBUG: convenience function for broad-phase collision tests
 //******************
 inline const eBounds & eGridCell::AbsBounds() const {
-	return absBounds;
-}
-
-//******************
-// eGridCell::AbsBounds
-// DEBUG: convenience function for broad-phase collision tests
-//******************
-inline const eBounds & eGridCell::AbsBounds() {
 	return absBounds;
 }
 

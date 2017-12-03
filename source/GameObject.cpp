@@ -52,11 +52,6 @@ void eGameObject::UpdateComponentsOwner(){
 //*************
 void eGameObject::SetOrigin(const eVec2 & newOrigin) {
 	orthoOrigin = newOrigin;
-	if (collisionModel != nullptr)
-		collisionModel->Update();
-
-	if (renderImage != nullptr)
-		renderImage->Update();
 }
 
 //*************
@@ -76,4 +71,21 @@ void eGameObject::SetWorldLayer(Uint32 layer) {
 void eGameObject::SetWorldLayer(float zPosition) {
 	oldWorldLayer = worldLayer;
 	worldLayer = game.GetMap().TileMap().LayerFromZPosition(eMath::NearestInt(zPosition));
+}
+
+//*************
+// eGameObject::UpdateComponents
+// TODO: UpdateComponents should be hidden from users... private w/eGame as a friend?
+//*************
+void eGameObject::UpdateComponents() {
+	if (movementPlanner != nullptr)
+		movementPlanner->Update();
+	
+	if (collisionModel != nullptr)
+		collisionModel->Update();
+
+	if (animationController != nullptr)
+		animationController->Update();
+	else if (renderImage != nullptr)
+		renderImage->Update();
 }

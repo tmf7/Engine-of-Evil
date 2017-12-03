@@ -39,13 +39,11 @@ public:
 	bool						GetPlayerSelected() const;
 	int							SpawnID() const;
 
-	virtual void				Think() override;			
 	virtual void				DebugDraw() override;
 	virtual int					GetClassType() const override { return CLASS_ENTITY; }
 
 private:
 
-	eVec2						imageColliderOffset;	
 	int							spawnedEntityID;		// index within eGame::entities
 	bool						playerSelected;			// player is controlling this eEntity
 };
