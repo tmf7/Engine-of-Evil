@@ -16,13 +16,61 @@ void eRenderImage::SetImage(int imageManagerIndex) {
 }
 
 //************
-// eRenderImage::SnapRenderBlockToLayer
-// DEBUG: only call this after owner->worldLayer has been assigned
+// eRenderImage::UpdateRenderBlock
+// snaps the renderblock minimum z value according to owner::worldlayer, and
+// the x,y is positioned using either owner::collisionModel (if non-nullptr), or owner::orthoOrigin,
+// to best prevent renderBlock overlap and minimize draw-order sorting anomolies, otherwise the  is used
 //************
-void eRenderImage::SnapRenderBlockToLayer() {
-	const float newRBMinZ = (float)game.GetMap().TileMap().MinZPositionFromLayer(owner->WorldLayer());
-	const float oldRBMinZ = renderBlock[0].z;
-	renderBlock += eVec3(0.0f, 0.0f, newRBMinZ - oldRBMinZ);
+void eRenderImage::UpdateRenderBlock() {
+	auto & renderBlockMins = renderBlock[0];
+
+	if (owner->worldLayer != owner->oldWorldLayer) {
+		const float newRBMinZ = (float)game.GetMap().TileMap().MinZPositionFromLayer(owner->worldLayer);
+		renderBlock += eVec3(0.0f, 0.0f, newRBMinZ - renderBlockMins.z);
+	}
+
+	if (owner->collisionModel != nullptr) {
+		auto & collisionMins = owner->collisionModel->AbsBounds()[0];
+		renderBlock += eVec3(collisionMins.x - renderBlockMins.x, collisionMins.y - renderBlockMins.y , 0.0f);
+	} else {
+		auto & ownerOrigin = owner->GetOrigin();
+		renderBlock += eVec3(ownerOrigin.x - renderBlockMins.x, ownerOrigin.y - renderBlockMins.y , 0.0f);
+	}
+}
+
+//*************
+// eRenderImage::SetRenderBlockSize
+//*************
+void eRenderImage::SetRenderBlockSize(const eVec3 & newSize) {
+	auto & renderBlockMins = renderBlock[0];
+	renderBlock = eBounds3D(renderBlockMins, renderBlockMins + newSize);
+//	UpdateRenderBlock();
+}
+
+//************
+// eRenderImage::Update
+// ensures this->origin tracks along with owner::orthoOrigin
+// ensures only the visuals are isometric, 
+// while backend collision occurs on a 2D top-down grid
+// DEBUG: if owner->IsStatic this only calls UpdateAreas during loadtime initialization, not each frame
+//************
+void eRenderImage::Update() {
+	oldOrigin = origin;
+	auto & ownerOrigin = owner->GetOrigin();
+	eVec2 newOrigin = ownerOrigin;	
+	eMath::CartesianToIsometric(newOrigin.x, newOrigin.y);
+	newOrigin += orthoOriginOffset;
+	origin = newOrigin;
+
+	UpdateWorldClip();
+	if (origin != oldOrigin || (owner->IsStatic() && game.GetGameTime() < 5000)) {
+		if (isSelectable)
+			UpdateAreasWorldClipArea();
+		else
+			UpdateAreasWorldClipCorners();
+	}
+
+	UpdateRenderBlock();
 }
 
 //************
@@ -96,16 +144,7 @@ void eRenderImage::UpdateAreasWorldClipArea() {
 
 //*************
 // eRenderImage::SetOrigin
-// DEBUG: if owner->IsStatic only call this during loadtime initialization, not each frame
 //*************
 void eRenderImage::SetOrigin(const eVec2 & newOrigin) {
-	oldOrigin = origin;
-	origin = newOrigin;
-	UpdateWorldClip();
-	if (owner->IsStatic() || origin != oldOrigin) {
-		if (isSelectable)
-			UpdateAreasWorldClipArea();
-		else
-			UpdateAreasWorldClipCorners();
-	}
+	owner->SetOrigin(newOrigin);
 }

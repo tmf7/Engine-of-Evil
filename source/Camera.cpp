@@ -44,7 +44,7 @@ void eCamera::Think() {
 		float y = camSpeed * (float)(input.KeyHeld(SDL_SCANCODE_S) - input.KeyHeld(SDL_SCANCODE_W));
 		collisionModel->SetVelocity(eVec2(x, y));
 		if (collisionModel->GetVelocity() != vec2_zero)
-			collisionModel->UpdateOrigin();
+			collisionModel->Update();
 	}
 
 	moved = (zoomLevel != oldZoomLevel || collisionModel->Origin() != oldOrigin);

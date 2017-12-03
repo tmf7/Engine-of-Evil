@@ -95,9 +95,9 @@ bool eEntityPrefabManager::LoadAndGet(const char * resourceFilename, std::shared
 			return false;
 		}
 
-		read.ignore(std::numeric_limits<std::streamsize>::max(), '=');	// imageCollisionOffset
-		read >> spawnArgs.imageColliderOffset.x;
-		read >> spawnArgs.imageColliderOffset.y;
+		read.ignore(std::numeric_limits<std::streamsize>::max(), '=');	// renderImageOffset
+		read >> spawnArgs.renderImageOffset.x;
+		read >> spawnArgs.renderImageOffset.y;
 		read.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
 		if (!VerifyRead(read)){
 			result = resourceList[0];
@@ -123,6 +123,14 @@ bool eEntityPrefabManager::LoadAndGet(const char * resourceFilename, std::shared
 	}
 
 	if (!spawnArgs.localBounds.IsEmpty()) {
+		read.ignore(std::numeric_limits<std::streamsize>::max(), '=');	// colliderOffset
+		read >> spawnArgs.colliderOffset.x >> spawnArgs.colliderOffset.y;
+		read.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+		if (!VerifyRead(read)){
+			result = resourceList[0];
+			return false;
+		}
+
 		read.ignore(std::numeric_limits<std::streamsize>::max(), '=');	// movementSpeed
 		read >> spawnArgs.movementSpeed;
 		read.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
@@ -133,7 +141,6 @@ bool eEntityPrefabManager::LoadAndGet(const char * resourceFilename, std::shared
 
 		read.ignore(std::numeric_limits<std::streamsize>::max(), '=');	// collisionActive
 		read >> std::boolalpha >> spawnArgs.collisionActive;
-//		read.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
 		if (!VerifyRead(read)){
 			result = resourceList[0];
 			return false;

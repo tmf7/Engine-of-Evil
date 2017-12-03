@@ -86,7 +86,7 @@ bool eMap::LoadMap(const char * mapFilename) {
 
 	row = 0;
 	column = 0;
-	int layer = 0;
+	Uint32 layer = 0;
 	enum {
 		READING_MAP,
 		LOADING_PREFABS,
@@ -122,8 +122,8 @@ bool eMap::LoadMap(const char * mapFilename) {
 				auto & origin = cell.AbsBounds()[0];
 				cell.AddTileOwned(eTile(&cell, origin, tileType, layer));
 				auto & tileRenderImage = cell.TilesOwned().back().RenderImage();
-				if (tileRenderImage.RenderBlock().Depth() > tallestRenderBlock)
-					tallestRenderBlock = (size_t)tileRenderImage.RenderBlock().Depth();
+				if (tileRenderImage.GetRenderBlock().Depth() > tallestRenderBlock)
+					tallestRenderBlock = (size_t)tileRenderImage.GetRenderBlock().Depth();
 
 				sortTiles.emplace_back(&tileRenderImage);
 			}
@@ -171,7 +171,19 @@ bool eMap::LoadMap(const char * mapFilename) {
 			read.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
 			if (!VerifyRead(read))
 				return false;
-			
+
+			// TODO: allow users to define custom eEntity derived class Spawn functions,
+			// which they can then call EngineOfEvil::RegisterSpawnFunction("functionName", FunctionPointer_t)
+			// where the SpawnFunction reads a local/global spawnArgs HashMap to initialize the eEntity
+			// (instead of taking a fixed-size parameter list or templated parameter pack)
+
+			// TODO: users will derive from an EngineOfEvil eGame class and override a virtual Start() method,
+			// which the base eGame::Init will call polymorphically. In the user's Start() they can
+			// call RegisterSpawnFunction, or any other functions they intend to hook into the EngineOfEvil runtime
+
+			// TODO: similarly, when eGame::Run's loop hits entities->Think, the user's eEntity subclasses Think() will
+			// be called polymorphically based on the runtime eEntity type provided during eGame::AddEntity(std::unique_ptr<eEntity> && entity)
+
 			if (!eEntity::Spawn(prefabListIndex, worldPosition)) {
 				std::string message = "Invalid prefabListIndex value: " + std::to_string(prefabListIndex) + "\nOr invalid prefab file contents.";
 				SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_INFORMATION, "Error", message.c_str(), NULL);
@@ -181,7 +193,7 @@ bool eMap::LoadMap(const char * mapFilename) {
 	read.close();
 
 	// initialize the static map images sort order
-	eRenderer::TopologicalDrawDepthSort(sortTiles);		// FREEHILL 3d topological sort
+	eRenderer::TopologicalDrawDepthSort(sortTiles);	
 	return true;
 }
 

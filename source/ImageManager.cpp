@@ -88,6 +88,11 @@ bool eImageManager::LoadAndGetConstantText(TTF_Font * font, const char * text, c
 // eImageManager::LoadSubframes
 // helper function for Loading .eimg files
 // see also LoadAndGet
+// FIXME: sHero_Run_0.eimg top &bottom are slightly clipped
+// SOLUTION: re-split the images (didn't work)
+// SOLUTION: manually adjust the frame on export (too unpredictable)
+// SOLUTION: check that eRenderImage srcRect/destRect isn't tweaking the subframe data (it isn't)
+// SOLUTION: Unity may be slightly resizing (algorithm selection) the image before splitting it so the rects are slightly off from the original image (tried, no affect)
 //***************************
 bool eImageManager::LoadSubframes(std::ifstream & read, std::shared_ptr<eImage> & result) {
 	int numFrames = 0;

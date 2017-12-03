@@ -27,5 +27,6 @@ void eStateNode::NextFrame(const eAnimation & animation) {
 	auto & targetRenderImage = stateMachine->Owner()->RenderImage();
 	targetRenderImage.SetImage(currentFrame->imageManagerIndex);
 	targetRenderImage.SetImageFrame(currentFrame->subframeIndex);
+	targetRenderImage.Update();
 }
 

@@ -51,7 +51,7 @@ void eMovementPlanner::Update() {
 
 		// drop a trail waypoint (but never in a deadend that stopped the entity last frame)
 		if (moving && !wasStopped && moveState != MOVETYPE_TRAIL && lastTrailTile != currentTile) {
-			trail.push_front(ownerCollisionModel.Origin());
+			trail.PushFront(ownerCollisionModel.Origin());
 			lastTrailTile = currentTile;
 		}
 
@@ -64,7 +64,7 @@ void eMovementPlanner::Update() {
 		// finalize the move
 		if (ownerCollisionModel.GetVelocity() != vec2_zero) {
 			moving = true;
-			ownerCollisionModel.UpdateOrigin();
+			ownerCollisionModel.Update();
 		}
 	}
 }
@@ -340,7 +340,7 @@ void eMovementPlanner::AddUserWaypoint(const eVec2 & waypoint) {
 		eCollision::BoxCast(collisions, waypointBounds, vec2_zero, 0.0f))
 		return;
 
-	goals.push_front(waypoint);
+	goals.PushFront(waypoint);
 	UpdateWaypoint();
 }
 
@@ -350,27 +350,27 @@ void eMovementPlanner::AddUserWaypoint(const eVec2 & waypoint) {
 void eMovementPlanner::UpdateWaypoint(bool getNext) {
 	switch (moveState) {
 		case MOVETYPE_GOAL: {
-			if (getNext && !goals.empty()) {
-				goals.pop_back();
-				trail.clear();
+			if (getNext && !goals.IsEmpty()) {
+				goals.PopBack();
+				trail.Clear();
 			}
 			CheckTrail();
-			if (!goals.empty()) {
-				currentWaypoint = &goals.back();//->Data();
+			if (!goals.IsEmpty()) {
+				currentWaypoint = &goals.Back()->Data();
 				return;
 			}
 			currentWaypoint = nullptr;
 			return;
 		}
 		case MOVETYPE_TRAIL: {
-			if (getNext && !trail.empty())
-				trail.pop_front();
+			if (getNext && !trail.IsEmpty())
+				trail.PopFront();
 			if (!CheckTrail()) {
-				currentWaypoint = &trail.front();//->Data();
+				currentWaypoint = &trail.Front()->Data();
 				return;
-			} else if (!goals.empty()) {
+			} else if (!goals.IsEmpty()) {
 				moveState = MOVETYPE_GOAL;
-				currentWaypoint = &goals.back();//->Data();
+				currentWaypoint = &goals.Back()->Data();
 				return;
 			}
 			currentWaypoint = nullptr;
@@ -378,13 +378,13 @@ void eMovementPlanner::UpdateWaypoint(bool getNext) {
 		}
 		default: {		// DEBUG: currently for PATHTYPE_WALL
 						// TODO: have PATHTYPE_WALL pay attention to knownMap and trail waypoints too
-			if (getNext && !goals.empty()) {
-				goals.pop_back();
-				trail.clear();
+			if (getNext && !goals.IsEmpty()) {
+				goals.PopBack();
+				trail.Clear();
 			}
 			CheckTrail();
-			if (!goals.empty()) {
-				currentWaypoint = &goals.back();//->Data();
+			if (!goals.IsEmpty()) {
+				currentWaypoint = &goals.Back()->Data();
 				return;
 			}
 			currentWaypoint = nullptr;
@@ -408,7 +408,7 @@ void eMovementPlanner::ClearTrail() {
 // returns false if the entity should fresh-start goal pathfinding
 //******************
 bool eMovementPlanner::CheckTrail() {
-	if (trail.empty()) {
+	if (trail.IsEmpty()) {
 		knownMap.ResetAllCells();
 		lastTrailTile = nullptr;
 		return true;
@@ -443,11 +443,11 @@ void eMovementPlanner::UpdateKnownMap() {
 	if (!CheckTrail()) {
 		
 		// solid-box of tiles at the tileResetRange centered on the current goal waypoint to reset the knownMap
-		if (!goals.empty()) {
-			tileResetRange = (int)((goals.back()/*->Data()*/ - owner->CollisionModel().Origin()).Length() / (knownMap.CellWidth() * 2));
+		if (!goals.IsEmpty()) {
+			tileResetRange = (int)((goals.Back()->Data() - owner->CollisionModel().Origin()).Length() / (knownMap.CellWidth() * 2));
 
 			// find the knownMap row and column of the current goal waypoint
-			knownMap.Index(goals.back()/*->Data()*/, row, column);
+			knownMap.Index(goals.Back()->Data(), row, column);
 
 			// set initial bounding box top-left and bottom-right indexes within knownMap
 			startRow = row - (tileResetRange / 2);
@@ -482,9 +482,9 @@ void eMovementPlanner::UpdateKnownMap() {
 	}
 
 	// pop all trail waypoints that no longer fall on VISITED_TILEs
-	while (!trail.empty()) {
-		if (knownMap.Index(trail.back()/*->Data()*/).value == UNKNOWN_TILE)
-			trail.pop_back();
+	while (!trail.IsEmpty()) {
+		if (knownMap.Index(trail.Back()->Data()).value == UNKNOWN_TILE)
+			trail.PopBack();
 		else
 			break;
 	}
@@ -506,9 +506,8 @@ void eMovementPlanner::DrawGoalWaypoints() {
 	if (!game.debugFlags.GOAL_WAYPOINTS)
 		return;
 
-//	for (auto iterator = goals.Back(); iterator != nullptr; iterator = iterator->Next()) {
-//		eVec2 goalPoint = iterator->Data();
-	for (auto goalPoint : goals) {
+	for (auto iterator = goals.Back(); iterator != nullptr; iterator = iterator->Next()) {
+		eVec2 goalPoint = iterator->Data();
 		goalPoint.SnapInt();
 		eBounds goalBounds = eBounds(goalPoint).ExpandSelf(goalRange);
 		game.GetRenderer().DrawIsometricRect(redColor, goalBounds, RENDERTYPE_DYNAMIC);
@@ -522,9 +521,8 @@ void eMovementPlanner::DrawTrailWaypoints() {
 	if (!game.debugFlags.TRAIL_WAYPOINTS)
 		return;
 
-//	for(auto iterator = trail.Front(); iterator != nullptr; iterator = iterator->Prev()) {
-//		eVec2 trailPoint = iterator->Data();
-	for (auto trailPoint : trail) {
+	for(auto iterator = trail.Front(); iterator != nullptr; iterator = iterator->Prev()) {
+		eVec2 trailPoint = iterator->Data();
 		trailPoint.SnapInt();
 		eBounds trailBounds = eBounds(trailPoint).ExpandSelf(4);
 		game.GetRenderer().DrawIsometricRect(greenColor, trailBounds, RENDERTYPE_DYNAMIC);

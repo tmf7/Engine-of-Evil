@@ -6,7 +6,7 @@
 class sHero : public eEntity {
 public:
 
-	virtual void						ExtendedThink() override;
+	virtual void						Think() override;
 	virtual int							GetClassType() const override { return CLASS_SHERO; }
 
 private:

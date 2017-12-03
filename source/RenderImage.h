@@ -32,9 +32,11 @@ public:
 	const SDL_Rect *					GetImageFrame() const;
 	void								SetOrigin(const eVec2 & newOrigin);
 	const eVec2 &						Origin() const;
-	eBounds3D &							RenderBlock();
-	const eBounds3D &					RenderBlock() const;
-	void								SnapRenderBlockToLayer();
+	const eVec2 &						Offset() const;
+	void								Update();
+	void								SetOffset(const eVec2 & newOffset);
+	void								SetRenderBlockSize(const eVec3 & newSize);
+	const eBounds3D &					GetRenderBlock() const;
 	const eBounds &						GetWorldClip() const;
 	const std::vector<eGridCell *> &	Areas() const;
 	void								SetIsSelectable(bool isSelectable);
@@ -45,6 +47,7 @@ public:
 private:
 
 	void								UpdateWorldClip();
+	void								UpdateRenderBlock();
 	void								ClearAreas();
 	void								UpdateAreasWorldClipCorners();
 	void								UpdateAreasWorldClipArea();
@@ -56,17 +59,15 @@ private:
 	SDL_Rect							dstRect;						// SDL consumable cliprect, where on the screen (adjusted with camera position)
 	eVec2								origin;							// top-left corner of image using world coordinates (not adjusted with camera position)
 	eVec2								oldOrigin;						// minimizes number of UpdateAreas calls for non-static eGameObjects that aren't moving
+	eVec2								orthoOriginOffset;				// offset from (eGameObject)owner::orthoOrigin (default: (0,0))
 	float								priority;						// determined during topological sort, lower priority draws first
 	Uint32								lastDrawTime	= 0;			// prevent attempts to draw this more than once per frame
 	std::vector<eGridCell *>			areas;							// the gridcells responsible for drawing *this
 	bool								isSelectable	= false;		// if this should added to all eGridCells its worldClip overlaps, or just its corners
-
-// FREEHILL BEGIN 3d topological sort
 	eBounds								worldClip;						// dstRect in world space (ie: not adjusted with camera position yet) used for occlusion tests
 	eBounds3D							renderBlock;					// determines draw order of visible images
 	std::vector<eRenderImage *>			allBehind;						// topological sort
 	bool								visited			= false;		// topological sort
-// FREEHILL END 3d topological sort
 };
 
 //*************
@@ -114,16 +115,25 @@ inline const eVec2 & eRenderImage::Origin() const {
 }
 
 //*************
-// eRenderImage::RenderBlock
+// eRenderImage::Offset
+// x and y distance from owner::orthoOrigin
 //*************
-inline eBounds3D & eRenderImage::RenderBlock() {
-	return renderBlock;
+inline const eVec2 & eRenderImage::Offset() const {
+	return orthoOriginOffset;
 }
 
 //*************
-// eRenderImage::RenderBlock
+// eRenderImage::SetOffset
+// sets the x and y distance from owner::orthoOrigin
 //*************
-inline const eBounds3D & eRenderImage::RenderBlock() const {
+inline void eRenderImage::SetOffset(const eVec2 & newOffset) {
+	orthoOriginOffset = newOffset;
+}
+
+//*************
+// eRenderImage::GetRenderBlock
+//*************
+inline const eBounds3D & eRenderImage::GetRenderBlock() const {
 	return renderBlock;
 }
 

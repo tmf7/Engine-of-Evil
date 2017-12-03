@@ -8,17 +8,20 @@ eCollisionModel::~eCollisionModel() {
 }
 
 //*************
-// eCollisionModel::UpdateOrigin
-// TODO: if getting rid of localBounds (to just calculate it when needed based on origin and absBounds)
-// absBounds += (origin - oldOrigin);		// FIXME: or translation = velocity * deltaTime; (then apply one translation to origin and absBounds)
-// TODO: OR, get rid of velocity as well, and defer that to a physics/rigidbody class (let eMovementPlanner use a *placeholder* velocity in the meantime)
+// eCollisionModel::Update
+// TODO: move velocity to physics/rigidbody class (this will affect eMovementPlanner logic)
 //*************
-void eCollisionModel::UpdateOrigin() {
+void eCollisionModel::Update() {
 	if (active)
 		AvoidCollisionSlide();		// TODO: alternatively push the collider away if it can be moved (non-static)
 
 	oldOrigin = origin;
-	origin += velocity;// * game.GetFixedTime();	// FIXME: defined outside this header
+	owner->orthoOrigin += velocity; // * game.GetFixedTime();
+
+	// FIXME/BUG(!!): this extra push can cause collision overlap (because absBounds was used to detect and avoid collisions)
+	origin = owner->orthoOrigin + orthoOriginOffset;
+
+
 	absBounds = localBounds + origin;
 
 	if (active && origin != oldOrigin)
@@ -29,13 +32,8 @@ void eCollisionModel::UpdateOrigin() {
 // eCollisionModel::SetOrigin
 //*************
 void eCollisionModel::SetOrigin(const eVec2 & point) {
-	oldOrigin = origin;
-	origin = point;
-	absBounds = localBounds + origin;
-	if (active && origin != oldOrigin)
-		UpdateAreas();
+	owner->SetOrigin(point);
 }
-
 
 //***************
 // eCollisionModel::ClearAreas

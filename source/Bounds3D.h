@@ -33,7 +33,8 @@ public:
 
 	void			Zero();											
 	eVec3			Center() const;									
-	float			Radius() const;									
+	float			Radius() const;	
+	const eVec3 &	Size() const;
 	float			Width() const;
 	float			Height() const;
 	float			Depth() const;
@@ -47,6 +48,7 @@ public:
 private:
 
 	eVec3			bounds[2];			// mins at [0] and maxs at [1]
+	eVec3			quickSize;			// cached x=width, y=height, and z=depth
 };
 
 //*************
@@ -64,6 +66,7 @@ inline eBounds3D::eBounds3D() {
 inline eBounds3D::eBounds3D(const eVec3 & mins, const eVec3 & maxs) {
 	bounds[0] = mins;
 	bounds[1] = maxs;
+	quickSize = eVec3(Width(), Height(), Depth());
 }
 
 //*************
@@ -145,6 +148,7 @@ inline bool eBounds3D::operator!=(const eBounds3D & a) const {
 //*************
 inline void eBounds3D::Zero() {
 	bounds[0].x = bounds[0].y = bounds[1].x = bounds[1].y = bounds[0].z = bounds[1].z = 0.0f;
+	quickSize = eVec3(Width(), Height(), Depth());
 }
 
 //*************
@@ -202,7 +206,7 @@ inline eBounds3D & eBounds3D::TranslateSelf(const eVec3 & translation) {
 
 //*************
 // eBounds3D::Expand
-// return bounds expanded in all directions with the given value
+// return a new bounds equal to *this expanded in all directions with the given value
 //*************
 inline eBounds3D eBounds3D::Expand(const float range) const {
 	return eBounds3D(eVec3(bounds[0].x - range, bounds[0].y - range, bounds[0].z - range),
@@ -220,7 +224,15 @@ inline eBounds3D & eBounds3D::ExpandSelf(const float range) {
 	bounds[1].x += range;
 	bounds[1].y += range;
 	bounds[1].z += range;
+	quickSize = eVec3(Width(), Height(), Depth());
 	return *this;
+}
+
+//*************
+// eBounds3D::Size
+//*************
+inline const eVec3 & eBounds3D::Size() const {
+	return quickSize;
 }
 
 //*************

@@ -390,15 +390,14 @@ void eRenderer::FlushCameraPool() {
 
 // FREEHILL BEGIN 3d topological sort
 	TopologicalDrawDepthSort(cameraPoolInserts);	// assign a "localDrawDepth" priority amongst the cameraPoolInserts
-													// to avoid the need to loop over the same cameraPool items with each new imageToInsert (maybe)
 	float newPriorityMin = 0.0f;
 	for (auto & imageToInsert : cameraPoolInserts) {
 		float newPriorityMax = 0.0f;
 
+		// minize time sent re-sorting static renderImages and just insert the dynamic ones
 		auto & iter = cameraPool.begin();
 		for (/*iter*/; iter != cameraPool.end() ; ++iter) {
-			if (eCollision::AABBAABBTest(imageToInsert->worldClip, (*iter)->worldClip)) {	// FIXME(?): this check works for ONE eEntity, but may break for more
-																							// double-check the logic, and test the reality of it
+			if (eCollision::AABBAABBTest(imageToInsert->worldClip, (*iter)->worldClip)) {	
 				if (eCollision::IsAABB3DInIsometricFront(imageToInsert->renderBlock, (*iter)->renderBlock)) {
 					newPriorityMin = (*iter)->priority;
 				} else {

@@ -8,6 +8,8 @@
 //***********************************************
 //				eTileImpl 
 // general tile type data for use by all tiles
+// FIXME: make this a proper pImpl implementation (moving definitions to .cpp)
+// and make tileSet a separate class, with tileTypes a pseudo-singleton object/class
 //***********************************************
 class eTileImpl : public eClass {
 private:
@@ -75,7 +77,7 @@ inline int eTileImpl::Type() const {
 class eTile : public eGameObject {
 public:
 
-										eTile(eGridCell * owner, const eVec2 & origin, const int type, const int layer);
+										eTile(eGridCell * owner, const eVec2 & origin, const int type, const Uint32 layer);
 	
 	int									Type() const;
 	void								SetType(int newType);

@@ -11,13 +11,15 @@ typedef struct entitySpawnArgs_s {
 	std::string		spriteFilename				= "";
 	std::string		animationControllerFilename = "";
 	eVec3			renderBlockSize				= vec3_zero;
-	eVec2			imageColliderOffset			= vec2_zero;
+	eVec2			renderImageOffset			= vec2_zero;
+	eVec2			colliderOffset				= vec2_zero;
 	float			movementSpeed				= 0.0f;
 	int				prefabManagerIndex			= 0;
 	int				initialSpriteFrame			= 0;
 	bool			collisionActive				= false;
 //	int				colliderType;				// TODO: AABB/OBB/Circle/Line/Polyline
 //	int				colliderMask;				// TODO: solid, liquid, enemy, player, etc
+//  Uint32			worldLayer;					// TODO: use this instead of Spawn(worldPosition.z)
 		
 					entitySpawnArgs_s() { localBounds.Clear(); };
 } entitySpawnArgs_t;
@@ -35,8 +37,6 @@ public:
 
 	void						SetPlayerSelected(bool isSelected);
 	bool						GetPlayerSelected() const;
-	void						UpdateRenderImageOrigin();
-	void						UpdateRenderImageDisplay();
 	int							SpawnID() const;
 
 	virtual void				Think() override;			
@@ -45,26 +45,9 @@ public:
 
 private:
 
-	// DEBUG: collisionModel.Origin(), collisionModel.AbsBounds().Center and renderImage.origin 
-	// are treated different in eEntity compared to eTile. 
-	// --> eEntity moves via its collisionModel::origin so its localBounds is centered on (0,0)
-	// and its renderImage.origin is positioned and offset (post-isometric-transformation) from the collisionModel.AbsBounds()[0] (minimum/top-left corner)
-	// --> eTile does not move, and are positioned once according to its owner eGridCell position, then isometrically transformed
-	// and its collisionModel.LocalBounds()[0] == renderImage.origin (pre-isometric-transformation) + eVec2(arbitraryOffset)
-	// --> the reason this discrepancy currently remains is that eAI logic depends on a centered absBounds origin
-	// TODO: update eAI logic to work from a universal eTransform::origin, and make
-	// renderImage::origin, and collisionModel::origin positioned via offsets from that shared eTransform::origin
-	// for both eTile and eEntity (static and dynamic objects)
 	eVec2						imageColliderOffset;	
 	int							spawnedEntityID;		// index within eGame::entities
 	bool						playerSelected;			// player is controlling this eEntity
-
-// FREEHILL BEGIN logic test
-	eVec2 oldFacingDirection			= vec2_oneZero;
-	const int xSpeedParameterHash		= std::hash<std::string>()("xSpeed");
-	const int ySpeedParameterHash		= std::hash<std::string>()("ySpeed");
-	const int magnitudeParameterHash	= std::hash<std::string>()("magnitude");
-// FREEHILL END logic test
 };
 
 //**************

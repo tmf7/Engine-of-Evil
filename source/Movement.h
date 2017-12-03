@@ -87,8 +87,8 @@ private:
 	float				maxMoveSpeed;
 	float				goalRange;						// acceptable range to consider the goal waypoint reached
 
-	std::deque<eVec2>		trail;							// *this defines waypoints for effective backtracking
-	std::deque<eVec2>		goals;							// User-defined waypoints as terminal destinations
+	eDeque<eVec2>		trail;							// *this defines waypoints for effective backtracking
+	eDeque<eVec2>		goals;							// User-defined waypoints as terminal destinations
 	eVec2 *				currentWaypoint = nullptr;		// simplifies switching between the deque being tracked
 
 	decision_t			forward;						// currently used movement vector

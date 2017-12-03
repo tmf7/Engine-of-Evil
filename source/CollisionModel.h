@@ -25,8 +25,10 @@ public:
 
 	void								SetOrigin(const eVec2 & point);	
 	const eVec2 &						Origin() const;
-	void								UpdateOrigin();
+	void								Update();
 	eVec2								GetOriginDelta() const;
+	const eVec2 &						Offset() const;
+	void								SetOffset(const eVec2 & newOffset);
 	eBounds &							LocalBounds();
 	eBounds &							AbsBounds();
 	const eBounds &						LocalBounds() const;
@@ -54,6 +56,7 @@ private:
 	eBounds								absBounds;				// using world coordinates	
 	eVec2								origin;					// using world coordinates
 	eVec2								oldOrigin;				// for use with collision response
+	eVec2								orthoOriginOffset;		// offset from (eGameObject)owner::orthoOrigin (default: (0,0))
 	eVec2								oldVelocity;			// velocity of the prior frame
 	eVec2								velocity;				// DEBUG: never normalized, only rotated and scaled
 	std::vector<eGridCell *>			areas;					// currently occupied tileMap indexes (between 1 and 4)
@@ -82,6 +85,22 @@ inline const eVec2 & eCollisionModel::Origin() const {
 //*************
 inline eVec2 eCollisionModel::GetOriginDelta() const {
 	return origin - oldOrigin;
+}
+
+//*************
+// eCollisionModel::Offset
+// x and y distance from owner::orthoOrigin
+//*************
+inline const eVec2 & eCollisionModel::Offset() const {
+	return orthoOriginOffset;
+}
+
+//*************
+// eCollisionModel::SetOffset
+// sets the x and y distance from owner::orthoOrigin
+//*************
+inline void eCollisionModel::SetOffset(const eVec2 & newOffset) {
+	orthoOriginOffset = newOffset;
 }
 
 //*************

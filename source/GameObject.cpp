@@ -1,4 +1,5 @@
 #include "GameObject.h"
+#include "Game.h"
 
 //**************
 // eGameObject::eGameObject
@@ -44,4 +45,35 @@ void eGameObject::UpdateComponentsOwner(){
 	if (animationController != nullptr) animationController->SetOwner(this);
 	if (collisionModel != nullptr)		collisionModel->SetOwner(this);
 	if (movementPlanner != nullptr)		movementPlanner->SetOwner(this);
+}
+
+//*************
+// eGameObject::SetOrigin
+//*************
+void eGameObject::SetOrigin(const eVec2 & newOrigin) {
+	orthoOrigin = newOrigin;
+	if (collisionModel != nullptr)
+		collisionModel->Update();
+
+	if (renderImage != nullptr)
+		renderImage->Update();
+}
+
+//*************
+// eGameObject::SetWorldLayer
+// directly sets the worldLayer
+//*************
+void eGameObject::SetWorldLayer(Uint32 layer) {
+	oldWorldLayer = worldLayer;
+	worldLayer = layer;
+}
+
+//*************
+// eGameObject::SetWorldLayer
+// calculates the layer with a minimum-z position
+// closest to param zPosition and assigns it to worldLayer
+//*************
+void eGameObject::SetWorldLayer(float zPosition) {
+	oldWorldLayer = worldLayer;
+	worldLayer = game.GetMap().TileMap().LayerFromZPosition(eMath::NearestInt(zPosition));
 }

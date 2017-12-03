@@ -5,17 +5,16 @@
 //**************
 eEntity::eEntity(const entitySpawnArgs_t & spawnArgs)
 	: eResource(spawnArgs.sourceFilename, spawnArgs.prefabManagerIndex),
-	  imageColliderOffset(spawnArgs.imageColliderOffset),
 	  spawnedEntityID(-1) {
 
 	if (!spawnArgs.localBounds.IsEmpty()) {
 		collisionModel = std::make_unique<eCollisionModel>(this);
 		collisionModel->LocalBounds() = spawnArgs.localBounds;
+		collisionModel->SetOffset(spawnArgs.colliderOffset);
 		collisionModel->SetActive(spawnArgs.collisionActive);
 	
-		if (spawnArgs.movementSpeed) {
+		if (spawnArgs.movementSpeed)
 			movementPlanner = std::make_unique<eMovementPlanner>(this, spawnArgs.movementSpeed);
-		}
 	}
 
 	if (!spawnArgs.spriteFilename.empty()) {
@@ -32,8 +31,8 @@ eEntity::eEntity(const entitySpawnArgs_t & spawnArgs)
 			initialSpriteFrame = 0;
 
 		renderImage->SetImageFrame(initialSpriteFrame);
-		eVec3 blockMins = (eVec3)spawnArgs.localBounds[0];
-		renderImage->RenderBlock() = eBounds3D(blockMins, blockMins + spawnArgs.renderBlockSize);
+		renderImage->SetOffset(spawnArgs.renderImageOffset);
+		renderImage->SetRenderBlockSize( spawnArgs.renderBlockSize);
 
 		// init animationController, if any
 		if (!spawnArgs.animationControllerFilename.empty()) {
@@ -49,7 +48,6 @@ eEntity::eEntity(const entitySpawnArgs_t & spawnArgs)
 //***************
 // eEntity::Spawn
 // copies a prefab eEntity and adds unique details
-// TODO: position via a single stack eTransform, not the eCollisionModel, or eRenderImage, or eAnimationController
 //***************
 bool eEntity::Spawn(const int entityPrefabIndex, const eVec3 & worldPosition) {
 	auto & prefabEntity = game.GetEntityPrefabManager().Get(entityPrefabIndex);
@@ -72,51 +70,33 @@ bool eEntity::Spawn(const int entityPrefabIndex, const eVec3 & worldPosition) {
 	auto & newEntity = game.GetEntity(spawnID);
 	newEntity->spawnedEntityID = spawnID;
 														
-	if (newEntity->animationController != nullptr) {
-		newEntity->IsStatic() = false;
+	if (newEntity->renderImage != nullptr) {
+		newEntity->SetStatic(false);
 		newEntity->renderImage->SetIsSelectable(true);
-		newEntity->renderImage->RenderBlock() += worldPosition;
-
-		// FIXME: remove renderImage dependency on the collisionModel (and vis versa)
-		if (newEntity->collisionModel != nullptr)
-			newEntity->collisionModel->SetOrigin(eVec2(worldPosition.x, worldPosition.y));
-
-		newEntity->UpdateRenderImageDisplay();
-		newEntity->UpdateRenderImageOrigin();
 	}
+
+	newEntity->SetWorldLayer(worldPosition.z);
+
+	// DEBUG: updates both the renderimage and collisionModel, if any
+	newEntity->SetOrigin(eVec2(worldPosition.x, worldPosition.y));
 	return true;
 }
 
 //***************
 // eEntity::Think
+// FIXME: leave this base-class definition blank
+// but still call Update() on all non-nullptr components owned by *this
 //***************
 void eEntity::Think() {
 	if (movementPlanner != nullptr)
 		movementPlanner->Update();
+	else if (collisionModel != nullptr)
+		collisionModel->Update();
 
-	// TODO: make eEntity.renderImage manipulation part of eAnimationController
-	// then just call animationController->Update(); here 
-	if (animationController != nullptr) {
-		UpdateRenderImageDisplay();
-		UpdateRenderImageOrigin();
-	}
-
-// FREEHILL BEGIN logic test
-	auto & velocity = collisionModel->GetVelocity();
-	eVec2 facingDirection;
-	if (velocity != vec2_zero) {
-		facingDirection = velocity.Normalized();
-		eMath::CartesianToIsometric(facingDirection.x, facingDirection.y);
-		facingDirection.Normalize();
-		oldFacingDirection = facingDirection;
-	} else {
-		facingDirection = oldFacingDirection * 0.25f;
-	}
-			
-	animationController->SetFloatParameter(xSpeedParameterHash, facingDirection.x);
-	animationController->SetFloatParameter(ySpeedParameterHash, facingDirection.y);
-	animationController->SetFloatParameter(magnitudeParameterHash, facingDirection.Length());
-// FREEHILL END logic test
+	if (animationController != nullptr)
+		animationController->Update();
+	else if (renderImage != nullptr)
+		renderImage->Update();
 }
 
 //***************
@@ -124,7 +104,7 @@ void eEntity::Think() {
 //***************
 void eEntity::DebugDraw() {
 	if (game.debugFlags.RENDERBLOCKS && animationController != nullptr)
-		game.GetRenderer().DrawIsometricPrism(lightBlueColor, renderImage->RenderBlock(), RENDERTYPE_DYNAMIC);
+		game.GetRenderer().DrawIsometricPrism(lightBlueColor, renderImage->GetRenderBlock(), RENDERTYPE_DYNAMIC);
 
 //		game.GetRenderer().DrawCartesianRect(lightBlueColor, renderImage->GetWorldClip(), false, RENDERTYPE_DYNAMIC);		// DEBUG: draw worldclip
 
@@ -148,42 +128,4 @@ void eEntity::DebugDraw() {
 
 	if (movementPlanner != nullptr)
 		movementPlanner->DebugDraw();
-}
-
-//*************
-// eEntity::UpdateRenderImageOrigin
-// backend collision occurs on a 2D top-down grid
-// UpdateRenderImageOrigin ensures only the visuals are isometric
-//*************
-void eEntity::UpdateRenderImageOrigin() {
-	eVec2 renderImageOrigin = collisionModel->AbsBounds()[0];	// FIXME(later): eTile::renderImage::origin is unmoving in iso. world space (regardless of collision)
-																// SOLUTION: treat all renderImage-collisionModel relations the same
-																// everthing can have a Transform...position, orientation, scale
-																// then collisionModels have origins at their center w/offset from the transform
-																// and renderImage_ts have origins at their top-left corner w/ offset from the transform
-	eMath::CartesianToIsometric(renderImageOrigin.x, renderImageOrigin.y);
-	renderImageOrigin += imageColliderOffset;
-	renderImage->SetOrigin(renderImageOrigin);
-}
-
-//*************
-// eEntity::UpdateRenderImageDisplay
-// TODO: uses the animationController to set the animation image and frame data
-// TODO: move this to eEntity::Think, and just call animationController.Update();
-//*************
-void eEntity::UpdateRenderImageDisplay() {
-	animationController->Update();
-
-// FREEHILL BEGIN 3d topological sort
-	// DEBUG: renderBlock and collisionModel currently designed to align, while offsetting renderImage.origin instead
-	eVec2 collisionMins = collisionModel->AbsBounds()[0];
-	eVec3 renderBlockMins = renderImage->RenderBlock()[0];
-	renderImage->RenderBlock() += eVec3(collisionMins.x - renderBlockMins.x, collisionMins.y - renderBlockMins.y , 0.0f);
-// FREEHILL END 3d topological sort
-
-	// TODO: eEntity layer unused, but set for possible future use
-	// EG: with a fluid renderBlock z-position *this can gradually climb a hill and still sort correctly, 
-	// instead of visually snapping to a layer using trigger lines,
-	// and the worldLayer can be used as a collision filter
-	worldLayer = game.GetMap().TileMap().LayerFromZPosition(eMath::NearestInt(renderImage->RenderBlock()[0].z));
 }

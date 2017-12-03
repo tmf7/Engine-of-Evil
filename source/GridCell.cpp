@@ -37,7 +37,7 @@ void eGridCell::DebugDraw() {
 		if (game.debugFlags.COLLISION && &tile.CollisionModel() != nullptr)
 			game.GetRenderer().DrawIsometricRect(pinkColor, tile.CollisionModel().AbsBounds(), true);
 
-		auto & renderBlock = tile.RenderImage().RenderBlock();
+		auto & renderBlock = tile.RenderImage().GetRenderBlock();
 		if (game.debugFlags.RENDERBLOCKS && renderBlock.Depth() > 0)		// DEBUG(performance): for visual clarity, don't draw flat renderBlocks
 			game.GetRenderer().DrawIsometricPrism(lightBlueColor, renderBlock, RENDERTYPE_DYNAMIC);
 	}

@@ -56,7 +56,7 @@ void ePlayer::Think() {
 		entityCollisionModel.SetVelocity(eVec2(moveInput.x, moveInput.y));
 
 		if (entityCollisionModel.GetVelocity() != vec2_zero) {
-			entityCollisionModel.UpdateOrigin();
+			entityCollisionModel.Update();
 		}
 	}
 }
