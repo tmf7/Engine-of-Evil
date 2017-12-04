@@ -70,7 +70,12 @@ public:
 	Uint32									GetGameTime() const;
 	void									DrawFPS();
 
-	virtual int								GetClassType() const override { return CLASS_GAME; }
+	virtual int								GetClassType() const override				{ return CLASS_GAME; }
+	virtual bool							IsClassType(int classType) const override	{ 
+												if(classType == CLASS_GAME) 
+													return true; 
+												return eClass::IsClassType(classType); 
+											}
 
 private:
 

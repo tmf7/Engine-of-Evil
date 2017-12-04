@@ -6,8 +6,17 @@
 class sHero : public eEntity {
 public:
 
+										sHero(const eEntity & other) : eEntity(other)		{}
+										sHero(eEntity && other) : eEntity(std::move(other)) {}
+
+	virtual bool						Spawn(const eVec3 & worldPosition) override;
 	virtual void						Think() override;
-	virtual int							GetClassType() const override { return CLASS_SHERO; }
+	virtual int							GetClassType() const override						{ return CLASS_SHERO; }
+	virtual bool						IsClassType(int classType) const override			{ 
+											if(classType == CLASS_SHERO) 
+												return true; 
+											return eEntity::IsClassType(classType);
+										}
 
 private:
 	

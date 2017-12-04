@@ -45,7 +45,12 @@ public:
 	void				DrawIsometricRect(const SDL_Color & color, const eBounds & rect, bool dynamic) const;
 	void				DrawCartesianRect(const SDL_Color & color, const eBounds & rect, bool fill, bool dynamic) const;
 
-	virtual int			GetClassType() const override { return CLASS_RENDERER; }
+	virtual int			GetClassType() const override				{ return CLASS_RENDERER; }
+	virtual bool		IsClassType(int classType) const override	{ 
+							if(classType == CLASS_RENDERER) 
+								return true; 
+							return eClass::IsClassType(classType); 
+						}
 
 	static void			TopologicalDrawDepthSort(const std::vector<eRenderImage *> & renderImagePool);
 

@@ -63,7 +63,12 @@ public:
 
 	virtual void						SetOwner(eGameObject * newOwner) override;
 
-	virtual int							GetClassType() const override { return CLASS_ANIMATIONCONTROLLER; }
+	virtual int							GetClassType() const override				{ return CLASS_ANIMATIONCONTROLLER; }
+	virtual bool						IsClassType(int classType) const override	{ 
+											if(classType == CLASS_ANIMATIONCONTROLLER) 
+												return true; 
+											return eComponent::IsClassType(classType); 
+										}
 
 private:
 

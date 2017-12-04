@@ -15,7 +15,12 @@ public:
 	virtual bool							Init() override;
 	virtual bool							LoadAndGet(const char * resourceFilename, std::shared_ptr<eImage> & result) override;
 
-	virtual int								GetClassType() const override { return CLASS_IMAGE_MANAGER; }
+	virtual int								GetClassType() const override				{ return CLASS_IMAGE_MANAGER; }
+	virtual bool							IsClassType(int classType) const override	{ 
+												if(classType == CLASS_IMAGE_MANAGER) 
+													return true; 
+												return eResourceManager<eImage>::IsClassType(classType); 
+											}
 
 	// subclass extension, does not obscure any base function
 	bool									LoadAndGetConstantText(TTF_Font * font, const char * text, const SDL_Color & color, std::shared_ptr<eImage> & result);

@@ -24,7 +24,12 @@ public:
 	const SDL_Rect &		GetSubframe(int subframeIndex) const;
 	int						NumSubframes() const;
 
-	virtual int				GetClassType() const override { return CLASS_IMAGE; }
+	virtual int				GetClassType() const override				{ return CLASS_IMAGE; }
+	virtual bool			IsClassType(int classType) const override	{ 
+								if(classType == CLASS_IMAGE) 
+									return true; 
+								return eClass::IsClassType(classType); 
+							}
 
 private:
 

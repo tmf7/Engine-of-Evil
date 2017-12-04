@@ -27,7 +27,12 @@ public:
 	static int					NumTileTypes();
 	static bool					HasCollider(int type);
 
-	virtual int					GetClassType() const override { return CLASS_TILEIMPL; }
+	virtual int					GetClassType() const override				{ return CLASS_TILEIMPL; }
+	virtual bool				IsClassType(int classType) const override	{ 
+									if(classType == CLASS_TILEIMPL) 
+										return true; 
+									return eClass::IsClassType(classType); 
+								}
 
 private:
 
@@ -83,7 +88,12 @@ public:
 	void								SetType(int newType);
 	eGridCell *							GetCellOwner();
 
-	virtual int							GetClassType() const override { return CLASS_TILE; }
+	virtual int							GetClassType() const override				{ return CLASS_TILE; }
+	virtual bool						IsClassType(int classType) const override	{ 
+											if(classType == CLASS_TILE) 
+												return true; 
+											return eGameObject::IsClassType(classType); 
+										}
 
 private:
 

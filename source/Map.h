@@ -25,7 +25,12 @@ public:
 	const std::array<std::pair<eBounds, eVec2>, 4>	&	EdgeColliders() const;
 	const eBounds &										AbsBounds() const;
 
-	virtual int											GetClassType() const override { return CLASS_MAP; }
+	virtual int											GetClassType() const override				{ return CLASS_MAP; }
+	virtual bool										IsClassType(int classType) const override	{ 
+															if(classType == CLASS_MAP) 
+																return true; 
+															return eClass::IsClassType(classType); 
+														}
 
 private:
 

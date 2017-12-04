@@ -35,7 +35,12 @@ public:
 	void				DrawKnownMap() const;
 
 	virtual void		SetOwner(eGameObject * newOwner) override;
-	virtual int			GetClassType() const override { return CLASS_MOVEMENT; }
+	virtual int			GetClassType() const override				{ return CLASS_MOVEMENT; }
+	virtual bool		IsClassType(int classType) const override	{ 
+							if(classType == CLASS_MOVEMENT) 
+								return true; 
+							return eComponent::IsClassType(classType); 
+						}
 
 private:
 

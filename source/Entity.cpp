@@ -38,7 +38,7 @@ eEntity::eEntity(const entitySpawnArgs_t & spawnArgs)
 		if (!spawnArgs.animationControllerFilename.empty()) {
 			std::shared_ptr<eAnimationController> prefabAnimationController = nullptr;
 			if (!game.GetAnimationControllerManager().LoadAndGet(spawnArgs.animationControllerFilename.c_str(), prefabAnimationController))
-				throw badEntityCtorException(spawnArgs.spriteFilename.c_str());	
+				throw badEntityCtorException(spawnArgs.animationControllerFilename.c_str());	
 
 			animationController = std::make_unique<eAnimationController>(*prefabAnimationController);
 		}
@@ -48,28 +48,14 @@ eEntity::eEntity(const entitySpawnArgs_t & spawnArgs)
 //***************
 // eEntity::Spawn
 // copies a prefab eEntity and adds unique details
+// FIXME: don't throw exceptions in eEntity::eEntity, just assign defaults
 //***************
-bool eEntity::Spawn(const int entityPrefabIndex, const eVec3 & worldPosition) {
-	auto & prefabEntity = game.GetEntityPrefabManager().Get(entityPrefabIndex);
-	if (!prefabEntity->IsValid())
-		return false;
-	
-	int spawnID = -1;
-	try {
-		spawnID = game.AddEntity(std::make_unique<eEntity>(*prefabEntity));
-	} catch (const badEntityCtorException & e) {
-		// TODO: output to an error log file (popup is fine for now because it's more obvious and immediate)
-		std::string message = e.what + " caused eEntity (" + std::to_string(spawnID) + ") spawn failure.";
-		SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_INFORMATION, "Error", message.c_str(), NULL);
-		return false;
-	}
-
+bool eEntity::Spawn(const eVec3 & worldPosition) {
+	int spawnID = game.AddEntity(std::make_unique<eEntity>(*this));
 	if (spawnID < 0)
 		return false;
 
 	auto & newEntity = game.GetEntity(spawnID);
-	newEntity->spawnedEntityID = spawnID;
-														
 	if (newEntity->renderImage != nullptr) {
 		newEntity->SetStatic(false);
 		newEntity->renderImage->SetIsSelectable(true);
@@ -77,8 +63,6 @@ bool eEntity::Spawn(const int entityPrefabIndex, const eVec3 & worldPosition) {
 
 	newEntity->SetWorldLayer(worldPosition.z);
 	newEntity->SetOrigin(eVec2(worldPosition.x, worldPosition.y));
-
-	newEntity->UpdateComponents();
 	return true;
 }
 

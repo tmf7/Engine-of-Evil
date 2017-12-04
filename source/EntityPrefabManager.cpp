@@ -1,4 +1,5 @@
 #include "EntityPrefabManager.h"
+#include "sHero.h"
 
 //**************************
 // eEntityPrefabManager::Init
@@ -151,7 +152,14 @@ bool eEntityPrefabManager::LoadAndGet(const char * resourceFilename, std::shared
 
 	// register the requested entity prefab
 	try {
-		result = std::make_shared<eEntity>(spawnArgs);
+		// FIXME: read a ClassType from the file (eg: CLASS_ENTITY, CLASS_SHERO, etc)
+		// confirm that the ClassType derives from eEntity (somehow...)
+		// then set the make_shared template type...by calling a different templated method?
+		// SOLUTION: make eEntity derived classes responsible for calling their own Load/LoadAndGet (such that the correct fn is implicitly defined)
+		// ...
+		auto & tempResult = std::make_shared<eEntity>(spawnArgs);
+		result = std::make_shared<sHero>(std::move(*tempResult));
+
 		resourceHash.Add(result->GetNameHash(), resourceList.size());
 		resourceList.emplace_back(result);
 		return true;
@@ -164,3 +172,21 @@ bool eEntityPrefabManager::LoadAndGet(const char * resourceFilename, std::shared
 	}
 }
 
+template<class SpawnClass>
+void CreatePrefab(std::shared_ptr<eEntity> & result) {
+	auto & tempResult = std::make_shared<eEntity>(spawnArgs);
+	result = std::make_shared<SpawnClass>(std::move(*tempResult));
+}
+
+//***************
+// eEntityPrefabManager::SpawnInstance
+// calls the runtime type Spawn function of the prefab eEntity
+// at param entityPrefabIndex within resourceList
+//***************
+bool eEntityPrefabManager::SpawnInstance(const int entityPrefabIndex, const eVec3 & worldPosition) {
+	auto & prefabEntity = Get(entityPrefabIndex);
+	if (!prefabEntity->IsValid())
+		return false;
+
+	return prefabEntity->Spawn(worldPosition);
+}

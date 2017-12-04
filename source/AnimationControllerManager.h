@@ -15,7 +15,12 @@ public:
 	virtual bool							Init() override;
 	virtual bool							LoadAndGet(const char * resourceFilename, std::shared_ptr<eAnimationController> & result) override;
 
-	virtual int								GetClassType() const override { return CLASS_ANIMATIONCONTROLLER_MANAGER; }
+	virtual int								GetClassType() const override				{ return CLASS_ANIMATIONCONTROLLER_MANAGER; }
+	virtual bool							IsClassType(int classType) const override	{ 
+												if(classType == CLASS_ANIMATIONCONTROLLER_MANAGER) 
+													return true; 
+												return eResourceManager<eAnimationController>::IsClassType(classType); 
+											}
 };
 
 #endif /* EVIL_ANIMATION_CONTROLLER_MANAGER_H */

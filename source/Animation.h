@@ -41,7 +41,12 @@ public:
 	void								SetFPS(int newFPS);
 	float								Duration() const;
 
-	virtual int							GetClassType() const override { return CLASS_ANIMATION; }
+	virtual int							GetClassType() const override				{ return CLASS_ANIMATION; }
+	virtual bool						IsClassType(int classType) const override	{ 
+											if(classType == CLASS_ANIMATION) 
+												return true; 
+											return eClass::IsClassType(classType); 
+										}
 
 public:
 

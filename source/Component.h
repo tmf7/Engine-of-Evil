@@ -19,10 +19,15 @@ private:
 
 public:
 
-	const eGameObject *					Owner() const						{ return owner; }
-	eGameObject *						Owner()								{ return owner; }
+	const eGameObject *					Owner() const								{ return owner; }
+	eGameObject *						Owner()										{ return owner; }
 
-	virtual int							GetClassType() const override		{ return CLASS_COMPONENT; }
+	virtual int							GetClassType() const override				{ return CLASS_COMPONENT; }
+	virtual bool						IsClassType(int classType) const override	{ 
+											if(classType == CLASS_COMPONENT) 
+												return true; 
+											return eClass::IsClassType(classType); 
+										}
 
 protected:
 

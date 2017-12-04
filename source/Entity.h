@@ -31,18 +31,33 @@ typedef struct entitySpawnArgs_s {
 class eEntity : public eGameObject, public eResource {
 public:
 
+	friend class eGame;			// for access to assign spawnedEntityID
+
+public:
+
+	virtual					   ~eEntity() override = default;
+								eEntity() = default;
+								eEntity(const eEntity & other) = default;
+								eEntity(eEntity && other) = default;
+	eEntity &					operator=(const eEntity & other)				{ eGameObject::operator=(other); }
+	eEntity &					operator=(eEntity && other)						{ eGameObject::operator=(other); }
 								eEntity(const entitySpawnArgs_t & spawnArgs);
 
-	static bool					Spawn(const int entityPrefabIndex, const eVec3 & worldPosition);
+	virtual bool				Spawn(const eVec3 & worldPosition);
 
 	void						SetPlayerSelected(bool isSelected);
 	bool						GetPlayerSelected() const;
 	int							SpawnID() const;
 
 	virtual void				DebugDraw() override;
-	virtual int					GetClassType() const override { return CLASS_ENTITY; }
+	virtual int					GetClassType() const override					{ return CLASS_ENTITY; }
+	virtual bool				IsClassType(int classType) const override		{ 
+									if(classType == CLASS_ENTITY) 
+										return true; 
+									return eGameObject::IsClassType(classType);
+								}
 
-private:
+protected:
 
 	int							spawnedEntityID;		// index within eGame::entities
 	bool						playerSelected;			// player is controlling this eEntity

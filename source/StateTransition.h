@@ -26,6 +26,11 @@ public:
 													 float offset = 0.0f);
 
 	virtual int						GetClassType() const override { return CLASS_STATETRANSITION; }
+	virtual bool					IsClassType(int classType) const override	{ 
+										if(classType == CLASS_STATETRANSITION) 
+											return true; 
+										return eClass::IsClassType(classType); 
+									}
 
 private:
 

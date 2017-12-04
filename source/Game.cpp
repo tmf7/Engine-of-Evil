@@ -119,7 +119,7 @@ void eGame::FreeAssets() {
 //****************
 // eGame::AddEntity
 // finds the first unused slot in game::entities to move param entity
-// and assigns it a spawnID
+// and assigns it a spawnID,
 // returns the new spawnID index within game::entities
 // returns -1 if something went wrong
 //****************
@@ -127,6 +127,7 @@ int eGame::AddEntity(std::unique_ptr<eEntity> && entity) {
 	int spawnID = 0;
 	for (auto & entitySlot : entities) {
 		if (entitySlot == nullptr) {
+			entity->spawnedEntityID = spawnID;
 			entitySlot = std::move(entity);
 			return spawnID;
 		} else {
@@ -135,6 +136,7 @@ int eGame::AddEntity(std::unique_ptr<eEntity> && entity) {
 	}
 
 	if (spawnID == entities.size()) {
+		entity->spawnedEntityID = spawnID;
 		entities.emplace_back(std::move(entity));
 		return spawnID;
 	}

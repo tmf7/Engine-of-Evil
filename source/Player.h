@@ -18,7 +18,12 @@ public:
 	void					Draw();
 	void					DebugDraw();
 
-	virtual int				GetClassType() const override { return CLASS_PLAYER; }
+	virtual int				GetClassType() const override				{ return CLASS_PLAYER; }
+	virtual bool			IsClassType(int classType) const override	{ 
+								if(classType == CLASS_PLAYER) 
+									return true; 
+								return eClass::IsClassType(classType); 
+							}
 
 private:
 

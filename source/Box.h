@@ -32,7 +32,12 @@ public:
 	const eVec2 &	Extents() const;
 	const eVec2 *	Axes() const;
 
-	virtual int		GetClassType() const override { return CLASS_BOX; }
+	virtual int		GetClassType() const override				{ return CLASS_BOX; }
+	virtual bool	IsClassType(int classType) const override	{ 
+						if(classType == CLASS_BOX) 
+							return true; 
+						return eClass::IsClassType(classType); 
+					}
 
 private:
 

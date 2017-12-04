@@ -19,6 +19,11 @@ public:
 
 	virtual	void		Reset()												{ inOpenSet = false; inClosedSet = false; }
 	virtual int			GetClassType() const override						{ return CLASS_GRIDINDEX; }
+	virtual bool		IsClassType(int classType) const override			{ 
+							if(classType == CLASS_GRIDINDEX) 
+								return true; 
+							return eClass::IsClassType(classType); 
+						}
 
 public:
 
@@ -98,7 +103,12 @@ public:
 
 	void					ResetAllCells();
 
-	virtual int				GetClassType() const override { return CLASS_SPATIALINDEXGRID; }
+	virtual int				GetClassType() const override				{ return CLASS_SPATIALINDEXGRID; }
+	virtual bool			IsClassType(int classType) const override	{ 
+								if(classType == CLASS_SPATIALINDEXGRID) 
+									return true; 
+								return eClass::IsClassType(classType); 
+							}
 
 private:
 

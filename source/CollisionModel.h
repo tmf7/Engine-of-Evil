@@ -41,6 +41,11 @@ public:
 	bool								FindApproachingCollision(const eVec2 & dir, const float length, Collision_t & result) const;
 
 	virtual int							GetClassType() const override { return CLASS_COLLISIONMODEL; }
+	virtual bool						IsClassType(int classType) const override	{ 
+											if(classType == CLASS_COLLISIONMODEL) 
+												return true; 
+											return eComponent::IsClassType(classType); 
+										}
 
 private:
 

@@ -36,7 +36,12 @@ public:
 															AnimationBlendMode blendMode = AnimationBlendMode::SIMPLE_1D,
 															float speed = 1.0f);
 
-	virtual int									GetClassType() const override { return CLASS_BLENDSTATE; }
+	virtual int									GetClassType() const override				{ return CLASS_BLENDSTATE; }
+	virtual bool								IsClassType(int classType) const override	{ 
+													if(classType == CLASS_BLENDSTATE) 
+														return true; 
+													return eStateNode::IsClassType(classType); 
+												}
 
 private:
 

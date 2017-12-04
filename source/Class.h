@@ -19,7 +19,8 @@ public:
 	eClass &		operator=(const eClass & other) = default;
 	eClass &		operator=(eClass && other) = default;
 
-	virtual	int		GetClassType() const = 0;
+	virtual	int		GetClassType() const				{ return CLASS_CLASS; }
+	virtual bool	IsClassType(int classType) const	{ return classType == CLASS_CLASS; }
 };
 
 #endif /* EVIL_CLASS_H */

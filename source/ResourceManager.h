@@ -24,7 +24,12 @@ public:
 	virtual bool							Init() = 0;
 	virtual bool							LoadAndGet(const char * resourceFilename, std::shared_ptr<type> & result) = 0;
 
-	virtual int								GetClassType() const override = 0;
+	virtual int								GetClassType() const override				{ return CLASS_RESOURCE_MANAGER; }
+	virtual bool							IsClassType(int classType) const override	{ 
+												if(classType == CLASS_RESOURCE_MANAGER) 
+													return true; 
+												return eClass::IsClassType(classType); 
+											}
 
 	// no need to specialize these, but if needed do so in a derived class to avoid removing functionality
 	// DEBUG: however, obscuring visibility of the base class function can lead to undefined behavior (especially through base-class pointers/references)

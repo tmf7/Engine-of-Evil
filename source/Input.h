@@ -34,7 +34,12 @@ public:
 	int					GetMouseY() const;
 	void				HideCursor(bool hide = true) const;
 
-	virtual int			GetClassType() const override { return CLASS_INPUT; }
+	virtual int			GetClassType() const override				{ return CLASS_INPUT; }
+	virtual bool		IsClassType(int classType) const override	{ 
+							if(classType == CLASS_INPUT) 
+								return true; 
+							return eClass::IsClassType(classType); 
+						}
 
 private:
 

@@ -23,7 +23,12 @@ public:
 															const std::shared_ptr<eAnimation> & animation, 
 															float speed = 1.0f);
 
-	virtual int								GetClassType() const override { return CLASS_ANIMATIONSTATE; }
+	virtual int								GetClassType() const override				{ return CLASS_ANIMATIONSTATE; }
+	virtual bool							IsClassType(int classType) const override	{ 
+												if(classType == CLASS_ANIMATIONSTATE) 
+													return true; 
+												return eStateNode::IsClassType(classType); 
+											}
 
 private:
 

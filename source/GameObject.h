@@ -18,6 +18,7 @@ class eGameObject : public eClass {
 public:
 
 	// FIXME: don't make component's access dependent on eGameObject definition
+	// especially since derived classes don't get the same access
 	friend class eCollisionModel;
 	friend class eRenderImage;
 	friend class eAnimationController;
@@ -32,7 +33,13 @@ public:
 	eGameObject &							operator=(eGameObject other);
 
 
-	virtual int								GetClassType() const override			{ return CLASS_GAMEOBJECT; }
+	virtual int								GetClassType() const override				{ return CLASS_GAMEOBJECT; }
+	virtual bool							IsClassType(int classType) const override	{ 
+												if(classType == CLASS_GAMEOBJECT) 
+													return true; 
+												return eClass::IsClassType(classType); 
+											}
+
 	virtual void							Think()									{}
 	virtual void							DebugDraw()								{}
 

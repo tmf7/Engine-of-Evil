@@ -1,5 +1,6 @@
 #include "Player.h"
 #include "Game.h"
+#include "sHero.h"
 
 void ePlayer::Think() {
 	auto & input = game.GetInput();
@@ -90,10 +91,11 @@ bool ePlayer::SelectGroup() {
 		for (auto & kvPair : cell->RenderContents()) {
 			auto owner = kvPair.second->Owner();
 			
-			if (owner == nullptr || owner->GetClassType() != CLASS_ENTITY)
+			if (owner == nullptr || !owner->IsClassType(CLASS_ENTITY))
 				continue;
 
-			const auto & entity = static_cast<eEntity *>(owner);
+			const int classType = owner->GetClassType();
+			const auto & entity = (classType == CLASS_ENTITY ? static_cast<eEntity *>(owner) : static_cast<sHero *>(owner));
 			
 			// don't test the same entity twice
 			if (alreadyTested.find(entity) != alreadyTested.end())

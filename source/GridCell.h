@@ -25,7 +25,12 @@ public:
 	void															SetAbsBounds(const eBounds & bounds);
 
 	virtual void													Reset() override;
-	virtual int														GetClassType() const override { return CLASS_GRIDCELL; }
+	virtual int														GetClassType() const override				{ return CLASS_GRIDCELL; }
+	virtual bool													IsClassType(int classType) const override	{ 
+																		if(classType == CLASS_GRIDCELL) 
+																			return true; 
+																		return eGridIndex::IsClassType(classType); 
+																	}
 
 private:
 

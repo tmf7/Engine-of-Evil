@@ -43,6 +43,11 @@ public:
 	bool								IsSelectable() const;
 
 	virtual int							GetClassType() const override { return CLASS_RENDERIMAGE; }
+	virtual bool						IsClassType(int classType) const override	{ 
+											if(classType == CLASS_RENDERIMAGE) 
+												return true; 
+											return eComponent::IsClassType(classType); 
+										}
 
 private:
 

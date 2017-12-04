@@ -43,7 +43,12 @@ public:
 	void			FromPoints(const eVec3 * points, const int numPoints);
 	void			ToPoints(eVec3 points[8]) const;
 
-	virtual int		GetClassType() const override { return CLASS_BOUNDS3D; }
+	virtual int		GetClassType() const override				{ return CLASS_BOUNDS3D; }
+	virtual bool	IsClassType(int classType) const override	{ 
+						if(classType == CLASS_BOUNDS3D) 
+							return true; 
+						return eClass::IsClassType(classType); 
+					}
 
 private:
 

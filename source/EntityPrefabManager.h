@@ -15,7 +15,14 @@ public:
 	virtual bool							Init() override;
 	virtual bool							LoadAndGet(const char * resourceFilename, std::shared_ptr<eEntity> & result) override;
 
-	virtual int								GetClassType() const override { return CLASS_ENTITYPREFAB_MANAGER; }
+	bool									SpawnInstance(const int entityPrefabIndex, const eVec3 & worldPosition);
+
+	virtual int								GetClassType() const override				{ return CLASS_ENTITYPREFAB_MANAGER; }
+	virtual bool							IsClassType(int classType) const override	{ 
+												if(classType == CLASS_ENTITYPREFAB_MANAGER) 
+													return true; 
+												return eResourceManager<eEntity>::IsClassType(classType); 
+											}
 };
 
 #endif /* EVIL_ENTITY_PREFAB_MANAGER_H */

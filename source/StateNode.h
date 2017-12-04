@@ -29,7 +29,12 @@ public:
 	int											NameHash() const;
 	const AnimationFrame_t &					GetCurrentFrame() const;
 
-	virtual int									GetClassType() const override { return CLASS_STATENODE; }
+	virtual int									GetClassType() const override				{ return CLASS_STATENODE; }
+	virtual bool								IsClassType(int classType) const override	{ 
+													if(classType == CLASS_STATENODE) 
+														return true; 
+													return eClass::IsClassType(classType); 
+												}
 
 protected:
 
