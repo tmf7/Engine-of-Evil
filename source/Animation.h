@@ -30,7 +30,7 @@ public:
 
 public:
 	
-										eAnimation(const std::string & sourceFilename, int animationManagerIndex, 
+										eAnimation(const char * sourceFilename, int animationManagerIndex, 
 												   std::vector<AnimationFrame_t> & frames,
 												   int framesPerSecond,
 												   AnimationLoopState loop = AnimationLoopState::ONCE);
@@ -62,7 +62,7 @@ private:
 //*******************
 // eAnimation::eAnimation
 //*******************
-inline eAnimation::eAnimation(const std::string & sourceFilename, int animationManagerIndex, std::vector<AnimationFrame_t> & frames, int framesPerSecond, AnimationLoopState loop)
+inline eAnimation::eAnimation(const char * sourceFilename, int animationManagerIndex, std::vector<AnimationFrame_t> & frames, int framesPerSecond, AnimationLoopState loop)
 	: eResource(sourceFilename, animationManagerIndex),
 	  frames(frames),
 	  framesPerSecond(framesPerSecond),

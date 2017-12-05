@@ -19,7 +19,7 @@ public:
 										eResource() = default;
 										eResource(const eResource & other) = default;
 										eResource(eResource && other) = default;
-										eResource(const std::string & sourceFilename, int managerIndex)
+										eResource(const char * sourceFilename, int managerIndex)
 											: sourceFilename(sourceFilename),
 											  managerIndex(managerIndex) {
 											nameHash = std::hash<std::string>()(sourceFilename);

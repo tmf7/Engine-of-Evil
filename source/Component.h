@@ -9,44 +9,43 @@ class eGameObject;
 //				eComponent
 // base class for all in-game interactive objects
 // eGameObjects handle the lifetime of eComponents
-// DEBUG: always define and construct derived classes
-// with an eGameObject-type owner [eg: eRenderImage::eRenderImage(eGameObject * owner)]
 //*************************************************
-class eComponent : eClass {
+class eComponent : public eClass {
 private:
 
 	friend class eGameObject;
 
 public:
 
-	const eGameObject *					Owner() const								{ return owner; }
-	eGameObject *						Owner()										{ return owner; }
+	const eGameObject *							Owner() const								{ return owner; }
+	eGameObject *								Owner()										{ return owner; }
 
-	virtual int							GetClassType() const override				{ return CLASS_COMPONENT; }
-	virtual bool						IsClassType(int classType) const override	{ 
-											if(classType == CLASS_COMPONENT) 
-												return true; 
-											return eClass::IsClassType(classType); 
-										}
 
-protected:
-
-										eComponent() = default;		// safety-reminder, disallow outside classes from instantiation without an owner
-
-	virtual void						SetOwner(eGameObject * newOwner)	{ owner = newOwner; }
+	virtual int									GetClassType() const override				{ return CLASS_COMPONENT; }
+	virtual bool								IsClassType( int classType ) const override	{ 
+													if( classType == CLASS_COMPONENT ) 
+														return true; 
+													return eClass::IsClassType( classType ); 
+												}
 
 protected:
 
-	eGameObject *						owner = nullptr;			// back-pointer to user managing the lifetime of *this
+												eComponent() = default;		// safety-reminder, disallow outside classes from instantiation without an owner
 
-	// DEBUG: std::shared_ptr creates a loop and artificial memory leak because neither this nor its owner can be destroyed
-	// DEBUG: raw pointer is okay as long as *this doesn't outlive its owner 
+												// called after owner is constructed, or after it Spawns, depending on user needs
+	virtual void								Init()										{}
+												
+												// called every frame before owner::Think in owner::UpdateComponents
+	virtual void								Update()									{}
 
-	// FIXME/BUG: *owner may move in memory because of std::vector resizing
-	// SOLTUION(1/3): use observer pattern w/std::weak_ptr (owner as the subject, *this as observer)
-	// SOLUTION(2/3): OR, update this->owner whenever ANY of owners ctor/assignments are called [cheaper?]
-	// which means creating rule of 5 for everything with an eComponent
-	// SOLUTION(3/3): OR, only assign owner once the final *owner no longer moves in memory (eg: during eEntity::Spawn)
+												// used to maintain the runtime type of a derived eComponent when copying eGameObjects
+	virtual std::unique_ptr<eComponent>			GetCopy() const								{ return std::make_unique< eComponent >( *this ); }
+
+	virtual void								SetOwner(eGameObject * newOwner)			{ owner = newOwner; }
+
+protected:
+
+	eGameObject *								owner = nullptr;			// back-pointer to user managing the lifetime of *this
 };
 
 #endif /* EVIL_COMPONENT_H */

@@ -194,7 +194,7 @@ eTile::eTile(eGridCell * cellOwner, const eVec2 & origin, const int type, const 
 // eTile::SetType
 //************
 void eTile::SetType(int newType) {
-	// if this is a type change, not just an initialization, then clear all collisionModel properties
+	// if this is a type change, not just an initialization, then clear the collisionModel properties
 	collisionModel = nullptr;
 
 	impl = &eTileImpl::tileTypes[newType];														// DEBUG: assumes newType is defined

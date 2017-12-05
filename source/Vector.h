@@ -641,6 +641,7 @@ public:
 
 	eQuat			Inverse() const;
 	void			Set(const float x, const float y, const float z, const float w);
+	void			Zero();
 
 	float			operator[](const int index) const;
 	float &			operator[](const int index);
@@ -790,6 +791,17 @@ inline void eQuat::Set(const float x, const float y, const float z, const float 
 	this->y = y;
 	this->z = z;
 	this->w = w;
+}
+
+//******************
+// eQuat::Zero
+// sets x, y, z, and w to zero
+//******************
+inline void eQuat::Zero() {
+	x = 0.0f;
+	y = 0.0f;
+	z = 0.0f;
+	w = 0.0f;
 }
 
 #endif /* EVIL_VECTOR_H */

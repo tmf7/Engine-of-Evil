@@ -20,52 +20,53 @@ typedef struct Collision_s Collision_t;
 class eCollisionModel : public eComponent {
 public:
 
-										eCollisionModel(eGameObject * owner);
-	virtual								~eCollisionModel() override;
+												eCollisionModel(eGameObject * owner);
+	virtual										~eCollisionModel() override;
 
-	void								SetOrigin(const eVec2 & newOrigin);	
-	const eVec2 &						Center() const;
-	void								Update();
-	eVec2								GetOriginDelta() const;
-	const eVec2 &						Offset() const;
-	void								SetOffset(const eVec2 & newOffset);
-	void								SetLocalBounds(const eBounds & newLocalBounds);
-	const eBounds &						LocalBounds() const;
-	const eBounds &						AbsBounds() const;
-	void								SetVelocity(const eVec2 & newVelocity);
-	const eVec2 &						GetVelocity() const;
-	const eVec2 &						GetOldVelocity() const;
-	bool								IsActive() const;
-	void								SetActive(bool active);
-	const std::vector<eGridCell *> &	Areas() const;
-	bool								FindApproachingCollision(const eVec2 & dir, const float length, Collision_t & result) const;
+	void										SetOrigin(const eVec2 & newOrigin);	
+	const eVec2 &								Center() const;
+	eVec2										GetOriginDelta() const;
+	const eVec2 &								Offset() const;
+	void										SetOffset(const eVec2 & newOffset);
+	void										SetLocalBounds(const eBounds & newLocalBounds);
+	const eBounds &								LocalBounds() const;
+	const eBounds &								AbsBounds() const;
+	void										SetVelocity(const eVec2 & newVelocity);
+	const eVec2 &								GetVelocity() const;
+	const eVec2 &								GetOldVelocity() const;
+	bool										IsActive() const;
+	void										SetActive(bool active);
+	const std::vector<eGridCell *> &			Areas() const;
+	bool										FindApproachingCollision(const eVec2 & dir, const float length, Collision_t & result) const;
 
-	virtual int							GetClassType() const override { return CLASS_COLLISIONMODEL; }
-	virtual bool						IsClassType(int classType) const override	{ 
-											if(classType == CLASS_COLLISIONMODEL) 
-												return true; 
-											return eComponent::IsClassType(classType); 
-										}
-
-private:
-
-	void								ClearAreas();
-	void								UpdateAreas();
-	void								AvoidCollisionSlide();
-	void								AvoidCollisionCorrection();
+	virtual void								Update() override;
+	virtual std::unique_ptr<eComponent>			GetCopy() const override					{ return std::make_unique<eCollisionModel>(*this); }
+	virtual int									GetClassType() const override				{ return CLASS_COLLISIONMODEL; }
+	virtual bool								IsClassType(int classType) const override	{ 
+													if(classType == CLASS_COLLISIONMODEL) 
+														return true; 
+													return eComponent::IsClassType(classType); 
+												}
 
 private:
 
-	eBounds								localBounds;			// using model coordinates
-	eBounds								absBounds;				// using world coordinates	
-	eVec2								origin;					// using world coordinates
-	eVec2								oldOrigin;				// for use with collision response
-	eVec2								center;					// cached absBounds.Center() for faster updates
-	eVec2								orthoOriginOffset;		// offset from (eGameObject)owner::orthoOrigin (default: (0,0))
-	eVec2								oldVelocity;			// velocity of the prior frame
-	eVec2								velocity;				// DEBUG: never normalized, only rotated and scaled
-	std::vector<eGridCell *>			areas;					// currently occupied tileMap indexes (between 1 and 4)
-	bool								active;					// whether this participates in (dynamic or kinematic) collision detection
+	void										ClearAreas();
+	void										UpdateAreas();
+	void										AvoidCollisionSlide();
+	void										AvoidCollisionCorrection();
+
+private:
+
+	eBounds										localBounds;			// using model coordinates
+	eBounds										absBounds;				// using world coordinates	
+	eVec2										origin;					// using world coordinates
+	eVec2										oldOrigin;				// for use with collision response
+	eVec2										center;					// cached absBounds.Center() for faster updates
+	eVec2										orthoOriginOffset;		// offset from (eGameObject)owner::orthoOrigin (default: (0,0))
+	eVec2										oldVelocity;			// velocity of the prior frame
+	eVec2										velocity;				// DEBUG: never normalized, only rotated and scaled
+	std::vector<eGridCell *>					areas;					// currently occupied tileMap indexes (between 1 and 4)
+	bool										active;					// whether this participates in (dynamic or kinematic) collision detection
 
 };
 

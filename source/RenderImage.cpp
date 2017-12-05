@@ -24,9 +24,15 @@ void eRenderImage::SetImage(int imageManagerIndex) {
 void eRenderImage::UpdateRenderBlock() {
 	auto & renderBlockMins = renderBlock[0];
 
+	// static eGameObjects snap z according to worldLayer
+	// dynamic eGameObjects use the fluid zPosition
 	if (owner->worldLayer != owner->oldWorldLayer) {
-		const float newRBMinZ = (float)game.GetMap().TileMap().MinZPositionFromLayer(owner->worldLayer);
-		renderBlock += eVec3(0.0f, 0.0f, newRBMinZ - renderBlockMins.z);
+		if (owner->isStatic) {
+			const float newRBMinZ = (float)game.GetMap().TileMap().MinZPositionFromLayer(owner->worldLayer);
+			renderBlock += eVec3(0.0f, 0.0f, newRBMinZ - renderBlockMins.z);
+		} else {
+			renderBlock += eVec3(0.0f, 0.0f, owner->zPosition - renderBlockMins.z);
+		}
 	}
 
 	if (owner->collisionModel != nullptr) {

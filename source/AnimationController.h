@@ -24,73 +24,73 @@ public:
 
 public:
 
-	virtual							   ~eAnimationController() = default;
-										eAnimationController() = default;
-										eAnimationController(eAnimationController && other) = default;
-	eAnimationController &				operator=(const eAnimationController & other) = default;
-	eAnimationController &				operator=(eAnimationController && other) = default;								
-//	eAnimationController &				operator=(eAnimationController other);
-										eAnimationController(const eAnimationController & other);
-										eAnimationController(const std::string & sourceFilename, int managerIndex);
+	virtual									   ~eAnimationController() = default;
+												eAnimationController() = default;
+												eAnimationController(eAnimationController && other) = default;
+												eAnimationController(const eAnimationController & other);
+												eAnimationController(const char * sourceFilename, int managerIndex);
 
-	void								Update();
-	void								Pause(bool isPaused = true);
+	eAnimationController &						operator=(const eAnimationController & other) = default;
+	eAnimationController &						operator=(eAnimationController && other) = default;								
 
-	const eStateNode &					GetCurrentState() const;
-	eStateNode &						GetCurrentState();
+	void										Pause();
+	void										Unpause();
+	const eStateNode &							GetCurrentState() const;
+	eStateNode &								GetCurrentState();				// allows setting the current state's normalizedTime
 
 	// returns true if the item exists and can be set, or false if it doesn't exist
-	bool								SetFloatParameter(const std::string & name, float newValue);
-	bool								SetIntParameter(const std::string & name, int newValue);
-	bool								SetBoolParameter(const std::string & name, bool newValue);
-	bool								SetTriggerParameter(const std::string & name);
-	bool								ResetTriggerParameter(const std::string & name);
-	bool								SetFloatParameter(int nameHash, float newValue);
-	bool								SetIntParameter(int nameHash, int newValue);
-	bool								SetBoolParameter(int nameHash, bool newValue);
-	bool								SetTriggerParameter(int nameHash);
-	bool								ResetTriggerParameter(int nameHash);
+	bool										SetFloatParameter(const std::string & name, float newValue);
+	bool										SetIntParameter(const std::string & name, int newValue);
+	bool										SetBoolParameter(const std::string & name, bool newValue);
+	bool										SetTriggerParameter(const std::string & name);
+	bool										ResetTriggerParameter(const std::string & name);
+	bool										SetFloatParameter(int nameHash, float newValue);
+	bool										SetIntParameter(int nameHash, int newValue);
+	bool										SetBoolParameter(int nameHash, bool newValue);
+	bool										SetTriggerParameter(int nameHash);
+	bool										ResetTriggerParameter(int nameHash);
 
 	// returns the value, or a default if it doesn't exist
-	float								GetFloatParameter(const std::string & name) const;
-	int									GetIntParameter(const std::string & name) const;
-	bool								GetBoolParameter(const std::string & name) const;
-	bool								GetTriggerParameter(const std::string & name) const;
-	float								GetFloatParameter(int nameHash) const;
-	int									GetIntParameter(int nameHash) const;
-	bool								GetBoolParameter(int nameHash) const;
-	bool								GetTriggerParameter(int nameHash) const;
+	float										GetFloatParameter(const std::string & name) const;
+	int											GetIntParameter(const std::string & name) const;
+	bool										GetBoolParameter(const std::string & name) const;
+	bool										GetTriggerParameter(const std::string & name) const;
+	float										GetFloatParameter(int nameHash) const;
+	int											GetIntParameter(int nameHash) const;
+	bool										GetBoolParameter(int nameHash) const;
+	bool										GetTriggerParameter(int nameHash) const;
 
-	virtual void						SetOwner(eGameObject * newOwner) override;
-
-	virtual int							GetClassType() const override				{ return CLASS_ANIMATIONCONTROLLER; }
-	virtual bool						IsClassType(int classType) const override	{ 
-											if(classType == CLASS_ANIMATIONCONTROLLER) 
-												return true; 
-											return eComponent::IsClassType(classType); 
-										}
+	virtual void								Update() override;
+	virtual std::unique_ptr<eComponent>			GetCopy() const	override					{ return std::make_unique<eAnimationController>(*this); }
+	virtual void								SetOwner(eGameObject * newOwner) override;
+	virtual int									GetClassType() const override				{ return CLASS_ANIMATIONCONTROLLER; }
+	virtual bool								IsClassType(int classType) const override	{ 
+													if(classType == CLASS_ANIMATIONCONTROLLER) 
+														return true; 
+													return eComponent::IsClassType(classType); 
+												}
 
 private:
 
 	// returns true if add was successful, false if the item already exists 
-	bool								AddAnimationState(std::unique_ptr<eStateNode> && newState);
+	bool										AddAnimationState(std::unique_ptr<eStateNode> && newState);
 	// transitionHash allows collisions, because it's indexed by eStateTransition::fromState
-	void								AddTransition(eStateTransition && newTransition);
-	void								SortAndHashTransitions();
+	void										AddTransition(eStateTransition && newTransition);
+	void										SortAndHashTransitions();
 
-	bool								AddFloatParameter(const std::string & name, float initialValue = 0.0f);
-	bool								AddIntParameter(const std::string & name, int initialValue = 0);
-	bool								AddBoolParameter(const std::string & name, bool initialValue = false);
-	bool								AddTriggerParameter(const std::string & name, bool initialValue = false);
-	bool								CheckTransitionConditions(const eStateTransition & transition);
+	bool										AddFloatParameter(const std::string & name, float initialValue = 0.0f);
+	bool										AddIntParameter(const std::string & name, int initialValue = 0);
+	bool										AddBoolParameter(const std::string & name, bool initialValue = false);
+	bool										AddTriggerParameter(const std::string & name, bool initialValue = false);
+	bool										CheckTransitionConditions(const eStateTransition & transition);
 
 	// DEBUG: used by eAnimationControllerManager to load *this
-	void								Init(int numStates, int numTransitions, int numInts, int numFloats, int numBools, int numTriggers);
-	int									GetFloatParameterIndex(const std::string & name) const;
-	int									GetIntParameterIndex(const std::string & name) const;
-	int									GetBoolParameterIndex(const std::string & name) const;
-	int									GetTriggerParameterIndex(const std::string & name) const;
-	int									GetStateIndex(const std::string & name) const;
+	void										Init(int numStates, int numTransitions, int numInts, int numFloats, int numBools, int numTriggers);
+	int											GetFloatParameterIndex(const std::string & name) const;
+	int											GetIntParameterIndex(const std::string & name) const;
+	int											GetBoolParameterIndex(const std::string & name) const;
+	int											GetTriggerParameterIndex(const std::string & name) const;
+	int											GetStateIndex(const std::string & name) const;
 
 private:
 
@@ -101,26 +101,26 @@ private:
 	std::vector<eStateTransition>				stateTransitions;
 
 	// indexed by user-defined parameter name
-	eHashIndex							floatParamsHash;
-	eHashIndex							intParamsHash;
-	eHashIndex							boolParamsHash;
-	eHashIndex							triggerParamsHash;
+	eHashIndex									floatParamsHash;
+	eHashIndex									intParamsHash;
+	eHashIndex									boolParamsHash;
+	eHashIndex									triggerParamsHash;
 
 	// controller params compared against eStateTransitions and eBlendStates
-	std::vector<float>					floatParameters;
-	std::vector<int>					intParameters;			
-	std::vector<bool>					boolParameters;			// retains value until changed by user
-	std::vector<bool>					triggerParameters;		// resets to false after currentState changes
+	std::vector<float>							floatParameters;
+	std::vector<int>							intParameters;			
+	std::vector<bool>							boolParameters;			// retains value until changed by user
+	std::vector<bool>							triggerParameters;		// resets to false after currentState changes
 
-	int									currentState	= 0;
-	bool								paused			= false;
+	int											currentState	= 0;
+	bool										paused			= false;
 
 };
 
 //**************
 // eAnimationController::eAnimationController
 //**************
-inline eAnimationController::eAnimationController(const std::string & sourceFilename, int animationControllerManagerIndex)
+inline eAnimationController::eAnimationController(const char * sourceFilename, int animationControllerManagerIndex)
 	: eResource(sourceFilename, animationControllerManagerIndex) {
 }
 
@@ -128,8 +128,16 @@ inline eAnimationController::eAnimationController(const std::string & sourceFile
 // eAnimationController::Pause
 // stops animation on the currentFrame
 //***********************
-inline void eAnimationController::Pause(bool isPaused) {
-	paused = isPaused;
+inline void eAnimationController::Pause() {
+	paused = true;
+}
+
+//***********************
+// eAnimationController::Unpause
+// resumes animation at currentFrame
+//***********************
+inline void eAnimationController::Unpause() {
+	paused = false;
 }
 
 //***********************

@@ -172,21 +172,6 @@ bool eMap::LoadMap(const char * mapFilename) {
 			if (!VerifyRead(read))
 				return false;
 
-			// TODO: allow users to define custom eEntity derived class Spawn functions,
-			// which they can then call EngineOfEvil::RegisterSpawnFunction("functionName", FunctionPointer_t)
-			// where the SpawnFunction reads a local/global spawnArgs HashMap to initialize the eEntity
-			// (instead of taking a fixed-size parameter list or templated parameter pack)
-
-			// TODO: users will derive from an EngineOfEvil eGame class and override a virtual Start() method,
-			// which the base eGame::Init will call polymorphically. In the user's Start() they can
-			// call RegisterSpawnFunction, or any other functions they intend to hook into the EngineOfEvil runtime
-			// PROBLEM: each eEntity derived class would have to be defined...or forward declared before Start() in order to pass in the fn-pointer
-
-			// TODO: similarly, when eGame::Run's loop hits entities->Think, the user's eEntity subclasses Think() will
-			// be called polymorphically based on the runtime eEntity type provided during eGame::AddEntity(std::unique_ptr<eEntity> && entity)
-
-			// TODO: give prefabs a spawnFunction name or classname such that eMap can find the spawnfunction by name (within an eEntityFactory.. or just static eEntity method)
-
 			if (!game.GetEntityPrefabManager().SpawnInstance(prefabListIndex, worldPosition)) {
 				std::string message = "Invalid prefabListIndex value: " + std::to_string(prefabListIndex) + "\nOr invalid prefab file contents.";
 				SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_INFORMATION, "Error", message.c_str(), NULL);

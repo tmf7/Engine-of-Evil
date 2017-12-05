@@ -54,7 +54,13 @@ eGame::ErrorCode eGame::Init() {
 
 	camera.Init();
 
-	if (!entityPrefabManager.Init())
+	// FIXME: eMap::Init immediatly starts eMap::LoadMap despite it not being a strict "system" initialization,
+	// leave ::LoadMap up to the user
+	// FIXME: this is just a temporary hack fix, let a user assign this before eGame::Init
+	// or possibly pass a PrefabManager into init
+	SetEntityPrefabManager(std::make_unique<eEntityPrefabManager>());			
+
+	if (!entityPrefabManager->Init())
 		return ENTITY_PREFAB_MANAGER_ERROR;
 
 	if (!map.Init())

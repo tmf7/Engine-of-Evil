@@ -22,9 +22,9 @@
 #include <random>
 #include <limits>
 #include <unordered_map>
+#include <deque>
 #include <vector>
 #include <array>
-#include <deque>
 #include <functional>		// std::hash
 #include <regex>
 #include "Math.h"
@@ -41,6 +41,7 @@
 #define MAX_MAP_ROWS 256
 #define MAX_MAP_COLUMNS 256
 #define MAX_ENTITIES 4096
+#define MAX_PREFAB_ENTITIES 1024
 #define MAX_IMAGES 1024
 #define MAX_ANIMATIONS 1024
 #define MAX_ANIMATION_CONTROLLERS 512
@@ -57,16 +58,5 @@ typedef enum {
 
 //#define ONE_GIGABYTE 1073741824
 //extern byte_t memoryPool[ONE_GIGABYTE];
-
-//*************************************************
-//					exceptions
-//*************************************************
-struct badEntityCtorException : public std::exception {
-	badEntityCtorException(const char * entityPrefabFilename)
-		: what(entityPrefabFilename) {
-	};
-
-	std::string what;
-};
 
 #endif /* EVIL_DEFINITIONS_H */

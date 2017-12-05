@@ -30,52 +30,6 @@ eAnimationController::eAnimationController(const eAnimationController & other)
 	}
 }
 
-/*
-//************
-// eAnimationController::eAnimationController
-//************
-eAnimationController::eAnimationController(eAnimationController && other)
-	: eResource(std::move(other)), eComponent(std::move(other)),
-	  transitionsHash(std::move(other.transitionsHash)),
-	  statesHash(std::move(other.statesHash)),
-	  animationStates(std::move(other.animationStates)),
-	  stateTransitions(std::move(other.stateTransitions)),
-	  floatParamsHash(std::move(other.floatParamsHash)),
-	  intParamsHash(std::move(other.intParamsHash)),
-	  boolParamsHash(std::move(other.boolParamsHash)),
-	  triggerParamsHash(std::move(other.triggerParamsHash)),
-	  floatParameters(std::move(other.floatParameters)),
-	  intParameters(std::move(other.intParameters)),
-	  boolParameters(std::move(other.boolParameters)),
-	  triggerParameters(std::move(other.triggerParameters)),
-	  currentState(other.currentState),
-	  paused(other.paused) {
-}
-
-//************
-// eAnimationController::operator=
-// copy-and-swap
-//************
-eAnimationController & eAnimationController::operator=(eAnimationController other) {
-	eResource::operator=(other);
-	eComponent::operator=(other);
-	std::swap(transitionsHash, other.transitionsHash);
-	std::swap(statesHash, other.statesHash);
-	std::swap(animationStates, other.animationStates);
-	std::swap(stateTransitions, other.stateTransitions);
-	std::swap(floatParamsHash, other.floatParamsHash);
-	std::swap(intParamsHash, other.intParamsHash);
-	std::swap(boolParamsHash, other.boolParamsHash);
-	std::swap(triggerParamsHash, other.triggerParamsHash);
-	std::swap(floatParameters, other.floatParameters);
-	std::swap(intParameters, other.intParameters);
-	std::swap(boolParameters, other.boolParameters);
-	std::swap(triggerParameters, other.triggerParameters);
-	std::swap(currentState, other.currentState);
-	std::swap(paused, other.paused);
-}
-*/
-
 //************
 // eAnimationController::CheckTransitionConditions
 // all conditions must be met for the transition to trigger

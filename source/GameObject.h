@@ -49,8 +49,14 @@ public:
 	Uint32									GetWorldLayer()							{ return worldLayer; }
 	void									SetWorldLayer(Uint32 layer);
 	void									SetWorldLayer(float zPosition);
+	void									SetZPosition(float newZPosition);
 	bool									IsStatic() const						{ return isStatic; }
 	void									SetStatic(bool isStatic)				{ this->isStatic = isStatic; }
+
+	bool									AddRenderImage(const std::string & spriteFilename, const eVec3 & renderBlockSize, int initialSpriteFrame = 0, const eVec2 & renderImageOffset = vec2_zero, bool isPlayerSelectable = false);
+	bool									AddCollisionModel(const eBounds & localBounds, const eVec2 & colliderOffset = vec2_zero, bool collisionActive = false);
+	bool									AddAnimationController(const std::string & animationControllerFilename);
+	bool									AddMovementPlanner(float movementSpeed);
 
 	// FIXME: make these proper const get, non-const set
 	eRenderImage &							RenderImage()							{ return *renderImage; }
@@ -72,7 +78,8 @@ protected:
 private:
 
 	eVec2									orthoOrigin;						// orthographic 2D global transfrom coordinates
-	Uint32									worldLayer			= MAX_LAYER;	// z-position in the game world (positions renderBlock and TODO: filters collision)
+	float									zPosition			= 0.0f;			// 3D position used for fluid renderBlock positioning (TODO: and other 3D related tasks)
+	Uint32									worldLayer			= MAX_LAYER;	// common layer on the eMap::tileMap (can position renderBlock and TODO: filters collision)
 	Uint32									oldWorldLayer		= MAX_LAYER;	// helps track changes and minimize calculations
 	bool									isStatic			= true;			// if orthoOrigin ever changes at runtime, speeds up draw-order sorting
 };

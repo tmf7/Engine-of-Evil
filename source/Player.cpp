@@ -137,7 +137,7 @@ void ePlayer::Draw() {
 
 	// highlight those selected
 	for (auto & entity : groupSelection)
-		;//game.GetRenderer().DrawIsometricPrism(lightBlueColor, entity->RenderImage().RenderBlock(), RENDERTYPE_DYNAMIC);
+		game.GetRenderer().DrawIsometricRect(lightBlueColor, entity->CollisionModel().AbsBounds(), RENDERTYPE_DYNAMIC);
 
 }
 
