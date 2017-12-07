@@ -1,28 +1,40 @@
-﻿  sHero.cpp
-  main.cpp
+﻿  Vector.cpp
   Tile.cpp
   StateNode.cpp
-  Renderer.cpp
+  SoundFx.cpp
+  sHero.cpp
   RenderImage.cpp
+  Renderer.cpp
   Player.cpp
+  Music.cpp
   Movement.cpp
   Map.cpp
+  main.cpp
+  Input.cpp
   ImageManager.cpp
+  HashIndex.cpp
   GridCell.cpp
   GameObject.cpp
   Game.cpp
+  ErrorLogger.cpp
   EntityPrefabManager.cpp
+  Generating Code...
+  Compiling...
   Entity.cpp
+  Dictionary.cpp
   CreateEntityPrefabStrategies.cpp
   CollisionModel.cpp
   Collision.cpp
   Camera.cpp
+  Box.cpp
+  Bounds3D.cpp
+  Bounds.cpp
   BlendState.cpp
-  Generating Code...
-  Compiling...
+  Audio.cpp
   AnimationState.cpp
   AnimationManager.cpp
   AnimationControllerManager.cpp
   AnimationController.cpp
   Generating Code...
+  LINK : C:\Users\Tom\Desktop\EngineOfEvil\\Builds\Debug\EngineOfEvil.exe not found or not built by the last incremental link; performing full link
   EngineOfEvil.vcxproj -> C:\Users\Tom\Desktop\EngineOfEvil\\Builds\Debug\EngineOfEvil.exe

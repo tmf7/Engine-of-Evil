@@ -8,6 +8,7 @@
 #include "Map.h"
 #include "Camera.h"
 #include "Input.h"
+#include "Audio.h"
 #include "Player.h"
 
 //*************************************************
@@ -19,10 +20,10 @@ public:
 
 	struct {
 		bool	GOAL_WAYPOINTS		= true;
-		bool	TRAIL_WAYPOINTS		= true;
+		bool	TRAIL_WAYPOINTS		= false;
 		bool	COLLISION			= false;
 		bool	RENDERBLOCKS		= false;
-		bool	KNOWN_MAP_DRAW		= true;
+		bool	KNOWN_MAP_DRAW		= false;
 		bool	KNOWN_MAP_CLEAR		= true;
 		bool	FRAMERATE			= true;
 		bool	GRID_OCCUPANCY		= false;
@@ -36,6 +37,7 @@ public:
 	void											Shutdown();
 	bool											Run();
 
+	eAudio &										GetAudio();
 	eInput &										GetInput();
 	eRenderer &										GetRenderer();
 	eImageManager &									GetImageManager();
@@ -74,14 +76,15 @@ private:
 
 	std::vector<std::unique_ptr<eEntity>>			entities;
 
+	eAudio											audio;
 	eInput											input;
-	eMap											map;
+	eMap											map;				// one map instance, use eMap::LoadMap/UnloadMap as needed
 	eRenderer										renderer;
 	eImageManager									imageManager;
 	eAnimationManager								animationManager;
 	eAnimationControllerManager						animationControllerManager;
 	eEntityPrefabManager							entityPrefabManager;
-	eCamera											camera;
+	eCamera											camera;				// TODO: allow for more than one instance of eCamera gameObjects across multiple systems
 
 	ePlayer											player;
 
@@ -100,6 +103,13 @@ extern eGame	game;								// one instance used by all objects
 inline eGame::eGame() {
 	entities.reserve(MAX_ENTITIES);
 	SetFixedFPS(defaultFPS);
+}
+
+//****************
+// eGame::GetAudio
+//****************
+inline eAudio & eGame::GetAudio() {
+	return audio;
 }
 
 //****************

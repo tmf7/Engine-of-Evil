@@ -36,6 +36,11 @@ bool eGame::Init() {
 		return false;
 	}
 
+	if (!audio.Init()) {
+		EVIL_ERROR_LOG.ErrorPopupWindow("AUDIO INIT FAILURE");
+		return false;
+	}
+
 	try {
 		input.Init();
 	} catch (...) {

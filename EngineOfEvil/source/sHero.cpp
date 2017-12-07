@@ -5,7 +5,7 @@ void sHero::Think() {
 	auto & velocity = collisionModel->GetVelocity();
 	eVec2 facingDirection;
 	if (velocity != vec2_zero) {
-		facingDirection = -velocity.Normalized();
+		facingDirection = velocity.Normalized();
 		eMath::CartesianToIsometric(facingDirection.x, facingDirection.y);
 		facingDirection.Normalize();
 		oldFacingDirection = facingDirection;

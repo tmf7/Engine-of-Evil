@@ -1,0 +1,51 @@
+Graphics/Animations/bArcher/Controller_defs/bArcher.bimg
+Graphics/Animations/bArcher/Controller_defs/bArcher.banim
+IdleState
+2 2 0 3 0 0
+
+Controller_Parameters {
+float xSpeed 0
+float ySpeed 0
+float magnitude 0
+}
+
+Animation_States {
+}
+
+Blend_States {
+{
+IdleState 8 2 1
+xSpeed ySpeed
+Graphics/Animations/bArcher/bArcher_Idle/Animation_defs/bArcher_Idle_0.eanim 0 1
+Graphics/Animations/bArcher/bArcher_Idle/Animation_defs/bArcher_Idle_1.eanim 0.707 0.707
+Graphics/Animations/bArcher/bArcher_Idle/Animation_defs/bArcher_Idle_2.eanim 1 0
+Graphics/Animations/bArcher/bArcher_Idle/Animation_defs/bArcher_Idle_3.eanim 0.707 -0.707
+Graphics/Animations/bArcher/bArcher_Idle/Animation_defs/bArcher_Idle_4.eanim 0 -1
+Graphics/Animations/bArcher/bArcher_Idle/Animation_defs/bArcher_Idle_5.eanim -0.707 -0.707
+Graphics/Animations/bArcher/bArcher_Idle/Animation_defs/bArcher_Idle_6.eanim -1 0
+Graphics/Animations/bArcher/bArcher_Idle/Animation_defs/bArcher_Idle_7.eanim -0.707 0.707
+}
+{
+RunState 8 2 1.25
+xSpeed ySpeed
+Graphics/Animations/bArcher/bArcher_Run/Animation_defs/bArcher_Run_0.eanim 0 1
+Graphics/Animations/bArcher/bArcher_Run/Animation_defs/bArcher_Run_1.eanim 0.707 0.707
+Graphics/Animations/bArcher/bArcher_Run/Animation_defs/bArcher_Run_2.eanim 1 0
+Graphics/Animations/bArcher/bArcher_Run/Animation_defs/bArcher_Run_3.eanim 0.707 -0.707
+Graphics/Animations/bArcher/bArcher_Run/Animation_defs/bArcher_Run_4.eanim 0 -1
+Graphics/Animations/bArcher/bArcher_Run/Animation_defs/bArcher_Run_5.eanim -0.707 -0.707
+Graphics/Animations/bArcher/bArcher_Run/Animation_defs/bArcher_Run_6.eanim -1 0
+Graphics/Animations/bArcher/bArcher_Run/Animation_defs/bArcher_Run_7.eanim -0.707 0.707
+}
+}
+
+State_Transitions {
+{
+IdleToRun IdleState RunState 0 0 0
+float magnitude greater 0.5
+}
+{
+RunToIdle RunState IdleState 0 0 0
+float magnitude less 0.5
+}
+}

@@ -7,7 +7,7 @@
 bool eCreateEntityPrefabUser::CreatePrefab(std::shared_ptr<eEntity> & newPrefab, const std::string & prefabShortName, const eDictionary & spawnArgs) {
 	if (prefabShortName == "Entity")
 		newPrefab = std::make_shared<eEntity>();
-	else if (prefabShortName == "sHero")
+	else if (prefabShortName == "sHero" || prefabShortName == "sArcher")
 		newPrefab = std::make_shared<sHero>();
 	else
 		return false;

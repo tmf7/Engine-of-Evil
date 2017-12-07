@@ -1,0 +1,15 @@
+12 12 2			# numAnimationFrames,framesPerSecond, loop [1 = once, 2 = repeat]
+Graphics/Animations/bArcher/bArcher_Run/Textures/Image_defs/bArcher_Run_6.eimg{
+0 0.0			# subframe index within image, normalizedTime	# animationFrame 0
+1 0.091			# 1
+2 0.182			# 2
+3 0.273			# 3
+4 0.364			# 4
+5 0.455			# 5
+6 0.545			# 6
+7 0.636			# 7
+8 0.727			# 8
+9 0.818			# 9
+10 0.909		# 10
+11 1			# 11
+}
