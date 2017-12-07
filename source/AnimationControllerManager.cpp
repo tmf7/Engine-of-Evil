@@ -104,7 +104,6 @@ bool eAnimationControllerManager::LoadAndGet(const char * resourceFilename, std:
 		return false;
 	}
 
-
 	memset(buffer, 0, sizeof(buffer));
 	read.getline(buffer, sizeof(buffer), '\n');							// animation batch file
 	if (!VerifyRead(read) || !game.GetAnimationManager().BatchLoad(buffer)) {

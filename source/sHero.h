@@ -6,11 +6,7 @@
 class sHero : public eEntity {
 public:
 
-										sHero( const char * sourceFilename, int managerIndex )
-											: eEntity( sourceFilename, managerIndex ) {
-										}
-
-	virtual bool						Spawn( const eVec3 & worldPosition ) override;
+	virtual bool						SpawnCopy( const eVec3 & worldPosition ) override;
 	virtual void						Think() override;
 	virtual int							GetClassType() const override						{ return CLASS_SHERO; }
 	virtual bool						IsClassType( int classType ) const override			{ 

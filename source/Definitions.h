@@ -28,7 +28,7 @@
 #include <functional>		// std::hash
 #include <regex>
 #include "Math.h"
-#include "FileIO.h"
+#include "ErrorLogger.h"
 
 #define MAX(a,b) (a > b ? a : b)
 #define MIN(a,b) (a < b ? a : b)
@@ -54,9 +54,5 @@ typedef enum {
 	CLASS_INVALID
 } ClassTypes_t;
 #undef REGISTER_ENUM
-
-
-//#define ONE_GIGABYTE 1073741824
-//extern byte_t memoryPool[ONE_GIGABYTE];
 
 #endif /* EVIL_DEFINITIONS_H */

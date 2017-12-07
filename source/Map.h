@@ -19,6 +19,7 @@ public:
 	void												Draw();
 	void												DebugDraw();
 	bool												LoadMap(const char * mapFilename);
+	void												UnloadMap();
 	tile_map_t &										TileMap();
 
 	const std::vector<eGridCell *> &					VisibleCells();

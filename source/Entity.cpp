@@ -1,10 +1,11 @@
 #include "Game.h"
 
 //***************
-// eEntity::Spawn
-// copies a prefab eEntity and adds unique details
+// eEntity::SpawnCopy
+// copies a *this and adds unique details
+// DEBUG: *this is typically a prefab from eEntityPrefabManager::SpawnInstance
 //***************
-bool eEntity::Spawn(const eVec3 & worldPosition) {
+bool eEntity::SpawnCopy(const eVec3 & worldPosition) {
 	auto & newEntity = std::make_unique<eEntity>(*this);
 	newEntity->SetZPosition(worldPosition.z);
 	newEntity->SetOrigin(eVec2(worldPosition.x, worldPosition.y));

@@ -42,10 +42,7 @@ bool eTileImpl::LoadTileset(const char * tilesetFilename, bool appendNew) {
 	char buffer[MAX_ESTRING_LENGTH];
 	memset(buffer, 0, sizeof(buffer));
 	read.getline(buffer, sizeof(buffer), '\n');
-	if (!VerifyRead(read))
-		return false;
-
-	if (!game.GetImageManager().BatchLoad(buffer))
+	if (!VerifyRead(read) || !game.GetImageManager().BatchLoad(buffer))
 		return false;
 
 	enum {

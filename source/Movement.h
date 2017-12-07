@@ -13,7 +13,7 @@ class eEntity;
 //				eMovementPlanner
 // updates owner's velocity to avoid collision
 // and pathfind to goal waypoints
-// DEBUG: owner must have a eCollisionModel for this to function
+// DEBUG: owner must have an eCollisionModel for this to function
 // TODO: give knownMap multiple layers to match eMap::tileMap,
 // so this->owner can navigate them without blocking itself prematurely
 // TODO: implement a eMovementStrategy to swap out the ::Move algorithm at runtime
@@ -130,6 +130,7 @@ private:
 	// pathfinding (compass)
 	void					CompassFollow();
 	bool					CheckTrail();
+
 	void					UpdateKnownMap();
 	void					StopMoving();
 };

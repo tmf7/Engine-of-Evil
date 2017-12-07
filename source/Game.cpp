@@ -1,116 +1,71 @@
 #include "Game.h"
+#include "CreatePrefabStrategies.h"
 
-//byte_t memoryPool[ONE_GIGABYTE];
 eGame game;
-
-/*
-//*************
-// (global) FileLogFn
-// output all SDL_LogXYZ messages to a log.txt file
-//************
-void FileLogFn(void * userdata, int category, SDL_LogPriority priority, const char * message) {
-	std::ofstream write("EvilErrorLog.txt");
-
-	// unable to find/create/open file
-	if (!write.good()) 
-		return;
-
-	write.seekp(0, std::ios_base::end);
-	write << message << '\n';
-
-	write.close();
-}
-SDL_LogOutputFunction FileLogFn_ptr = &FileLogFn;
-*/
 
 //****************
 // eGame::Init
 //****************
-eGame::ErrorCode eGame::Init() {
-	if (SDL_Init(SDL_INIT_EVERYTHING) == -1)
-		return SDL_ERROR;
+bool eGame::Init() {
 
-//	SDL_LogSetAllPriority(SDL_LOG_PRIORITY_VERBOSE);	// SDL_LOG_PRIORITY_CRITICAL // 
-//	SDL_LogSetOutputFunction(FileLogFn_ptr, NULL);		// DEBUG: SDL_LogCritical is called alot for some reason, bottleneck (DrawOutlineText, IMG_Load seem to be the reason)
+	if (SDL_Init(SDL_INIT_EVERYTHING) == -1) {
+		EVIL_ERROR_LOG.ErrorPopupWindow("SDL INIT FAILURE");
+		return false;
+	}
 
-	if (!renderer.Init())
-		return RENDERER_ERROR;
+	if (!EVIL_ERROR_LOG.Init())			// has its own error popup call
+		return false;
 
-	if (!imageManager.Init())
-		return IMAGE_MANAGER_ERROR;
+	if (!renderer.Init()) {
+		EVIL_ERROR_LOG.ErrorPopupWindow("RENDERER INIT FAILURE");
+		return false;
+	}
 
-	if (!animationManager.Init())
-		return ANIMATION_MANAGER_ERROR;
+	if (!imageManager.Init()) {
+		EVIL_ERROR_LOG.ErrorPopupWindow("IMAGE MANAGER INIT FAILURE");
+		return false;
+	}
 
-	if (!animationControllerManager.Init())
-		return ANIMATION_CONTROLLER_MANAGER_ERROR;
+	if (!animationManager.Init()) {
+		EVIL_ERROR_LOG.ErrorPopupWindow("ANIMATION MANAGER INIT FAILURE");
+		return false;
+	}
 
-//	try {
+	if (!animationControllerManager.Init()) {
+		EVIL_ERROR_LOG.ErrorPopupWindow("ANIMATION CONTROLER MANAGER INIT FAILURE");
+		return false;
+	}
+
+	try {
 		input.Init();
-//	} catch (const std::bad_alloc & e) {
-//		throw;
-//		return INPUT_ERROR;						// TODO: log a proper error
-//	}
+	} catch (...) {
+		EVIL_ERROR_LOG.ErrorPopupWindow("INPUT INIT FAILURE");
+		throw;
+	}
 
 	camera.Init();
 
-	// FIXME: eMap::Init immediatly starts eMap::LoadMap despite it not being a strict "system" initialization,
-	// leave ::LoadMap up to the user
-	// FIXME: this is just a temporary hack fix, let a user assign this before eGame::Init
-	// or possibly pass a PrefabManager into init
-	SetEntityPrefabManager(std::make_unique<eEntityPrefabManager>());			
+	if (!entityPrefabManager.Init()) {
+		EVIL_ERROR_LOG.ErrorPopupWindow("ENTITY PREFAB MANAGER INIT FAILURE");
+		return false;
+	}
 
-	if (!entityPrefabManager->Init())
-		return ENTITY_PREFAB_MANAGER_ERROR;
+	entityPrefabManager.SetCreatePrefabStrategy(std::make_shared<eCreateEntityPrefabUser>());			// FIXME: move this to an external, user-initialization function, not Engine Initialization
 
-	if (!map.Init())
-		return MAP_ERROR;
-
-
-// DEBUG: testing global static memory allocation, works (taskmanager shows 1GB in use for evil.exe; takes about 2 seconds to memset 1GB though, slow startup, ran quick after)
-//	memset(memoryPool, 0xff, sizeof(byte_t) * ONE_GIGABYTE);
+	if (!map.Init()) {
+		EVIL_ERROR_LOG.ErrorPopupWindow("MAP INIT FAILURE");
+		return false;
+	}
 	
 	gameTime = SDL_GetTicks();
 
-	return INIT_SUCCESS;
+	return true;
 }
 
 //****************
 // eGame::Shutdown
 //****************
-void eGame::Shutdown(eGame::ErrorCode error) {
-	char message[64];
-
-	if (error != INIT_SUCCESS) {
-		switch (error) {
-			case SDL_ERROR:
-				SDL_strlcpy(message, "SDL INIT FAILURE", 64);
-				break;
-			case INPUT_ERROR:
-				SDL_strlcpy(message, "INPUT INIT FAILURE", 64);
-				break;
-			case RENDERER_ERROR:
-				SDL_strlcpy(message, "RENDERER INIT FAILURE", 64);
-				break;
-			case IMAGE_MANAGER_ERROR:
-				SDL_strlcpy(message, "IMAGE MANAGER INIT FAILURE", 64);
-				break;
-			case ANIMATION_MANAGER_ERROR:
-				SDL_strlcpy(message, "ANIMATION MANAGER INIT FAILURE", 64);
-				break;
-			case ANIMATION_CONTROLLER_MANAGER_ERROR:
-				SDL_strlcpy(message, "ANIMATION CONTROLER MANAGER INIT FAILURE", 64);
-				break;
-			case ENTITY_PREFAB_MANAGER_ERROR:
-				SDL_strlcpy(message, "ENTITY PREFAB MANAGER INIT FAILURE", 64);
-				break;
-			case MAP_ERROR:
-				SDL_strlcpy(message, "MAP INIT FAILURE", 64);
-				break;
-		}
-		SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_INFORMATION, "Error", message, NULL);
-	}
-
+void eGame::Shutdown() {
 	FreeAssets();
 	SDL_Quit();
 }
@@ -134,6 +89,8 @@ int eGame::AddEntity(std::unique_ptr<eEntity> && entity) {
 	for (auto & entitySlot : entities) {
 		if (entitySlot == nullptr) {
 			entity->spawnedEntityID = spawnID;
+			entity->spawnName = entity->spawnArgs.GetString("prefabShortName", TO_STRING(eEntity));
+			entity->spawnName += "_" + spawnID;
 			entitySlot = std::move(entity);
 			return spawnID;
 		} else {
@@ -147,6 +104,13 @@ int eGame::AddEntity(std::unique_ptr<eEntity> && entity) {
 		return spawnID;
 	}
 	return -1;
+}
+
+//****************
+// eGame::ClearAllEntities
+//****************
+void eGame::ClearAllEntities() {
+	entities.clear();
 }
 
 //****************

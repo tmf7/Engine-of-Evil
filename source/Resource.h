@@ -19,11 +19,7 @@ public:
 										eResource() = default;
 										eResource(const eResource & other) = default;
 										eResource(eResource && other) = default;
-										eResource(const char * sourceFilename, int managerIndex)
-											: sourceFilename(sourceFilename),
-											  managerIndex(managerIndex) {
-											nameHash = std::hash<std::string>()(sourceFilename);
-										}
+										eResource(const char * sourceFilename, int managerIndex) { InitResource(sourceFilename, managerIndex); }
 
 	eResource &							operator=(const eResource & other) = default;
 	eResource &							operator=(eResource && other) = default;
@@ -35,9 +31,19 @@ public:
 
 protected:
 
-	std::string							sourceFilename;
-	int									nameHash;
-	int									managerIndex;
+										// for post-load initialization (eg: see eEntityPrefabManager::CreatePrefab)
+	void								InitResource(const char * sourceFilename, int managerIndex) {
+											this->sourceFilename = sourceFilename;
+											this->managerIndex = managerIndex;
+											nameHash = std::hash<std::string>()(sourceFilename);
+
+										}
+
+protected:
+
+	std::string							sourceFilename		= "not_managed";
+	int									nameHash			= -1;	
+	int									managerIndex		= -1;
 };
 
 #endif  /* EVIL_RESOURCE_H */

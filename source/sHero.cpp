@@ -19,10 +19,10 @@ void sHero::Think() {
 }
 
 //***************
-// sHero::Spawn
+// sHero::SpawnCopy
 // copies a prefab sHero and adds unique details
 //***************
-bool sHero::Spawn(const eVec3 & worldPosition) {
+bool sHero::SpawnCopy(const eVec3 & worldPosition) {
 	auto & newHero = std::make_unique<sHero>(*this);
 	newHero->SetZPosition(worldPosition.z);
 	newHero->SetOrigin(eVec2(worldPosition.x, worldPosition.y));

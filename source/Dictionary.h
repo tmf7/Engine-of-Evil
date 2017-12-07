@@ -4,6 +4,14 @@
 #include "Definitions.h"
 #include "Vector.h"
 
+//*************************************************
+//				eDictionary
+// uses std::unordered_map to store key-values pairs
+// of std::strings that can be reinterpreted as
+// types [int|float|bool|Vec2|Vec3|Vec4|string]
+// this class is primarily designed to load and 
+// initaialize eEntitiy-type objects 
+//*************************************************
 class eDictionary {
 public:
 
@@ -32,7 +40,6 @@ private:
 	std::unordered_map<std::string, std::string>		args;
 	std::array<char, MAX_ESTRING_LENGTH>				setBuffer;
 };
-
 
 //********************
 // eDictionary::Clear

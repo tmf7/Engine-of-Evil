@@ -153,8 +153,9 @@ bool eMap::LoadMap(const char * mapFilename) {
 			if (!VerifyRead(read))
 				return false;
 
-			if (!game.GetEntityPrefabManager().BatchLoad(buffer))
-				return false;
+			if (!game.GetEntityPrefabManager().BatchLoad(buffer)) {
+				// FIXME(~): no permanent consequences
+			}
 
 			read.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
 			readState = SPAWNING_ENTITIES;
@@ -173,8 +174,10 @@ bool eMap::LoadMap(const char * mapFilename) {
 				return false;
 
 			if (!game.GetEntityPrefabManager().SpawnInstance(prefabListIndex, worldPosition)) {
-				std::string message = "Invalid prefabListIndex value: " + std::to_string(prefabListIndex) + "\nOr invalid prefab file contents.";
-				SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_INFORMATION, "Error", message.c_str(), NULL);
+				std::string message = "Invalid prefabListIndex value (";
+				message += std::to_string(prefabListIndex);
+				message += "), or invalid prefab file contents.";
+				EVIL_ERROR_LOG.LogError(message.c_str(), __FILE__, __LINE__);
 			}
 		}
 	}
@@ -183,6 +186,15 @@ bool eMap::LoadMap(const char * mapFilename) {
 	// initialize the static map images sort order
 	eRenderer::TopologicalDrawDepthSort(sortTiles);	
 	return true;
+}
+
+//***************
+// eMap::UnloadMap
+// clears the current tileMap and empties eGame::entities
+//***************
+void eMap::UnloadMap() {
+	tileMap.ResetAllCells();
+	game.ClearAllEntities();
 }
 
 //***************

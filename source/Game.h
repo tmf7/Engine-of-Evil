@@ -28,24 +28,12 @@ public:
 		bool	GRID_OCCUPANCY		= false;
 	} debugFlags;
 
-	enum ErrorCode {
-		SDL_ERROR,
-		INPUT_ERROR,
-		RENDERER_ERROR,
-		IMAGE_MANAGER_ERROR,
-		ANIMATION_MANAGER_ERROR,
-		ANIMATION_CONTROLLER_MANAGER_ERROR,
-		ENTITY_PREFAB_MANAGER_ERROR,
-		MAP_ERROR,
-		INIT_SUCCESS = -1
-	};
-
 public:
 
 													eGame();
 
-	ErrorCode										Init();
-	void											Shutdown(ErrorCode error);
+	bool											Init();
+	void											Shutdown();
 	bool											Run();
 
 	eInput &										GetInput();
@@ -54,11 +42,11 @@ public:
 	eAnimationManager &								GetAnimationManager();
 	eAnimationControllerManager &					GetAnimationControllerManager();
 	eEntityPrefabManager &							GetEntityPrefabManager();
-	void											SetEntityPrefabManager(std::unique_ptr<eEntityPrefabManager> && entityFactory);
 	eCamera &										GetCamera();
 	eMap &											GetMap();
 	int												AddEntity(std::unique_ptr<eEntity> && entity);
 	void											RemoveEntity(int entityID);
+	void											ClearAllEntities();
 	std::unique_ptr<eEntity> &						GetEntity(int entityID);
 	int												NumEntities() const;
 
@@ -92,7 +80,7 @@ private:
 	eImageManager									imageManager;
 	eAnimationManager								animationManager;
 	eAnimationControllerManager						animationControllerManager;
-	std::unique_ptr<eEntityPrefabManager>			entityPrefabManager;
+	eEntityPrefabManager							entityPrefabManager;
 	eCamera											camera;
 
 	ePlayer											player;
@@ -153,16 +141,7 @@ inline eAnimationControllerManager & eGame::GetAnimationControllerManager() {
 // eGame::GetEntityPrefabManager
 //*****************
 inline eEntityPrefabManager & eGame::GetEntityPrefabManager() {
-	return *entityPrefabManager;
-}
-
-//****************
-// eGame::SetEntityPrefabManager
-// configure what eEntity types eGame can instance and configure
-// see also: eEntityPrefabManager, and eEntity::Spawn
-//****************
-inline void eGame::SetEntityPrefabManager(std::unique_ptr<eEntityPrefabManager> && entityFactory) {
-	entityPrefabManager = std::move(entityFactory);
+	return entityPrefabManager;
 }
 
 //****************

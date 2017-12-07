@@ -50,7 +50,6 @@ void eRenderImage::UpdateRenderBlock() {
 void eRenderImage::SetRenderBlockSize(const eVec3 & newSize) {
 	auto & renderBlockMins = renderBlock[0];
 	renderBlock = eBounds3D(renderBlockMins, renderBlockMins + newSize);
-//	UpdateRenderBlock();
 }
 
 //************

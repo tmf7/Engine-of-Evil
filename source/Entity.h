@@ -5,26 +5,6 @@
 #include "Resource.h"
 #include "Dictionary.h"
 
-// entitySpawnArgs_t
-typedef struct entitySpawnArgs_s {
-	eBounds			localBounds;
-	std::string		sourceFilename				= "";
-	std::string		spriteFilename				= "";
-	std::string		animationControllerFilename = "";
-	eVec3			renderBlockSize				= vec3_zero;
-	eVec2			renderImageOffset			= vec2_zero;
-	eVec2			colliderOffset				= vec2_zero;
-	float			movementSpeed				= 0.0f;
-	int				prefabManagerIndex			= 0;
-	int				initialSpriteFrame			= 0;
-	bool			collisionActive				= false;
-//	int				colliderType;				// TODO: AABB/OBB/Circle/Line/Polyline
-//	int				colliderMask;				// TODO: solid, liquid, enemy, player, etc
-//  Uint32			worldLayer;					// TODO: use this instead of Spawn(worldPosition.z)
-		
-					entitySpawnArgs_s() { localBounds.Clear(); };
-} entitySpawnArgs_t;
-
 //*************************************************
 //					eEntity
 // objects that dynamically interact with the game environment
@@ -32,48 +12,36 @@ typedef struct entitySpawnArgs_s {
 class eEntity : public eGameObject, public eResource {
 public:
 
-	friend class eGame;			// for access to assign spawnedEntityID
+	friend class eGame;						// for access to assign spawnedEntityID and spawnName
+	friend class eEntityPrefabManager;		// for access to spawnArgs
 
 public:
 
-//	virtual					   ~eEntity() override = default;
-//								eEntity() = default;
-//								eEntity(const eEntity & other) = default;
-//								eEntity(eEntity && other) = default;
-								eEntity(const char * sourceFilename, int managerIndex);
+	void								SetPlayerSelected(bool isSelected);
+	bool								GetPlayerSelected() const;
+	const eDictionary &					GetSpawnArgs() const;
+	const std::string &					SpawnName() const;
+	int									SpawnID() const;
 
-//	eEntity &					operator=(const eEntity & other)				{ eGameObject::operator=(other); }
-//	eEntity &					operator=(eEntity && other)						{ eGameObject::operator=(other); }
+	virtual bool						SpawnCopy(const eVec3 & worldPosition);
+	virtual void						DebugDraw() override;
 
-	void						SetPlayerSelected(bool isSelected);
-	bool						GetPlayerSelected() const;
-	void						SetSpawnArgs(const eDictionary & newSpawnArgs);
-	const eDictionary &			GetSpawnArgs() const;
-	int							SpawnID() const;
+	virtual int							GetClassType() const override					{ return CLASS_ENTITY; }
+	virtual bool						IsClassType(int classType) const override		{ 
+											if(classType == CLASS_ENTITY) 
+												return true; 
+											return eGameObject::IsClassType(classType);
+										}
 
-	virtual bool				Spawn(const eVec3 & worldPosition);
-	virtual void				DebugDraw() override;
+private:
 
-	virtual int					GetClassType() const override					{ return CLASS_ENTITY; }
-	virtual bool				IsClassType(int classType) const override		{ 
-									if(classType == CLASS_ENTITY) 
-										return true; 
-									return eGameObject::IsClassType(classType);
-								}
+	eDictionary							spawnArgs;				// populated during eEntityPrefabManager::CreatePrefab, used for initialization in eCreateEntityPrefabStrategy::CreatePrefab-overridden methods
+	std::string							spawnName;				// unique name for this instance (eg: "prefabShortName_spawnedEntityID")
+	int									spawnedEntityID;		// index within eGame::entities
+	bool								playerSelected;			// player is controlling this eEntity
 
-protected:
 
-	eDictionary					spawnArgs;				// populated during eEntityPrefabManager::CreatePrefab, used for initialization
-	int							spawnedEntityID;		// index within eGame::entities
-	bool						playerSelected;			// player is controlling this eEntity
 };
-
-//**************
-// eEntity::eEntity
-//**************
-inline eEntity::eEntity( const char * sourceFilename, int managerIndex )
-	: eResource( sourceFilename, managerIndex ) {
-}
 
 //**************
 // eEntity::SetPlayerSelected
@@ -90,14 +58,6 @@ inline bool eEntity::GetPlayerSelected() const {
 }
 
 //**************
-// eEntity::SetSpawnArgs
-// DEBUG: best just to set this once a load-time
-//**************
-inline void eEntity::SetSpawnArgs(const eDictionary & newSpawnArgs) {
-	spawnArgs = newSpawnArgs;
-}
-
-//**************
 // eEntity::GetSpawnArgs
 //**************
 inline const eDictionary & eEntity::GetSpawnArgs() const {
@@ -109,6 +69,14 @@ inline const eDictionary & eEntity::GetSpawnArgs() const {
 //**************
 inline int eEntity::SpawnID() const {
 	return spawnedEntityID;
+}
+
+//**************
+// eEntity::SpawnName
+// unique instance name
+//**************
+inline const std::string &	eEntity::SpawnName() const {
+	return spawnName;
 }
 
 #endif /* ENTITY_H */

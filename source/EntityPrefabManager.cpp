@@ -1,18 +1,37 @@
 #include "EntityPrefabManager.h"
 #include "Game.h"
-#include "sHero.h"					// FIXME: move this to an eEntityPrefabManager-derived class, this is just a test
 
 //**************************
 // eEntityPrefabManager::Init
-// TODO: output to an error log file upon failure
 //**************************
 bool eEntityPrefabManager::Init() {
 	// prepare the hashindex
 	resourceHash.ClearAndResize(MAX_PREFAB_ENTITIES);
 
 	// register the error_prefab_entity as the first element of resourceList
-	RegisterPrefab(std::make_shared<eEntity>("error_prefab_entity", 0));	// default error prefab entity
+	auto & errorPrefab = std::make_shared<eEntity>();
+	errorPrefab->InitResource("error_prefab_entity", 0); 
+	RegisterPrefab(errorPrefab);	// default error prefab entity
 	return true;
+}
+
+//**************************
+// eEntityPrefabManager::SetCreatePrefabStrategy
+// assigns the method to be used for creating various
+// eEntity-derived objects for later copying into the game-world
+// via eEntityPrefabManager::SpawnInstance and/or eEntity::SpawnCopy
+//**************************
+void eEntityPrefabManager::SetCreatePrefabStrategy(const std::shared_ptr<eCreateEntityPrefabStrategy> & newStrategy) {
+	createPrefabStrategy = newStrategy;
+}
+
+//**************************
+// eEntityPrefabManager::GetCreatePrefabStrategy
+// useful for re-using the same strategy across multiple eEntityPrefabManagers
+// because eCreateEntityPrefabStrategy is stateless and requires no direct access to eEntityPrefabManager
+//**************************
+const std::shared_ptr<eCreateEntityPrefabStrategy> & eEntityPrefabManager::GetCreatePrefabStrategy() const {
+	return createPrefabStrategy;
 }
 
 //**************************
@@ -88,8 +107,8 @@ bool eEntityPrefabManager::LoadAndGet(const char * resourceFilename, std::shared
 	// add a prefab instance to the resourceList according to resourceFilename
 	// and get the index where that prefab is located
 	int prefabManagerIndex = 0;
-	std::string prefabShortName = spawnArgs.GetString("prefabShortName", "error_prefab");
-	if (prefabShortName == "error_prefab" || !CreatePrefab(resourceFilename, prefabShortName, spawnArgs, prefabManagerIndex)) {
+	std::string prefabShortName = spawnArgs.GetString("prefabShortName", "error_prefab_entity");
+	if (prefabShortName == "error_prefab_entity" || !CreatePrefab(resourceFilename, prefabShortName, spawnArgs, prefabManagerIndex)) {
 		result = resourceList[0];
 		return false;
 	}	
@@ -104,9 +123,10 @@ bool eEntityPrefabManager::LoadAndGet(const char * resourceFilename, std::shared
 // eEntityPrefabManager::RegisterPrefab
 // convenience function called after a std::make_shared<eEntity-type>(...) call
 // in eEntityPrefabManager::CreatePrefab to ensure the resourceHash and resourceList are synchronized
+// DEBUG: copies param newPrefab into the resourceList
 //***************
 void eEntityPrefabManager::RegisterPrefab(const std::shared_ptr<eEntity> & newPrefab) {
-	resourceHash.Add(newPrefab->GetNameHash(), resourceList.size());
+	resourceHash.Add(newPrefab->GetNameHash(), newPrefab->GetManagerIndex());
 	resourceList.emplace_back(newPrefab);
 }
 
@@ -116,20 +136,46 @@ void eEntityPrefabManager::RegisterPrefab(const std::shared_ptr<eEntity> & newPr
 // param spawnArgs can be used in this fn to initialize the instance
 // or copy them into the instance 
 // DEBUG: allows hash collisions when registering prefabs
+// DEBUG: hooray a template-method design pattern that uses the Strategy design pattern
 //***************
 bool eEntityPrefabManager::CreatePrefab(const char * sourceFilename, const std::string & prefabShortName, const eDictionary & spawnArgs, int & prefabManagerIndex) {
 	std::shared_ptr<eEntity> newPrefab = nullptr;
 	prefabManagerIndex = resourceList.size();
 
-	if (prefabShortName == "Entity") {
-		newPrefab = std::make_shared<eEntity>(sourceFilename, prefabManagerIndex);
-	} else if (prefabShortName == "sHero") {										// FIXME: move this to an eEntityPrefabManager-derived class, this is just a test
-		newPrefab = std::make_shared<sHero>(sourceFilename, prefabManagerIndex);
-	} else {
-		return false;
+	if (createPrefabStrategy->CreatePrefab(newPrefab, prefabShortName, spawnArgs) && newPrefab != nullptr) {
+		newPrefab->spawnArgs = std::move(spawnArgs);
+		newPrefab->InitResource(sourceFilename, prefabManagerIndex); 
+		RegisterPrefab(newPrefab);
+		return true;
 	}
 
-	newPrefab->SetSpawnArgs(spawnArgs);			// copied for later SpawnInstance calls, if needed
+	return false;
+}
+
+//***************
+// eEntityPrefabManager::SpawnInstance
+// convenience function for duplicating entities a runtime
+// calls the runtime type Spawn function of the prefab eEntity
+// at param entityPrefabIndex within resourceList
+//***************
+bool eEntityPrefabManager::SpawnInstance(const int entityPrefabIndex, const eVec3 & worldPosition) {
+	if (entityPrefabIndex < 0 || (size_t)entityPrefabIndex >= resourceList.size())
+		return false;
+
+	return Get(entityPrefabIndex)->SpawnCopy(worldPosition);
+}
+
+//***************
+// eCreateEntityPrefabBasic::CreatePrefab
+// derived classes can contain different prefab creation cases
+// param spawnArgs can be used in this fn to initialize the instance
+// DEBUG: do not copy/move spawnArgs into param newPrefab, eEntityPrefabManager moves them automatically after this fn 
+//***************
+bool eCreateEntityPrefabBasic::CreatePrefab(std::shared_ptr<eEntity> & newPrefab, const std::string & prefabShortName, const eDictionary & spawnArgs) {
+	if (prefabShortName == "Entity")
+		newPrefab = std::make_shared<eEntity>();
+	else
+		return false;
 
 	bool success = true;
 	success = newPrefab->AddRenderImage(	spawnArgs.GetString("spriteFilename", ""), 
@@ -146,23 +192,5 @@ bool eEntityPrefabManager::CreatePrefab(const char * sourceFilename, const std::
 	success = newPrefab->AddCollisionModel(localBounds, spawnArgs.GetVec2("colliderOffset", "0 0"), spawnArgs.GetBool("collisionActive", "0"));
 	success = newPrefab->AddMovementPlanner(spawnArgs.GetFloat("movementSpeed", "0"));
 	newPrefab->SetStatic(spawnArgs.GetBool("isStatic", "1"));
-
-	if (success) 
-		RegisterPrefab(newPrefab);
-
 	return success;
-}
-
-//***************
-// eEntityPrefabManager::SpawnInstance
-// convenience function for duplicating entities a runtime
-// calls the runtime type Spawn function of the prefab eEntity
-// at param entityPrefabIndex within resourceList
-//***************
-bool eEntityPrefabManager::SpawnInstance(const int entityPrefabIndex, const eVec3 & worldPosition) {
-	auto & prefabEntity = Get(entityPrefabIndex);
-	if (!prefabEntity->IsValid())
-		return false;
-
-	return prefabEntity->Spawn(worldPosition);
 }
