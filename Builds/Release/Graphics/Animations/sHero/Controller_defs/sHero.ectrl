@@ -1,0 +1,67 @@
+Graphics/Animations/sHero/Controller_defs/sHero.bimg
+Graphics/Animations/sHero/Controller_defs/sHero.banim
+IdleState
+2 2 0 3 0 0
+
+Controller_Parameters {
+float xSpeed 0
+float ySpeed 0
+float magnitude 0
+}
+
+Animation_States {
+}
+
+Blend_States {
+{
+IdleState 16 2 1
+xSpeed ySpeed
+Graphics/Animations/sHero/sHero_Idle/Animation_defs/sHero_Idle_0.eanim -0.5 0
+Graphics/Animations/sHero/sHero_Idle/Animation_defs/sHero_Idle_1.eanim -0.462 0.191
+Graphics/Animations/sHero/sHero_Idle/Animation_defs/sHero_Idle_2.eanim -0.354 0.354
+Graphics/Animations/sHero/sHero_Idle/Animation_defs/sHero_Idle_3.eanim -0.191 0.462
+Graphics/Animations/sHero/sHero_Idle/Animation_defs/sHero_Idle_4.eanim 0 0.5
+Graphics/Animations/sHero/sHero_Idle/Animation_defs/sHero_Idle_5.eanim 0.191 0.462
+Graphics/Animations/sHero/sHero_Idle/Animation_defs/sHero_Idle_6.eanim 0.354 0.354
+Graphics/Animations/sHero/sHero_Idle/Animation_defs/sHero_Idle_7.eanim 0.462 0.191
+Graphics/Animations/sHero/sHero_Idle/Animation_defs/sHero_Idle_8.eanim 0.5 0
+Graphics/Animations/sHero/sHero_Idle/Animation_defs/sHero_Idle_9.eanim 0.462 -0.191
+Graphics/Animations/sHero/sHero_Idle/Animation_defs/sHero_Idle_10.eanim 0.354 -0.354
+Graphics/Animations/sHero/sHero_Idle/Animation_defs/sHero_Idle_11.eanim 0.191 -0.462
+Graphics/Animations/sHero/sHero_Idle/Animation_defs/sHero_Idle_12.eanim 0 -0.5
+Graphics/Animations/sHero/sHero_Idle/Animation_defs/sHero_Idle_13.eanim -0.191 -0.462
+Graphics/Animations/sHero/sHero_Idle/Animation_defs/sHero_Idle_14.eanim -0.354 -0.354
+Graphics/Animations/sHero/sHero_Idle/Animation_defs/sHero_Idle_15.eanim -0.462 -0.191
+}
+{
+RunState 16 2 1
+xSpeed ySpeed
+Graphics/Animations/sHero/sHero_Run/Animation_defs/sHero_Run_0.eanim -1 0
+Graphics/Animations/sHero/sHero_Run/Animation_defs/sHero_Run_1.eanim -0.924 0.383
+Graphics/Animations/sHero/sHero_Run/Animation_defs/sHero_Run_2.eanim -0.707 0.707
+Graphics/Animations/sHero/sHero_Run/Animation_defs/sHero_Run_3.eanim -0.383 0.924
+Graphics/Animations/sHero/sHero_Run/Animation_defs/sHero_Run_4.eanim 0 1
+Graphics/Animations/sHero/sHero_Run/Animation_defs/sHero_Run_5.eanim 0.383 0.924
+Graphics/Animations/sHero/sHero_Run/Animation_defs/sHero_Run_6.eanim 0.707 0.707
+Graphics/Animations/sHero/sHero_Run/Animation_defs/sHero_Run_7.eanim 0.924 0.383
+Graphics/Animations/sHero/sHero_Run/Animation_defs/sHero_Run_8.eanim 1 0
+Graphics/Animations/sHero/sHero_Run/Animation_defs/sHero_Run_9.eanim 0.924 -0.383
+Graphics/Animations/sHero/sHero_Run/Animation_defs/sHero_Run_10.eanim 0.707 -0.707
+Graphics/Animations/sHero/sHero_Run/Animation_defs/sHero_Run_11.eanim 0.383 -0.924
+Graphics/Animations/sHero/sHero_Run/Animation_defs/sHero_Run_12.eanim 0 -1
+Graphics/Animations/sHero/sHero_Run/Animation_defs/sHero_Run_13.eanim -0.383 -0.924
+Graphics/Animations/sHero/sHero_Run/Animation_defs/sHero_Run_14.eanim -0.707 -0.707
+Graphics/Animations/sHero/sHero_Run/Animation_defs/sHero_Run_15.eanim -0.924 -0.383
+}
+}
+
+State_Transitions {
+{
+IdleToRun IdleState RunState 0 0 0
+float magnitude greater 0.5
+}
+{
+RunToIdle RunState IdleState 0 0 0
+float magnitude less 0.5
+}
+}

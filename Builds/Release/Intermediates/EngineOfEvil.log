@@ -1,0 +1,42 @@
+﻿  AnimationController.cpp
+  AnimationControllerManager.cpp
+  AnimationManager.cpp
+  AnimationState.cpp
+  Audio.cpp
+  BlendState.cpp
+  Bounds.cpp
+  Bounds3D.cpp
+  Box.cpp
+  Camera.cpp
+  Collision.cpp
+  CollisionModel.cpp
+  CreateEntityPrefabStrategies.cpp
+  Dictionary.cpp
+  Entity.cpp
+  EntityPrefabManager.cpp
+  ErrorLogger.cpp
+  Game.cpp
+  GameObject.cpp
+  GridCell.cpp
+  Compiling...
+  HashIndex.cpp
+  ImageManager.cpp
+  Input.cpp
+  main.cpp
+  Map.cpp
+  Movement.cpp
+  Music.cpp
+  Player.cpp
+  Renderer.cpp
+  RenderImage.cpp
+  sHero.cpp
+  SoundFx.cpp
+  StateNode.cpp
+  Tile.cpp
+  Vector.cpp
+  Generating code
+  4450 of 4494 functions (99.0%) were compiled, the rest were copied from previous compilation.
+    44 functions were new in current compilation
+    0 functions had inline decision re-evaluated but remain unchanged
+  Finished generating code
+  EngineOfEvil.vcxproj -> C:\Users\Tom\Desktop\EngineOfEvil\EngineOfEvil\\Builds\Release\EngineOfEvil.exe

@@ -1,0 +1,312 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="Resource Files">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+    <Filter Include="Core">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hh;hpp;hxx;hm;inl;inc;xsd</Extensions>
+    </Filter>
+    <Filter Include="Core\Collision">
+      <UniqueIdentifier>{665519a3-d6ec-424f-9f10-2769cc0106cc}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Core\Collision\BoundingVolumes">
+      <UniqueIdentifier>{2b27d0d4-71fd-4b18-878a-5a3e153fb681}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Core\GameObjects">
+      <UniqueIdentifier>{2c84b851-9d60-440e-bafe-419d8743173e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Core\Components">
+      <UniqueIdentifier>{12cea269-9f78-495f-8fe2-a5f3973c5f08}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Core\Input">
+      <UniqueIdentifier>{56a2630b-55a0-43ac-90b6-f3416981d359}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Core\Map">
+      <UniqueIdentifier>{bd342c59-9878-4ec9-86d8-1b64e36728e8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Core\ResourceManagers">
+      <UniqueIdentifier>{4f989705-811b-4ec5-8645-8a1c33b008ab}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Core\DataContainers">
+      <UniqueIdentifier>{5f882528-8ebb-4e04-bcc9-fdde816f20ff}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Core\Renderer">
+      <UniqueIdentifier>{08f0dd14-ac82-4252-a12c-9ef59a8e77f4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Core\Math">
+      <UniqueIdentifier>{68c363a7-a23c-4771-8d88-901235345134}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Core\Animation">
+      <UniqueIdentifier>{f3467055-705f-46cd-8071-68d7b13da6f1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Core\Utilities">
+      <UniqueIdentifier>{85b1274b-7b01-46c7-965b-e30ff4b09470}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Core\TestLogic">
+      <UniqueIdentifier>{76270406-68dd-43ed-bb47-b2d37e3e3b59}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Core\Audio">
+      <UniqueIdentifier>{178bdced-ec57-44d4-b552-76172fdb219f}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="source\main.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\Game.cpp">
+      <Filter>Core</Filter>
+    </ClCompile>
+    <ClCompile Include="source\Bounds.cpp">
+      <Filter>Core\Collision\BoundingVolumes</Filter>
+    </ClCompile>
+    <ClCompile Include="source\Bounds3D.cpp">
+      <Filter>Core\Collision\BoundingVolumes</Filter>
+    </ClCompile>
+    <ClCompile Include="source\Box.cpp">
+      <Filter>Core\Collision\BoundingVolumes</Filter>
+    </ClCompile>
+    <ClCompile Include="source\Camera.cpp">
+      <Filter>Core\Renderer</Filter>
+    </ClCompile>
+    <ClCompile Include="source\Collision.cpp">
+      <Filter>Core\Collision</Filter>
+    </ClCompile>
+    <ClCompile Include="source\CollisionModel.cpp">
+      <Filter>Core\Components</Filter>
+    </ClCompile>
+    <ClCompile Include="source\Entity.cpp">
+      <Filter>Core\GameObjects</Filter>
+    </ClCompile>
+    <ClCompile Include="source\EntityPrefabManager.cpp">
+      <Filter>Core\ResourceManagers</Filter>
+    </ClCompile>
+    <ClCompile Include="source\GameObject.cpp">
+      <Filter>Core\GameObjects</Filter>
+    </ClCompile>
+    <ClCompile Include="source\GridCell.cpp">
+      <Filter>Core\Map</Filter>
+    </ClCompile>
+    <ClCompile Include="source\HashIndex.cpp">
+      <Filter>Core\DataContainers</Filter>
+    </ClCompile>
+    <ClCompile Include="source\ImageManager.cpp">
+      <Filter>Core\ResourceManagers</Filter>
+    </ClCompile>
+    <ClCompile Include="source\Input.cpp">
+      <Filter>Core\Input</Filter>
+    </ClCompile>
+    <ClCompile Include="source\Map.cpp">
+      <Filter>Core\Map</Filter>
+    </ClCompile>
+    <ClCompile Include="source\Movement.cpp">
+      <Filter>Core\Components</Filter>
+    </ClCompile>
+    <ClCompile Include="source\RenderImage.cpp">
+      <Filter>Core\Components</Filter>
+    </ClCompile>
+    <ClCompile Include="source\Renderer.cpp">
+      <Filter>Core\Renderer</Filter>
+    </ClCompile>
+    <ClCompile Include="source\Tile.cpp">
+      <Filter>Core\GameObjects</Filter>
+    </ClCompile>
+    <ClCompile Include="source\Vector.cpp">
+      <Filter>Core\Math</Filter>
+    </ClCompile>
+    <ClCompile Include="source\AnimationState.cpp">
+      <Filter>Core\Animation</Filter>
+    </ClCompile>
+    <ClCompile Include="source\AnimationController.cpp">
+      <Filter>Core\Components</Filter>
+    </ClCompile>
+    <ClCompile Include="source\BlendState.cpp">
+      <Filter>Core\Animation</Filter>
+    </ClCompile>
+    <ClCompile Include="source\StateNode.cpp">
+      <Filter>Core\Animation</Filter>
+    </ClCompile>
+    <ClCompile Include="source\AnimationManager.cpp">
+      <Filter>Core\ResourceManagers</Filter>
+    </ClCompile>
+    <ClCompile Include="source\AnimationControllerManager.cpp">
+      <Filter>Core\ResourceManagers</Filter>
+    </ClCompile>
+    <ClCompile Include="source\Player.cpp">
+      <Filter>Core\TestLogic</Filter>
+    </ClCompile>
+    <ClCompile Include="source\sHero.cpp">
+      <Filter>Core\TestLogic</Filter>
+    </ClCompile>
+    <ClCompile Include="source\Dictionary.cpp">
+      <Filter>Core\DataContainers</Filter>
+    </ClCompile>
+    <ClCompile Include="source\CreateEntityPrefabStrategies.cpp">
+      <Filter>Core\TestLogic</Filter>
+    </ClCompile>
+    <ClCompile Include="source\ErrorLogger.cpp">
+      <Filter>Core\Utilities</Filter>
+    </ClCompile>
+    <ClCompile Include="source\Music.cpp">
+      <Filter>Core\Audio</Filter>
+    </ClCompile>
+    <ClCompile Include="source\Audio.cpp">
+      <Filter>Core\Audio</Filter>
+    </ClCompile>
+    <ClCompile Include="source\SoundFx.cpp">
+      <Filter>Core\Audio</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="source\Game.h">
+      <Filter>Core</Filter>
+    </ClInclude>
+    <ClInclude Include="source\Definitions.h">
+      <Filter>Core</Filter>
+    </ClInclude>
+    <ClInclude Include="source\ClassTypes.h">
+      <Filter>Core</Filter>
+    </ClInclude>
+    <ClInclude Include="source\Class.h">
+      <Filter>Core</Filter>
+    </ClInclude>
+    <ClInclude Include="source\AnimationController.h">
+      <Filter>Core\Components</Filter>
+    </ClInclude>
+    <ClInclude Include="source\BinaryHeap.h">
+      <Filter>Core\DataContainers</Filter>
+    </ClInclude>
+    <ClInclude Include="source\Bounds.h">
+      <Filter>Core\Collision\BoundingVolumes</Filter>
+    </ClInclude>
+    <ClInclude Include="source\Bounds3D.h">
+      <Filter>Core\Collision\BoundingVolumes</Filter>
+    </ClInclude>
+    <ClInclude Include="source\Box.h">
+      <Filter>Core\Collision\BoundingVolumes</Filter>
+    </ClInclude>
+    <ClInclude Include="source\Camera.h">
+      <Filter>Core\Renderer</Filter>
+    </ClInclude>
+    <ClInclude Include="source\Collision.h">
+      <Filter>Core\Collision</Filter>
+    </ClInclude>
+    <ClInclude Include="source\CollisionModel.h">
+      <Filter>Core\Components</Filter>
+    </ClInclude>
+    <ClInclude Include="source\Component.h">
+      <Filter>Core\Components</Filter>
+    </ClInclude>
+    <ClInclude Include="source\Deque.h">
+      <Filter>Core\DataContainers</Filter>
+    </ClInclude>
+    <ClInclude Include="source\Entity.h">
+      <Filter>Core\GameObjects</Filter>
+    </ClInclude>
+    <ClInclude Include="source\EntityPrefabManager.h">
+      <Filter>Core\ResourceManagers</Filter>
+    </ClInclude>
+    <ClInclude Include="source\GameObject.h">
+      <Filter>Core\GameObjects</Filter>
+    </ClInclude>
+    <ClInclude Include="source\GridCell.h">
+      <Filter>Core\Map</Filter>
+    </ClInclude>
+    <ClInclude Include="source\HashIndex.h">
+      <Filter>Core\DataContainers</Filter>
+    </ClInclude>
+    <ClInclude Include="source\Image.h">
+      <Filter>Core\Renderer</Filter>
+    </ClInclude>
+    <ClInclude Include="source\ImageManager.h">
+      <Filter>Core\ResourceManagers</Filter>
+    </ClInclude>
+    <ClInclude Include="source\Input.h">
+      <Filter>Core\Input</Filter>
+    </ClInclude>
+    <ClInclude Include="source\Map.h">
+      <Filter>Core\Map</Filter>
+    </ClInclude>
+    <ClInclude Include="source\Math.h">
+      <Filter>Core\Math</Filter>
+    </ClInclude>
+    <ClInclude Include="source\Movement.h">
+      <Filter>Core\Components</Filter>
+    </ClInclude>
+    <ClInclude Include="source\RenderImage.h">
+      <Filter>Core\Components</Filter>
+    </ClInclude>
+    <ClInclude Include="source\Renderer.h">
+      <Filter>Core\Renderer</Filter>
+    </ClInclude>
+    <ClInclude Include="source\Sort.h">
+      <Filter>Core\DataContainers</Filter>
+    </ClInclude>
+    <ClInclude Include="source\SpatialIndexGrid.h">
+      <Filter>Core\Map</Filter>
+    </ClInclude>
+    <ClInclude Include="source\Tile.h">
+      <Filter>Core\GameObjects</Filter>
+    </ClInclude>
+    <ClInclude Include="source\Vector.h">
+      <Filter>Core\Math</Filter>
+    </ClInclude>
+    <ClInclude Include="source\Animation.h">
+      <Filter>Core\Animation</Filter>
+    </ClInclude>
+    <ClInclude Include="source\AnimationState.h">
+      <Filter>Core\Animation</Filter>
+    </ClInclude>
+    <ClInclude Include="source\StateTransition.h">
+      <Filter>Core\Animation</Filter>
+    </ClInclude>
+    <ClInclude Include="source\BlendState.h">
+      <Filter>Core\Animation</Filter>
+    </ClInclude>
+    <ClInclude Include="source\StateNode.h">
+      <Filter>Core\Animation</Filter>
+    </ClInclude>
+    <ClInclude Include="source\ResourceManager.h">
+      <Filter>Core\ResourceManagers</Filter>
+    </ClInclude>
+    <ClInclude Include="source\AnimationManager.h">
+      <Filter>Core\ResourceManagers</Filter>
+    </ClInclude>
+    <ClInclude Include="source\Resource.h">
+      <Filter>Core\ResourceManagers</Filter>
+    </ClInclude>
+    <ClInclude Include="source\AnimationControllerManager.h">
+      <Filter>Core\ResourceManagers</Filter>
+    </ClInclude>
+    <ClInclude Include="source\Player.h">
+      <Filter>Core\TestLogic</Filter>
+    </ClInclude>
+    <ClInclude Include="source\sHero.h">
+      <Filter>Core\TestLogic</Filter>
+    </ClInclude>
+    <ClInclude Include="source\Dictionary.h">
+      <Filter>Core\DataContainers</Filter>
+    </ClInclude>
+    <ClInclude Include="source\CreatePrefabStrategies.h">
+      <Filter>Core\TestLogic</Filter>
+    </ClInclude>
+    <ClInclude Include="source\ErrorLogger.h">
+      <Filter>Core\Utilities</Filter>
+    </ClInclude>
+    <ClInclude Include="source\Music.h">
+      <Filter>Core\Audio</Filter>
+    </ClInclude>
+    <ClInclude Include="source\Audio.h">
+      <Filter>Core\Audio</Filter>
+    </ClInclude>
+    <ClInclude Include="source\SoundFx.h">
+      <Filter>Core\Audio</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>

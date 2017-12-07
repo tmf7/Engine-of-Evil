@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Express 15 for Windows Desktop
+VisualStudioVersion = 15.0.27004.2009
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "EngineOfEvil", "EngineOfEvil\EngineOfEvil.vcxproj", "{8CCB83A0-80A6-4820-B4DA-CD5426426F2C}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|x64 = Debug|x64
+		Debug|x86 = Debug|x86
+		Release|x64 = Release|x64
+		Release|x86 = Release|x86
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{8CCB83A0-80A6-4820-B4DA-CD5426426F2C}.Debug|x64.ActiveCfg = Debug|x64
+		{8CCB83A0-80A6-4820-B4DA-CD5426426F2C}.Debug|x64.Build.0 = Debug|x64
+		{8CCB83A0-80A6-4820-B4DA-CD5426426F2C}.Debug|x86.ActiveCfg = Debug|Win32
+		{8CCB83A0-80A6-4820-B4DA-CD5426426F2C}.Debug|x86.Build.0 = Debug|Win32
+		{8CCB83A0-80A6-4820-B4DA-CD5426426F2C}.Release|x64.ActiveCfg = Release|x64
+		{8CCB83A0-80A6-4820-B4DA-CD5426426F2C}.Release|x64.Build.0 = Release|x64
+		{8CCB83A0-80A6-4820-B4DA-CD5426426F2C}.Release|x86.ActiveCfg = Release|Win32
+		{8CCB83A0-80A6-4820-B4DA-CD5426426F2C}.Release|x86.Build.0 = Release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {DEB86146-03B9-4491-8AC1-E04A85CD7EFA}
+	EndGlobalSection
+EndGlobal
