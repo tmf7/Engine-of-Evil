@@ -373,8 +373,8 @@ void eMovementPlanner::UpdateWaypoint(bool getNext) {
 			currentWaypoint = nullptr;
 			return;
 		}
-		default: {		// DEBUG: currently for PATHTYPE_WALL
-						// TODO: have PATHTYPE_WALL pay attention to knownMap and trail waypoints too
+		default: {		// DEBUG: currently for PATHTYPE_WALL, dupicate code for case MOVETYPE_GOAL
+						// TODO(?): have PATHTYPE_WALL do more than add to knownMap and trail waypoints, or separate knownMap entirely into PATHTYPE_COMPASS
 			if (getNext && !goals.IsEmpty()) {
 				goals.PopBack();
 				trail.Clear();

@@ -57,7 +57,7 @@ bool eRenderer::Init() {
 	if (TTF_Init() == -1)
 		return false;
 
-	font = TTF_OpenFont("fonts/Alfphabet.ttf", 24);
+	font = TTF_OpenFont("Graphics/Fonts/Alfphabet.ttf", 24);				// FIXME: make this a file-initialized string, not hard-coded
 
 	if (!font)
 		return false;

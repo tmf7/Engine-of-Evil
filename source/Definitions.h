@@ -14,6 +14,7 @@
 #include "SDL.h"
 #include "SDL_ttf.h"
 #include "SDL_image.h"
+#include "SDL_mixer.h"
 #include <cstring>			// memset
 #include <memory>			// std::unique_ptr, std::shared_ptr, std::weak_ptr
 #include <string>
