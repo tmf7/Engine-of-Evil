@@ -80,10 +80,9 @@ bool ePlayer::SelectGroup() {
 	eVec2 xAxis(selectionBounds[1].x, selectionBounds[0].y);
 	eVec2 yAxis(selectionBounds[0].x, selectionBounds[1].y);
 	std::array<eVec2, 3> obbPoints = { std::move(corner), std::move(xAxis), std::move(yAxis) };
-	for (auto & point : obbPoints) {
-		point += game.GetCamera().CollisionModel().AbsBounds()[0];
-		eMath::IsometricToCartesian(point.x, point.y);
-	}
+	for (auto & point : obbPoints)
+		point = game.GetCamera().ScreenToWorldPosition(point);
+
 	eBox selectionArea(obbPoints.data());
 
 	eCollision::GetAreaCells(selectionArea, selectedCells);
@@ -102,9 +101,16 @@ bool ePlayer::SelectGroup() {
 				continue;
 
 			alreadyTested[entity] = entity;
-			const eBounds dstRect = entity->RenderImage().GetWorldClip().Translate(-game.GetCamera().CollisionModel().AbsBounds()[0]);
+
+			// account for current camera zoom level
+			auto & worldClip = entity->RenderImage().GetWorldClip();
+			const float zoom = game.GetCamera().GetZoom();
+			const eVec2 worldClipOrigin = (worldClip[0] - game.GetCamera().CollisionModel().AbsBounds()[0]) * zoom;
+			const eVec2 worldClipSize = eVec2(worldClip.Width(), worldClip.Height()) * zoom;
+			const eBounds dstRect = eBounds(worldClipOrigin, worldClipOrigin + worldClipSize);
+			
 			if (eCollision::AABBAABBTest(dstRect, selectionBounds)) {
-				entity->SetPlayerSelected(true);						// TODO: to draw a highlight around the selected entities
+				entity->SetPlayerSelected(true);
 				groupSelection.emplace_back(entity);
 			}
 		}
@@ -151,6 +157,6 @@ void ePlayer::DebugDraw() {
 	const eVec2 worldPosition = game.GetCamera().MouseWorldPosition();
 	if (tileMap.IsValid(worldPosition)) {
 		auto & tileBounds = tileMap.Index(worldPosition).AbsBounds();
-//		game.GetRenderer().DrawIsometricRect(yellowColor, tileBounds, RENDERTYPE_DYNAMIC);
+		game.GetRenderer().DrawIsometricRect(yellowColor, tileBounds, RENDERTYPE_DYNAMIC);
 	}
 }

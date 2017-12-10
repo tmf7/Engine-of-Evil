@@ -1,6 +1,6 @@
 #include "Game.h"
 
-const SDL_Color clearColor		= { 128, 128, 128, SDL_ALPHA_OPAQUE };
+const SDL_Color clearColor		= { 128, 128, 128, SDL_ALPHA_TRANSPARENT };
 const SDL_Color blackColor		= { 0, 0, 0, SDL_ALPHA_OPAQUE };
 const SDL_Color greyColor_trans = { 0, 0, 0, 64 };
 const SDL_Color greenColor		= { 0, 255, 0, SDL_ALPHA_OPAQUE };
@@ -51,8 +51,37 @@ bool eRenderer::Init() {
 	if (!scalableTarget)
 		return false;
 
-	// ensure the scalableTarget can alhpa-blend
+	// ensure the scalableTarget can alpha-blend
 	SDL_SetTextureBlendMode(scalableTarget, SDL_BLENDMODE_BLEND);
+
+
+	// initialize debugCameraTarget for scaling debug info using the camera
+	debugCameraTarget = SDL_CreateTexture(internal_renderer,
+										  SDL_PIXELFORMAT_ARGB8888,		// DEBUG: this format may not work for all images
+										  SDL_TEXTUREACCESS_TARGET,
+										  viewArea.w,
+										  viewArea.h);
+
+	if (!debugCameraTarget)
+		return false;
+
+	// ensure the debugCameraTarget can alhpa-blend
+	SDL_SetTextureBlendMode(debugCameraTarget, SDL_BLENDMODE_BLEND);
+
+	// initialize debugOverlayTarget for overlay debug info
+	debugOverlayTarget = SDL_CreateTexture(internal_renderer,
+										   SDL_PIXELFORMAT_ARGB8888,	// DEBUG: this format may not work for all images
+										   SDL_TEXTUREACCESS_TARGET,
+										   viewArea.w,
+										   viewArea.h);
+
+	if (!debugOverlayTarget)
+		return false;
+
+	// ensure the debugOverlayTarget can alhpa-blend
+	SDL_SetTextureBlendMode(debugOverlayTarget, SDL_BLENDMODE_BLEND);
+
+
 
 	if (TTF_Init() == -1)
 		return false;
@@ -114,13 +143,10 @@ void eRenderer::DrawOutlineText(const char * text, eVec2 & point, const SDL_Colo
 	SDL_Rect dstRect = { (int)point.x, (int)point.y, 0, 0 };
 	SDL_QueryTexture(renderedText, NULL, NULL, &dstRect.w, &dstRect.h);
 	if (dynamic) {
-		SDL_SetRenderTarget(internal_renderer, scalableTarget);
-		SDL_RenderSetScale(internal_renderer, game.GetCamera().GetZoom(), game.GetCamera().GetZoom());
+		SetRenderTarget(debugCameraTarget, game.GetCamera().GetZoom());
 		SDL_RenderCopy(internal_renderer, renderedText, nullptr, &dstRect);
-		SDL_SetRenderTarget(internal_renderer, NULL);
-		SDL_RenderSetScale(internal_renderer, 1.0f, 1.0f);
-		SDL_RenderCopy(internal_renderer, scalableTarget, NULL, NULL);
 	} else {
+		SetRenderTarget(debugOverlayTarget);
 		SDL_RenderCopy(internal_renderer, renderedText, nullptr, &dstRect);
 	}
 }
@@ -143,16 +169,12 @@ void eRenderer::DrawLines(const SDL_Color & color, std::vector<eVec2>  points, b
 		iPoints[i] = { (int)points[i].x, (int)points[i].y };
 	}
 
-	if (dynamic) {
-		SDL_SetRenderTarget(internal_renderer, scalableTarget);
-		SDL_RenderSetScale(internal_renderer, game.GetCamera().GetZoom(), game.GetCamera().GetZoom());
-		SDL_RenderDrawLines(internal_renderer, iPoints.data(), iPoints.size());
-		SDL_SetRenderTarget(internal_renderer, NULL);
-		SDL_RenderSetScale(internal_renderer, 1.0f, 1.0f);
-		SDL_RenderCopy(internal_renderer, scalableTarget, NULL, NULL);
-	} else {
-		SDL_RenderDrawLines(internal_renderer, iPoints.data(), iPoints.size());
-	}
+	if (dynamic)
+		SetRenderTarget(debugCameraTarget, game.GetCamera().GetZoom());
+	else
+		SetRenderTarget(debugOverlayTarget);
+	
+	SDL_RenderDrawLines(internal_renderer, iPoints.data(), iPoints.size());
 	SDL_SetRenderDrawColor(internal_renderer, clearColor.r, clearColor.g, clearColor.b, clearColor.a);
 }
 
@@ -187,10 +209,10 @@ void eRenderer::DrawIsometricPrism(const SDL_Color & color, const eBounds3D & re
 		iPoints[i] = { (int)fPoints[i].x, (int)fPoints[i].y };
 	}
 
-	if (dynamic) {
-		SDL_SetRenderTarget(internal_renderer, scalableTarget);
-		SDL_RenderSetScale(internal_renderer, game.GetCamera().GetZoom(), game.GetCamera().GetZoom());
-	}
+	if (dynamic)
+		SetRenderTarget(debugCameraTarget, game.GetCamera().GetZoom());
+	else
+		SetRenderTarget(debugOverlayTarget);
 
 	SDL_RenderDrawLines(internal_renderer, iPoints.data(), iPoints.size());
 
@@ -206,13 +228,6 @@ void eRenderer::DrawIsometricPrism(const SDL_Color & color, const eBounds3D & re
 	verticals[0] = iPoints[8];
 	verticals[1] = iPoints[3];
 	SDL_RenderDrawLines(internal_renderer, verticals.data(), verticals.size());
-
-	if (dynamic) {
-		SDL_SetRenderTarget(internal_renderer, NULL);
-		SDL_RenderSetScale(internal_renderer, 1.0f, 1.0f);
-		SDL_RenderCopy(internal_renderer, scalableTarget, NULL, NULL);
-	}
-	SDL_SetRenderDrawColor(internal_renderer, clearColor.r, clearColor.g, clearColor.b, clearColor.a);
 }
 
 //***************
@@ -238,17 +253,12 @@ void eRenderer::DrawIsometricRect(const SDL_Color & color, const eBounds & rect,
 		iPoints[i] = { (int)fPoints[i].x, (int)fPoints[i].y };
 	}
 
-	if (dynamic) {
-		SDL_SetRenderTarget(internal_renderer, scalableTarget);
-		SDL_RenderSetScale(internal_renderer, game.GetCamera().GetZoom(), game.GetCamera().GetZoom());
-		SDL_RenderDrawLines(internal_renderer, iPoints.data(), iPoints.size());
-		SDL_SetRenderTarget(internal_renderer, NULL);
-		SDL_RenderSetScale(internal_renderer, 1.0f, 1.0f);
-		SDL_RenderCopy(internal_renderer, scalableTarget, NULL, NULL);
-	} else {
-		SDL_RenderDrawLines(internal_renderer, iPoints.data(), iPoints.size());
-	}
-	SDL_SetRenderDrawColor(internal_renderer, clearColor.r, clearColor.g, clearColor.b, clearColor.a);
+	if (dynamic)
+		SetRenderTarget(debugCameraTarget, game.GetCamera().GetZoom());
+	else
+		SetRenderTarget(debugOverlayTarget, game.GetCamera().GetZoom());
+
+	SDL_RenderDrawLines(internal_renderer, iPoints.data(), iPoints.size());
 }
 
 //***************
@@ -266,19 +276,13 @@ void eRenderer::DrawCartesianRect(const SDL_Color & color, const eBounds & rect,
 							eMath::NearestInt(rect.Width()), 
 							eMath::NearestInt(rect.Height()) };
 
-	if (dynamic) {
-		SDL_SetRenderTarget(internal_renderer, scalableTarget);
-		SDL_RenderSetScale(internal_renderer, game.GetCamera().GetZoom(), game.GetCamera().GetZoom());
-		fill ? SDL_RenderFillRect(internal_renderer, &drawRect)
-			: SDL_RenderDrawRect(internal_renderer, &drawRect);
-		SDL_SetRenderTarget(internal_renderer, NULL);
-		SDL_RenderSetScale(internal_renderer, 1.0f, 1.0f);
-		SDL_RenderCopy(internal_renderer, scalableTarget, NULL, NULL);
-	} else {
-		fill ? SDL_RenderFillRect(internal_renderer, &drawRect)
-			: SDL_RenderDrawRect(internal_renderer, &drawRect);
-	}
-	SDL_SetRenderDrawColor(internal_renderer, clearColor.r, clearColor.g, clearColor.b, clearColor.a);
+	if (dynamic)
+		SetRenderTarget(debugCameraTarget, game.GetCamera().GetZoom());
+	else
+		SetRenderTarget(debugOverlayTarget, game.GetCamera().GetZoom());
+
+	fill ? SDL_RenderFillRect(internal_renderer, &drawRect)
+		: SDL_RenderDrawRect(internal_renderer, &drawRect);
 }
 
 //***************
@@ -367,6 +371,24 @@ void eRenderer::VisitTopologicalNode(eRenderImage * renderImage) {
 }
 
 //***************
+// eRenderer::Flush
+//***************
+void eRenderer::Flush() {
+	FlushCameraPool();
+	SetRenderTarget(scalableTarget);
+	SDL_RenderCopy(internal_renderer, debugCameraTarget, NULL, NULL);
+
+	// transfer camera (and its debug) info to the main render texture
+	SetRenderTarget(defaultTarget);
+	SDL_RenderCopy(internal_renderer, scalableTarget, NULL, NULL);
+
+	// draw all overlay (HUD/UI/Screen-Space) info now
+	FlushOverlayPool();
+	SetRenderTarget(defaultTarget);
+	SDL_RenderCopy(internal_renderer, debugOverlayTarget, NULL, NULL);
+}
+
+//***************
 // eRenderer::FlushCameraPool
 // DEBUG: this unstable quicksort may put renderImages at random draw orders if they have equal priority
 //***************
@@ -417,8 +439,7 @@ void eRenderer::FlushCameraPool() {
 // FREEHILL END 3d topological sort
 
 	// set the render target, and scale according to camera zoom
-	SDL_SetRenderTarget(internal_renderer, scalableTarget);
-	SDL_RenderSetScale(internal_renderer, game.GetCamera().GetZoom(), game.GetCamera().GetZoom());
+	SetRenderTarget(scalableTarget, game.GetCamera().GetZoom());
 
 	// draw to the scalableTarget
 	for (auto && renderImage : cameraPool)
@@ -426,12 +447,6 @@ void eRenderer::FlushCameraPool() {
 
 	cameraPool.clear();
 	cameraPoolInserts.clear();
-
-	// default the render target and scale,
-	// then transfer the scalableTarget
-	SDL_SetRenderTarget(internal_renderer, NULL);
-	SDL_RenderSetScale(internal_renderer, 1.0f, 1.0f);
-	SDL_RenderCopy(internal_renderer, scalableTarget, NULL, NULL);
 }
 
 //***************
@@ -447,6 +462,9 @@ void eRenderer::FlushOverlayPool() {
 					else if (a->priority > b->priority) return 1;
 					return 0; 
 			});
+
+	// set the render target, and scale to 1.0f
+	SetRenderTarget(defaultTarget);
 
 	for (auto && renderImage : overlayPool)
 		DrawImage(renderImage, RENDERTYPE_STATIC);

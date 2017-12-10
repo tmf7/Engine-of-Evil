@@ -158,7 +158,6 @@ bool eGame::Run() {
 	// draw the dynamic/scalable gameplay
 	renderer.Clear();
 	map.Draw();
-	renderer.FlushCameraPool();
 	player.Draw();
 
 	// all debug information is an overlay
@@ -177,7 +176,7 @@ bool eGame::Run() {
 	if (debugFlags.FRAMERATE)
 		DrawFPS();
 
-//	renderer.FlushOverlayPool();			// DEBUG: not currently used
+	renderer.Flush();
 	renderer.Show();
 
 	// frame-rate governing delay

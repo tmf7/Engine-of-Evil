@@ -61,7 +61,7 @@ void eCamera::SetZoom(float level) {
 	zoomLevel = level;
 
 	eVec2 screenBottomRight = eVec2((float)game.GetRenderer().ViewArea().w, (float)game.GetRenderer().ViewArea().h);
-	screenBottomRight *= level;
+	screenBottomRight /= level;
 
 	// variable rectangle with (0, 0) at its center)
 	collisionModel->SetLocalBounds(eBounds(-screenBottomRight * 0.5f, screenBottomRight * 0.5f));
@@ -70,9 +70,10 @@ void eCamera::SetZoom(float level) {
 //**************
 // eCamera::ScreenToWorldPosition
 // returns current position of screenPoint over the 2D orthographic game world
+// FIXME: account for the zoom levels to offset the screenPoint
 //**************
 eVec2 eCamera::ScreenToWorldPosition(const eVec2 & screenPoint) const {
-	eVec2 worldPoint = screenPoint + collisionModel->AbsBounds()[0];
+	eVec2 worldPoint = (screenPoint / zoomLevel) + collisionModel->AbsBounds()[0];
 	eMath::IsometricToCartesian(worldPoint.x, worldPoint.y);
 	return worldPoint;
 }

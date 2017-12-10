@@ -22,41 +22,44 @@ typedef enum {
 class eRenderer : public eClass {
 public:
 
-						eRenderer();
-						
-	bool				Init();
-	void				Free() const;
-	void				Clear() const;
-	void				Show() const;
-	SDL_Rect			ViewArea() const;
+										eRenderer();
+										
+	bool								Init();
+	void								Free() const;
+	void								Clear() const;
+	void								Show() const;
+	SDL_Rect							ViewArea() const;
 
-	SDL_Renderer *		GetSDLRenderer() const;
-	SDL_Window *		GetWindow() const;
+	SDL_Renderer *						GetSDLRenderer() const;
+	SDL_Window *						GetWindow() const;
 
-	void				AddToCameraRenderPool(eRenderImage * renderImage);
-	void				AddToOverlayRenderPool(eRenderImage * renderImage);
-	void				FlushCameraPool();
-	void				FlushOverlayPool();
+	void								AddToCameraRenderPool(eRenderImage * renderImage);
+	void								AddToOverlayRenderPool(eRenderImage * renderImage);
+	void								Flush();
 
-	void				DrawOutlineText(const char * text, eVec2 & point, const SDL_Color & color, bool constText, bool dynamic);
-	void				DrawImage(eRenderImage * renderImage, eRenderType_t renderType) const;
-	void				DrawLines(const SDL_Color & color, std::vector<eVec2> points, bool dynamic) const;
-	void				DrawIsometricPrism(const SDL_Color & color, const eBounds3D & rect, bool dynamic) const;
-	void				DrawIsometricRect(const SDL_Color & color, const eBounds & rect, bool dynamic) const;
-	void				DrawCartesianRect(const SDL_Color & color, const eBounds & rect, bool fill, bool dynamic) const;
+	void								DrawOutlineText(const char * text, eVec2 & point, const SDL_Color & color, bool constText, bool dynamic);
+	void								DrawImage(eRenderImage * renderImage, eRenderType_t renderType) const;
+	void								DrawLines(const SDL_Color & color, std::vector<eVec2> points, bool dynamic) const;
+	void								DrawIsometricPrism(const SDL_Color & color, const eBounds3D & rect, bool dynamic) const;
+	void								DrawIsometricRect(const SDL_Color & color, const eBounds & rect, bool dynamic) const;
+	void								DrawCartesianRect(const SDL_Color & color, const eBounds & rect, bool fill, bool dynamic) const;
 
-	virtual int			GetClassType() const override				{ return CLASS_RENDERER; }
-	virtual bool		IsClassType(int classType) const override	{ 
-							if(classType == CLASS_RENDERER) 
-								return true; 
-							return eClass::IsClassType(classType); 
-						}
+	virtual int							GetClassType() const override				{ return CLASS_RENDERER; }
+	virtual bool						IsClassType(int classType) const override	{ 
+											if(classType == CLASS_RENDERER) 
+												return true; 
+											return eClass::IsClassType(classType); 
+										}
 
-	static void			TopologicalDrawDepthSort(const std::vector<eRenderImage *> & renderImagePool);
+	static void							TopologicalDrawDepthSort(const std::vector<eRenderImage *> & renderImagePool);
 
 private:
-	
-	static void			VisitTopologicalNode(eRenderImage * renderImage);
+
+	void								SetRenderTarget(SDL_Texture *, float zoom = 1.0f) const;
+	void								FlushCameraPool();
+	void								FlushOverlayPool();
+
+	static void							VisitTopologicalNode(eRenderImage * renderImage);
 
 private:
 
@@ -71,8 +74,8 @@ private:
 	SDL_Renderer *						internal_renderer;
 
 	// swappable render targets
-	// DEBUG: default SDL rendertarget (NULL) is the window texture (ie the "overlayTarget")
 	// and uses draw-order sorting based on eRenderImage::renderBlock
+	SDL_Texture * const					defaultTarget = nullptr;		// DEBUG: default SDL rendertarget (NULL) is the window texture (ie the "overlayTarget")
 	SDL_Texture *						scalableTarget;					// move and scale with the camera, with draw-order sorting based on eRenderImage::renderBlock		
 	SDL_Texture *						debugCameraTarget;				// move and scale with the camera, but draw last, without draw-order sorting
 	SDL_Texture *						debugOverlayTarget;				// draw straight on the window (no camera adjustment), last, without draw-order sorting
@@ -100,12 +103,29 @@ inline eRenderer::eRenderer() {
 }
 
 //***************
+// eRenderer::SetRenderTarget
+//***************
+inline void eRenderer::SetRenderTarget(SDL_Texture * target, float zoom) const {
+	SDL_SetRenderTarget(internal_renderer, target);
+	SDL_RenderSetScale(internal_renderer, zoom, zoom);
+}
+
+//***************
 // eRenderer::Clear
 //***************
 inline void eRenderer::Clear() const {
+	SDL_SetRenderDrawColor(internal_renderer, clearColor.r, clearColor.g, clearColor.b, clearColor.a);
+
+	SDL_SetRenderTarget(internal_renderer, debugCameraTarget);
+	SDL_RenderClear(internal_renderer);
+
+	SDL_SetRenderTarget(internal_renderer, debugOverlayTarget);
+	SDL_RenderClear(internal_renderer);
+
 	SDL_SetRenderTarget(internal_renderer, scalableTarget);
 	SDL_RenderClear(internal_renderer);
-	SDL_SetRenderTarget(internal_renderer, NULL);
+
+	SDL_SetRenderTarget(internal_renderer, defaultTarget);
 	SDL_RenderClear(internal_renderer);
 }
 
