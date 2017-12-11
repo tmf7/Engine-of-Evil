@@ -57,7 +57,7 @@ bool eTileImpl::LoadTileset(const char * tilesetFilename, bool appendNew) {
 
 	while (readState == LOADING_DEFAULT_COLLISION) {
 		memset(buffer, 0, sizeof(buffer));
-		read.getline(buffer, sizeof(buffer), ':');
+		read.getline(buffer, sizeof(buffer), ':');							// collision shape text
 		if (!VerifyRead(read))
 			return false;
 	
@@ -94,10 +94,7 @@ bool eTileImpl::LoadTileset(const char * tilesetFilename, bool appendNew) {
 
 	std::vector<eVec3> defaultRenderBlockSizes;
 	while (readState == LOADING_DEFAULT_RENDERBLOCKS) {
-		read.ignore(std::numeric_limits<std::streamsize>::max(), ':');		// rbSize text
-		if (!VerifyRead(read))
-			return false;
-	
+		SkipFileKey(read);													// rbSize text
 		float width = 0;
 		float height = 0;
 		float depth = 0;
@@ -109,7 +106,7 @@ bool eTileImpl::LoadTileset(const char * tilesetFilename, bool appendNew) {
 		read.ignore(std::numeric_limits<std::streamsize>::max(), '\n');		// skip the rest of the line
 		if (read.peek() == '#') {
 			read.ignore(std::numeric_limits<std::streamsize>::max(), '\n');	// begin tile type definitions comment
-			read.ignore(std::numeric_limits<std::streamsize>::max(), ':');	// num_tiles text
+			SkipFileKey(read);												// num_tiles text
 			readState = LOADING_TILESET;
 		}
 	} 
@@ -132,7 +129,7 @@ bool eTileImpl::LoadTileset(const char * tilesetFilename, bool appendNew) {
 			return false;
 
 		// get a pointer to a source image
-		auto & sourceImage = game.GetImageManager().Get(buffer);
+		auto & sourceImage = game.GetImageManager().GetByFilename(buffer);
 		if (!sourceImage->IsValid())
 			return false;
 
@@ -162,12 +159,9 @@ bool eTileImpl::LoadTileset(const char * tilesetFilename, bool appendNew) {
 		}
 		read.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
 	}
+
 	read.close();
-
-	if (tileSet.empty())
-		return false;
-
-	return true;
+	return !tileSet.empty();
 }
 
 //************
@@ -194,9 +188,9 @@ void eTile::SetType(int newType) {
 	// if this is a type change, not just an initialization, then clear the collisionModel properties
 	collisionModel = nullptr;
 
-	impl = &eTileImpl::tileTypes[newType];														// DEBUG: assumes newType is defined
-	renderImage->Image() = game.GetImageManager().Get(eTileImpl::tileSet.at(newType).first);	// which image (tile atlas)
-	renderImage->SetImageFrame(eTileImpl::tileSet.at(newType).second);							// which part of that image
+	impl = &eTileImpl::tileTypes[newType];																	// DEBUG: assumes newType is defined
+	renderImage->Image() = game.GetImageManager().GetByResourceID(eTileImpl::tileSet.at(newType).first);	// which image (tile atlas)
+	renderImage->SetImageFrame(eTileImpl::tileSet.at(newType).second);										// which part of that image
 
 	// visual alignment with isometric grid
 	const float isoCellWidthAdjustment = (float)game.GetMap().TileMap().IsometricCellWidth() * 0.5f;

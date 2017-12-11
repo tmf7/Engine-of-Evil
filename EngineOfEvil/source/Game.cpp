@@ -127,7 +127,7 @@ void eGame::DrawFPS() {
 	fraps += std::to_string(fixedFPS);
 	fraps += "/";
 	fraps += std::to_string(GetDynamicFPS());
-	renderer.DrawOutlineText(fraps.c_str(), vec2_zero, redColor, false, RENDERTYPE_STATIC);
+	renderer.DrawOutlineText(fraps.c_str(), vec2_zero, redColor, true, RENDERTYPE_STATIC);
 }
 
 //****************
@@ -136,7 +136,7 @@ void eGame::DrawFPS() {
 bool eGame::Run() {	
 	Uint32 startTime = SDL_GetTicks();
 
-	// FIXME/TODO: the event poll may be extremely slow
+	// TODO: poll events in a separate eWindow class
 	SDL_Event event;
 	while (SDL_PollEvent(&event)) {
 		if (event.type == SDL_QUIT)
@@ -155,22 +155,16 @@ bool eGame::Run() {
 
 	camera.Think();
 
-	// draw the dynamic/scalable gameplay
 	renderer.Clear();
 	map.Draw();
 	player.Draw();
 
-	// all debug information is an overlay
+	// DEBUG: all debug information is an overlay on their respective target texture [camera|overlay]
 	for (auto & entity : entities)
 		entity->DebugDraw();		
 
-	// TODO(!): modify eRenderer shape and text drawing to be on secondary textures to be referenced via renderImages
-	// and added to the static/dynamic-renderPools for more flexible debug (or otherwise) drawing (ie just one ::Draw call here)
-	map.DebugDraw();				// draw the collision bounds of collidable tiles
+	map.DebugDraw();
 	player.DebugDraw();
-
-	// TODO: the HUD would be a static/non-scalable overlay...which should draw with the player...
-	// BUT THAT'S FINE because FlushStaticPool gets called last, whew!
 
 	// draw static debug information
 	if (debugFlags.FRAMERATE)

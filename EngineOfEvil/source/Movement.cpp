@@ -330,8 +330,8 @@ void eMovementPlanner::CheckWalls(float * bias) {
 //******************
 void eMovementPlanner::AddUserWaypoint(const eVec2 & waypoint) {
 	static std::vector<Collision_t> collisions;		// FIXME(~): make this a private data member instead of per-fn, if more than one fn uses it
+	collisions.clear();								// DEBUG: lazy clearing
 
-	collisions.clear();		// DEBUG: lazy clearing
 	eBounds waypointBounds = owner->CollisionModel().LocalBounds() + waypoint;
 	if(!eCollision::AABBContainsAABB(game.GetMap().AbsBounds(), waypointBounds) ||
 		eCollision::BoxCast(collisions, waypointBounds, vec2_zero, 0.0f))

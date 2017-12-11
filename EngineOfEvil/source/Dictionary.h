@@ -10,7 +10,7 @@
 // of std::strings that can be reinterpreted as
 // types [int|float|bool|Vec2|Vec3|Vec4|string]
 // this class is primarily designed to load and 
-// initaialize eEntitiy-type objects 
+// initaialize eEntity-type objects 
 //*************************************************
 class eDictionary {
 public:
@@ -34,6 +34,15 @@ public:
 	eVec2												GetVec2( const char *key, const char *defaultString = nullptr ) const;
 	eVec3												GetVec3( const char *key, const char *defaultString = nullptr) const;
 	eQuat												GetVec4( const char *key, const char *defaultString = nullptr) const;
+
+
+	typedef std::unordered_map<std::string, std::string>::iterator iterator;
+    typedef std::unordered_map<std::string, std::string>::const_iterator const_iterator;
+
+    iterator											begin()				{ return args.begin(); }
+    const_iterator										begin() const		{ return args.begin(); }
+    iterator											end()				{ return args.end(); }
+    const_iterator										end() const			{ return args.end(); }
 
 private:
 

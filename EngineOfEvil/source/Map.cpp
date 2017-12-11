@@ -13,22 +13,33 @@ bool eMap::Init () {
 // using a file
 // DEBUG (.emap file format):
 // # first line comment\n
-// numColumns numRows cellWidth cellHeight numLayers\n
-// # third line comment\n
-// tileSetFilename.etls\n
+// # any number of leading comments with '#'\n
+// Num_Columns: numColumns\n
+// Num_Rows: numRows\n
+// Cell_Width: cellWidth\n
+// Cell_Height: cellHeight\n
+// Num_Layers: numLayers\n
+// Tileset_Filename: tileSetFilename.etls\n
+// Layers {\n
+// layer_1_name {\n
 // master-tileSet-index, master-tileSet-index, ... master-tileSet-index\n
-// # end of layer 1 comment\n
+// }\n		(signifies end of a layer's definition)
+// layer_2_name {\n
 // master-tileSet-index, master-tileSet-index, ... master-tileSet-index\n
-// # end of layer 2 comment\n
-// (repeat, note that 0 as a master-tileSet-index indicates a placeholder, ie a tileMap index to skip for that layer)
-// (also note that ALL read values are reduced by 1 before loading into an eTileImpl::type here)
-// # end of layer n comment\n
+// }\n		(signifies end of a layer's definition)
+// (repeat layer definitions for Num_Layers)
+// }\n		(signifies end of ALL layers' definitions, moving on to entity map's entity definitions)
+// [NOTE]: 0 as a master-tileSet-index indicates a placeholder, ie a tileMap index to skip for that layer
+// [NOTE]: ALL master-tileSet-index read are reduced by 1 before loading into an eTileImpl::type
 // # batch-load eEntity prefabs used on this map (defines prefabList indexes used below)\n
-// entityPrefabBatchFilename.bprf\n
-// # spawn unique eEntities\n
-// prefabListIndex xPos yPos zPos	# eEntity::collisionModel::origin in orthographic 2D world-space, zPos of eEntity::renderImage::renderBlock's bottom in 3D world-space\n
-// prefabListIndex xPos yPos zPos	# int float float float (everything past the last float is ignored)\n
+// # any number of leading comments with '#' between layer and entity definitions\n
+// # only use [0|1] prefab batch file, to simplify entity map assignment\n
+// Entity_Prefab_BatchFilename: entityPrefabBatchFilename.bprf\n
+// Spawn_List_Title {\n
+// prefabShortName: xPos yPos zPos	# eEntity::collisionModel::origin in orthographic 2D world-space, zPos of eEntity::renderImage::renderBlock's bottom in 3D world-space\n
+// prefabShortName: xPos yPos zPos	# string float float float (everything past the last float is ignored)\n
 // (repeat)
+// }\n		(signifies end of the spawn list definition for this map)
 //**************
 bool eMap::LoadMap(const char * mapFilename) {
 	std::ifstream	read(mapFilename);
@@ -38,6 +49,8 @@ bool eMap::LoadMap(const char * mapFilename) {
 
 	std::vector<eRenderImage *> sortTiles;
 	char buffer[MAX_ESTRING_LENGTH];
+	memset(buffer, 0, sizeof(buffer));
+
 	int numColumns = 0;
 	int numRows = 0;
 	int cellWidth = 0;
@@ -46,11 +59,24 @@ bool eMap::LoadMap(const char * mapFilename) {
 	int row = 0;
 	int column = 0;
 
-	read.ignore(std::numeric_limits<std::streamsize>::max(), '\n');		// skip the first line comment
-	read >> numColumns >> numRows >> cellWidth >> cellHeight >> numLayers;
-	read.ignore(std::numeric_limits<std::streamsize>::max(), '\n');		// skip the rest of the line
-	if (!VerifyRead(read))
-		return false;
+	while (read.peek() == '#')
+		read.ignore(std::numeric_limits<std::streamsize>::max(), '\n');		// skip comments at the top of the file
+
+	for (int i = 0; i < 6; ++i) {
+		SkipFileKey(read);													// value label text
+		switch (i) {
+			case 0: read >> numColumns; break;
+			case 1: read >> numRows;	break;
+			case 2: read >> cellWidth;	break;
+			case 3: read >> cellHeight; break;
+			case 4: read >> numLayers;	break;
+			case 5: read.getline(buffer, sizeof(buffer), '\n'); break;		// tileSet filename
+		}
+
+		read.ignore(std::numeric_limits<std::streamsize>::max(), '\n');		// skip the rest of the line
+		if (!VerifyRead(read))
+			return false;
+	}	
 
 	tileMap.SetGridSize(numRows, numColumns);					
 	tileMap.SetCellSize(cellWidth, cellHeight);
@@ -75,47 +101,27 @@ bool eMap::LoadMap(const char * mapFilename) {
 		}
 	}
 
-	read.ignore(std::numeric_limits<std::streamsize>::max(), '\n');		// skip the third line comment
-	memset(buffer, 0, sizeof(buffer));
-	read.getline(buffer, sizeof(buffer), '\n');
-	if (!VerifyRead(read))
-		return false;
-
 	if (!eTileImpl::LoadTileset(buffer))
 		return false;
 
-	row = 0;
-	column = 0;
-	Uint32 layer = 0;
-	enum {
-		READING_MAP,
-		LOADING_PREFABS,
-		SPAWNING_ENTITIES
-	};
-
 	sortTiles.reserve(numRows * numColumns * numLayers);
 
-	int readState = READING_MAP;
-	size_t tallestRenderBlock = 0;
-	while (!read.eof()) {
-		if (readState == READING_MAP) {
-			int tileType = INVALID_ID;
-			bool firstComment = false;
+	// READING LAYERS
+	Uint32 layer = 0;
+	read.ignore(std::numeric_limits<std::streamsize>::max(), '\n');			// ignore "Layers {\n"
+	while (read.peek() != '}') {
+		row = 0;
+		column = 0;
+		size_t tallestRenderBlock = 0;
+		read.ignore(std::numeric_limits<std::streamsize>::max(), '\n');		// ignore "layer_# {\n"
 
-			if (read.peek() == '#') {
-				read.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-				tileMap.AddLayerDepth(tallestRenderBlock);
-				tallestRenderBlock = 0;
-				row = 0;
-				column = 0;
-				++layer;
-				firstComment = true;
-			} else {
-				read >> tileType;
-			}
+		// read one layer
+		while (read.peek() != '}') {
+			int tileType = INVALID_ID;
+			read >> tileType;
 			if (!VerifyRead(read))
 				return false;
-		
+			
 			--tileType;			// DEBUG: .map format is easier to read with 0's instead of -1's so all values are incremented by 1 when writing it
 			if (tileType > INVALID_ID) {
 				auto & cell = tileMap.Index(row, column);
@@ -141,46 +147,56 @@ bool eMap::LoadMap(const char * mapFilename) {
 				}
 			}
 
-			if (firstComment && read.peek() == '#') {
-				readState = LOADING_PREFABS;
-				read.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-			} else if (!tileMap.IsValid(row, column)) {			// TODO: remove this, it's just a backup in case of an excessive .map file
+			if (!tileMap.IsValid(row, column))									// TODO: remove this, it's just a backup in case of an excessive .map file
 				return false;
-			}
-		} else if (readState == LOADING_PREFABS) {
-			memset(buffer, 0, sizeof(buffer));
-			read.getline(buffer, sizeof(buffer), '\n');
-			if (!VerifyRead(read))
-				return false;
+		}
 
-			if (!game.GetEntityPrefabManager().BatchLoad(buffer)) {
-				// FIXME(~): no permanent consequences
-			}
+		read.ignore(std::numeric_limits<std::streamsize>::max(), '\n');			// ignore layer closing brace '}\n'
+		tileMap.AddLayerDepth(tallestRenderBlock);
+		++layer;
+	}
+				
+	read.ignore(std::numeric_limits<std::streamsize>::max(), '\n');				// ignore layers group closing brace '}\n'
+						  
+	// LOADING PREFABS
+	while (read.peek() == '#')
+		read.ignore(std::numeric_limits<std::streamsize>::max(), '\n');			// skip comments between the map layers and entity prefabs/spawning
 
-			read.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-			readState = SPAWNING_ENTITIES;
-		} else if (readState == SPAWNING_ENTITIES) {
-			if (read.peek() == '#')
-				break;
-			
-			int prefabListIndex = -1;
-			eVec3 worldPosition;
-			read >> prefabListIndex;
-			read >> worldPosition.x;
-			read >> worldPosition.y;
-			read >> worldPosition.z;
-			read.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-			if (!VerifyRead(read))
-				return false;
+	SkipFileKey(read);															// skip "Entity_Prefab_BatchFilename:"
+	memset(buffer, 0, sizeof(buffer));
+	read.getline(buffer, sizeof(buffer), '\n');
+	if (!VerifyRead(read))
+		return false;
 
-			if (!game.GetEntityPrefabManager().SpawnInstance(prefabListIndex, worldPosition)) {
-				std::string message = "Invalid prefabListIndex value (";
-				message += std::to_string(prefabListIndex);
-				message += "), or invalid prefab file contents.";
-				EVIL_ERROR_LOG.LogError(message.c_str(), __FILE__, __LINE__);
-			}
+	game.GetEntityPrefabManager().BatchLoad(buffer);							// DEBUG: any batch errors get logged, but doesn't stop the map from loading
+
+							  
+	// SPAWNING ENTITIES
+	read.ignore(std::numeric_limits<std::streamsize>::max(), '\n');				// ignore "Spawn_List {\n"
+
+	while (read.peek() != '}') {
+		memset(buffer, 0, sizeof(buffer));
+		read.getline(buffer, sizeof(buffer), ':');								// prefabShortName
+		std::string prefabShortName(buffer);
+		if (!VerifyRead(read))
+			return false;
+
+		eVec3 worldPosition;
+		read >> worldPosition.x;
+		read >> worldPosition.y;
+		read >> worldPosition.z;
+		read.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+		if (!VerifyRead(read))
+			return false;
+
+		if (!game.GetEntityPrefabManager().SpawnInstance(prefabShortName, worldPosition)) {
+			std::string message = "Invalid prefabShortName (";
+			message += prefabShortName;
+			message += "), or invalid prefab file contents.";
+			EVIL_ERROR_LOG.LogError(message.c_str(), __FILE__, __LINE__);
 		}
 	}
+
 	read.close();
 
 	// initialize the static map images sort order

@@ -45,9 +45,10 @@ public:
 class eEntityPrefabManager : public eResourceManager<eEntity> {
 public:
 
+	std::shared_ptr<eEntity> &									GetByShortName(const std::string & prefabShortName);
 	const std::shared_ptr<eCreateEntityPrefabStrategy> &		GetCreatePrefabStrategy() const;
 	void														SetCreatePrefabStrategy(const std::shared_ptr<eCreateEntityPrefabStrategy> & newStrategy);
-	bool														SpawnInstance(const int entityPrefabIndex, const eVec3 & worldPosition);
+	bool														SpawnInstance(const std::string & prefabShortName, const eVec3 & worldPosition);
 
 	virtual bool												Init() override;
 	virtual bool												LoadAndGet(const char * resourceFilename, std::shared_ptr<eEntity> & result) override;
@@ -62,10 +63,11 @@ public:
 private:
 
 	bool														CreatePrefab(const char * sourceFilename, const std::string & prefabShortName, const eDictionary & spawnArgs, int & prefabManagerIndex);
-	void														RegisterPrefab(const std::shared_ptr<eEntity> & newPrefab);
+	void														RegisterPrefab(const std::shared_ptr<eEntity> & newPrefab, const std::string & prefabShortName);
 
 private:
 
+	eHashIndex													prefabShortNameHash;
 	std::shared_ptr<eCreateEntityPrefabStrategy>				createPrefabStrategy = std::make_shared<eCreateEntityPrefabBasic>();
 };
 

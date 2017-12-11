@@ -10,7 +10,7 @@ bool eAnimationControllerManager::Init() {
 
 	auto & error_animation_controller = std::make_shared<eAnimationController>("error_animation_controller", resourceList.size());	
 	error_animation_controller->Init(1, 0, 0, 0, 0, 0);
-	if (!error_animation_controller->AddAnimationState(std::make_unique<eAnimationState>("error_state", game.GetAnimationManager().Get(0), 1.0f)))
+	if (!error_animation_controller->AddAnimationState(std::make_unique<eAnimationState>("error_state", game.GetAnimationManager().GetByResourceID(0), 1.0f)))
 		return false;
 
 	// TODO: register the error_animation_controller as the first element of resourceList
@@ -85,7 +85,7 @@ controllerParamType1 controllerParamName1 compareEnumName1 transitionValue\n
 //***********************
 bool eAnimationControllerManager::LoadAndGet(const char * resourceFilename, std::shared_ptr<eAnimationController> & result) {
 	// animation controller already loaded
-	if ((result = Get(resourceFilename))->IsValid())
+	if ((result = GetByFilename(resourceFilename))->IsValid())
 		return true;
 
 	std::ifstream	read(resourceFilename);
@@ -213,7 +213,7 @@ bool eAnimationControllerManager::LoadAndGet(const char * resourceFilename, std:
 
 					memset(buffer, 0, sizeof(buffer));
 					read.getline(buffer, sizeof(buffer), ' ');				// animation name
-					auto & animation = game.GetAnimationManager().Get(buffer);
+					auto & animation = game.GetAnimationManager().GetByFilename(buffer);
 					if (!VerifyRead(read) || !animation->IsValid()) {
 						result = resourceList[0];
 						return false;

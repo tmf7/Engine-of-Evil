@@ -61,7 +61,7 @@ bool eAnimationController::CheckTransitionConditions(const eStateTransition & tr
 		updateState = (boolParameters[conditionPair.first] == conditionPair.second);
 	}
 
-	static std::vector<size_t> resetTriggers;						// static to reduce dynamic allocations
+	static std::vector<size_t> resetTriggers;					// static to reduce dynamic allocations
 	resetTriggers.clear();										// lazy clearing
 	for (size_t i = 0; i < transition.triggerConditions.size(); ++i) {
 		const auto & conditionPair = transition.triggerConditions[i];

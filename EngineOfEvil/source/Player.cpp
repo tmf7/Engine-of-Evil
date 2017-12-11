@@ -69,7 +69,9 @@ void ePlayer::Think() {
 //***************
 bool ePlayer::SelectGroup() {
 	static std::unordered_map<const eEntity *, const eEntity *> alreadyTested;
-	static std::vector<eGridCell *> selectedCells;				// DEBUG(performance): static to reduce dynamic allocations	
+	static std::vector<eGridCell *>								selectedCells;				// DEBUG(performance): static to reduce dynamic allocations	
+	alreadyTested.clear();																	// lazy clearing
+	selectedCells.clear();
 
 	eBounds selectionBounds(selectionPoints.data(), selectionPoints.size());
 	if (selectionBounds.Width() <= 0.0f || selectionBounds.Height() <= 0.0f)
@@ -115,8 +117,6 @@ bool ePlayer::SelectGroup() {
 			}
 		}
 	}
-	alreadyTested.clear();
-	selectedCells.clear();
 	return !groupSelection.empty();
 }
 
@@ -129,7 +129,6 @@ void ePlayer::ClearGroupSelection() {
 	}
 	groupSelection.clear();
 }
-
 
 //***************
 // ePlayer::Draw
@@ -152,7 +151,6 @@ void ePlayer::Draw() {
 //***************
 void ePlayer::DebugDraw() {
 	// highlight the cell under the cursor
-	// FIXME: conflicts w/ ePlayerDraw order (because of the immediacy of drawing to the rendertargets)
 	auto & tileMap = game.GetMap().TileMap();
 	const eVec2 worldPosition = game.GetCamera().MouseWorldPosition();
 	if (tileMap.IsValid(worldPosition)) {

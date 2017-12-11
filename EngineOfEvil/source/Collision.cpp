@@ -199,6 +199,8 @@ void eCollision::GetAreaCells(const eBox & area, std::vector<eGridCell *> & area
 	for (auto & cell : closedSet)
 		cell->inClosedSet = false;
 	closedSet.clear();
+	openSet.clear();
+	neighbors.clear();
 }
 
 //***************
@@ -264,6 +266,8 @@ void eCollision::GetAreaCells(const eBounds & bounds, const eVec2 & dir, const f
 	for (auto & cell : closedSet)
 		cell->inClosedSet = false;
 	closedSet.clear();
+	openSet.clear();
+	neighbors.clear();
 }
 
 //***************
@@ -307,6 +311,8 @@ void eCollision::GetAreaCells(const eVec2 & begin, const eVec2 & dir, const floa
 	for (auto & cell : closedSet)
 		cell->inClosedSet = false;
 	closedSet.clear();
+	openSet.clear();
+	neighbors.clear();
 }
 
 //***************

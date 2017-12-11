@@ -7,11 +7,12 @@
 bool eEntityPrefabManager::Init() {
 	// prepare the hashindex
 	resourceHash.ClearAndResize(MAX_PREFAB_ENTITIES);
+	prefabShortNameHash.ClearAndResize(MAX_PREFAB_ENTITIES);
 
 	// register the error_prefab_entity as the first element of resourceList
 	auto & errorPrefab = std::make_shared<eEntity>();
-	errorPrefab->InitResource("error_prefab_entity", 0); 
-	RegisterPrefab(errorPrefab);	// default error prefab entity
+	errorPrefab->InitResource("error_prefab_entity_no_resourceFilename", 0); 
+	RegisterPrefab(errorPrefab, "error_prefab_entity");	// default error prefab entity
 	return true;
 }
 
@@ -32,6 +33,28 @@ void eEntityPrefabManager::SetCreatePrefabStrategy(const std::shared_ptr<eCreate
 //**************************
 const std::shared_ptr<eCreateEntityPrefabStrategy> & eEntityPrefabManager::GetCreatePrefabStrategy() const {
 	return createPrefabStrategy;
+}
+
+//***************************
+// eEntityPrefabManager::GetByPrefabName
+// returns a resource pointer if it exists
+// if param prefabShortName is null or the resource doesn't exist
+// then it returns the default error resource pointer
+// DEBUG: relies on items in resourceList to have the function:
+// const eDictionary & GetSpawnArgs() const;
+// which contains the key: "prefabShortName" (typically assigned during LoadAndGet)
+//***************************
+std::shared_ptr<eEntity> & eEntityPrefabManager::GetByShortName(const std::string & prefabShortName) {
+	if (prefabShortName.empty()) 
+		return resourceList[0]; // default error resource
+
+	int hashKey = prefabShortNameHash.GetHashKey(prefabShortName);
+	for (int i = prefabShortNameHash.First(hashKey); i != -1; i = prefabShortNameHash.Next(i)) {
+		const char * entityPrefabShortName = resourceList[i]->GetSpawnArgs().GetString("prefabShortName", "error_prefab_entity");
+		if (prefabShortName == entityPrefabShortName)
+			return resourceList[i];
+	}
+	return resourceList[0];		// default error resource
 }
 
 //**************************
@@ -59,7 +82,7 @@ const std::shared_ptr<eCreateEntityPrefabStrategy> & eEntityPrefabManager::GetCr
 // [NOTE]: batch entity prefab files are .bprf
 //**************************
 bool eEntityPrefabManager::LoadAndGet(const char * resourceFilename, std::shared_ptr<eEntity> & result) {
-	if ((result = Get(resourceFilename))->IsValid())						// prefab already loaded
+	if ((result = GetByFilename(resourceFilename))->IsValid())						// prefab already loaded
 		return true;
 
 	std::ifstream	read(resourceFilename);
@@ -72,7 +95,7 @@ bool eEntityPrefabManager::LoadAndGet(const char * resourceFilename, std::shared
 	char buffer[MAX_ESTRING_LENGTH];
 
 	while (read.peek() == '#' || read.peek() == '\n')
-		read.ignore(std::numeric_limits<std::streamsize>::max(), '\n');			// ignore comment or empty lines before prefab definition
+		read.ignore(std::numeric_limits<std::streamsize>::max(), '\n');		// ignore comment or empty lines before prefab definition
 
 
 	while (!read.eof()) {
@@ -121,12 +144,15 @@ bool eEntityPrefabManager::LoadAndGet(const char * resourceFilename, std::shared
 
 //***************
 // eEntityPrefabManager::RegisterPrefab
-// convenience function called after a std::make_shared<eEntity-type>(...) call
-// in eEntityPrefabManager::CreatePrefab to ensure the resourceHash and resourceList are synchronized
+// ensures the resourceHash, prefabShortNameHash and resourceList are synchronized
 // DEBUG: copies param newPrefab into the resourceList
 //***************
-void eEntityPrefabManager::RegisterPrefab(const std::shared_ptr<eEntity> & newPrefab) {
+void eEntityPrefabManager::RegisterPrefab(const std::shared_ptr<eEntity> & newPrefab, const std::string & prefabShortName) {
 	resourceHash.Add(newPrefab->GetNameHash(), newPrefab->GetManagerIndex());
+
+	int hashKey = prefabShortNameHash.GetHashKey(prefabShortName);
+	prefabShortNameHash.Add(hashKey, newPrefab->GetManagerIndex());
+
 	resourceList.emplace_back(newPrefab);
 }
 
@@ -145,7 +171,7 @@ bool eEntityPrefabManager::CreatePrefab(const char * sourceFilename, const std::
 	if (createPrefabStrategy->CreatePrefab(newPrefab, prefabShortName, spawnArgs) && newPrefab != nullptr) {
 		newPrefab->spawnArgs = std::move(spawnArgs);
 		newPrefab->InitResource(sourceFilename, prefabManagerIndex); 
-		RegisterPrefab(newPrefab);
+		RegisterPrefab(newPrefab, prefabShortName);
 		return true;
 	}
 
@@ -158,11 +184,12 @@ bool eEntityPrefabManager::CreatePrefab(const char * sourceFilename, const std::
 // calls the runtime type Spawn function of the prefab eEntity
 // at param entityPrefabIndex within resourceList
 //***************
-bool eEntityPrefabManager::SpawnInstance(const int entityPrefabIndex, const eVec3 & worldPosition) {
-	if (entityPrefabIndex < 0 || (size_t)entityPrefabIndex >= resourceList.size())
+bool eEntityPrefabManager::SpawnInstance(const std::string & prefabShortName, const eVec3 & worldPosition) {
+	auto & entityPrefab = GetByShortName(prefabShortName);
+	if (!entityPrefab->IsValid())
 		return false;
 
-	return Get(entityPrefabIndex)->SpawnCopy(worldPosition);
+	return entityPrefab->SpawnCopy(worldPosition);
 }
 
 //***************

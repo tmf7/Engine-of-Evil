@@ -58,7 +58,7 @@ bool eImageManager::Init() {
 //***************************
 bool eImageManager::LoadAndGetConstantText(TTF_Font * font, const char * text, const SDL_Color & color, std::shared_ptr<eImage> & result) {
 	// image already loaded
-	if ((result = Get(text))->IsValid())
+	if ((result = GetByFilename(text))->IsValid())
 		return true;
 
 	SDL_Surface * surfaceText = TTF_RenderText_Solid(font, text, color);
@@ -157,7 +157,7 @@ bool eImageManager::LoadSubframes(std::ifstream & read, std::shared_ptr<eImage> 
 //***************************
 bool eImageManager::LoadAndGet(const char * resourceFilename, std::shared_ptr<eImage> & result) {
 	// image already loaded
-	if ((result = Get(resourceFilename))->IsValid())
+	if ((result = GetByFilename(resourceFilename))->IsValid())
 		return true;
 
 	std::ifstream	read(resourceFilename);

@@ -39,7 +39,7 @@ void eBlendState::Init() {
 //*********************
 bool eBlendState::AddBlendNode(const std::string & animationName, float xPosition, float yPosition) {
 	const int index = animations.size();
-	auto & animation = game.GetAnimationManager().Get(animationName.c_str());
+	auto & animation = game.GetAnimationManager().GetByFilename(animationName.c_str());
 	if (!animation->IsValid())
 		return false;
 

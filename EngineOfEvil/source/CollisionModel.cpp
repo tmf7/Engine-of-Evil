@@ -87,8 +87,8 @@ void eCollisionModel::UpdateAreas() {
 //***************
 bool eCollisionModel::FindApproachingCollision(const eVec2 & dir, const float length, Collision_t & result) const {
 	static std::vector<Collision_t> collisions;		// FIXME(~): make this a private data member instead of per-fn, if more than one fn uses it
+	collisions.clear();								// DEBUG: lazy clearing
 
-	collisions.clear();	// DEBUG: lazy clearing
 	if(eCollision::BoxCast(collisions, absBounds, dir, length)) {
 		for (auto & collision : collisions) {
 			float movingAway = collision.normal * dir;

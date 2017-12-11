@@ -142,13 +142,12 @@ void eRenderer::DrawOutlineText(const char * text, eVec2 & point, const SDL_Colo
 	point.SnapInt();
 	SDL_Rect dstRect = { (int)point.x, (int)point.y, 0, 0 };
 	SDL_QueryTexture(renderedText, NULL, NULL, &dstRect.w, &dstRect.h);
-	if (dynamic) {
+	if (dynamic)
 		SetRenderTarget(debugCameraTarget, game.GetCamera().GetZoom());
-		SDL_RenderCopy(internal_renderer, renderedText, nullptr, &dstRect);
-	} else {
+	else
 		SetRenderTarget(debugOverlayTarget);
-		SDL_RenderCopy(internal_renderer, renderedText, nullptr, &dstRect);
-	}
+
+	SDL_RenderCopy(internal_renderer, renderedText, nullptr, &dstRect);
 }
 
 //***************
@@ -256,7 +255,7 @@ void eRenderer::DrawIsometricRect(const SDL_Color & color, const eBounds & rect,
 	if (dynamic)
 		SetRenderTarget(debugCameraTarget, game.GetCamera().GetZoom());
 	else
-		SetRenderTarget(debugOverlayTarget, game.GetCamera().GetZoom());
+		SetRenderTarget(debugOverlayTarget);
 
 	SDL_RenderDrawLines(internal_renderer, iPoints.data(), iPoints.size());
 }
@@ -279,7 +278,7 @@ void eRenderer::DrawCartesianRect(const SDL_Color & color, const eBounds & rect,
 	if (dynamic)
 		SetRenderTarget(debugCameraTarget, game.GetCamera().GetZoom());
 	else
-		SetRenderTarget(debugOverlayTarget, game.GetCamera().GetZoom());
+		SetRenderTarget(debugOverlayTarget);
 
 	fill ? SDL_RenderFillRect(internal_renderer, &drawRect)
 		: SDL_RenderDrawRect(internal_renderer, &drawRect);
@@ -470,5 +469,6 @@ void eRenderer::FlushOverlayPool() {
 		DrawImage(renderImage, RENDERTYPE_STATIC);
 
 	overlayPool.clear();
+	overlayPoolInserts.clear();
 }
 

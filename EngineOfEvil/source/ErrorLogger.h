@@ -47,7 +47,15 @@ private:
 
 };
 
-
+//******************
+// SkipFileKey (global)
+// skips "KeyName:" and whitepace b/t ':' and the labelled value
+//******************
+inline void SkipFileKey(std::ifstream & read) {
+	read.ignore(std::numeric_limits<std::streamsize>::max(), ':');
+	while (read.peek() == ' ' || read.peek() == '\t')						
+		read.ignore();
+}
 
 //******************
 // VerifyWrite (global)

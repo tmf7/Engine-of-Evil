@@ -33,8 +33,8 @@ public:
 
 	// no need to specialize these, but if needed do so in a derived class to avoid removing functionality
 	// DEBUG: however, obscuring visibility of the base class function can lead to undefined behavior (especially through base-class pointers/references)
-	std::shared_ptr<type> &					Get(const char * resourceFilename);
-	std::shared_ptr<type> &					Get(int resourceID);
+	std::shared_ptr<type> &					GetByFilename(const char * resourceFilename);
+	std::shared_ptr<type> &					GetByResourceID(int resourceID);
 	bool									Load(const char * resourceFilename);
 	bool									BatchLoad(const char * resourceBatchFilename);
 	int										ResourceCount() const { return resourceList.size(); }
@@ -90,35 +90,35 @@ inline void eResourceManager<type>::Unload(int resourceID) {
 }
 
 //*************************
-// eResourceManager::Get
+// eResourceManager::GetByResourceID
 // returns the resource with the given resourceID
 // DEBUG: no range checking occurs
 //*************************
 template<class type>
-inline std::shared_ptr<type> & eResourceManager<type>::Get(int resourceID) {
+inline std::shared_ptr<type> & eResourceManager<type>::GetByResourceID(int resourceID) {
 	return resourceList[resourceID];  
 }
 
 //***************************
-// eResourceManager::Get
-// returns an resource pointer if it exists
+// eResourceManager::GetByFilename
+// returns a resource pointer if it exists
 // if param resourceFilename is null or the resource doesn't exist
 // then it returns the default error resource pointer
 // DEBUG: relies on items in resourceList to have the function:
 // const std::string & GetSourceFilename() const;
 //***************************
 template<class type>
-inline std::shared_ptr<type> & eResourceManager<type>::Get(const char * resourceFilename) {
+inline std::shared_ptr<type> & eResourceManager<type>::GetByFilename(const char * resourceFilename) {
 	if (!resourceFilename) 
 		return resourceList[0]; // default error resource
 
-	// search for pre-existing texture
 	int hashKey = resourceHash.GetHashKey(std::string(resourceFilename));
 	for (int i = resourceHash.First(hashKey); i != -1; i = resourceHash.Next(i)) {
 		if (resourceList[i]->GetSourceFilename() == resourceFilename)
 			return resourceList[i];
 	}
-	return resourceList[0];		// default error resource
+
+	return resourceList[0];
 }
 
 //***************************

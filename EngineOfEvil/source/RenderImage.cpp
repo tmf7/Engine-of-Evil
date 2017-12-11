@@ -12,7 +12,7 @@ eRenderImage::~eRenderImage() {
 // DEBUG: no range checking for faster assignment
 //*************
 void eRenderImage::SetImage(int imageManagerIndex) {
-	image = game.GetImageManager().Get(imageManagerIndex);
+	image = game.GetImageManager().GetByResourceID(imageManagerIndex);
 }
 
 //************
