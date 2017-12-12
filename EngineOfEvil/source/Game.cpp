@@ -25,14 +25,11 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 ===========================================================================
 */
 #include "Game.h"
-#include "CreatePrefabStrategies.h"
-
-eGame game;
 
 //****************
-// eGame::Init
+// eGame::InitSystem
 //****************
-bool eGame::Init() {
+bool eGame::InitSystem() {
 
 	if (SDL_Init(SDL_INIT_EVERYTHING) == -1) {
 		EVIL_ERROR_LOG.ErrorPopupWindow("SDL INIT FAILURE");
@@ -74,75 +71,25 @@ bool eGame::Init() {
 		throw;
 	}
 
-	camera.Init();
-
 	if (!entityPrefabManager.Init()) {
 		EVIL_ERROR_LOG.ErrorPopupWindow("ENTITY PREFAB MANAGER INIT FAILURE");
 		return false;
 	}
 
-	entityPrefabManager.SetCreatePrefabStrategy(std::make_shared<eCreateEntityPrefabUser>());			// FIXME: move this to an external, user-initialization function, not Engine Initialization
-
-	if (!map.Init()) {
-		EVIL_ERROR_LOG.ErrorPopupWindow("MAP INIT FAILURE");
-		return false;
-	}
-	
+	SetFixedFPS(defaultFPS);
 	gameTime = SDL_GetTicks();
-
-	return true;
+	return Init();
 }
 
 //****************
-// eGame::Shutdown
+// eGame::ShutdownSystem
 //****************
-void eGame::Shutdown() {
-	FreeAssets();
+void eGame::ShutdownSystem() {
+	audio.Shutdown();
+	renderer.Shutdown();
 	SDL_Quit();
 }
 
-//****************
-// eGame::FreeAssets
-//****************
-void eGame::FreeAssets() {
-	renderer.Free();
-}
-
-//****************
-// eGame::AddEntity
-// finds the first unused slot in game::entities to move param entity
-// and assigns it a spawnID,
-// returns the new spawnID index within game::entities
-// returns -1 if something went wrong
-//****************
-int eGame::AddEntity(std::unique_ptr<eEntity> && entity) {
-	int spawnID = 0;
-	for (auto & entitySlot : entities) {
-		if (entitySlot == nullptr) {
-			entity->spawnedEntityID = spawnID;
-			entity->spawnName = entity->spawnArgs.GetString("prefabShortName", TO_STRING(eEntity));
-			entity->spawnName += "_" + spawnID;
-			entitySlot = std::move(entity);
-			return spawnID;
-		} else {
-			++spawnID;
-		}
-	}
-
-	if (spawnID == entities.size()) {
-		entity->spawnedEntityID = spawnID;
-		entities.emplace_back(std::move(entity));
-		return spawnID;
-	}
-	return -1;
-}
-
-//****************
-// eGame::ClearAllEntities
-//****************
-void eGame::ClearAllEntities() {
-	entities.clear();
-}
 
 //****************
 // eGame::DrawFPS
@@ -153,62 +100,43 @@ void eGame::DrawFPS() {
 	fraps += std::to_string(fixedFPS);
 	fraps += "/";
 	fraps += std::to_string(GetDynamicFPS());
-	renderer.DrawOutlineText(fraps.c_str(), vec2_zero, redColor, true, RENDERTYPE_STATIC);
+	renderer.DrawOutlineText(renderer.GetDebugOverlayTarget(), fraps.c_str(), vec2_zero, redColor, true);
 }
 
 //****************
 // eGame::Run
 //****************
-bool eGame::Run() {	
-	Uint32 startTime = SDL_GetTicks();
+void eGame::Run() {	
+	isRunning = true;
+	while (isRunning) {
+		Uint32 startTime = SDL_GetTicks();
 
-	// TODO: poll events in a separate eWindow class
-	SDL_Event event;
-	while (SDL_PollEvent(&event)) {
-		if (event.type == SDL_QUIT)
-			return false;
-	}
+		// TODO: poll events in a separate eWindow class
+		renderer.PollEvents();
 	
-	// system updates
-	input.Update();
+		// system updates
+		input.Update();
+		Update();
 
-	player.Think();
+		// draw static debug information
+		if (debugFlags.FRAMERATE)
+			DrawFPS();
 
-	for (auto & entity : entities) {
-		entity->UpdateComponents();
-		entity->Think();
+		renderer.Flush();
+		renderer.Show();
+
+		// frame-rate governing delay
+		gameTime = SDL_GetTicks();
+		deltaTime = gameTime - startTime;
+
+		// DEBUG: breakpoint handling
+		if (deltaTime > 1000)
+			deltaTime = frameTime;
+
+		// DEBUG: delta time of this last frame is not used as the global update interval,
+		// instead the globally available update interval is fixed to frameTime
+		deltaTime <= frameTime ? SDL_Delay(frameTime - deltaTime) : SDL_Delay(deltaTime - frameTime);
 	}
-
-	camera.Think();
-
-	renderer.Clear();
-	map.Draw();
-	player.Draw();
-
-	// DEBUG: all debug information is an overlay on their respective target texture [camera|overlay]
-	for (auto & entity : entities)
-		entity->DebugDraw();		
-
-	map.DebugDraw();
-	player.DebugDraw();
-
-	// draw static debug information
-	if (debugFlags.FRAMERATE)
-		DrawFPS();
-
-	renderer.Flush();
-	renderer.Show();
-
-	// frame-rate governing delay
-	gameTime = SDL_GetTicks();
-	deltaTime = gameTime - startTime;
-
-	// DEBUG: breakpoint handling
-	if (deltaTime > 1000)
-		deltaTime = frameTime;
-
-	// DEBUG: delta time of this last frame is not used as the global update interval,
-	// instead the globally available update interval is fixed to frameTime
-	deltaTime <= frameTime ? SDL_Delay(frameTime - deltaTime) : SDL_Delay(deltaTime - frameTime);
-	return true;
+	Shutdown();
+	ShutdownSystem();
 }

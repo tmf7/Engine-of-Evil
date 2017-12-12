@@ -29,6 +29,8 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 
 #include "Tile.h"
 
+class eCamera;
+class eRenderTarget;
 class eCollisionModel;
 
 //******************************************
@@ -39,8 +41,12 @@ class eCollisionModel;
 class eGridCell : public eGridIndex {
 public:
 
-	void															Draw();
-	void															DebugDraw();
+	friend class eMap;
+
+public:
+
+	void															Draw(eCamera * viewCamera);
+	void															DebugDraw(eRenderTarget * renderTarget);
 	void															AddTileOwned(eTile && tile);
 	const std::vector<eTile> &										TilesOwned() const;
 	std::vector<eTile> &											TilesOwned();
@@ -49,6 +55,7 @@ public:
 	std::unordered_map<eCollisionModel *, eCollisionModel *> &		CollisionContents();
 	const eBounds &													AbsBounds() const;
 	void															SetAbsBounds(const eBounds & bounds);
+	eMap * const													GetMap();
 
 	virtual void													Reset() override;
 	virtual int														GetClassType() const override				{ return CLASS_GRIDCELL; }
@@ -60,7 +67,9 @@ public:
 
 private:
 
-	// FIXME (performance): make these std::vectors because most map sizes are small (0-30)
+	eMap *															map;				// back-pointer to the eMap object owns the eSpatialIndexGrid than owns *this
+
+	// FIXME (performance): make these std::vectors because most bounds sizes are small (0-30 occupied cells)
 	// be sure to update eCollisionModel and eRenderImage's ::UpdateAreas fns accordingly
 	std::unordered_map<eCollisionModel *, eCollisionModel *>		collisionContents;	// all eCollisionModel::absBounds that overlap this->absBounds
 	std::unordered_map<eRenderImage *, eRenderImage *>				renderContents;		// all eRenderImage::worldClip that overlap this->absBounds
@@ -76,6 +85,13 @@ private:
 	int																fCost		= 0;		// sum of gCost and hCost
 */
 };
+
+//************
+// eGridCell::GetMap
+//************
+inline eMap * const eGridCell::GetMap() {
+	return map;
+}
 
 //************
 // eGridCell::TilesOwned

@@ -24,22 +24,17 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 
 ===========================================================================
 */
-#include "Movement.h"
 #include "Game.h"
+#include "Movement.h"
+#include "Map.h"
 
 //***************
 // eMovementPlanner::eMovementPlanner
 //***************
 eMovementPlanner::eMovementPlanner(eGameObject * owner, float movementSpeed)
 	: maxMoveSpeed(movementSpeed),
-	  goalRange(movementSpeed),
-	  pathingState(PATHTYPE_COMPASS),
-	  moveState(MOVETYPE_GOAL) {
+	  goalRange(movementSpeed) {
 	this->owner = owner;
-	auto & tileMap = game.GetMap().TileMap();
-	knownMap.SetCellSize( tileMap.CellWidth(),
-						  tileMap.CellHeight());
-	knownMap.ResetAllCells();
 }
 
 //***************
@@ -50,6 +45,18 @@ void eMovementPlanner::SetOwner(eGameObject * newOwner) {
 	currentTile		= &knownMap.Index(owner->CollisionModel().Center());
 	previousTile	= currentTile;
 	StopMoving();
+}
+
+//***************
+// eMovementPlanner::Init
+//***************
+void eMovementPlanner::Init() {
+	pathingState = PATHTYPE_COMPASS;
+	moveState = MOVETYPE_GOAL;
+	auto & tileMap = owner->GetMap()->TileMap();
+	knownMap.SetCellSize( tileMap.CellWidth(),
+						  tileMap.CellHeight());
+	knownMap.ResetAllCells();
 }
 
 //******************
@@ -282,7 +289,7 @@ bool eMovementPlanner::CheckVectorPath(decision_t & along) {
 	float nearestFraction = 1.0f;
 	float mapEdgeFraction = 1.0f;
 
-	auto & mapEdges = game.GetMap().EdgeColliders();
+	auto & mapEdges = owner->GetMap()->EdgeColliders();
 	for(size_t i = 0; i < mapEdges.size(); ++i) {
 		float movingAway = mapEdges[i].second * along.vector;
 		if (movingAway >= 0.0f) 
@@ -359,8 +366,8 @@ void eMovementPlanner::AddUserWaypoint(const eVec2 & waypoint) {
 	collisions.clear();								// DEBUG: lazy clearing
 
 	eBounds waypointBounds = owner->CollisionModel().LocalBounds() + waypoint;
-	if(!eCollision::AABBContainsAABB(game.GetMap().AbsBounds(), waypointBounds) ||
-		eCollision::BoxCast(collisions, waypointBounds, vec2_zero, 0.0f))
+	if(!eCollision::AABBContainsAABB(owner->GetMap()->AbsBounds(), waypointBounds) ||
+		eCollision::BoxCast(owner->map, collisions, waypointBounds, vec2_zero, 0.0f))
 		return;
 
 	goals.PushFront(waypoint);
@@ -526,14 +533,15 @@ void eMovementPlanner::DebugDraw() {
 // eMovementPlanner::DrawGoalWaypoints
 //******************
 void eMovementPlanner::DrawGoalWaypoints() {
-	if (!game.debugFlags.GOAL_WAYPOINTS)
+	if (!game->debugFlags.GOAL_WAYPOINTS)
 		return;
 
+	const auto & renderTarget = owner->GetMap()->GetViewCamera()->GetDebugRenderTarget();
 	for (auto iterator = goals.Back(); iterator != nullptr; iterator = iterator->Next()) {
 		eVec2 goalPoint = iterator->Data();
 		goalPoint.SnapInt();
 		eBounds goalBounds = eBounds(goalPoint).ExpandSelf(goalRange);
-		game.GetRenderer().DrawIsometricRect(redColor, goalBounds, RENDERTYPE_DYNAMIC);
+		game->GetRenderer().DrawIsometricRect(renderTarget, redColor, goalBounds);
 	}
 }
 
@@ -541,14 +549,15 @@ void eMovementPlanner::DrawGoalWaypoints() {
 // eMovementPlanner::DrawTrailWaypoints
 //******************
 void eMovementPlanner::DrawTrailWaypoints() {
-	if (!game.debugFlags.TRAIL_WAYPOINTS)
+	if (!game->debugFlags.TRAIL_WAYPOINTS)
 		return;
 
+	const auto & renderTarget = owner->GetMap()->GetViewCamera()->GetDebugRenderTarget();
 	for(auto iterator = trail.Front(); iterator != nullptr; iterator = iterator->Prev()) {
 		eVec2 trailPoint = iterator->Data();
 		trailPoint.SnapInt();
 		eBounds trailBounds = eBounds(trailPoint).ExpandSelf(4);
-		game.GetRenderer().DrawIsometricRect(greenColor, trailBounds, RENDERTYPE_DYNAMIC);
+		game->GetRenderer().DrawIsometricRect(renderTarget, greenColor, trailBounds);
 	}
 }
 
@@ -557,14 +566,15 @@ void eMovementPlanner::DrawTrailWaypoints() {
 // TODO: check collision/draw layers, and draw debug rects over visited (and visible) tiles instead of entire cells.
 //******************
 void eMovementPlanner::DrawKnownMap() const {
-	if (!game.debugFlags.KNOWN_MAP_DRAW)
+	if (!game->debugFlags.KNOWN_MAP_DRAW)
 		return;
 
-	auto & tileMap = game.GetMap().TileMap();
-	auto & visibleCells = game.GetMap().VisibleCells();
+	auto & tileMap = owner->GetMap()->TileMap();
+	auto & visibleCells = owner->GetMap()->VisibleCells();
+	const auto & renderTarget = owner->GetMap()->GetViewCamera()->GetDebugRenderTarget();
 	for (auto & cell : visibleCells) {
 		if (knownMap.Index(cell->GridRow(), cell->GridColumn()).value == VISITED_TILE)
-			game.GetRenderer().DrawIsometricRect(pinkColor, cell->AbsBounds(), RENDERTYPE_DYNAMIC);
+			game->GetRenderer().DrawIsometricRect(renderTarget, pinkColor, cell->AbsBounds());
 	}
 
 }

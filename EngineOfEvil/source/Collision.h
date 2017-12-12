@@ -34,6 +34,7 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 
 class eGridCell;
 class eCollisionModel;
+class eMap;
 
 // TODO: incorperate the contact point in Collision_t for all geometry 
 // (eg: GJK closest points on convex hulls)
@@ -58,10 +59,10 @@ public:
 	static eBounds			GetBroadPhaseBounds(const eBounds & bounds, const eVec2 & dir, const float length);
 	static void				GetCollisionNormal(const eVec2 & point, const eBounds & bounds, eVec2 & resultNormal);
 	static void				GetCollisionNormal(eBounds self, const eVec2 & dir, const float length, const eBounds & other, Collision_t & collision);
-	static void				GetAreaCells(const eBox & area, std::vector<eGridCell *> & areaCells);
-	static void				GetAreaCells(const eBounds & area, std::vector<eGridCell *> & areaCells);
-	static void				GetAreaCells(const eBounds & bounds, const eVec2 & dir, const float length, std::vector<eGridCell *> & areaCells);
-	static void				GetAreaCells(const eVec2 & begin, const eVec2 & dir, const float length, std::vector<eGridCell *> & areaCells);
+	static void				GetAreaCells(eMap * onMap, const eBox & area, std::vector<eGridCell *> & areaCells);
+	static void				GetAreaCells(eMap * onMap, const eBounds & area, std::vector<eGridCell *> & areaCells);
+	static void				GetAreaCells(eMap * onMap, const eBounds & bounds, const eVec2 & dir, const float length, std::vector<eGridCell *> & areaCells);
+	static void				GetAreaCells(eMap * onMap, const eVec2 & begin, const eVec2 & dir, const float length, std::vector<eGridCell *> & areaCells);
 	
 	static bool				OBBOBBTest(const eBox & a, const eBox & b);
 
@@ -73,8 +74,8 @@ public:
 	static bool				MovingAABBAABBTest(const eBounds & self, const eVec2 & dir, const float length, const eBounds & other, float & resultFraction);
 	static bool				RayAABBTest(const eVec2 & begin, const eVec2 & dir, const float length, const eBounds & bounds, float & resultFraction);
 
-	static bool				RayCast(std::vector<Collision_t> & collisions, const eVec2 & begin, const eVec2 & dir, const float length = FLT_MAX, bool ignoreStartInCollision = true);
-	static bool				BoxCast(std::vector<Collision_t> & collisions, const eBounds & bounds, const eVec2 & dir, const float length);
+	static bool				RayCast(eMap * onMap, std::vector<Collision_t> & collisions, const eVec2 & begin, const eVec2 & dir, const float length = FLT_MAX, bool ignoreStartInCollision = true);
+	static bool				BoxCast(eMap * onMap, std::vector<Collision_t> & collisions, const eBounds & bounds, const eVec2 & dir, const float length);
 
 	static bool				IsAABB3DInIsometricFront(const eBounds3D & self, const eBounds3D & other);
 

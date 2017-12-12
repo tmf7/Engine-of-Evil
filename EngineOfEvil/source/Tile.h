@@ -35,7 +35,7 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 //				eTileImpl 
 // general tile type data for use by all tiles
 // FIXME: make this a proper pImpl implementation (moving definitions to .cpp)
-// and make tileSet a separate class, with tileTypes a pseudo-singleton object/class
+// and make tileSet a separate flyweight class, with tileTypes a pseudo-singleton object/class
 //***********************************************
 class eTileImpl : public eClass {
 private:

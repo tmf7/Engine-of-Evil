@@ -92,7 +92,7 @@ private:
 	eVec2										oldVelocity;			// velocity of the prior frame
 	eVec2										velocity;				// DEBUG: never normalized, only rotated and scaled
 	std::vector<eGridCell *>					areas;					// currently occupied tileMap indexes (between 1 and 4)
-	bool										active;					// whether this participates in (dynamic or kinematic) collision detection
+	bool										active = false;			// whether this participates in (dynamic or kinematic) collision detection
 
 };
 

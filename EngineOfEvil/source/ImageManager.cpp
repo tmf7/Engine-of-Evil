@@ -34,9 +34,9 @@ bool eImageManager::Init() {
 	resourceHash.ClearAndResize(MAX_IMAGES);
 
 	// initialize error_image, a bright red texture the size of the current render target
-	int width = game.GetRenderer().ViewArea().w;
-	int height = game.GetRenderer().ViewArea().h;
-	SDL_Texture * error_texture = SDL_CreateTexture(game.GetRenderer().GetSDLRenderer(),
+	int width = game->GetRenderer().ViewArea().w;
+	int height = game->GetRenderer().ViewArea().h;
+	SDL_Texture * error_texture = SDL_CreateTexture(game->GetRenderer().GetSDLRenderer(),
 		SDL_PIXELFORMAT_ARGB8888,
 		SDL_TEXTUREACCESS_STREAMING,
 		width,
@@ -93,7 +93,7 @@ bool eImageManager::LoadAndGetConstantText(TTF_Font * font, const char * text, c
 		return false;
 	}
 
-	SDL_Texture * renderedText = SDL_CreateTextureFromSurface(game.GetRenderer().GetSDLRenderer(), surfaceText);
+	SDL_Texture * renderedText = SDL_CreateTextureFromSurface(game->GetRenderer().GetSDLRenderer(), surfaceText);
 	SDL_FreeSurface(surfaceText);
 	if (renderedText == NULL) {
 		result = resourceList[0]; // default error image
@@ -219,7 +219,7 @@ bool eImageManager::LoadAndGet(const char * resourceFilename, std::shared_ptr<eI
 			return false;
 		}
 
-		texture = SDL_CreateTexture(game.GetRenderer().GetSDLRenderer(),
+		texture = SDL_CreateTexture(game->GetRenderer().GetSDLRenderer(),
 												  source->format->format,
 												  accessType, 
 												  source->w, 
@@ -241,7 +241,7 @@ bool eImageManager::LoadAndGet(const char * resourceFilename, std::shared_ptr<eI
 		SDL_FreeSurface(source);
 		SDL_SetTextureBlendMode(texture, SDL_BLENDMODE_BLEND);
 	} else {
-		texture = IMG_LoadTexture(game.GetRenderer().GetSDLRenderer(), textureFilepath);
+		texture = IMG_LoadTexture(game->GetRenderer().GetSDLRenderer(), textureFilepath);
 
 		// unable to initialize texture
 		if (texture == NULL) {

@@ -36,7 +36,7 @@ eAnimationState::eAnimationState(const std::string & name, const std::shared_ptr
 	this->name = name;
 
 	currentFrame = &animation->GetFrame(0);
-	duration = (animation->Duration() / speed) + (float)game.GetFixedTime();	// BUGFIX: + FixedTime() prevents skipping the last animation frame during playback
+	duration = (animation->Duration() / speed) + (float)game->GetFixedTime();	// BUGFIX: + FixedTime() prevents skipping the last animation frame during playback
 	nameHash = std::hash<std::string>()(name);
 }
 

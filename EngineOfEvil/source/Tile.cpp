@@ -25,6 +25,8 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 ===========================================================================
 */
 #include "Game.h"
+#include "Tile.h"
+#include "Map.h"
 
 std::vector<std::pair<int, int>> eTileImpl::tileSet;		// first == index within eImageManager::resourceList; second == eImage subframe index;
 std::array<eTileImpl, eTileImpl::maxTileTypes> eTileImpl::tileTypes;
@@ -68,7 +70,7 @@ bool eTileImpl::LoadTileset(const char * tilesetFilename, bool appendNew) {
 	char buffer[MAX_ESTRING_LENGTH];
 	memset(buffer, 0, sizeof(buffer));
 	read.getline(buffer, sizeof(buffer), '\n');
-	if (!VerifyRead(read) || !game.GetImageManager().BatchLoad(buffer))
+	if (!VerifyRead(read) || !game->GetImageManager().BatchLoad(buffer))
 		return false;
 
 	enum {
@@ -155,7 +157,7 @@ bool eTileImpl::LoadTileset(const char * tilesetFilename, bool appendNew) {
 			return false;
 
 		// get a pointer to a source image
-		auto & sourceImage = game.GetImageManager().GetByFilename(buffer);
+		auto & sourceImage = game->GetImageManager().GetByFilename(buffer);
 		if (!sourceImage->IsValid())
 			return false;
 
@@ -200,6 +202,7 @@ bool eTileImpl::LoadTileset(const char * tilesetFilename, bool appendNew) {
 //************
 eTile::eTile(eGridCell * cellOwner, const eVec2 & origin, const int type, const Uint32 layer) 
 	: cellOwner(cellOwner) {
+	map = cellOwner->GetMap();
 	SetWorldLayer(layer);
 	renderImage = std::make_unique<eRenderImage>(this);		// all tiles currently have a renderimage by default
 	SetType(type);
@@ -215,12 +218,12 @@ void eTile::SetType(int newType) {
 	collisionModel = nullptr;
 
 	impl = &eTileImpl::tileTypes[newType];																	// DEBUG: assumes newType is defined
-	renderImage->Image() = game.GetImageManager().GetByResourceID(eTileImpl::tileSet.at(newType).first);	// which image (tile atlas)
+	renderImage->Image() = game->GetImageManager().GetByResourceID(eTileImpl::tileSet.at(newType).first);	// which image (tile atlas)
 	renderImage->SetImageFrame(eTileImpl::tileSet.at(newType).second);										// which part of that image
 
 	// visual alignment with isometric grid
-	const float isoCellWidthAdjustment = (float)game.GetMap().TileMap().IsometricCellWidth() * 0.5f;
-	const float isoCellHeightAdjustment = (float)game.GetMap().TileMap().IsometricCellHeight();
+	const float isoCellWidthAdjustment = (float)map->TileMap().IsometricCellWidth() * 0.5f;
+	const float isoCellHeightAdjustment = (float)map->TileMap().IsometricCellHeight();
 	renderImage->SetOffset(eVec2(-isoCellWidthAdjustment, isoCellHeightAdjustment - (float)renderImage->GetImageFrame()->h));
 	renderImage->SetRenderBlockSize(impl->renderBlockSize);
 

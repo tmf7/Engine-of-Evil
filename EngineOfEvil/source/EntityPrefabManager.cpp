@@ -210,12 +210,12 @@ bool eEntityPrefabManager::CreatePrefab(const char * sourceFilename, const std::
 // calls the runtime type Spawn function of the prefab eEntity
 // at param entityPrefabIndex within resourceList
 //***************
-bool eEntityPrefabManager::SpawnInstance(const std::string & prefabShortName, const eVec3 & worldPosition) {
+bool eEntityPrefabManager::SpawnInstance(eMap * onMap, const std::string & prefabShortName, const eVec3 & worldPosition) {
 	auto & entityPrefab = GetByShortName(prefabShortName);
 	if (!entityPrefab->IsValid())
 		return false;
 
-	return entityPrefab->SpawnCopy(worldPosition);
+	return entityPrefab->SpawnCopy(onMap, worldPosition);
 }
 
 //***************

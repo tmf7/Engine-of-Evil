@@ -32,7 +32,7 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 class sHero : public eEntity {
 public:
 
-	virtual bool						SpawnCopy( const eVec3 & worldPosition ) override;
+	virtual bool						SpawnCopy( eMap * onMap, const eVec3 & worldPosition ) override;
 	virtual void						Think() override;
 	virtual int							GetClassType() const override						{ return CLASS_SHERO; }
 	virtual bool						IsClassType( int classType ) const override			{ 

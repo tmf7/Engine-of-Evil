@@ -162,6 +162,12 @@
     <ClCompile Include="source\SoundFx.cpp">
       <Filter>Core\Audio</Filter>
     </ClCompile>
+    <ClCompile Include="source\GameLocal.cpp">
+      <Filter>Core\TestLogic</Filter>
+    </ClCompile>
+    <ClCompile Include="source\RenderTarget.cpp">
+      <Filter>Core\Renderer</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="source\Game.h">
@@ -307,6 +313,12 @@
     </ClInclude>
     <ClInclude Include="source\SoundFx.h">
       <Filter>Core\Audio</Filter>
+    </ClInclude>
+    <ClInclude Include="source\GameLocal.h">
+      <Filter>Core\TestLogic</Filter>
+    </ClInclude>
+    <ClInclude Include="source\RenderTarget.h">
+      <Filter>Core\Renderer</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

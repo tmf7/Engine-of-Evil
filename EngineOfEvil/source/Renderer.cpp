@@ -26,33 +26,24 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 */
 #include "Game.h"
 
-const SDL_Color clearColor		= { 128, 128, 128, SDL_ALPHA_TRANSPARENT };
-const SDL_Color blackColor		= { 0, 0, 0, SDL_ALPHA_OPAQUE };
-const SDL_Color greyColor_trans = { 0, 0, 0, 64 };
-const SDL_Color greenColor		= { 0, 255, 0, SDL_ALPHA_OPAQUE };
-const SDL_Color redColor		= { 255, 0, 0, SDL_ALPHA_OPAQUE };
-const SDL_Color blueColor		= { 0, 0, 255, SDL_ALPHA_OPAQUE };
-const SDL_Color pinkColor		= { 255, 0, 255, SDL_ALPHA_OPAQUE };
-const SDL_Color lightBlueColor	= { 0, 255, 255, SDL_ALPHA_OPAQUE };
-const SDL_Color yellowColor		= { 255, 255, 0, SDL_ALPHA_OPAQUE };
 int eRenderer::globalDrawDepth	= 0;
 
 //***************
 // eRenderer::Init
 // initialize the window, its rendering context, and a default font
 //***************
-bool eRenderer::Init() {
-	window = SDL_CreateWindow(	"Evil", 
-								SDL_WINDOWPOS_UNDEFINED, 
-								SDL_WINDOWPOS_UNDEFINED, 
-								1500, 
-								800, 
-								SDL_WINDOW_SHOWN | SDL_WINDOW_OPENGL);
+bool eRenderer::Init(const char * name, int windowWidth, int windowHeight) {
+	window = SDL_CreateWindow( name, 
+							   SDL_WINDOWPOS_UNDEFINED, 
+							   SDL_WINDOWPOS_UNDEFINED, 
+							   windowWidth, 
+							   windowHeight, 
+							   SDL_WINDOW_SHOWN | SDL_WINDOW_OPENGL );
 
 	if (!window)
 		return false;
 
-	// DEBUG: TARGETTEXTURE is used to read pixel data from SDL_Textures
+	// DEBUG: SDL_RENDERER_TARGETTEXTURE allows rendering to SDL_Textures
 	internal_renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_TARGETTEXTURE);
 
 	if (!internal_renderer)
@@ -61,53 +52,14 @@ bool eRenderer::Init() {
 	// enable linear anti-aliasing for the renderer context
 //	SDL_SetHintWithPriority(SDL_HINT_RENDER_SCALE_QUALITY, "linear" , SDL_HINT_OVERRIDE);
 
-	if (SDL_SetRenderDrawColor(internal_renderer, clearColor.r, clearColor.g, clearColor.b, clearColor.a) == -1)	// opaque grey
-		return false;
-
-	// initialize scalableTarget for scaling textures using the camera
-	// independent of any static overlay (gui/HUD)
-	SDL_Rect viewArea;
-	SDL_RenderGetViewport(internal_renderer, &viewArea);
-	scalableTarget = SDL_CreateTexture(internal_renderer,
-									   SDL_PIXELFORMAT_ARGB8888,		// DEBUG: this format may not work for all images
-									   SDL_TEXTUREACCESS_TARGET,
-									   viewArea.w,
-									   viewArea.h);
-
-	if (!scalableTarget)
-		return false;
-
-	// ensure the scalableTarget can alpha-blend
-	SDL_SetTextureBlendMode(scalableTarget, SDL_BLENDMODE_BLEND);
-
-
-	// initialize debugCameraTarget for scaling debug info using the camera
-	debugCameraTarget = SDL_CreateTexture(internal_renderer,
-										  SDL_PIXELFORMAT_ARGB8888,		// DEBUG: this format may not work for all images
-										  SDL_TEXTUREACCESS_TARGET,
-										  viewArea.w,
-										  viewArea.h);
-
-	if (!debugCameraTarget)
-		return false;
-
-	// ensure the debugCameraTarget can alhpa-blend
-	SDL_SetTextureBlendMode(debugCameraTarget, SDL_BLENDMODE_BLEND);
+	// DEBUG: eRenderer::defaultOverlayTarget does not need a new SDL_Texture
+	defaultOverlayTarget.InitDefault(internal_renderer);
 
 	// initialize debugOverlayTarget for overlay debug info
-	debugOverlayTarget = SDL_CreateTexture(internal_renderer,
-										   SDL_PIXELFORMAT_ARGB8888,	// DEBUG: this format may not work for all images
-										   SDL_TEXTUREACCESS_TARGET,
-										   viewArea.w,
-										   viewArea.h);
-
-	if (!debugOverlayTarget)
+	SDL_Rect viewArea;
+	SDL_RenderGetViewport(internal_renderer, &viewArea);
+	if (!debugOverlayTarget.Init(internal_renderer, viewArea.w, viewArea.h))
 		return false;
-
-	// ensure the debugOverlayTarget can alhpa-blend
-	SDL_SetTextureBlendMode(debugOverlayTarget, SDL_BLENDMODE_BLEND);
-
-
 
 	if (TTF_Init() == -1)
 		return false;
@@ -117,14 +69,29 @@ bool eRenderer::Init() {
 	if (!font)
 		return false;
 
+	overlayPool.reserve(MAX_IMAGES);
+	overlayPoolInserts.reserve(MAX_IMAGES);
 	return true;
 }
 
 //***************
-// eRenderer::Free
+// eRenderer::PollEvents
+// polls all events in the current window/rendering context
+// TODO: allow different callbacks for different events (eg: MOUSE_PRESSED, etc)
+//***************
+void eRenderer::PollEvents() const {
+	SDL_Event event;
+	while (SDL_PollEvent(&event)) {
+		if (event.type == SDL_QUIT)
+			game->Stop();
+	}
+}
+
+//***************
+// eRenderer::Shutdown
 // close the font and destroy the window
 //***************
-void eRenderer::Free() const {
+void eRenderer::Shutdown() const {
 	if (font)
 		TTF_CloseFont(font);
 
@@ -139,17 +106,15 @@ void eRenderer::Free() const {
 
 //***************
 // eRenderer::DrawOutlineText
-// Immediatly draws the given string on the screen using location and color
-// constText caches the text image to accelerate redraw
-// dynamic moves and scales with the camera
-// DEBUG: converts the input point float data to integer values
+// param constText caches the text image to accelerate redraw
+// DEBUG: immediatly draws to the given render target
 //***************
-void eRenderer::DrawOutlineText(const char * text, eVec2 & point, const SDL_Color & color, bool constText, bool dynamic) {
+void eRenderer::DrawOutlineText(eRenderTarget * target, const char * text, eVec2 & point, const SDL_Color & color, bool constText) {
 	SDL_Texture * renderedText = NULL;
 	if (constText) {
 		// check if the image already exists, if not then load it and set result
 		std::shared_ptr<eImage> result;
-		game.GetImageManager().LoadAndGetConstantText(font, text, color, result);
+		game->GetImageManager().LoadAndGetConstantText(font, text, color, result);
 		renderedText = result->Source();
 	} else {
 		SDL_Surface * surfaceText = TTF_RenderText_Solid(font, text, color);
@@ -164,54 +129,43 @@ void eRenderer::DrawOutlineText(const char * text, eVec2 & point, const SDL_Colo
 		SDL_SetTextureBlendMode(renderedText, SDL_BLENDMODE_BLEND);
 	}
 	
-	point -= game.GetCamera().CollisionModel().AbsBounds()[0] * dynamic;
+	point -= target->origin;		// FIXME(?): used to be camera.absBounds[0], which may be a problem because the absBounds is centered on 0,0 originally....
 	point.SnapInt();
 	SDL_Rect dstRect = { (int)point.x, (int)point.y, 0, 0 };
 	SDL_QueryTexture(renderedText, NULL, NULL, &dstRect.w, &dstRect.h);
-	if (dynamic)
-		SetRenderTarget(debugCameraTarget, game.GetCamera().GetZoom());
-	else
-		SetRenderTarget(debugOverlayTarget);
-
+	SetRenderTarget(target);
 	SDL_RenderCopy(internal_renderer, renderedText, nullptr, &dstRect);
+
+	if (!constText)
+		SDL_DestroyTexture(renderedText);
 }
 
 //***************
 // eRenderer::DrawLines
-// dynamic moves and scales with the camera
 // draws points.size()-1 lines from front to back
 // DEBUG: immediatly draws to the given render target
 //***************
-void eRenderer::DrawLines(const SDL_Color & color, std::vector<eVec2>  points, bool dynamic) const {
-	SDL_SetRenderDrawColor(internal_renderer, color.r, color.g, color.b, color.a);
-
+void eRenderer::DrawLines(eRenderTarget * target, const SDL_Color & color, std::vector<eVec2>  points) {
 	std::vector<SDL_Point> iPoints;
 	iPoints.reserve(points.size());
 	for (size_t i = 0; i < points.size(); ++i) {
 		eMath::CartesianToIsometric(points[i].x, points[i].y);
-		points[i] -= game.GetCamera().CollisionModel().AbsBounds()[0] * dynamic;
+		points[i] -= target->origin;
 		points[i].SnapInt();
 		iPoints[i] = { (int)points[i].x, (int)points[i].y };
 	}
 
-	if (dynamic)
-		SetRenderTarget(debugCameraTarget, game.GetCamera().GetZoom());
-	else
-		SetRenderTarget(debugOverlayTarget);
-	
+	SetRenderTarget(target);	
+	SDL_SetRenderDrawColor(internal_renderer, color.r, color.g, color.b, color.a);
 	SDL_RenderDrawLines(internal_renderer, iPoints.data(), iPoints.size());
-	SDL_SetRenderDrawColor(internal_renderer, clearColor.r, clearColor.g, clearColor.b, clearColor.a);
 }
 
 //***************
 // eRenderer::DrawIsometricPrism
 // converts the given rect into an isomectric box
-// dynamic moves and scales with the camera
 // DEBUG: immediatly draws to the given render target
 //***************
-void eRenderer::DrawIsometricPrism(const SDL_Color & color, const eBounds3D & rect, bool dynamic) const {
-	SDL_SetRenderDrawColor(internal_renderer, color.r, color.g, color.b, color.a);
-
+void eRenderer::DrawIsometricPrism(eRenderTarget * target, const SDL_Color & color, const eBounds3D & rect) {
 	std::array<eVec3, 10> fPoints;
 	rect.ToPoints(fPoints.data());
 	
@@ -229,16 +183,13 @@ void eRenderer::DrawIsometricPrism(const SDL_Color & color, const eBounds3D & re
 		fPoints[i].x -= fPoints[i].z;
 		fPoints[i].y -= fPoints[i].z;
 		eMath::CartesianToIsometric(fPoints[i].x, fPoints[i].y);
-		fPoints[i] -= (eVec3)game.GetCamera().CollisionModel().AbsBounds()[0] * dynamic;
+		fPoints[i] -= (eVec3)target->origin;
 		fPoints[i].SnapInt();
 		iPoints[i] = { (int)fPoints[i].x, (int)fPoints[i].y };
 	}
 
-	if (dynamic)
-		SetRenderTarget(debugCameraTarget, game.GetCamera().GetZoom());
-	else
-		SetRenderTarget(debugOverlayTarget);
-
+	SetRenderTarget(target);
+	SDL_SetRenderDrawColor(internal_renderer, color.r, color.g, color.b, color.a);
 	SDL_RenderDrawLines(internal_renderer, iPoints.data(), iPoints.size());
 
 	std::array<SDL_Point, 2> verticals;
@@ -258,12 +209,9 @@ void eRenderer::DrawIsometricPrism(const SDL_Color & color, const eBounds3D & re
 //***************
 // eRenderer::DrawIsometricRect
 // converts the given rect into an isomectric box
-// dynamic moves and scales with the camera
 // DEBUG: immediatly draws to the given render target
 //***************
-void eRenderer::DrawIsometricRect(const SDL_Color & color, const eBounds & rect, bool dynamic) const {
-	SDL_SetRenderDrawColor(internal_renderer, color.r, color.g, color.b, color.a);
-
+void eRenderer::DrawIsometricRect(eRenderTarget * target, const SDL_Color & color, const eBounds & rect) {
 	std::array<eVec2, 5> fPoints;
 	rect.ToPoints(fPoints.data());
 	fPoints[4] = fPoints[0];
@@ -273,16 +221,13 @@ void eRenderer::DrawIsometricRect(const SDL_Color & color, const eBounds & rect,
 	std::array<SDL_Point, 5> iPoints;
 	for (size_t i = 0; i < fPoints.size(); ++i) {
 		eMath::CartesianToIsometric(fPoints[i].x, fPoints[i].y);
-		fPoints[i] -= game.GetCamera().CollisionModel().AbsBounds()[0] * dynamic;
+		fPoints[i] -= target->origin;
 		fPoints[i].SnapInt();
 		iPoints[i] = { (int)fPoints[i].x, (int)fPoints[i].y };
 	}
 
-	if (dynamic)
-		SetRenderTarget(debugCameraTarget, game.GetCamera().GetZoom());
-	else
-		SetRenderTarget(debugOverlayTarget);
-
+	SetRenderTarget(target);
+	SDL_SetRenderDrawColor(internal_renderer, color.r, color.g, color.b, color.a);
 	SDL_RenderDrawLines(internal_renderer, iPoints.data(), iPoints.size());
 }
 
@@ -292,64 +237,131 @@ void eRenderer::DrawIsometricRect(const SDL_Color & color, const eBounds & rect,
 // dynamic moves and scales with the camera
 // DEBUG: immediatly draws to the given render target
 //***************
-void eRenderer::DrawCartesianRect(const SDL_Color & color, const eBounds & rect, bool fill, bool dynamic) const {
-	SDL_SetRenderDrawColor(internal_renderer, color.r, color.g, color.b, color.a);
-
-	auto & cameraMins = game.GetCamera().CollisionModel().AbsBounds()[0];
-	SDL_Rect drawRect = {	eMath::NearestInt(rect[0].x - cameraMins.x * dynamic), 
-							eMath::NearestInt(rect[0].y - cameraMins.y * dynamic), 
+void eRenderer::DrawCartesianRect(eRenderTarget * target, const SDL_Color & color, const eBounds & rect, bool fill) {
+	SDL_Rect drawRect = {	eMath::NearestInt(rect[0].x - target->origin.x), 
+							eMath::NearestInt(rect[0].y - target->origin.y), 
 							eMath::NearestInt(rect.Width()), 
 							eMath::NearestInt(rect.Height()) };
 
-	if (dynamic)
-		SetRenderTarget(debugCameraTarget, game.GetCamera().GetZoom());
-	else
-		SetRenderTarget(debugOverlayTarget);
-
+	SetRenderTarget(target);
+	SDL_SetRenderDrawColor(internal_renderer, color.r, color.g, color.b, color.a);
 	fill ? SDL_RenderFillRect(internal_renderer, &drawRect)
 		: SDL_RenderDrawRect(internal_renderer, &drawRect);
 }
 
 //***************
 // eRenderer::DrawImage
-// RENDERTYPE_DYNAMIC adjusts image origin by camera position ("transform")
-// RENDERTYPE_STATIC does not
-// FIXME: rendertype doesn't have the same meaning here as in AddTo...RenderPool,
-// but it should (or shouldn't be a parameter)
+// DEBUG: immediatly draws to the currently assigned render target
 //***************
-void eRenderer::DrawImage(eRenderImage * renderImage, eRenderType_t renderType) const {
-	eVec2 drawPoint = renderImage->origin;
-	if (renderType == RENDERTYPE_DYNAMIC) {
-		const auto & cameraAdjustment = game.GetCamera().CollisionModel().AbsBounds()[0];
-		drawPoint -= cameraAdjustment;
-	}
+void eRenderer::DrawImage(eRenderImage * renderImage) const {
+	eVec2 drawPoint = renderImage->origin - currentRenderTarget->origin;
 	drawPoint.SnapInt();
 	renderImage->dstRect = { (int)drawPoint.x, (int)drawPoint.y, renderImage->srcRect->w, renderImage->srcRect->h };
 	SDL_RenderCopy(internal_renderer, renderImage->image->Source(), renderImage->srcRect, &renderImage->dstRect);
 }
 
 //***************
-// eRenderer::AddToCameraRenderPool
+// eRenderer::RegisterCamera
+// registered cameras can have their renderPools modified (add/flush)
+// returns true if the camera was not already
+// registered to *this, and could be added
+// returns false otherwise
 //***************
-void eRenderer::AddToCameraRenderPool(eRenderImage * renderImage) {
-	const auto & gameTime = game.GetGameTime();
-	if (renderImage->lastDrawTime == gameTime)
-		return;
-	renderImage->lastDrawTime = gameTime;
-	auto targetPool = (renderImage->Owner()->IsStatic() ? &cameraPool : &cameraPoolInserts);
-	targetPool->emplace_back(renderImage);
+bool eRenderer::RegisterCamera(eCamera * newCamera) {
+	bool addSuccess = (std::find(registeredCameras.begin(), registeredCameras.end(), newCamera) == registeredCameras.end());
+	if (addSuccess)
+		registeredCameras.emplace_back(newCamera);
+
+	return addSuccess;
+}
+
+//***************
+// eRenderer::UnregisterCamera
+// returns true if the camera existed
+// and was removed from those registered to *this
+// returns false otherwise
+//***************
+bool eRenderer::UnregisterCamera(eCamera * camera) {
+	const auto & searchIndex = std::find(registeredCameras.begin(), registeredCameras.end(), camera);
+	bool removeSuccess = (searchIndex != registeredCameras.end());
+	if (removeSuccess)
+		registeredCameras.erase(searchIndex);
+
+	return removeSuccess;
+}
+
+//***************
+// eRenderer::UnregisterAllCameras
+//***************
+void eRenderer::UnregisterAllCameras() {
+	registeredCameras.clear();
+}
+
+//***************
+// eRenderer::NumRegisteredCameras
+//***************
+int eRenderer::NumRegisteredCameras() const {
+	return registeredCameras.size();
+}
+
+//***************
+// eRenderer::IsAlreadyDrawn
+// checks if param renderImage is already assigned
+// the the given renderTarget to be drawn this frame
+// and updates the renderImage's lastDrawnTime according to eGame::gameTime
+// DEBUG: it's quicker to do a linear search of the small drawnTo vector for a eRenderTarget *,
+// than it is to search the larger renderPool for a eRenderImage *
+//***************
+bool eRenderer::CheckDrawnStatus(eRenderTarget * renderTarget, eRenderImage * renderImage) const {
+	auto gameTime = game->GetGameTime();
+	if (renderImage->lastDrawnTime < gameTime) {
+		renderImage->lastDrawnTime = gameTime;
+		renderImage->drawnTo.clear();			// first time being drawn this frame
+		return false;
+	}
+
+	const auto & searchIndex = std::find(renderImage->drawnTo.begin(), renderImage->drawnTo.end(), renderTarget);
+	return (searchIndex != renderImage->drawnTo.end());
+}
+
+//***************
+// eRenderer::AddToCameraRenderPool
+// adds param renderImage to param registeredCamera for
+// later rendering during Flush (if the camera is registered to *this)
+// returns true if param renderImage hasn't already been added to the camera's renderPool
+// returns false if it's already in the camera's renderPool
+// DEBUG: doesn't check if the camera is genuinely registered, 
+// if not, then param renderImage won't be drawn to the rendering context
+// and the given camera's pools won't be cleared (as happens during Flush)
+// DEBUG: does not draw any eRenderImages on the eCamera::debugRenderTarget
+//***************
+bool eRenderer::AddToCameraRenderPool(eCamera * registeredCamera, eRenderImage * renderImage) {
+	const auto & renderTarget = &registeredCamera->renderTarget;
+	if (CheckDrawnStatus(renderTarget, renderImage))
+		return false;
+
+	renderImage->drawnTo.emplace_back(renderTarget);
+	const auto & renderPool = (renderImage->Owner()->IsStatic() ? &registeredCamera->cameraPool : &registeredCamera->cameraPoolInserts);
+	renderPool->emplace_back(renderImage);
+	return true;
 }
 
 //***************
 // eRenderer::AddToOverlayRenderPool
+// adds param renderImage to one of the overlayPools for later rendering during Flush
+// returns true if param renderImage hasn't already been added to the overlayPool
+// returns false if it's already in the overlayPool
+// DEBUG: does not draw any eRenderImages on the eRenderer::debugOverlayTarget
 //***************
-void eRenderer::AddToOverlayRenderPool(eRenderImage * renderImage) {
-	const auto & gameTime = game.GetGameTime();
-	if (renderImage->lastDrawTime == gameTime)
-		return;
-	renderImage->lastDrawTime = gameTime;
-	auto targetPool = (renderImage->Owner()->IsStatic() ? &overlayPool : &overlayPoolInserts);
-	targetPool->emplace_back(renderImage);
+bool eRenderer::AddToOverlayRenderPool(eRenderImage * renderImage) {
+	const auto & renderTarget = &defaultOverlayTarget;			
+	if (CheckDrawnStatus(renderTarget, renderImage))
+		return false;
+
+	renderImage->drawnTo.emplace_back(renderTarget);
+	const auto & renderPool = (renderImage->Owner()->IsStatic() ? &overlayPool : &overlayPoolInserts);
+	renderPool->emplace_back(renderImage);
+	return true;
 }
 
 //***************
@@ -399,32 +411,33 @@ void eRenderer::VisitTopologicalNode(eRenderImage * renderImage) {
 // eRenderer::Flush
 //***************
 void eRenderer::Flush() {
-	FlushCameraPool();
-	SetRenderTarget(scalableTarget);
-	SDL_RenderCopy(internal_renderer, debugCameraTarget, NULL, NULL);
+	for (auto && camera : registeredCameras) {
+		FlushCameraPool(camera);
+		SetRenderTarget(&camera->renderTarget);
+		SDL_RenderCopy(internal_renderer, camera->debugRenderTarget.target, NULL, NULL);		// debug targets are overlays on their counterpart renderTarget
+	}
 
-	// transfer camera (and its debug) info to the main render texture
-	SetRenderTarget(defaultTarget);
-	SDL_RenderCopy(internal_renderer, scalableTarget, NULL, NULL);
+	// transfer cameras (and their debugs') info to the main render texture
+	// FIXME: determine a simple sorting order for camera textures, back-to-front
+	// possibly use a renderTarget::origin.z value
+	SetRenderTarget(&defaultOverlayTarget);
+	for (auto && camera : registeredCameras)
+		SDL_RenderCopy(internal_renderer, camera->renderTarget.target, NULL, NULL);
 
 	// draw all overlay (HUD/UI/Screen-Space) info now
 	FlushOverlayPool();
-	SetRenderTarget(defaultTarget);
-	SDL_RenderCopy(internal_renderer, debugOverlayTarget, NULL, NULL);
+	SetRenderTarget(&defaultOverlayTarget);
+	SDL_RenderCopy(internal_renderer, debugOverlayTarget.target, NULL, NULL);
 }
 
 //***************
 // eRenderer::FlushCameraPool
 // DEBUG: this unstable quicksort may put renderImages at random draw orders if they have equal priority
 //***************
-void eRenderer::FlushCameraPool() {
-/*
-	auto targetPool = RENDERTYPE_CAMERA ? &cameraPool : &screenPool);
-	auto targetPoolInserts = RENDERTYPE_CAMERA ? &cameraPoolInserts : &screenPoolInserts);
-	// then check for RENDERTYPE_CAMERA again to set/reset the rendertarget
-*/
+void eRenderer::FlushCameraPool(eCamera * registeredCamera) {
 
-
+	auto & cameraPool = registeredCamera->cameraPool;
+	auto & cameraPoolInserts = registeredCamera->cameraPoolInserts;
 
 	// sort the dynamicPool for the scalableTarget
 	QuickSort(	cameraPool.data(),
@@ -457,18 +470,15 @@ void eRenderer::FlushCameraPool() {
 		imageToInsert->priority = newPriority;		// needed in the event this renderImage goes straight to dynamicPool next frame
 		cameraPool.emplace(iter, imageToInsert);
 		newPriorityMin = newPriority;
-		// FIXME/BUG(~): ensure iter is properly positioned for the next imageToInsert search works
-		// because iter may be pointing to the newly inserted item (or one in front of it) in dynamicPool
-		// or utterly somewhere else if dynamicPool resized (which is unlikely given that it has defaultRenderCapacity[1024] reserved)
 	}
 // FREEHILL END 3d topological sort
 
-	// set the render target, and scale according to camera zoom
-	SetRenderTarget(scalableTarget, game.GetCamera().GetZoom());
+	// sets the render target, and scales according to camera zoom
+	SetRenderTarget(&registeredCamera->renderTarget);
 
 	// draw to the scalableTarget
 	for (auto && renderImage : cameraPool)
-		DrawImage(renderImage, RENDERTYPE_DYNAMIC);
+		DrawImage(renderImage);
 
 	cameraPool.clear();
 	cameraPoolInserts.clear();
@@ -477,6 +487,7 @@ void eRenderer::FlushCameraPool() {
 //***************
 // eRenderer::FlushOverlayPool
 // DEBUG: this unstable quicksort may put renderImages at random draw orders if they have equal priority
+// TODO: mirror FlushCameraPool Topological sort an inserts logic here
 //***************
 void eRenderer::FlushOverlayPool() {
 	// sort the staticPool for the default render target
@@ -489,12 +500,74 @@ void eRenderer::FlushOverlayPool() {
 			});
 
 	// set the render target, and scale to 1.0f
-	SetRenderTarget(defaultTarget);
+	SetRenderTarget(&defaultOverlayTarget);
 
 	for (auto && renderImage : overlayPool)
-		DrawImage(renderImage, RENDERTYPE_STATIC);
+		DrawImage(renderImage);
 
 	overlayPool.clear();
 	overlayPoolInserts.clear();
+}
+
+//***************
+// eRenderer::SetRenderTarget
+// switches the current rendering target
+// and clears it (using its clear color)
+// if this is its first use this frame
+//***************
+void eRenderer::SetRenderTarget(eRenderTarget * target) {
+	target->ClearIfDirty(game->GetGameTime());
+	currentRenderTarget = target;
+	SDL_SetRenderTarget(internal_renderer, target->target);
+	SDL_RenderSetScale(internal_renderer, target->zoomLevel, target->zoomLevel);
+}
+
+//***************
+// eRenderer::Show
+// updates the window with the rendering context contents
+//***************
+void eRenderer::Show() const {
+	SDL_RenderPresent(internal_renderer);
+}
+
+
+//***************
+// eRenderer::GetDefaultOverlayTarget
+//***************
+eRenderTarget * const eRenderer::GetDefaultOverlayTarget() {
+	return &defaultOverlayTarget;
+}
+
+//***************
+// eRenderer::GetDebugOverlayTarget
+//***************
+eRenderTarget * const eRenderer::GetDebugOverlayTarget() {
+	return &debugOverlayTarget;
+}
+
+//***************
+// eRenderer::ViewArea
+// returns the dimensions of the current rendering target
+//***************
+SDL_Rect eRenderer::ViewArea() const {
+	SDL_Rect viewArea;
+	SDL_RenderGetViewport(internal_renderer, &viewArea);
+	return viewArea;
+}
+
+//***************
+// eRenderer::GetRenderer
+// returns the current SDL rendering context
+//***************
+SDL_Renderer * const eRenderer::GetSDLRenderer() const {
+	return internal_renderer;
+}
+
+//*****************
+// eRenderer::GetWindow
+// returns the window the rendering context is registered to
+//*****************
+SDL_Window * const eRenderer::GetWindow() const {
+	return window;
 }
 

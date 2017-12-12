@@ -103,7 +103,7 @@ bool eAnimationManager::LoadAndGet(const char * resourceFilename, std::shared_pt
 			return false;
 		}
 		
-		auto & image = game.GetImageManager().GetByFilename(imageFilepath);
+		auto & image = game->GetImageManager().GetByFilename(imageFilepath);
 		if (!image->IsValid()) {
 			result = resourceList[0];
 			return false;

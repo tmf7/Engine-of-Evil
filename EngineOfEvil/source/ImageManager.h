@@ -48,7 +48,6 @@ public:
 												return eResourceManager<eImage>::IsClassType(classType); 
 											}
 
-	// subclass extension, does not obscure any base function
 	bool									LoadAndGetConstantText(TTF_Font * font, const char * text, const SDL_Color & color, std::shared_ptr<eImage> & result);
 
 private:

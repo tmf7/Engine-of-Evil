@@ -25,11 +25,14 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 ===========================================================================
 */
 #include "Game.h"
+#include "Map.h"
+#include "Camera.h"
 
 //**************
 // eMap::Init
 //**************
 bool eMap::Init () {
+	entities.reserve(MAX_ENTITIES);
 	return LoadMap("Graphics/Maps/EvilTown.emap");
 }
 
@@ -120,6 +123,7 @@ bool eMap::LoadMap(const char * mapFilename) {
 	for (column = 0; column < numColumns; ++column) {
 		for (row = 0; row < numRows; ++row) {
 			auto & cell = tileMap.Index(row, column);
+			cell.map = this;
 			cell.SetGridPosition(row, column);
 			eVec2 cellMins = eVec2((float)(row * cellWidth), (float)(column * cellHeight));
 			cell.SetAbsBounds( eBounds(cellMins, cellMins + eVec2((float)cellWidth, (float)cellHeight)) );
@@ -194,8 +198,7 @@ bool eMap::LoadMap(const char * mapFilename) {
 	if (!VerifyRead(read))
 		return false;
 
-	game.GetEntityPrefabManager().BatchLoad(buffer);							// DEBUG: any batch errors get logged, but doesn't stop the map from loading
-
+	game->GetEntityPrefabManager().BatchLoad(buffer);							// DEBUG: any batch errors get logged, but doesn't stop the map from loading
 							  
 	// SPAWNING ENTITIES
 	read.ignore(std::numeric_limits<std::streamsize>::max(), '\n');				// ignore "Spawn_List {\n"
@@ -215,7 +218,7 @@ bool eMap::LoadMap(const char * mapFilename) {
 		if (!VerifyRead(read))
 			return false;
 
-		if (!game.GetEntityPrefabManager().SpawnInstance(prefabShortName, worldPosition)) {
+		if (!game->GetEntityPrefabManager().SpawnInstance(this, prefabShortName, worldPosition)) {
 			std::string message = "Invalid prefabShortName (";
 			message += prefabShortName;
 			message += "), or invalid prefab file contents.";
@@ -232,11 +235,88 @@ bool eMap::LoadMap(const char * mapFilename) {
 
 //***************
 // eMap::UnloadMap
-// clears the current tileMap and empties eGame::entities
+// clears the current tileMap and empties the entities vector
 //***************
 void eMap::UnloadMap() {
 	tileMap.ResetAllCells();
-	game.ClearAllEntities();
+	ClearAllEntities();
+}
+
+//****************
+// eMap::ConfigureEntity
+//****************
+void eMap::ConfigureEntity(int newSpawnID, eEntity * entity) {
+	entity->spawnedEntityID = newSpawnID;
+	entity->spawnName = entity->spawnArgs.GetString("prefabShortName", TO_STRING(eEntity));
+	entity->spawnName += "_" + newSpawnID;
+	entity->Init();
+}
+
+//****************
+// eMap::AddEntity
+// finds the first unused slot in game::entities to move param entity
+// and assigns it a spawnID,
+// returns the new spawnID index within game::entities
+// returns -1 if something went wrong
+//****************
+int eMap::AddEntity(std::unique_ptr<eEntity> && entity) {
+	int spawnID = 0;
+	for (auto & entitySlot : entities) {
+		if (entitySlot == nullptr) {
+			ConfigureEntity(spawnID, entity.get());
+			entitySlot = std::move(entity);
+			return spawnID;
+		} else {
+			++spawnID;
+		}
+	}
+
+	if (spawnID == entities.size()) {
+		ConfigureEntity(spawnID, entity.get());
+		entities.emplace_back(std::move(entity));
+		return spawnID;
+	}
+	return -1;
+}
+
+//****************
+// eMap::ClearAllEntities
+//****************
+void eMap::ClearAllEntities() {
+	entities.clear();
+}
+
+//****************
+// eMap::RemoveEntity
+// DEBUG: ASSERT (entityID >= 0 && entityID < numEntities)
+//****************
+void eMap::RemoveEntity(int entityID) {
+	entities[entityID] = nullptr;
+}
+
+//****************
+// eMap::GetEntity
+// DEBUG: ASSERT (entityID >= 0 && entityID < numEntities)
+//****************
+std::unique_ptr<eEntity> & eMap::GetEntity(int entityID) {
+	return entities[entityID];
+}
+
+//****************
+// eMap::NumEntities
+//****************
+int eMap::NumEntities() const {
+	return entities.size();
+}
+
+//****************
+// eMap::EntityThink
+//****************
+void eMap::EntityThink() {
+	for (auto && entity : entities) {
+		entity->UpdateComponents();
+		entity->Think();
+	}
 }
 
 //***************
@@ -252,8 +332,7 @@ RESULTS: does significantly reduce draw calls, but the layering visuals are wron
 */
 //***************
 void eMap::Draw() {
-	auto & camera = game.GetCamera();
-	if (camera.Moved() || game.GetGameTime() < 5000) {		// reduce visibleCells setup, except during startup
+	if (viewCamera->Moved() || game->GetGameTime() < 5000) {		// reduce visibleCells setup, except during startup
 		visibleCells.clear();
 
 /*
@@ -266,11 +345,11 @@ void eMap::Draw() {
 		std::array<eVec2, 3> obbPoints = { std::move(corner), std::move(xAxis), std::move(yAxis) };
 		for (auto & point : obbPoints) { eMath::IsometricToCartesian(point.x, point.y); }
 		eBox cameraArea(obbPoints.data());
-		eCollision::GetAreaCells(cameraArea, visibleCells);
+		eCollision::GetAreaCells(this, cameraArea, visibleCells);
 	}
 */
 		// use the corner cells of the camera to designate the draw area
-		const auto & camBounds = camera.CollisionModel().AbsBounds();
+		const auto & camBounds = viewCamera->AbsBounds();
 		std::array<eVec2, 4> corners;
 		camBounds.ToPoints(corners.data());
 		for (auto & point : corners) { eMath::IsometricToCartesian(point.x, point.y); }
@@ -300,7 +379,7 @@ void eMap::Draw() {
 			while(row <= endRow && column >= 0) {			// shifting across the screen
 				if (tileMap.IsValid(row, column)) {
 					auto & cell = tileMap.Index(row, column);
-					cell.Draw();
+					cell.Draw(viewCamera);
 					visibleCells.emplace_back(&cell);
 				} 
 				row++; column--;
@@ -313,7 +392,7 @@ void eMap::Draw() {
 		}
 	} else {
 		for (auto & cell : visibleCells)
-			cell->Draw();
+			cell->Draw(viewCamera);
 	}
 }
 
@@ -321,7 +400,10 @@ void eMap::Draw() {
 // eMap::DebugDraw
 //***************
 void eMap::DebugDraw() { 
-	for (auto & cell : visibleCells)
-		cell->DebugDraw();
+	for (auto && cell : visibleCells)
+		cell->DebugDraw(viewCamera->GetDebugRenderTarget());
+	
+	for (auto && entity : entities)
+		entity->DebugDraw(viewCamera->GetDebugRenderTarget());	
 }
 

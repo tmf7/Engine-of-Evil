@@ -32,6 +32,8 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 #include "Movement.h"
 #include "AnimationController.h"
 
+class eMap;
+
 //*************************************************
 //				eGameObject
 // base composite-class for isolating eComponent groups
@@ -48,7 +50,7 @@ public:
 	friend class eCollisionModel;
 	friend class eRenderImage;
 	friend class eAnimationController;
-	friend class eMovement;
+	friend class eMovementPlanner;
 
 public:
 	
@@ -66,10 +68,12 @@ public:
 												return eClass::IsClassType(classType); 
 											}
 
+	virtual void							Init()									{}
 	virtual void							Think()									{}
-	virtual void							DebugDraw()								{}
+	virtual void							DebugDraw(eRenderTarget * renderTarget)	{}
 
 	void									UpdateComponents();	
+	eMap * const							GetMap()								{ return map; }
 	const eVec2 &							GetOrigin()								{ return orthoOrigin; }
 	void									SetOrigin(const eVec2 & newOrigin);
 	Uint32									GetWorldLayer()							{ return worldLayer; }
@@ -84,11 +88,14 @@ public:
 	bool									AddAnimationController(const std::string & animationControllerFilename);
 	bool									AddMovementPlanner(float movementSpeed);
 
+	eCollisionModel &						CollisionModel()						{ return *collisionModel; }
+	const eCollisionModel &					CollisionModel() const					{ return *collisionModel; }
+
 	// FIXME: make these proper const get, non-const set
 	eRenderImage &							RenderImage()							{ return *renderImage; }
 	eAnimationController &					AnimationController()					{ return *animationController; }
-	eCollisionModel &						CollisionModel()						{ return *collisionModel; }
 	eMovementPlanner &						MovementPlanner()						{ return *movementPlanner; }
+
 
 private:
 
@@ -96,6 +103,7 @@ private:
 
 protected:
 
+	eMap *									map;								// back-pointer to the eMap object owns *this
 	std::unique_ptr<eRenderImage>			renderImage			= nullptr;		// data relevant to the renderer
 	std::unique_ptr<eAnimationController>	animationController = nullptr;		// manipulates the renderImage
 	std::unique_ptr<eCollisionModel>		collisionModel		= nullptr;		// handles collision between bounding volumes

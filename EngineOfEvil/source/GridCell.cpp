@@ -30,10 +30,10 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 //************
 // eGridCell::Draw
 //************
-void eGridCell::Draw() {
-	auto & renderer = game.GetRenderer();
+void eGridCell::Draw(eCamera * viewCamera) {
+	auto & renderer = game->GetRenderer();
 	for (auto & contentPair : renderContents)
-		renderer.AddToCameraRenderPool(contentPair.second);
+		renderer.AddToCameraRenderPool(viewCamera, contentPair.second);
 }
 
 //************
@@ -57,14 +57,14 @@ void eGridCell::Reset() {
 //************
 // eGridCell::DebugDraw
 //************
-void eGridCell::DebugDraw() {
-	auto & renderer = game.GetRenderer();
+void eGridCell::DebugDraw(eRenderTarget * renderTarget) {
+	auto & renderer = game->GetRenderer();
 	for (auto & tile : tilesOwned) {
-		if (game.debugFlags.COLLISION && &tile.CollisionModel() != nullptr)
-			game.GetRenderer().DrawIsometricRect(pinkColor, tile.CollisionModel().AbsBounds(), true);
+		if (game->debugFlags.COLLISION && &tile.CollisionModel() != nullptr)
+			game->GetRenderer().DrawIsometricRect(renderTarget, pinkColor, tile.CollisionModel().AbsBounds());
 
 		auto & renderBlock = tile.RenderImage().GetRenderBlock();
-		if (game.debugFlags.RENDERBLOCKS && renderBlock.Depth() > 0)		// DEBUG(performance): for visual clarity, don't draw flat renderBlocks
-			game.GetRenderer().DrawIsometricPrism(lightBlueColor, renderBlock, RENDERTYPE_DYNAMIC);
+		if (game->debugFlags.RENDERBLOCKS && renderBlock.Depth() > 0)		// DEBUG(performance): for visual clarity, don't draw flat renderBlocks
+			game->GetRenderer().DrawIsometricPrism(renderTarget, lightBlueColor, renderBlock);
 	}
 }

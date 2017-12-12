@@ -28,7 +28,7 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 //*************************************************************//
 // Original Copyright (C) Thomas Matthew Freehill July 29 2016 //
 //*************************************************************//
-#include "Game.h"
+#include "GameLocal.h"
 
 // DEBUG: not using SDL_main
 #undef main
@@ -50,15 +50,12 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 	// TODO: make all headers clean so the library's implementation isn't easily messed with
 	// and for faster testing compile times
 
-	if (!game.Init()) {
-		game.Shutdown();
+	if (!game->InitSystem()) {
+		game->ShutdownSystem();
 		return 1;
 	}
 
-	while (game.Run())
-		;
-
-	game.Shutdown();
+	game->Run();
 
 	return 0;
 }

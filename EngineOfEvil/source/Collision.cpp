@@ -25,6 +25,7 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 ===========================================================================
 */
 #include "Game.h"
+#include "Map.h"
 
 //***************
 // eCollision::OBBOBBTest
@@ -143,11 +144,11 @@ bool eCollision::SegmentAABBTest(const eVec2 & begin, const eVec2 & end, const e
 // DEBUG: dir must be unit length
 // TODO: add a collision mask param to filter collisions
 //***************
-bool eCollision::BoxCast(std::vector<Collision_t> & collisions, const eBounds & bounds, const eVec2 & dir, const float length) {
+bool eCollision::BoxCast(eMap * onMap, std::vector<Collision_t> & collisions, const eBounds & bounds, const eVec2 & dir, const float length) {
 	static std::unordered_map<const eBounds *, const eBounds *> alreadyTested;
 	static std::vector<eGridCell *> broadAreaCells;					// DEBUG(performance): static to reduce dynamic allocations
 
-	GetAreaCells(bounds, dir, length, broadAreaCells);
+	GetAreaCells(onMap, bounds, dir, length, broadAreaCells);
 	alreadyTested[&bounds] = &bounds;								// ignore self collision
 	for (auto & cell : broadAreaCells) {
 		for (auto && kvPair : cell->CollisionContents()) {
@@ -191,8 +192,8 @@ bool eCollision::BoxCast(std::vector<Collision_t> & collisions, const eBounds & 
 // within the given area box (includes touching)
 // DEBUG(performance): make sure areaCells passed in avoids excessive dynamic allocation by using a reserved/managed vector, or static memory
 //***************
-void eCollision::GetAreaCells(const eBox & area, std::vector<eGridCell *> & areaCells) {
-	auto & tileMap = game.GetMap().TileMap();
+void eCollision::GetAreaCells(eMap * onMap, const eBox & area, std::vector<eGridCell *> & areaCells) {
+	auto & tileMap = onMap->TileMap();
 	static std::deque<eGridCell *> openSet;							// first-come-first-served testing
 	static std::vector<eGridCell *> closedSet;
 	static std::vector<eGridCell *> neighbors;
@@ -225,8 +226,6 @@ void eCollision::GetAreaCells(const eBox & area, std::vector<eGridCell *> & area
 	for (auto & cell : closedSet)
 		cell->inClosedSet = false;
 	closedSet.clear();
-	openSet.clear();
-	neighbors.clear();
 }
 
 //***************
@@ -235,8 +234,8 @@ void eCollision::GetAreaCells(const eBox & area, std::vector<eGridCell *> & area
 // within the given area bounds (includes touching)
 // DEBUG(performance): make sure areaCells passed in avoids excessive dynamic allocation by using a reserved/managed vector, or static memory
 //***************
-void eCollision::GetAreaCells(const eBounds & area, std::vector<eGridCell *> & areaCells) {
-	auto & tileMap = game.GetMap().TileMap();
+void eCollision::GetAreaCells(eMap * onMap, const eBounds & area, std::vector<eGridCell *> & areaCells) {
+	auto & tileMap = onMap->TileMap();
 	int startRow, startCol;
 	int endRow, endCol;
 	tileMap.Index(area[0], startRow, startCol);
@@ -257,8 +256,8 @@ void eCollision::GetAreaCells(const eBounds & area, std::vector<eGridCell *> & a
 // along the given area swept by the bounds along (dir * length) (includes touching)
 // DEBUG(performance): make sure areaCells passed in avoids excessive dynamic allocation by using a reserved/managed vector, or static memory
 //***************
-void eCollision::GetAreaCells(const eBounds & bounds, const eVec2 & dir, const float length, std::vector<eGridCell *> & areaCells) {
-	auto & tileMap = game.GetMap().TileMap();
+void eCollision::GetAreaCells(eMap * onMap, const eBounds & bounds, const eVec2 & dir, const float length, std::vector<eGridCell *> & areaCells) {
+	auto & tileMap = onMap->TileMap();
 	static std::deque<eGridCell *> openSet;							// first-come-first-served testing
 	static std::vector<eGridCell *> closedSet;
 	static std::vector<eGridCell *> neighbors;
@@ -292,8 +291,6 @@ void eCollision::GetAreaCells(const eBounds & bounds, const eVec2 & dir, const f
 	for (auto & cell : closedSet)
 		cell->inClosedSet = false;
 	closedSet.clear();
-	openSet.clear();
-	neighbors.clear();
 }
 
 //***************
@@ -302,8 +299,8 @@ void eCollision::GetAreaCells(const eBounds & bounds, const eVec2 & dir, const f
 // along the given ray (directed line segment) (includes touching)
 // DEBUG(performance): make sure areaCells passed in avoids excessive dynamic allocation by using a reserved/managed vector, or static memory
 //***************
-void eCollision::GetAreaCells(const eVec2 & begin, const eVec2 & dir, const float length, std::vector<eGridCell *> & areaCells) {
-	auto & tileMap = game.GetMap().TileMap();
+void eCollision::GetAreaCells(eMap * onMap, const eVec2 & begin, const eVec2 & dir, const float length, std::vector<eGridCell *> & areaCells) {
+	auto & tileMap = onMap->TileMap();
 	static std::deque<eGridCell *> openSet;					// first-come-first-served testing
 	static std::vector<eGridCell *> closedSet;
 	static std::vector<eGridCell *> neighbors;
@@ -337,8 +334,6 @@ void eCollision::GetAreaCells(const eVec2 & begin, const eVec2 & dir, const floa
 	for (auto & cell : closedSet)
 		cell->inClosedSet = false;
 	closedSet.clear();
-	openSet.clear();
-	neighbors.clear();
 }
 
 //***************
@@ -556,11 +551,11 @@ bool eCollision::RayAABBTest(const eVec2 & begin, const eVec2 & dir, const float
 // DEBUG: dir must be unit length
 // TODO: add a collision mask param to filter collisions
 //***************
-bool eCollision::RayCast(std::vector<Collision_t> & collisions, const eVec2 & begin, const eVec2 & dir, const float length, bool ignoreStartInCollision) {
+bool eCollision::RayCast(eMap * onMap, std::vector<Collision_t> & collisions, const eVec2 & begin, const eVec2 & dir, const float length, bool ignoreStartInCollision) {
 	static std::unordered_map<const eCollisionModel *, const eCollisionModel *> alreadyTested;
 	static std::vector<eGridCell *> broadAreaCells;							// DEBUG(performance): static to reduce dynamic allocations
 
-	GetAreaCells(begin, dir, length, broadAreaCells);
+	GetAreaCells(onMap, begin, dir, length, broadAreaCells);
 	for (auto & cell : broadAreaCells) {
 		for (auto & kvPair : cell->CollisionContents()) {
 			auto & collider = kvPair.second;

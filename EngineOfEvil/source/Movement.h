@@ -50,6 +50,7 @@ public:
 
 												eMovementPlanner(eGameObject * owner, float movementSpeed);
 
+	void										Init();
 	void										DebugDraw();							
 	void										AddUserWaypoint(const eVec2 & waypoint);
 	void										ClearTrail();

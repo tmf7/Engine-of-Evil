@@ -31,11 +31,8 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 #include "AnimationManager.h"
 #include "AnimationControllerManager.h"
 #include "EntityPrefabManager.h"
-#include "Map.h"
-#include "Camera.h"
 #include "Input.h"
 #include "Audio.h"
-#include "Player.h"
 
 //*************************************************
 //					eGame
@@ -57,11 +54,14 @@ public:
 
 public:
 
-													eGame();
+	bool											InitSystem();
+	void											ShutdownSystem();
+	void											Run();
+	void											Stop();
 
-	bool											Init();
-	void											Shutdown();
-	bool											Run();
+	virtual bool									Init() = 0;
+	virtual void									Shutdown() = 0;
+	virtual void									Update() = 0;
 
 	eAudio &										GetAudio();
 	eInput &										GetInput();
@@ -70,13 +70,6 @@ public:
 	eAnimationManager &								GetAnimationManager();
 	eAnimationControllerManager &					GetAnimationControllerManager();
 	eEntityPrefabManager &							GetEntityPrefabManager();
-	eCamera &										GetCamera();
-	eMap &											GetMap();
-	int												AddEntity(std::unique_ptr<eEntity> && entity);
-	void											RemoveEntity(int entityID);
-	void											ClearAllEntities();
-	std::unique_ptr<eEntity> &						GetEntity(int entityID);
-	int												NumEntities() const;
 
 	// frame-rate metrics
 	void											SetFixedFPS(const Uint32 newFPS);
@@ -96,39 +89,30 @@ public:
 
 private:
 
-	void											FreeAssets();
-
-private:
-
-	std::vector<std::unique_ptr<eEntity>>			entities;
-
 	eAudio											audio;
 	eInput											input;
-	eMap											map;				// one map instance, use eMap::LoadMap/UnloadMap as needed
 	eRenderer										renderer;
 	eImageManager									imageManager;
 	eAnimationManager								animationManager;
 	eAnimationControllerManager						animationControllerManager;
 	eEntityPrefabManager							entityPrefabManager;
-	eCamera											camera;				// TODO: allow for more than one instance of eCamera gameObjects across multiple systems
-
-	ePlayer											player;
 
 	const Uint32									defaultFPS = 60;
 	Uint32											fixedFPS;			// constant framerate
 	Uint32											frameTime;			// constant framerate governing time interval (depends on FixedFPS)
 	Uint32											deltaTime;			// actual time a frame takes to execute (to the nearest millisecond)
 	Uint32											gameTime;			// time elapsed since execution began (updated at the end of each frame)
+	bool											isRunning = false;	// determines whether the game shuts down or continues
 };
 
-extern eGame	game;								// one instance used by all objects
+extern eGame *	game;								// the rest of the engine will only reference this, while all local/derived aspects stay hidden
 
 //****************
-// eGame::eGame
+// eGame::Stop
+// ends the main game loop
 //****************
-inline eGame::eGame() {
-	entities.reserve(MAX_ENTITIES);
-	SetFixedFPS(defaultFPS);
+inline void eGame::Stop() {
+	isRunning = false;
 }
 
 //****************
@@ -178,43 +162,6 @@ inline eAnimationControllerManager & eGame::GetAnimationControllerManager() {
 //*****************
 inline eEntityPrefabManager & eGame::GetEntityPrefabManager() {
 	return entityPrefabManager;
-}
-
-//****************
-// eGame::GetCamera
-//****************
-inline eCamera & eGame::GetCamera() {
-	return camera;
-}
-
-//****************
-// eGame::GetMap
-//****************
-inline eMap & eGame::GetMap() {
-	return map;
-}
-
-//****************
-// eGame::RemoveEntity
-// DEBUG: ASSERT (entityID >= 0 && entityID < numEntities)
-//****************
-inline void eGame::RemoveEntity(int entityID) {
-	entities[entityID] = nullptr;
-}
-
-//****************
-// eGame::GetEntity
-// DEBUG: ASSERT (entityID >= 0 && entityID < numEntities)
-//****************
-inline std::unique_ptr<eEntity> & eGame::GetEntity(int entityID) {
-	return entities[entityID];
-}
-
-//****************
-// eGame::NumEntities
-//****************
-inline int eGame::NumEntities() const {
-	return entities.size();
 }
 
 //****************

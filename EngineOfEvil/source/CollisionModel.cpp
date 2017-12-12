@@ -25,6 +25,7 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 ===========================================================================
 */
 #include "Game.h"
+#include "Map.h"
 
 //*************
 // eCollisionModel::~eCollisionModel
@@ -43,7 +44,7 @@ void eCollisionModel::Update() {
 
 	oldOrigin = origin;
 	origin = owner->orthoOrigin;
-	origin += velocity; // * game.GetFixedTime();
+	origin += velocity; // * game->GetFixedTime();
 	absBounds = localBounds + origin + orthoOriginOffset;
 	center = absBounds.Center();
 
@@ -92,10 +93,10 @@ void eCollisionModel::ClearAreas() {
 void eCollisionModel::UpdateAreas() {
 	ClearAreas();
 
-	auto & tileMap = game.GetMap().TileMap();
+	auto & tileMap = owner->GetMap()->TileMap();
 	auto & cell = tileMap.IndexValidated(origin);
 	if (cell.AbsBounds() != absBounds) {
-		eCollision::GetAreaCells(absBounds, areas);
+		eCollision::GetAreaCells(owner->map, absBounds, areas);
 	} else {							// BUGFIX: edge case where bounds matches its cell and winds up adding 4 areas instead of 1
 		areas.emplace_back(&cell);
 	}
@@ -115,7 +116,7 @@ bool eCollisionModel::FindApproachingCollision(const eVec2 & dir, const float le
 	static std::vector<Collision_t> collisions;		// FIXME(~): make this a private data member instead of per-fn, if more than one fn uses it
 	collisions.clear();								// DEBUG: lazy clearing
 
-	if(eCollision::BoxCast(collisions, absBounds, dir, length)) {
+	if(eCollision::BoxCast(owner->map, collisions, absBounds, dir, length)) {
 		for (auto & collision : collisions) {
 			float movingAway = collision.normal * dir;
 			float movingAwayThreshold = ((abs(collision.normal.x) < 1.0f && abs(collision.normal.y) < 1.0f) ? -0.707f : 0.0f); // vertex : edge

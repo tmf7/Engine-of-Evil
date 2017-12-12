@@ -34,6 +34,7 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 #include "Image.h"
 #include "Component.h"
 
+class eRenderTarget;
 class eGridCell;
 
 //**************************************************
@@ -93,7 +94,8 @@ private:
 	eVec2										oldOrigin;						// minimizes number of UpdateAreas calls for non-static eGameObjects that aren't moving
 	eVec2										orthoOriginOffset;				// offset from (eGameObject)owner::orthoOrigin (default: (0,0))
 	float										priority;						// determined during topological sort, lower priority draws first
-	Uint32										lastDrawTime	= 0;			// prevent attempts to draw this more than once per frame
+	Uint32										lastDrawnTime	= 0;			// allows the drawnTo vector to be cleared before *this is drawn the first time during a frame
+	std::vector<eRenderTarget *>				drawnTo;						// prevent attempts to draw this more than once per renderTarget per frame
 	std::vector<eGridCell *>					areas;							// the gridcells responsible for drawing *this
 	bool										isSelectable	= false;		// if this should added to all eGridCells its worldClip overlaps, or just its corners
 	eBounds										worldClip;						// dstRect in world space (ie: not adjusted with camera position yet) used for occlusion tests

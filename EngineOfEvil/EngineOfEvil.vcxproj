@@ -148,6 +148,7 @@
     <ClCompile Include="source\EntityPrefabManager.cpp" />
     <ClCompile Include="source\ErrorLogger.cpp" />
     <ClCompile Include="source\Game.cpp" />
+    <ClCompile Include="source\GameLocal.cpp" />
     <ClCompile Include="source\GameObject.cpp" />
     <ClCompile Include="source\GridCell.cpp" />
     <ClCompile Include="source\HashIndex.cpp" />
@@ -160,6 +161,7 @@
     <ClCompile Include="source\Player.cpp" />
     <ClCompile Include="source\Renderer.cpp" />
     <ClCompile Include="source\RenderImage.cpp" />
+    <ClCompile Include="source\RenderTarget.cpp" />
     <ClCompile Include="source\sHero.cpp" />
     <ClCompile Include="source\SoundFx.cpp" />
     <ClCompile Include="source\StateNode.cpp" />
@@ -177,7 +179,9 @@
     <ClInclude Include="source\CreatePrefabStrategies.h" />
     <ClInclude Include="source\Dictionary.h" />
     <ClInclude Include="source\ErrorLogger.h" />
+    <ClInclude Include="source\GameLocal.h" />
     <ClInclude Include="source\Music.h" />
+    <ClInclude Include="source\RenderTarget.h" />
     <ClInclude Include="source\Resource.h" />
     <ClInclude Include="source\ResourceManager.h" />
     <ClInclude Include="source\sHero.h" />

@@ -25,6 +25,7 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 ===========================================================================
 */
 #include "Game.h"
+#include "Map.h"
 
 //*************
 // eRenderImage::~eRenderImage
@@ -38,7 +39,7 @@ eRenderImage::~eRenderImage() {
 // DEBUG: no range checking for faster assignment
 //*************
 void eRenderImage::SetImage(int imageManagerIndex) {
-	image = game.GetImageManager().GetByResourceID(imageManagerIndex);
+	image = game->GetImageManager().GetByResourceID(imageManagerIndex);
 }
 
 //************
@@ -54,7 +55,7 @@ void eRenderImage::UpdateRenderBlock() {
 	// dynamic eGameObjects use the fluid zPosition
 	if (owner->worldLayer != owner->oldWorldLayer) {
 		if (owner->isStatic) {
-			const float newRBMinZ = (float)game.GetMap().TileMap().MinZPositionFromLayer(owner->worldLayer);
+			const float newRBMinZ = (float)owner->GetMap()->TileMap().MinZPositionFromLayer(owner->worldLayer);
 			renderBlock += eVec3(0.0f, 0.0f, newRBMinZ - renderBlockMins.z);
 		} else {
 			renderBlock += eVec3(0.0f, 0.0f, owner->zPosition - renderBlockMins.z);
@@ -94,7 +95,7 @@ void eRenderImage::Update() {
 	origin = newOrigin;
 
 	UpdateWorldClip();
-	if (origin != oldOrigin || (owner->IsStatic() && game.GetGameTime() < 5000)) {
+	if (origin != oldOrigin || (owner->IsStatic() && game->GetGameTime() < 5000)) {
 		if (isSelectable)
 			UpdateAreasWorldClipArea();
 		else
@@ -138,7 +139,7 @@ void eRenderImage::UpdateAreasWorldClipCorners() {
 	worldClip.ToPoints(visualWorldPoints.data());
 
 	// clip rectangle to orthographic world-space for proper grid alignment
-	auto & tileMap = game.GetMap().TileMap();
+	auto & tileMap = owner->GetMap()->TileMap();
 	for (auto & point : visualWorldPoints) {
 		eMath::IsometricToCartesian(point.x, point.y);
 		auto & cell = tileMap.IndexValidated(point);
@@ -168,7 +169,7 @@ void eRenderImage::UpdateAreasWorldClipArea() {
 		eMath::IsometricToCartesian(point.x, point.y);
 
 	const eBox worldClipArea(obbPoints.data());
-	eCollision::GetAreaCells(worldClipArea, areas);
+	eCollision::GetAreaCells(owner->map, worldClipArea, areas);
 	for (auto && cell : areas)
 		cell->RenderContents()[this] = this;
 }

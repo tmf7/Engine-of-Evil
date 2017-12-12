@@ -25,81 +25,166 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 ===========================================================================
 */
 #include "Game.h"
-
-//***************
-// eCamera::eCamera
-//***************
-eCamera::eCamera()
-	: camSpeed(defaultCamSpeed) {
-	collisionModel = std::make_unique<eCollisionModel>(this);
-	collisionModel->SetActive(false);
-}
+#include "Camera.h"
 
 //***************
 // eCamera::Init
-// starting view of map
-// TODO: allow the localBounds to be resized as the window resizes or goes fullscreen
 //***************
-void eCamera::Init() {
-	SetZoom(1);
-	collisionModel->SetOrigin(collisionModel->LocalBounds()[1] / 2.0f);
+void eCamera::Init(const eVec2 & size, const eVec2 & worldPosition, float zoomLevel, float panSpeed) {
+	this->panSpeed = panSpeed;
+	defaultSize = size;
+	const auto & context = game->GetRenderer().GetSDLRenderer();
+	SDL_Point intSize = { eMath::NearestInt(defaultSize.x), eMath::NearestInt(defaultSize.y) };
+	renderTarget.Init( context, intSize.x, intSize.y, worldPosition, zoomLevel );
+	debugRenderTarget.Init( context, intSize.x, intSize.y, worldPosition, zoomLevel );
+	UpdateZoom();
+	cameraPool.reserve(MAX_IMAGES);
+	cameraPoolInserts.reserve(MAX_IMAGES);
 }
 
 //***************
 // eCamera::Think
-// FIXME/TODO: modify the movement limits (either stay inside the "diamond" or allow some minimal wander beyond it
-// EG: an overall larger rectangle that the diamond is within [risky, given that some corner gaps would lead to total abyss])
-// TODO/FIXME (much later): zoom in/out adversly affects drawing coordinates
-// and number of tiles drawn to the screen (which is currently more-or-less hardcoded)
+// FIXME(?): a different fn should control the camera movement, and any of its restrictions
+// because there can be more than one eCamera instance in a game
+// SOLUTION(?): derive from a base eCamera class and override Think
 //***************
 void eCamera::Think() {
-	auto & input = game.GetInput();
-	float oldZoomLevel = zoomLevel;
-	eVec2 oldOrigin = collisionModel->Center();
+	auto & input = game->GetInput();
+	float oldZoomLevel = renderTarget.GetZoom();
+	const eVec2 oldOrigin = renderTarget.GetOrigin();
 	if (input.KeyPressed(SDL_SCANCODE_EQUALS))
-		SetZoom(zoomLevel + zoomIncrement);
+		ZoomIn();
 	else if (input.KeyPressed(SDL_SCANCODE_MINUS))
-		SetZoom(zoomLevel - zoomIncrement);
+		ZoomOut();
 
 	if (input.KeyHeld(SDL_SCANCODE_SPACE)) {
-		eVec2 snapFocus = game.GetEntity(0)->CollisionModel().Center();		// FIXME: 0th eEntity should not be the default thing to snap focus to
-		eMath::CartesianToIsometric(snapFocus.x, snapFocus.y);
-		collisionModel->SetOrigin(snapFocus);
+//		eVec2 snapFocus = map->GetEntity(0)->CollisionModel().Center();		// FIXME: 0th eEntity should not be the default thing to snap focus to
+//		eMath::CartesianToIsometric(snapFocus.x, snapFocus.y);
+//		SetOrigin(snapFocus);
 	} else {
-		float x = camSpeed * (float)(input.KeyHeld(SDL_SCANCODE_D) - input.KeyHeld(SDL_SCANCODE_A));
-		float y = camSpeed * (float)(input.KeyHeld(SDL_SCANCODE_S) - input.KeyHeld(SDL_SCANCODE_W));
-		collisionModel->SetVelocity(eVec2(x, y));
+		float x = panSpeed * (float)(input.KeyHeld(SDL_SCANCODE_D) - input.KeyHeld(SDL_SCANCODE_A));
+		float y = panSpeed * (float)(input.KeyHeld(SDL_SCANCODE_S) - input.KeyHeld(SDL_SCANCODE_W));
+		SetOrigin( oldOrigin + eVec2( x , y ) );
 	}
 
-	UpdateComponents();
-	moved = (zoomLevel != oldZoomLevel || collisionModel->Center() != oldOrigin);
+	moved = (renderTarget.GetZoom() != oldZoomLevel || renderTarget.GetOrigin() != oldOrigin);
 }
 
 //***************
-// eCamera::SetZoom
+// eCamera::UpdateZoom
+// ensures the collisionModel bounds
+// is syncronized with the zoomLevel
 //***************
-void eCamera::SetZoom(float level) {
-	if (level < minZoom)
-		level = minZoom;
-	else if (level > maxZoom)
-		level = maxZoom;
+void eCamera::UpdateZoom() {
+	eVec2 zoomSize = defaultSize / renderTarget.GetZoom();
+	absBounds = eBounds(vec2_zero, zoomSize) + renderTarget.GetOrigin();
+}
 
-	zoomLevel = level;
+//***************
+// eCamera::SetSize
+// resizes both eRenderTargets 
+// by copying their data to targets
+// and destroying the old ones
+//***************
+void eCamera::SetSize(const eVec2 & newSize) {
+	defaultSize = newSize;
+	UpdateZoom();
+	SDL_Point intSize = { eMath::NearestInt(defaultSize.x), eMath::NearestInt(defaultSize.y) };
+	renderTarget.Resize( intSize.x, intSize.y );
+	debugRenderTarget.Resize( intSize.x, intSize.y );
+}
 
-	eVec2 screenBottomRight = eVec2((float)game.GetRenderer().ViewArea().w, (float)game.GetRenderer().ViewArea().h);
-	screenBottomRight /= level;
+//***************
+// eCamera::ZoomIn
+// scales both render targets' data
+//***************
+void eCamera::ZoomIn() {
+	float zoom = renderTarget.GetZoom();
+	zoom += zoomSpeed;
+	if (zoom > maxZoom)
+		zoom = maxZoom;
 
-	// variable rectangle with (0, 0) at its center)
-	collisionModel->SetLocalBounds(eBounds(-screenBottomRight * 0.5f, screenBottomRight * 0.5f));
+	renderTarget.SetZoom(zoom);
+	debugRenderTarget.SetZoom(zoom);
+	UpdateZoom();
+}
+
+//***************
+// eCamera::ZoomOut
+// de-scales both render targets' data
+//***************
+void eCamera::ZoomOut() {
+	float zoom = renderTarget.GetZoom();
+	zoom -= zoomSpeed;
+	if (zoom < minZoom)
+		zoom = minZoom;
+
+	renderTarget.SetZoom(zoom);
+	debugRenderTarget.SetZoom(zoom);
+	UpdateZoom();
+}
+
+//***************
+// eCamera::ResetZoom
+// scales both render targets' data back to 1.0f
+//***************
+void eCamera::ResetZoom() {
+	renderTarget.ResetZoom();
+	debugRenderTarget.ResetZoom();
+	UpdateZoom();
+}
+
+//***************
+// eCamera::GetZoom
+// convenience function to query the renderTarget zoomLevel
+// DEBUG: which is equal to the debugRenderTarget zoomLevel
+//***************
+float eCamera::GetZoom() const {
+	return renderTarget.GetZoom();
+}
+
+//***************
+// eCamera::SetOrigin
+// keeps the renderTarget and 
+// debugRenderTarget positions synchronized
+//***************
+void eCamera::SetOrigin(const eVec2 & newOrigin) {
+	renderTarget.SetOrigin(newOrigin);
+	debugRenderTarget.SetOrigin(newOrigin);
+	UpdateZoom();
+}
+
+//***************
+// eCamera::GetOrigin
+// convenience fn to query renderTarget origin
+// DEBUG: with is equal to the debugRenderTarget origin
+//***************
+const eVec2 & eCamera::GetOrigin() const {
+	return renderTarget.GetOrigin();
+}
+
+//***************
+// eCamera::Moved
+// DEBUG: includes zoom and translation
+//***************
+bool eCamera::Moved() const {
+	return moved;
+}
+
+//***************
+// eCamera::AbsBounds
+// returns the current worldPosition and dimensions of *this
+//***************
+const eBounds & eCamera::AbsBounds() const {
+	return absBounds;
 }
 
 //**************
 // eCamera::ScreenToWorldPosition
 // returns current position of screenPoint over the 2D orthographic game world
-// FIXME: account for the zoom levels to offset the screenPoint
 //**************
 eVec2 eCamera::ScreenToWorldPosition(const eVec2 & screenPoint) const {
-	eVec2 worldPoint = (screenPoint / zoomLevel) + collisionModel->AbsBounds()[0];
+	eVec2 worldPoint = (screenPoint / renderTarget.GetZoom()) + absBounds[0];
 	eMath::IsometricToCartesian(worldPoint.x, worldPoint.y);
 	return worldPoint;
 }
@@ -109,8 +194,22 @@ eVec2 eCamera::ScreenToWorldPosition(const eVec2 & screenPoint) const {
 // returns current position of mouse over the isometric game world
 //**************
 eVec2 eCamera::MouseWorldPosition() const {
-	auto & input = game.GetInput();
+	auto & input = game->GetInput();
 	eVec2 screenPoint = eVec2((float)input.GetMouseX(), (float)input.GetMouseY());
 	return ScreenToWorldPosition(screenPoint);
+}
+
+//***************
+// eCamera::GetRenderTarget
+//***************
+eRenderTarget * const eCamera::GetRenderTarget() {
+	return &renderTarget;
+}
+
+//***************
+// eCamera::GetDebugRenderTarget
+//***************
+eRenderTarget * const eCamera::GetDebugRenderTarget() {
+	return &debugRenderTarget;
 }
 

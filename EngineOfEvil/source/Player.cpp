@@ -24,12 +24,12 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 
 ===========================================================================
 */
+#include "GameLocal.h"
 #include "Player.h"
-#include "Game.h"
 #include "sHero.h"
 
 void ePlayer::Think() {
-	auto & input = game.GetInput();
+	auto & input = game->GetInput();
 	eVec2 screenPosition = eVec2((float)input.GetMouseX(), (float)input.GetMouseY()); 
 
 	if (input.KeyPressed(SDL_SCANCODE_SPACE))
@@ -49,7 +49,7 @@ void ePlayer::Think() {
 
 		} else if (!groupSelection.empty()) {
 			for (auto & entity : groupSelection)
-				entity->MovementPlanner().AddUserWaypoint(game.GetCamera().MouseWorldPosition());
+				entity->MovementPlanner().AddUserWaypoint(map->GetViewCamera()->MouseWorldPosition());
 /*
 			if ("small selection area, so set a chase target for the group if there's an eEntity in the selectionArea") {		// TODO: implement
 			} else { // group pathfinding
@@ -68,7 +68,7 @@ void ePlayer::Think() {
 		if (input.KeyPressed(SDL_SCANCODE_M))
 			entityMovement.TogglePathingState();
 
-		if (game.debugFlags.KNOWN_MAP_CLEAR && input.KeyPressed(SDL_SCANCODE_R))
+		if (game->debugFlags.KNOWN_MAP_CLEAR && input.KeyPressed(SDL_SCANCODE_R))
 			entityMovement.ClearTrail();
 
 		const float moveSpeed = entityMovement.Speed();
@@ -109,11 +109,11 @@ bool ePlayer::SelectGroup() {
 	eVec2 yAxis(selectionBounds[0].x, selectionBounds[1].y);
 	std::array<eVec2, 3> obbPoints = { std::move(corner), std::move(xAxis), std::move(yAxis) };
 	for (auto & point : obbPoints)
-		point = game.GetCamera().ScreenToWorldPosition(point);
+		point = map->GetViewCamera()->ScreenToWorldPosition(point);
 
 	eBox selectionArea(obbPoints.data());
 
-	eCollision::GetAreaCells(selectionArea, selectedCells);
+	eCollision::GetAreaCells(map, selectionArea, selectedCells);
 	for (auto & cell : selectedCells) {
 		for (auto & kvPair : cell->RenderContents()) {
 			auto owner = kvPair.second->Owner();
@@ -132,8 +132,8 @@ bool ePlayer::SelectGroup() {
 
 			// account for current camera zoom level
 			auto & worldClip = entity->RenderImage().GetWorldClip();
-			const float zoom = game.GetCamera().GetZoom();
-			const eVec2 worldClipOrigin = (worldClip[0] - game.GetCamera().CollisionModel().AbsBounds()[0]) * zoom;
+			const float zoom = map->GetViewCamera()->GetZoom();
+			const eVec2 worldClipOrigin = (worldClip[0] - map->GetViewCamera()->AbsBounds()[0]) * zoom;
 			const eVec2 worldClipSize = eVec2(worldClip.Width(), worldClip.Height()) * zoom;
 			const eBounds dstRect = eBounds(worldClipOrigin, worldClipOrigin + worldClipSize);
 			
@@ -162,25 +162,25 @@ void ePlayer::ClearGroupSelection() {
 void ePlayer::Draw() {
 	// draw the selection box
 	if (beginSelection)
-		game.GetRenderer().DrawCartesianRect(greenColor, eBounds(selectionPoints.data(), selectionPoints.size()) , false, RENDERTYPE_STATIC);
+		game->GetRenderer().DrawCartesianRect(game->GetRenderer().GetDebugOverlayTarget(), greenColor, eBounds(selectionPoints.data(), selectionPoints.size()) , false);
 	else
 		selectionPoints[0] = selectionPoints[1];
 
 	// highlight those selected
 	for (auto & entity : groupSelection)
-		game.GetRenderer().DrawIsometricRect(lightBlueColor, entity->CollisionModel().AbsBounds(), RENDERTYPE_DYNAMIC);
-
+		game->GetRenderer().DrawIsometricRect(map->GetViewCamera()->GetDebugRenderTarget(), lightBlueColor, entity->CollisionModel().AbsBounds());
 }
 
 //***************
 // ePlayer::DebugDraw
 //***************
-void ePlayer::DebugDraw() {
+void ePlayer::DebugDraw(eRenderTarget * renderTarget) {
 	// highlight the cell under the cursor
-	auto & tileMap = game.GetMap().TileMap();
-	const eVec2 worldPosition = game.GetCamera().MouseWorldPosition();
+	auto & tileMap = map->TileMap();
+	const eVec2 worldPosition = map->GetViewCamera()->MouseWorldPosition();
 	if (tileMap.IsValid(worldPosition)) {
 		auto & tileBounds = tileMap.Index(worldPosition).AbsBounds();
-		game.GetRenderer().DrawIsometricRect(yellowColor, tileBounds, RENDERTYPE_DYNAMIC);
+		game->GetRenderer().DrawIsometricRect(renderTarget,yellowColor, tileBounds);
 	}
+
 }

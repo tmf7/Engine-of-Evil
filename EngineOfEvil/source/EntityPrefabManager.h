@@ -30,7 +30,6 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 #include "Entity.h"
 #include "ResourceManager.h"
 
-
 //******************************************
 //			eCreateEntityPrefabStrategy
 // base class for setting how an eEntityPrefabManager
@@ -74,7 +73,7 @@ public:
 	std::shared_ptr<eEntity> &									GetByShortName(const std::string & prefabShortName);
 	const std::shared_ptr<eCreateEntityPrefabStrategy> &		GetCreatePrefabStrategy() const;
 	void														SetCreatePrefabStrategy(const std::shared_ptr<eCreateEntityPrefabStrategy> & newStrategy);
-	bool														SpawnInstance(const std::string & prefabShortName, const eVec3 & worldPosition);
+	bool														SpawnInstance(eMap * onMap, const std::string & prefabShortName, const eVec3 & worldPosition);
 
 	virtual bool												Init() override;
 	virtual bool												LoadAndGet(const char * resourceFilename, std::shared_ptr<eEntity> & result) override;

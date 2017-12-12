@@ -36,7 +36,7 @@ bool eAnimationControllerManager::Init() {
 
 	auto & error_animation_controller = std::make_shared<eAnimationController>("error_animation_controller", resourceList.size());	
 	error_animation_controller->Init(1, 0, 0, 0, 0, 0);
-	if (!error_animation_controller->AddAnimationState(std::make_unique<eAnimationState>("error_state", game.GetAnimationManager().GetByResourceID(0), 1.0f)))
+	if (!error_animation_controller->AddAnimationState(std::make_unique<eAnimationState>("error_state", game->GetAnimationManager().GetByResourceID(0), 1.0f)))
 		return false;
 
 	// TODO: register the error_animation_controller as the first element of resourceList
@@ -125,14 +125,14 @@ bool eAnimationControllerManager::LoadAndGet(const char * resourceFilename, std:
 	char buffer[MAX_ESTRING_LENGTH];
 	memset(buffer, 0, sizeof(buffer));
 	read.getline(buffer, sizeof(buffer), '\n');							// image batch file
-	if (!VerifyRead(read) || !game.GetImageManager().BatchLoad(buffer)) {
+	if (!VerifyRead(read) || !game->GetImageManager().BatchLoad(buffer)) {
 		result = resourceList[0];				// default error animation controller, and destroy allocated result
 		return false;
 	}
 
 	memset(buffer, 0, sizeof(buffer));
 	read.getline(buffer, sizeof(buffer), '\n');							// animation batch file
-	if (!VerifyRead(read) || !game.GetAnimationManager().BatchLoad(buffer)) {
+	if (!VerifyRead(read) || !game->GetAnimationManager().BatchLoad(buffer)) {
 		result = resourceList[0];
 		return false;
 	}
@@ -239,7 +239,7 @@ bool eAnimationControllerManager::LoadAndGet(const char * resourceFilename, std:
 
 					memset(buffer, 0, sizeof(buffer));
 					read.getline(buffer, sizeof(buffer), ' ');				// animation name
-					auto & animation = game.GetAnimationManager().GetByFilename(buffer);
+					auto & animation = game->GetAnimationManager().GetByFilename(buffer);
 					if (!VerifyRead(read) || !animation->IsValid()) {
 						result = resourceList[0];
 						return false;

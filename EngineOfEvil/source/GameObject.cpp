@@ -24,8 +24,9 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 
 ===========================================================================
 */
-#include "GameObject.h"
 #include "Game.h"
+#include "GameObject.h"
+#include "Map.h"
 
 //**************
 // eGameObject::eGameObject
@@ -113,7 +114,7 @@ void eGameObject::SetWorldLayer(Uint32 layer) {
 //*************
 void eGameObject::SetWorldLayer(float zPosition) {
 	oldWorldLayer = worldLayer;
-	worldLayer = game.GetMap().TileMap().LayerFromZPosition(eMath::NearestInt(zPosition));
+	worldLayer = map->TileMap().LayerFromZPosition(eMath::NearestInt(zPosition));
 }
 
 //*************
@@ -128,7 +129,7 @@ void eGameObject::SetZPosition(float newZPosition) {
 
 //*************
 // eGameObject::UpdateComponents
-// TODO: UpdateComponents should be hidden from users... private w/eGame as a friend?
+// TODO(?): should UpdateComponents be hidden from users... private w/eGame as a friend?
 //*************
 void eGameObject::UpdateComponents() {
 	if (movementPlanner != nullptr)
@@ -154,7 +155,7 @@ bool eGameObject::AddRenderImage( const std::string & spriteFilename, const eVec
 
 	renderImage = std::make_unique<eRenderImage>(this);
 	std::shared_ptr<eImage> spriteImage = nullptr;
-	if (!game.GetImageManager().LoadAndGet(spriteFilename.c_str(), spriteImage))
+	if (!game->GetImageManager().LoadAndGet(spriteFilename.c_str(), spriteImage))
 		return false;
 
 	renderImage->SetImage(spriteImage->GetManagerIndex());
@@ -196,7 +197,7 @@ bool eGameObject::AddAnimationController( const std::string & animationControlle
 		return false;
 
 	std::shared_ptr<eAnimationController> prefabAnimationController = nullptr;
-	if ( !game.GetAnimationControllerManager().LoadAndGet( animationControllerFilename.c_str(), prefabAnimationController ) )
+	if ( !game->GetAnimationControllerManager().LoadAndGet( animationControllerFilename.c_str(), prefabAnimationController ) )
 		return false;
 
 	animationController = std::make_unique< eAnimationController >( *prefabAnimationController );

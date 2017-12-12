@@ -28,7 +28,6 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 #define ENTITY_H
 
 #include "GameObject.h"
-#include "Resource.h"
 #include "Dictionary.h"
 
 //*************************************************
@@ -38,7 +37,7 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 class eEntity : public eGameObject, public eResource {
 public:
 
-	friend class eGame;						// for access to assign spawnedEntityID and spawnName
+	friend class eMap;						// for access to assign spawnedEntityID and spawnName
 	friend class eEntityPrefabManager;		// for access to spawnArgs
 
 public:
@@ -49,8 +48,9 @@ public:
 	const std::string &					SpawnName() const;
 	int									SpawnID() const;
 
-	virtual bool						SpawnCopy(const eVec3 & worldPosition);
-	virtual void						DebugDraw() override;
+	virtual void						Init() override;
+	virtual bool						SpawnCopy(eMap * onMap, const eVec3 & worldPosition);
+	virtual void						DebugDraw(eRenderTarget * renderTarget) override;
 
 	virtual int							GetClassType() const override					{ return CLASS_ENTITY; }
 	virtual bool						IsClassType(int classType) const override		{ 

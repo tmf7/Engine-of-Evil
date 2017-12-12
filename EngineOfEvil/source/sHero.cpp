@@ -24,8 +24,9 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 
 ===========================================================================
 */
-#include "sHero.h"
 #include "Game.h"
+#include "sHero.h"
+#include "Map.h"
 
 void sHero::Think() {
 	auto & velocity = collisionModel->GetVelocity();
@@ -48,9 +49,10 @@ void sHero::Think() {
 // sHero::SpawnCopy
 // copies a prefab sHero and adds unique details
 //***************
-bool sHero::SpawnCopy(const eVec3 & worldPosition) {
+bool sHero::SpawnCopy(eMap * onMap, const eVec3 & worldPosition) {
 	auto & newHero = std::make_unique<sHero>(*this);
+	newHero->map = onMap;
 	newHero->SetZPosition(worldPosition.z);
 	newHero->SetOrigin(eVec2(worldPosition.x, worldPosition.y));
-	return (game.AddEntity(std::move(newHero)) >= 0);
+	return (onMap->AddEntity(std::move(newHero)) >= 0);
 }

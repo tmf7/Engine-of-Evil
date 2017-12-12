@@ -37,31 +37,31 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 class eGridIndex : public eClass {
 public:
 
-	virtual				~eGridIndex() = default;
+	virtual					~eGridIndex() = default;
 
-	void				SetGridPosition(const int row, const int column)	{ gridRow = row; gridColumn = column; }
-	int					GridRow() const										{ return gridRow; }
-	int					GridColumn() const									{ return gridColumn; }
+	void					SetGridPosition(const int row, const int column)	{ gridRow = row; gridColumn = column; }
+	int						GridRow() const										{ return gridRow; }
+	int						GridColumn() const									{ return gridColumn; }
 
-	virtual	void		Reset()												{ inOpenSet = false; inClosedSet = false; }
-	virtual int			GetClassType() const override						{ return CLASS_GRIDINDEX; }
-	virtual bool		IsClassType(int classType) const override			{ 
-							if(classType == CLASS_GRIDINDEX) 
-								return true; 
-							return eClass::IsClassType(classType); 
-						}
+	virtual	void			Reset()												{ inOpenSet = false; inClosedSet = false; }
+	virtual int				GetClassType() const override						{ return CLASS_GRIDINDEX; }
+	virtual bool			IsClassType(int classType) const override			{ 
+								if(classType == CLASS_GRIDINDEX) 
+									return true; 
+								return eClass::IsClassType(classType); 
+							}
 
 public:
 
 	// expidites openSet and closedSet vector searches while systematically traversing the eSpatialIndexGrid to which *this belongs (eg: A* search)
 	// DEBUG: always reset these values after use
-	bool				inOpenSet	= false;	
-	bool				inClosedSet = false;
+	bool					inOpenSet	= false;	
+	bool					inClosedSet = false;
 
 protected:
 
-	int					gridRow;
-	int					gridColumn;
+	int						gridRow;
+	int						gridColumn;
 
 };
 

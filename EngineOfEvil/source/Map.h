@@ -34,37 +34,54 @@ typedef eSpatialIndexGrid<eGridCell, MAX_MAP_ROWS, MAX_MAP_COLUMNS> tile_map_t;
 
 //*************************************************
 //					eMap
-// the game environment, draws as observed by eCamera,
-// and handles updates to the collision-world and render-world 
-// contents contained by the eGridCells in eSpatialIndexGrid (eMap::tileMap)
+// the game environment, draws as observed by an eCamera,
+// owns all dynamic eEntity-type objects, and
+// tracks updates to the collision-world and render-world with the
+// contents of eGridCells in its eSpatialIndexGrid (eMap::tileMap)
 //*************************************************
 class eMap : public eClass {
 public:
 
-	bool												Init();
-	void												Draw();
-	void												DebugDraw();
-	bool												LoadMap(const char * mapFilename);
-	void												UnloadMap();
-	tile_map_t &										TileMap();
+	bool													Init();
+	void													EntityThink();
+	void													Draw();
+	void													DebugDraw();
+	bool													LoadMap(const char * mapFilename);
+	void													UnloadMap();
+	tile_map_t &											TileMap();
+	const tile_map_t &										TileMap() const;
+	void													SetViewCamera(eCamera * newViewCamera);
+	eCamera * const											GetViewCamera();
 
-	const std::vector<eGridCell *> &					VisibleCells();
-	const std::array<std::pair<eBounds, eVec2>, 4>	&	EdgeColliders() const;
-	const eBounds &										AbsBounds() const;
+	int														AddEntity(std::unique_ptr<eEntity> && entity);
+	void													RemoveEntity(int entityID);
+	void													ClearAllEntities();
+	std::unique_ptr<eEntity> &								GetEntity(int entityID);
+	int														NumEntities() const;
 
-	virtual int											GetClassType() const override				{ return CLASS_MAP; }
-	virtual bool										IsClassType(int classType) const override	{ 
-															if(classType == CLASS_MAP) 
-																return true; 
-															return eClass::IsClassType(classType); 
-														}
+	const std::vector<eGridCell *> &						VisibleCells() const;
+	const std::array<std::pair<eBounds, eVec2>, 4>	&		EdgeColliders() const;
+	const eBounds &											AbsBounds() const;
+
+	virtual int												GetClassType() const override				{ return CLASS_MAP; }
+	virtual bool											IsClassType(int classType) const override	{ 
+																if(classType == CLASS_MAP) 
+																	return true; 
+																return eClass::IsClassType(classType); 
+															}
 
 private:
 
-	tile_map_t											tileMap;
-	std::vector<eGridCell *>							visibleCells;		// the cells currently within the camera's view
-	std::array<std::pair<eBounds, eVec2>, 4>			edgeColliders;		// for collision tests against map boundaries (0: left, 1: right, 2: top, 3: bottom)
-	eBounds												absBounds;			// for collision tests using AABBContainsAABB 
+	void													ConfigureEntity(int newSpawnID, eEntity * entity);
+
+private:
+
+	eCamera *												viewCamera;			// used to clip the visibleCells before drawing to the main render target (see also eGame::renderer)
+	tile_map_t												tileMap;			// owns all eTile gameObjects and tracks eRenderImages and eCollisionModels positions (ie: combined renderWorld and collisionWorld)
+	std::vector<std::unique_ptr<eEntity>>					entities;			// all entities owned by *this
+	std::vector<eGridCell *>								visibleCells;		// the cells currently within the camera's view
+	std::array<std::pair<eBounds, eVec2>, 4>				edgeColliders;		// for collision tests against map boundaries (0: left, 1: right, 2: top, 3: bottom)
+	eBounds													absBounds;			// for collision tests using AABBContainsAABB 
 };
 
 //**************
@@ -75,9 +92,16 @@ inline tile_map_t & eMap::TileMap() {
 }
 
 //**************
+// eMap::TileMap
+//**************
+inline const tile_map_t & eMap::TileMap() const {
+	return tileMap;
+}
+
+//**************
 // eMap::VisibleCells
 //**************
-inline const std::vector<eGridCell *> & eMap::VisibleCells() {
+inline const std::vector<eGridCell *> & eMap::VisibleCells() const {
 	return visibleCells;
 }
 
@@ -93,6 +117,20 @@ inline const std::array<std::pair<eBounds, eVec2>, 4> & eMap::EdgeColliders() co
 //**************
 inline const eBounds & eMap::AbsBounds() const {
 	return absBounds;
+}
+
+//**************
+// eMap::SetViewCamera
+//**************
+inline void eMap::SetViewCamera(eCamera * newViewCamera) {
+	viewCamera = newViewCamera;
+}
+
+//**************
+// eMap::GetViewCamera
+//**************
+inline eCamera * const eMap::GetViewCamera() {
+	return viewCamera;
 }
 
 #endif /* EVIL_MAP_H */
