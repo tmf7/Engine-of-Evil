@@ -1,0 +1,44 @@
+8/21/2017 3:26pm TF
+
+
+-- highlight collision bounds and pathfinding (trails, goals, knownmap)
+
+-- build a small map, save it to a file (and load)
+-- save out a map file to rebuild the 2d array (# key resources, then #/index)
+
+-- add more tile types (add layers, order in layer, and tie breaker y-coord)
+
+- spawn multiple entities at different locations (saved to a file)
+
+-- change sprite to specifically scripted animation
+
+- soundManager (load audio clips and music, see HaltCatchFire's SoundManager.cs)
+
+- gamestateManager
+
+
+---------------------------------------------
+isoblock sort works only if:
+1) blocks do not inter-penetrate (in 3D space)
+2) each renderImage has a block (or blocks?) that suits its size/shape (note: a skinny tree w/big top works [visual-logic-wise] using single 8x8ximageHeight renderBlock)
+
+problems:
+1) tiles/entities without collision will inter-penetrate (eg: walking on a pile of bricks looks bad)
+2) everything must have a 3D "renderBlock", regardless of its collision geometry and be tested as such
+
+performance:
+1) static items' global sort order can be cached
+2) dynamic items can be given pritority based on the drawn items its image overlaps (and insertion sorted)
+
+
+design rules:
+1*) tailor renderBlocks and collision bounds to each image size/shape (smaller/single-tile images have fewer edge cases crop up)
+2) open static floorplan (ie don't obscure the player if increasing depth/height up stairs/hills), to prevent cyclical renderBox ordering
+3?) put flat static items that rest above some floor/layer on their own layer (eg: pile of bricks, or flat plant in grass)
+4) arrange collision boxes/lines (and triggers) to prevent critical inter-pentration/overlap situations (eg dungeon staircase w/bannister)
+5) design tileset images to layer nicely (eg: by cutouts) instead of tweaking the renderBlock positions in engine to get the desired layer visuals
+
+ALSO: handle transitions between layers by tagging specific cells/tiles as "transitional",
+such that they visually affect the eEntity movement (ie: the illusion of walking up/down a slope), 
+and change renderBlock.z according to its given "slope" and "normals" for travel NSEW
+(always set the eEntity.renderBlock.z == whatever the "floor" tile's renderBlock.z is + 1 ==> which cell layer is the floor?)

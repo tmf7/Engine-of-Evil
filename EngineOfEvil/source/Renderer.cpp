@@ -129,7 +129,7 @@ void eRenderer::DrawOutlineText(eRenderTarget * target, const char * text, eVec2
 		SDL_SetTextureBlendMode(renderedText, SDL_BLENDMODE_BLEND);
 	}
 	
-	point -= target->origin;		// FIXME(?): used to be camera.absBounds[0], which may be a problem because the absBounds is centered on 0,0 originally....
+	point -= target->origin;
 	point.SnapInt();
 	SDL_Rect dstRect = { (int)point.x, (int)point.y, 0, 0 };
 	SDL_QueryTexture(renderedText, NULL, NULL, &dstRect.w, &dstRect.h);
@@ -254,10 +254,28 @@ void eRenderer::DrawCartesianRect(eRenderTarget * target, const SDL_Color & colo
 // DEBUG: immediatly draws to the currently assigned render target
 //***************
 void eRenderer::DrawImage(eRenderImage * renderImage) const {
+	if (renderImage->targetSrcRect == renderImage->srcRect && !renderImage->srcRects.empty()) {
+		renderImage->targetSrcRect = &renderImage->srcRects.front();
+	} else {
+		renderImage->targetSrcRect = renderImage->srcRect;
+	}
+
+//	eVec2 srcRectOrigin((float)renderImage->srcRect->x, (float)renderImage->srcRect->y);
+//	eVec2 tgtRectOrigin((float)renderImage->targetSrcRect->x, (float)renderImage->targetSrcRect->y);
+
+	// FIXME(?): account for the offset/size of the smaller srcRect
+	// FIXME(!): sometimes the overlap is literally just a line (no width/height), so in those cases IGNORE the draw-order shenanigans
 	eVec2 drawPoint = renderImage->origin - currentRenderTarget->origin;
 	drawPoint.SnapInt();
-	renderImage->dstRect = { (int)drawPoint.x, (int)drawPoint.y, renderImage->srcRect->w, renderImage->srcRect->h };
-	SDL_RenderCopy(internal_renderer, renderImage->image->Source(), renderImage->srcRect, &renderImage->dstRect);
+	renderImage->dstRect = { (int)drawPoint.x, (int)drawPoint.y, renderImage->targetSrcRect->w, renderImage->targetSrcRect->h };
+	SDL_RenderCopy(internal_renderer, renderImage->image->Source(), renderImage->targetSrcRect, &renderImage->dstRect);
+
+	if (!renderImage->srcRects.empty() && renderImage->targetSrcRect != &renderImage->srcRects.back()) {
+		renderImage->targetSrcRect++;
+	} else {									// the last srcRect is being drawn
+		renderImage->targetSrcRect = nullptr;	// setup for the next camera to re-calculate any different srcRects and iterate those (or just for the next frame)
+		renderImage->srcRects.clear();		
+	}
 }
 
 //***************
@@ -403,7 +421,7 @@ void eRenderer::VisitTopologicalNode(eRenderImage * renderImage) {
 			renderImage->allBehind.pop_back();
 		}
 		renderImage->priority = (float)globalDrawDepth++;
-		renderImage->allBehind.clear();
+		renderImage->allBehind.clear();						// FIXME: redundant?
 	}
 }
 
@@ -450,26 +468,35 @@ void eRenderer::FlushCameraPool(eCamera * registeredCamera) {
 
 // FREEHILL BEGIN 3d topological sort
 	TopologicalDrawDepthSort(cameraPoolInserts);	// assign a "localDrawDepth" priority amongst the cameraPoolInserts
-	float newPriorityMin = 0.0f;
 	for (auto & imageToInsert : cameraPoolInserts) {
-		float newPriorityMax = 0.0f;
+		bool firstBehind = false;
 
-		// minize time sent re-sorting static renderImages and just insert the dynamic ones
-		auto & iter = cameraPool.begin();
-		for (/*iter*/; iter != cameraPool.end() ; ++iter) {
+		// minimize time sent re-sorting static renderImages and just insert the dynamic ones
+		for (auto & iter = cameraPool.begin(); iter != cameraPool.end() ; ++iter) {
 			if (eCollision::AABBAABBTest(imageToInsert->worldClip, (*iter)->worldClip)) {	
 				if (eCollision::IsAABB3DInIsometricFront(imageToInsert->renderBlock, (*iter)->renderBlock)) {
-					newPriorityMin = (*iter)->priority;
-				} else {
-					newPriorityMax = (*iter)->priority;
-					break;
-				}
+					if (firstBehind) {
+						imageToInsert->srcRects.emplace_back( imageToInsert->GetOverlapImageFrame( (*iter)->worldClip ) );
+
+						// insert after what's behind
+						if (iter != std::prev(cameraPool.end()))
+							cameraPool.emplace(std::next(iter), imageToInsert);
+						else
+							cameraPool.emplace_back(imageToInsert);
+					}
+				} else if (!firstBehind) { // imageToInsert is behind *iter, insert before it
+					cameraPool.emplace(iter, imageToInsert);
+					firstBehind = true;
+				}												
 			}
 		}
-		float newPriority = (newPriorityMin + newPriorityMax) * 0.5f;
-		imageToInsert->priority = newPriority;		// needed in the event this renderImage goes straight to dynamicPool next frame
-		cameraPool.emplace(iter, imageToInsert);
-		newPriorityMin = newPriority;
+
+		// FIXME: if imageToInsert is never behind anything it never gets inserted
+		// FIXME/BUG: weird flicker when moving around in non-cycle areas (except cant stop in a place where the sprite just doesn't draw)
+		// ...its possible the srcRects gets a weird/small/shifted rect added to it
+		if (!firstBehind)
+			cameraPool.emplace_back(imageToInsert);
+
 	}
 // FREEHILL END 3d topological sort
 

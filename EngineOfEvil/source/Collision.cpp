@@ -368,7 +368,7 @@ eBounds eCollision::GetBroadPhaseBounds(const eBounds & bounds, const eVec2 & di
 // DEBUG: includes touching in X and Y, but not Z
 // DEBUG: x increases visually down-right, y increases visually down-left, z increases visually straight up the screen
 // DEBUG: self defaults to behind other if no separating axis exists
-// FIXME: add cases for inter-penetration
+// FIXME(?): add cases for inter-penetration
 //***************
 bool eCollision::IsAABB3DInIsometricFront(const eBounds3D & self, const eBounds3D & other) {
 	Uint8 separatingAxis = 0;

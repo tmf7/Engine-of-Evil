@@ -57,6 +57,7 @@ public:
 	void										SetImage(int imageManagerIndex);
 	void										SetImageFrame(int subframeIndex);
 	const SDL_Rect *							GetImageFrame() const;
+	SDL_Rect									GetOverlapImageFrame(const eBounds & otherWorldClip) const;
 	void										SetOrigin(const eVec2 & newOrigin);
 	const eVec2 &								Origin() const;
 	const eVec2 &								Offset() const;
@@ -87,7 +88,14 @@ private:
 
 private:
 
+	std::vector<SDL_Rect>						srcRects;						// used by non-static eGameObjects with tall or transitional z-value renderBlocks to resolve draw-order cycles (eg: pile of blocks w/partial in-front partial in-back drawing)
+	std::vector<eRenderTarget *>				drawnTo;						// prevent attempts to draw this more than once per renderTarget per frame
+	std::vector<eRenderImage *>					allBehind;						// topological sort
+	std::vector<eGridCell *>					areas;							// the gridcells responsible for drawing *this
 	std::shared_ptr<eImage>						image			= nullptr;		// source image (ie texture wrapper)
+	eBounds3D									renderBlock;					// determines draw order of visible images
+	eBounds										worldClip;						// dstRect in world space (ie: not adjusted with camera position yet) used for occlusion tests
+	const SDL_Rect *							targetSrcRect	= nullptr;		// which of either srcRects or srcRect *this should use during eRenderer::DrawImage
 	const SDL_Rect *							srcRect			= nullptr;		// what part of the source image to draw (nullptr for all of it)
 	SDL_Rect									dstRect;						// SDL consumable cliprect, where on the screen (adjusted with camera position)
 	eVec2										origin;							// top-left corner of image using world coordinates (not adjusted with camera position)
@@ -95,12 +103,7 @@ private:
 	eVec2										orthoOriginOffset;				// offset from (eGameObject)owner::orthoOrigin (default: (0,0))
 	float										priority;						// determined during topological sort, lower priority draws first
 	Uint32										lastDrawnTime	= 0;			// allows the drawnTo vector to be cleared before *this is drawn the first time during a frame
-	std::vector<eRenderTarget *>				drawnTo;						// prevent attempts to draw this more than once per renderTarget per frame
-	std::vector<eGridCell *>					areas;							// the gridcells responsible for drawing *this
 	bool										isSelectable	= false;		// if this should added to all eGridCells its worldClip overlaps, or just its corners
-	eBounds										worldClip;						// dstRect in world space (ie: not adjusted with camera position yet) used for occlusion tests
-	eBounds3D									renderBlock;					// determines draw order of visible images
-	std::vector<eRenderImage *>					allBehind;						// topological sort
 	bool										visited			= false;		// topological sort
 };
 

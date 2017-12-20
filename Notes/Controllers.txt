@@ -1,0 +1,44 @@
+
+
+controller has initial state, user-defined parameters trigger transitions to new states (made up of animation clips and other AnimationState data)
+
+parameters types (int, float, bool, trigger[hits once then resets after transition]) control transitions
+
+allow user to cache string hashes (use a static animCont method, and have animCont store a list of string hashes at load time)
+
+animation-override-controller: uses the same state machine of a eAnimationController, but swaps out the eAnimation clips
+
+
+---------------------------------------------------------
+AnimationState:		(in unity they can have a blend tree of multiple animation clips)
+---------------------
+clip (which animation)
+name
+nameHash
+wrapMode (if it should loop when animationState.time > duration :: once, loop, pingpong)
+speed (multiplier for clip progression)
+time	(+= frameTime)
+duration (ms == clipDuration * speed)
+loop (once, loop, pingpong when stateTime > duration)
+normalizedTime (current point in state/animation, stateTime / stateDuration; normTime >= clip.nextFrameNormTime ==> switch to that )
+
+AnimationTransition: (from calling eAnimationController::GetTransitionInfo)~
+------------------------
+anyState (true if transition is from previousState == "AnyState" state/node)
+previousState
+nextState
+(trigger_if CONTROLLER_params_values == TRANSITION_params_values)
+(one state can have more than one or two transitions, so check them all)
+name
+namehash
+
+AnimationController:
+--------------------
+GetTransitionInfo (takes int layer param...doesn't seem to grab the current transition like currentstate info does... is transition a type of AnimationState???)
+GetCurrentStateInfo
+GetParam (paramStringName_OrHash)
+SetParam (paramStringName_OrHash, value)
+IsInTransition
+speed (multiplies all state durations by this, global affector)
+
+

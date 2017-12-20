@@ -42,6 +42,22 @@ void eRenderImage::SetImage(int imageManagerIndex) {
 	image = game->GetImageManager().GetByResourceID(imageManagerIndex);
 }
 
+//*************
+// eRenderImage::GetOverlapImageFrame
+// intersects this->worldClip with otherWorldClip
+// and returns the ImageFrame needed to draw a sub-section of the current ImageFrame
+// DEBUG: at most a copy of the original ImageFrame would be returned
+//*************
+SDL_Rect eRenderImage::GetOverlapImageFrame(const eBounds & otherWorldClip) const {
+	eBounds subRect = worldClip.Intersect(otherWorldClip);
+	eVec2 srcRectOrigin((float)srcRect->x, (float)srcRect->y);
+	subRect.TranslateSelf(srcRectOrigin - origin);					// worldClip[0]
+	return SDL_Rect { eMath::NearestInt( subRect [ 0 ].x ) , 
+					  eMath::NearestInt( subRect [ 0 ].y ) , 
+					  eMath::NearestInt( subRect.Width ( ) ) , 
+					  eMath::NearestInt( subRect.Height ( ) ) };
+}
+
 //************
 // eRenderImage::UpdateRenderBlock
 // snaps the renderblock minimum z value according to owner::worldlayer, and

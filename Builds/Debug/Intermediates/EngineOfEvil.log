@@ -3,6 +3,7 @@
   Tile.cpp
   StateNode.cpp
   Renderer.cpp
+  RenderTarget.cpp
   RenderImage.cpp
   Player.cpp
   Movement.cpp
@@ -12,18 +13,20 @@
   GameObject.cpp
   GameLocal.cpp
   Game.cpp
+c:\users\tom\desktop\engineofevil\engineofevil\source\game.cpp(40): warning C4390: ';': empty controlled statement found; is this the intent?
   EntityPrefabManager.cpp
   Entity.cpp
   CreateEntityPrefabStrategies.cpp
   CollisionModel.cpp
   Collision.cpp
-  Camera.cpp
   Generating Code...
   Compiling...
+  Camera.cpp
   BlendState.cpp
   AnimationState.cpp
   AnimationManager.cpp
   AnimationControllerManager.cpp
   AnimationController.cpp
   Generating Code...
+  LINK : C:\Users\Tom\Desktop\EngineOfEvil\\Builds\Debug\EngineOfEvil.exe not found or not built by the last incremental link; performing full link
   EngineOfEvil.vcxproj -> C:\Users\Tom\Desktop\EngineOfEvil\\Builds\Debug\EngineOfEvil.exe

@@ -1,0 +1,12 @@
+# use Editor ofEvil to pull x: y: width: height ints from unity .meta files
+eg: Jog_0(14,60,111)_13
+   x: 1264
+     y: 3
+        width: 88
+        height: 122
+
+
+# merge the .tmx file import logic into Editor of Evil
+
+# add a UI eAnimationController builder that exports the state maching to a EngineOfEvil consumable text file
+

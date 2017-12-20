@@ -56,7 +56,6 @@ public:
 	bool								UnregisterCamera(eCamera * camera);
 	void								UnregisterAllCameras();
 	int									NumRegisteredCameras() const;
-	bool								CheckDrawnStatus(eRenderTarget * renderTarget, eRenderImage * renderImage) const; 
 	bool								AddToCameraRenderPool(eCamera * registeredCamera, eRenderImage * renderImage);
 	bool								AddToOverlayRenderPool(eRenderImage * renderImage);
 	void								Flush();
@@ -82,6 +81,7 @@ public:
 
 private:
 
+	bool								CheckDrawnStatus(eRenderTarget * renderTarget, eRenderImage * renderImage) const; 
 	void								SetRenderTarget(eRenderTarget *);
 	void								FlushCameraPool(eCamera * registeredCamera);
 	void								FlushOverlayPool();

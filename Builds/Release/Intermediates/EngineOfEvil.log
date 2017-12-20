@@ -1,32 +1,7 @@
-﻿  AnimationController.cpp
-  AnimationControllerManager.cpp
-  AnimationManager.cpp
-  AnimationState.cpp
-  BlendState.cpp
-  Camera.cpp
-  Collision.cpp
-  CollisionModel.cpp
-  CreateEntityPrefabStrategies.cpp
-  Entity.cpp
-  EntityPrefabManager.cpp
-  Game.cpp
-  GameLocal.cpp
-  GameObject.cpp
-  GridCell.cpp
-  ImageManager.cpp
-  Map.cpp
-  Movement.cpp
-  Player.cpp
-  RenderImage.cpp
-  Compiling...
-  Renderer.cpp
-  StateNode.cpp
-  Tile.cpp
-  main.cpp
-  sHero.cpp
+﻿  Renderer.cpp
   Generating code
-  0 of 4665 functions ( 0.0%) were compiled, the rest were copied from previous compilation.
+  4 of 4680 functions ( 0.1%) were compiled, the rest were copied from previous compilation.
     0 functions were new in current compilation
-    12 functions had inline decision re-evaluated but remain unchanged
+    10 functions had inline decision re-evaluated but remain unchanged
   Finished generating code
   EngineOfEvil.vcxproj -> C:\Users\Tom\Desktop\EngineOfEvil\\Builds\Release\EngineOfEvil.exe
