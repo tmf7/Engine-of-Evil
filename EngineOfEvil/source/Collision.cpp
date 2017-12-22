@@ -372,9 +372,9 @@ eBounds eCollision::GetBroadPhaseBounds(const eBounds & bounds, const eVec2 & di
 //***************
 bool eCollision::IsAABB3DInIsometricFront(const eBounds3D & self, const eBounds3D & other) {
 	Uint8 separatingAxis = 0;
-	if (self[1][0] <= other[0][0] || self[0][0] >= other[1][0]) separatingAxis |= 1;
-	if (self[1][1] <= other[0][1] || self[0][1] >= other[1][1]) separatingAxis |= 2;
-	if (self[1][2] < other[0][2] || self[0][2] > other[1][2]) separatingAxis |= 4;
+	if (self[1][0] <= other[0][0] || self[0][0] >= other[1][0]) separatingAxis |= 1;		// x-axis
+	if (self[1][1] <= other[0][1] || self[0][1] >= other[1][1]) separatingAxis |= 2;		// y-axis
+	if (self[1][2] < other[0][2] || self[0][2] > other[1][2]) separatingAxis |= 4;			// z-axis
 
 	// prioritize z-axis tests (z, xz, yz, xyz)
 	if (separatingAxis & 4)
@@ -382,9 +382,9 @@ bool eCollision::IsAABB3DInIsometricFront(const eBounds3D & self, const eBounds3
 
 	// test remaining axes (x, y, xy)
 	switch (separatingAxis) {
-		case 1: return !(self[1][0] < other[1][0]);	// x
-		case 2: return !(self[1][1] < other[1][1]);	// y
-		case 3: return (!(self[1][0] < other[1][0])); // xy defaults to x instead of x | y
+		case 1: return !(self[1][0] < other[1][0]);		// x
+		case 2: return !(self[1][1] < other[1][1]);		// y
+		case 3: return !(self[1][0] < other[1][0]);		// xy defaults to x instead of x | y
 		default: return false;	// error: inter-penetrating boxes
 	}
 }

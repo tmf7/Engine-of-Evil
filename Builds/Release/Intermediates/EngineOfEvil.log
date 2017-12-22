@@ -1,7 +1,32 @@
-﻿  Renderer.cpp
+﻿  AnimationController.cpp
+  AnimationControllerManager.cpp
+  AnimationManager.cpp
+  AnimationState.cpp
+  BlendState.cpp
+  Camera.cpp
+  Collision.cpp
+  CollisionModel.cpp
+  Entity.cpp
+  EntityPrefabManager.cpp
+  Game.cpp
+source\Game.cpp(40): warning C4390: ';': empty controlled statement found; is this the intent?
+  GameLocal.cpp
+  GameObject.cpp
+  GridCell.cpp
+  ImageManager.cpp
+  Map.cpp
+  Movement.cpp
+  Player.cpp
+  RenderImage.cpp
+  Renderer.cpp
+  Compiling...
+  StateNode.cpp
+  Tile.cpp
+  main.cpp
+  sHero.cpp
   Generating code
-  4 of 4680 functions ( 0.1%) were compiled, the rest were copied from previous compilation.
+  8 of 4681 functions ( 0.2%) were compiled, the rest were copied from previous compilation.
     0 functions were new in current compilation
-    10 functions had inline decision re-evaluated but remain unchanged
+    18 functions had inline decision re-evaluated but remain unchanged
   Finished generating code
   EngineOfEvil.vcxproj -> C:\Users\Tom\Desktop\EngineOfEvil\\Builds\Release\EngineOfEvil.exe

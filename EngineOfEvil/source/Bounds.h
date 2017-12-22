@@ -301,7 +301,7 @@ inline void eBounds::ToPoints(eVec2 points[4]) const {
 
 //*************
 // eBounds::Intersect
-// returns the eBounds shared between this and a (includes touching)
+// returns the eBounds shared between this and param a (includes touching)
 //*************
 inline eBounds eBounds::Intersect(const eBounds & a) const {
 	eBounds intersection;

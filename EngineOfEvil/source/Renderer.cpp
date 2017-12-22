@@ -254,27 +254,35 @@ void eRenderer::DrawCartesianRect(eRenderTarget * target, const SDL_Color & colo
 // DEBUG: immediatly draws to the currently assigned render target
 //***************
 void eRenderer::DrawImage(eRenderImage * renderImage) const {
-	if (renderImage->targetSrcRect == renderImage->srcRect && !renderImage->srcRects.empty()) {
-		renderImage->targetSrcRect = &renderImage->srcRects.front();
-	} else {
-		renderImage->targetSrcRect = renderImage->srcRect;
+	auto & targetSrcRect = renderImage->targetSrcRect;
+	auto & mainSrcRect = renderImage->srcRect;
+	auto & srcRects = renderImage->srcRects;
+
+	if (targetSrcRect == mainSrcRect && !srcRects.empty()) {
+		targetSrcRect = &srcRects.front();
+	} else if (targetSrcRect == nullptr) {	
+		targetSrcRect = mainSrcRect;
 	}
 
-//	eVec2 srcRectOrigin((float)renderImage->srcRect->x, (float)renderImage->srcRect->y);
-//	eVec2 tgtRectOrigin((float)renderImage->targetSrcRect->x, (float)renderImage->targetSrcRect->y);
+	// FIXME: cache these values, and/or only use them during srcRects assignments
+	eVec2 srcRectOrigin((float)renderImage->srcRect->x, (float)renderImage->srcRect->y);
+	eVec2 tgtRectOrigin((float)renderImage->targetSrcRect->x, (float)renderImage->targetSrcRect->y);
+	auto diff = tgtRectOrigin - srcRectOrigin;
 
-	// FIXME(?): account for the offset/size of the smaller srcRect
-	// FIXME(!): sometimes the overlap is literally just a line (no width/height), so in those cases IGNORE the draw-order shenanigans
-	eVec2 drawPoint = renderImage->origin - currentRenderTarget->origin;
+	// account for the offset/size of the smaller srcRect
+	eVec2 drawPoint = renderImage->origin + diff - currentRenderTarget->origin;
 	drawPoint.SnapInt();
-	renderImage->dstRect = { (int)drawPoint.x, (int)drawPoint.y, renderImage->targetSrcRect->w, renderImage->targetSrcRect->h };
-	SDL_RenderCopy(internal_renderer, renderImage->image->Source(), renderImage->targetSrcRect, &renderImage->dstRect);
+	renderImage->dstRect = { (int)drawPoint.x, (int)drawPoint.y, targetSrcRect->w, targetSrcRect->h };
+	SDL_RenderCopy(internal_renderer, renderImage->image->Source(), targetSrcRect, &renderImage->dstRect);
 
-	if (!renderImage->srcRects.empty() && renderImage->targetSrcRect != &renderImage->srcRects.back()) {
-		renderImage->targetSrcRect++;
-	} else {									// the last srcRect is being drawn
-		renderImage->targetSrcRect = nullptr;	// setup for the next camera to re-calculate any different srcRects and iterate those (or just for the next frame)
-		renderImage->srcRects.clear();		
+	// the last srcRect is being drawn
+	// setup for the next camera to re-calculate any different srcRects and iterate those (or just for the next frame)
+	if ((targetSrcRect == mainSrcRect && srcRects.empty()) ||
+		targetSrcRect == &srcRects.back()) {
+		targetSrcRect = nullptr;	
+		srcRects.clear();		
+	} else if (targetSrcRect != mainSrcRect) { // srcRects memory addresses							
+		targetSrcRect++;																			
 	}
 }
 
@@ -436,7 +444,7 @@ void eRenderer::Flush() {
 	}
 
 	// transfer cameras (and their debugs') info to the main render texture
-	// FIXME: determine a simple sorting order for camera textures, back-to-front
+	// TODO: determine a simple sorting order for camera textures, back-to-front
 	// possibly use a renderTarget::origin.z value
 	SetRenderTarget(&defaultOverlayTarget);
 	for (auto && camera : registeredCameras)
@@ -471,21 +479,39 @@ void eRenderer::FlushCameraPool(eCamera * registeredCamera) {
 	for (auto & imageToInsert : cameraPoolInserts) {
 		bool firstBehind = false;
 
-		// minimize time sent re-sorting static renderImages and just insert the dynamic ones
-		for (auto & iter = cameraPool.begin(); iter != cameraPool.end() ; ++iter) {
+		// minimize time spent re-sorting static renderImages and just insert the dynamic ones
+		for (auto & iter = cameraPool.begin(); iter != cameraPool.end(); ++iter) {
+
 			if (eCollision::AABBAABBTest(imageToInsert->worldClip, (*iter)->worldClip)) {	
 				if (eCollision::IsAABB3DInIsometricFront(imageToInsert->renderBlock, (*iter)->renderBlock)) {
-					if (firstBehind) {
-						imageToInsert->srcRects.emplace_back( imageToInsert->GetOverlapImageFrame( (*iter)->worldClip ) );
+					
+					// FIXME: this 2nd condition solves the "low-bricks in front of wall" issue
+					// but is still a problem if a tall entity (bArcher) steps on/near the bricks in front of a smaller entity behind the wall (sHero)
+					// SOLUTION: focus on the math behind a REACH up past the other RB
+					// FIXME: the reach-range check works better, except the bArcher main doesn't draw on the left wall in some positions
+					// and bArcher behind the wall-break messes with sHeros in front of the wall (ie: draws them before the bricks, or even the wall)
+					if (firstBehind && (imageToInsert->renderBlock[0].z < (*iter)->renderBlock[0].z && imageToInsert->renderBlock[1].z > (*iter)->renderBlock[0].z)) {
+						SDL_Rect newSrcRect = imageToInsert->GetOverlapImageFrame( (*iter)->worldClip );
 
-						// insert after what's behind
-						if (iter != std::prev(cameraPool.end()))
-							cameraPool.emplace(std::next(iter), imageToInsert);
-						else
-							cameraPool.emplace_back(imageToInsert);
+						if (!SDL_RectEmpty(&newSrcRect)) {
+							imageToInsert->srcRects.emplace_back( std::move(newSrcRect) );
+
+							// insert after what's behind
+							if (iter == std::prev(cameraPool.end())) {
+								cameraPool.emplace_back(imageToInsert);				// FIXME/BUG: invalidates past-the-end iterator
+								break;
+							} else {
+								auto oldIter = iter++;
+								cameraPool.emplace(iter, imageToInsert);			// FIXME/BUG: invalidates iter, and going backwards may make iter hit the thing that was just inserted (behind itself)
+								iter = ++oldIter;
+							}
+						}
 					}
-				} else if (!firstBehind) { // imageToInsert is behind *iter, insert before it
-					cameraPool.emplace(iter, imageToInsert);
+
+				} else if (!firstBehind) { // insert before what's in front
+					auto oldIter = std::prev(iter);
+					cameraPool.emplace(iter, imageToInsert);						// FIXME/BUG: invalidates iter
+					iter = ++oldIter;
 					firstBehind = true;
 				}												
 			}

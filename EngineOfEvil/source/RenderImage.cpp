@@ -52,10 +52,10 @@ SDL_Rect eRenderImage::GetOverlapImageFrame(const eBounds & otherWorldClip) cons
 	eBounds subRect = worldClip.Intersect(otherWorldClip);
 	eVec2 srcRectOrigin((float)srcRect->x, (float)srcRect->y);
 	subRect.TranslateSelf(srcRectOrigin - origin);					// worldClip[0]
-	return SDL_Rect { eMath::NearestInt( subRect [ 0 ].x ) , 
-					  eMath::NearestInt( subRect [ 0 ].y ) , 
-					  eMath::NearestInt( subRect.Width ( ) ) , 
-					  eMath::NearestInt( subRect.Height ( ) ) };
+	return SDL_Rect { eMath::NearestInt( subRect[0].x ) , 
+					  eMath::NearestInt( subRect[0].y ) , 
+					  eMath::NearestInt( subRect.Width() ) , 
+					  eMath::NearestInt( subRect.Height() ) };
 }
 
 //************

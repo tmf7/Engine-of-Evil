@@ -198,7 +198,7 @@ bool eImageManager::LoadAndGet(const char * resourceFilename, std::shared_ptr<eI
 
 	int accessInt = 0;
 	SDL_TextureAccess accessType;
-	read >> accessInt;
+	read >> accessInt;															// SDL texture access type
 	if (!VerifyRead(read))
 		return false;
 

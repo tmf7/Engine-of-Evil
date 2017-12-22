@@ -338,7 +338,7 @@ void eMap::Draw() {
 /*
 		// use the corner cells of the camera to designate the draw area
 		// same speed in Release, several ms slower in debug
-		auto & camBounds = camera.CollisionModel().AbsBounds();
+		auto & camBounds = viewCamera->AbsBounds();
 		eVec2 corner = camBounds[0];
 		eVec2 xAxis(camBounds[1].x, camBounds[0].y);
 		eVec2 yAxis(camBounds[0].x, camBounds[1].y);
@@ -346,7 +346,6 @@ void eMap::Draw() {
 		for (auto & point : obbPoints) { eMath::IsometricToCartesian(point.x, point.y); }
 		eBox cameraArea(obbPoints.data());
 		eCollision::GetAreaCells(this, cameraArea, visibleCells);
-	}
 */
 		// use the corner cells of the camera to designate the draw area
 		const auto & camBounds = viewCamera->AbsBounds();
