@@ -37,6 +37,10 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 class eInput : public eClass {
 public:
 
+	friend class eGame;
+
+public:
+
 						eInput();
 						eInput(const eInput & other) = delete;
 						eInput(eInput && other) = delete;
@@ -58,6 +62,7 @@ public:
 	bool				MouseMoved() const;
 	int					GetMouseX() const;
 	int					GetMouseY() const;
+	int					GetMouseScroll() const;
 	void				HideCursor(bool hide = true) const;
 
 	virtual int			GetClassType() const override				{ return CLASS_INPUT; }
@@ -69,6 +74,11 @@ public:
 
 private:
 
+	void				PollEvents();
+	void				SetMouseWheelState(int wheelDirection);
+
+private:
+
 	Uint8 *				keys;
 	Uint8 *				prevKeys;
 	int					numKeys;
@@ -77,6 +87,7 @@ private:
 	int					prevMouseButtons[3];
 	int					mouseX;
 	int					mouseY;
+	int					mouseScroll;
 	int					oldMouseX;
 	int					oldMouseY;
 };

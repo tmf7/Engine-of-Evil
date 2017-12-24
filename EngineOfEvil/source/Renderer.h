@@ -51,7 +51,6 @@ public:
 	SDL_Renderer * const				GetSDLRenderer() const;
 	SDL_Window * const					GetWindow() const;
 
-	void								PollEvents() const;
 	bool								RegisterCamera(eCamera * newCamera);
 	bool								UnregisterCamera(eCamera * camera);
 	void								UnregisterAllCameras();

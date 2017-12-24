@@ -63,7 +63,7 @@ public:
 private:
 
 	static const int								invalidTileType = -1;
-	static const int								maxTileTypes = 256;
+	static const int								maxTileTypes = 1024;
 	static std::vector<std::pair<int, int>>			tileSet;		// first == index within eImageManager::resourceList; second == eImage subframe index;
 	static std::array<eTileImpl, maxTileTypes>		tileTypes;
 	

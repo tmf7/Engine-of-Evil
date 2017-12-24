@@ -75,19 +75,6 @@ bool eRenderer::Init(const char * name, int windowWidth, int windowHeight) {
 }
 
 //***************
-// eRenderer::PollEvents
-// polls all events in the current window/rendering context
-// TODO: allow different callbacks for different events (eg: MOUSE_PRESSED, etc)
-//***************
-void eRenderer::PollEvents() const {
-	SDL_Event event;
-	while (SDL_PollEvent(&event)) {
-		if (event.type == SDL_QUIT)
-			game->Stop();
-	}
-}
-
-//***************
 // eRenderer::Shutdown
 // close the font and destroy the window
 //***************
@@ -254,36 +241,10 @@ void eRenderer::DrawCartesianRect(eRenderTarget * target, const SDL_Color & colo
 // DEBUG: immediatly draws to the currently assigned render target
 //***************
 void eRenderer::DrawImage(eRenderImage * renderImage) const {
-	auto & targetSrcRect = renderImage->targetSrcRect;
-	auto & mainSrcRect = renderImage->srcRect;
-	auto & srcRects = renderImage->srcRects;
-
-	if (targetSrcRect == mainSrcRect && !srcRects.empty()) {
-		targetSrcRect = &srcRects.front();
-	} else if (targetSrcRect == nullptr) {	
-		targetSrcRect = mainSrcRect;
-	}
-
-	// FIXME: cache these values, and/or only use them during srcRects assignments
-	eVec2 srcRectOrigin((float)renderImage->srcRect->x, (float)renderImage->srcRect->y);
-	eVec2 tgtRectOrigin((float)renderImage->targetSrcRect->x, (float)renderImage->targetSrcRect->y);
-	auto diff = tgtRectOrigin - srcRectOrigin;
-
-	// account for the offset/size of the smaller srcRect
-	eVec2 drawPoint = renderImage->origin + diff - currentRenderTarget->origin;
+	eVec2 drawPoint = renderImage->origin - currentRenderTarget->origin;
 	drawPoint.SnapInt();
-	renderImage->dstRect = { (int)drawPoint.x, (int)drawPoint.y, targetSrcRect->w, targetSrcRect->h };
-	SDL_RenderCopy(internal_renderer, renderImage->image->Source(), targetSrcRect, &renderImage->dstRect);
-
-	// the last srcRect is being drawn
-	// setup for the next camera to re-calculate any different srcRects and iterate those (or just for the next frame)
-	if ((targetSrcRect == mainSrcRect && srcRects.empty()) ||
-		targetSrcRect == &srcRects.back()) {
-		targetSrcRect = nullptr;	
-		srcRects.clear();		
-	} else if (targetSrcRect != mainSrcRect) { // srcRects memory addresses							
-		targetSrcRect++;																			
-	}
+	renderImage->dstRect = { (int)drawPoint.x, (int)drawPoint.y, renderImage->srcRect->w, renderImage->srcRect->h };
+	SDL_RenderCopy(internal_renderer, renderImage->image->Source(), renderImage->srcRect, &renderImage->dstRect);
 }
 
 //***************
@@ -477,52 +438,21 @@ void eRenderer::FlushCameraPool(eCamera * registeredCamera) {
 // FREEHILL BEGIN 3d topological sort
 	TopologicalDrawDepthSort(cameraPoolInserts);	// assign a "localDrawDepth" priority amongst the cameraPoolInserts
 	for (auto & imageToInsert : cameraPoolInserts) {
-		bool firstBehind = false;
+		bool behindAnotherRenderBlock = false;
 
 		// minimize time spent re-sorting static renderImages and just insert the dynamic ones
 		for (auto & iter = cameraPool.begin(); iter != cameraPool.end(); ++iter) {
-
 			if (eCollision::AABBAABBTest(imageToInsert->worldClip, (*iter)->worldClip)) {	
-				if (eCollision::IsAABB3DInIsometricFront(imageToInsert->renderBlock, (*iter)->renderBlock)) {
-					
-					// FIXME: this 2nd condition solves the "low-bricks in front of wall" issue
-					// but is still a problem if a tall entity (bArcher) steps on/near the bricks in front of a smaller entity behind the wall (sHero)
-					// SOLUTION: focus on the math behind a REACH up past the other RB
-					// FIXME: the reach-range check works better, except the bArcher main doesn't draw on the left wall in some positions
-					// and bArcher behind the wall-break messes with sHeros in front of the wall (ie: draws them before the bricks, or even the wall)
-					if (firstBehind && (imageToInsert->renderBlock[0].z < (*iter)->renderBlock[0].z && imageToInsert->renderBlock[1].z > (*iter)->renderBlock[0].z)) {
-						SDL_Rect newSrcRect = imageToInsert->GetOverlapImageFrame( (*iter)->worldClip );
-
-						if (!SDL_RectEmpty(&newSrcRect)) {
-							imageToInsert->srcRects.emplace_back( std::move(newSrcRect) );
-
-							// insert after what's behind
-							if (iter == std::prev(cameraPool.end())) {
-								cameraPool.emplace_back(imageToInsert);				// FIXME/BUG: invalidates past-the-end iterator
-								break;
-							} else {
-								auto oldIter = iter++;
-								cameraPool.emplace(iter, imageToInsert);			// FIXME/BUG: invalidates iter, and going backwards may make iter hit the thing that was just inserted (behind itself)
-								iter = ++oldIter;
-							}
-						}
-					}
-
-				} else if (!firstBehind) { // insert before what's in front
-					auto oldIter = std::prev(iter);
-					cameraPool.emplace(iter, imageToInsert);						// FIXME/BUG: invalidates iter
-					iter = ++oldIter;
-					firstBehind = true;
+				if (!eCollision::IsAABB3DInIsometricFront(imageToInsert->renderBlock, (*iter)->renderBlock)) {
+					behindAnotherRenderBlock = true;
+					cameraPool.emplace(iter, imageToInsert);
+					break;
 				}												
 			}
 		}
 
-		// FIXME: if imageToInsert is never behind anything it never gets inserted
-		// FIXME/BUG: weird flicker when moving around in non-cycle areas (except cant stop in a place where the sprite just doesn't draw)
-		// ...its possible the srcRects gets a weird/small/shifted rect added to it
-		if (!firstBehind)
+		if (!behindAnotherRenderBlock)
 			cameraPool.emplace_back(imageToInsert);
-
 	}
 // FREEHILL END 3d topological sort
 

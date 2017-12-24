@@ -33,7 +33,7 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 //**************
 bool eMap::Init () {
 	entities.reserve(MAX_ENTITIES);
-	return LoadMap("Graphics/Maps/EvilTown.emap");
+	return LoadMap("Graphics/Maps/EvilTown2.emap");
 }
 
 //**************
@@ -102,7 +102,7 @@ bool eMap::LoadMap(const char * mapFilename) {
 			case 5: read.getline(buffer, sizeof(buffer), '\n'); break;		// tileSet filename
 		}
 
-		read.ignore(std::numeric_limits<std::streamsize>::max(), '\n');		// skip the rest of the line
+		read.ignore(std::numeric_limits<std::streamsize>::max(), '\n');		// skip the rest of the line (BUGFIX: and the # begin layer def comment line)
 		if (!VerifyRead(read))
 			return false;
 	}	
@@ -138,12 +138,15 @@ bool eMap::LoadMap(const char * mapFilename) {
 
 	// READING LAYERS
 	Uint32 layer = 0;
-	read.ignore(std::numeric_limits<std::streamsize>::max(), '\n');			// ignore "Layers {\n"
+	read.ignore(std::numeric_limits<std::streamsize>::max(), '{');			// ignore up past "Layers {"
+	read.ignore(1, '\n');													// ignore the '\n' past '{'
+
 	while (read.peek() != '}') {
 		row = 0;
 		column = 0;
 		size_t tallestRenderBlock = 0;
-		read.ignore(std::numeric_limits<std::streamsize>::max(), '\n');		// ignore "layer_# {\n"
+		read.ignore(std::numeric_limits<std::streamsize>::max(), '{');			// ignore up past "layer_# {"
+		read.ignore(1, '\n');													// ignore the '\n' past '{'
 
 		// read one layer
 		while (read.peek() != '}') {
@@ -177,8 +180,8 @@ bool eMap::LoadMap(const char * mapFilename) {
 				}
 			}
 
-			if (!tileMap.IsValid(row, column))									// TODO: remove this, it's just a backup in case of an excessive .map file
-				return false;
+//			if (!tileMap.IsValid(row, column))									// TODO: remove this, it's just a backup in case of an excessive .map file
+//				return false;
 		}
 
 		read.ignore(std::numeric_limits<std::streamsize>::max(), '\n');			// ignore layer closing brace '}\n'

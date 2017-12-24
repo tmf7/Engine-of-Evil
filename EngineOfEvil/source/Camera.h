@@ -76,10 +76,10 @@ private:
 public:
 
 	// FIXME: load these from engine config file
-	static constexpr const float					zoomSpeed		= 0.1f;
+	static constexpr const float					zoomSpeed		= 0.2f;
 	static constexpr const float					maxZoom			= 2.0f;
-	static constexpr const float					minZoom			= 0.1f;				
-	static constexpr const float					defaultCamSpeed = 10.0f;
+	static constexpr const float					minZoom			= 0.4f;				
+	static constexpr const float					defaultCamSpeed = 20.0f;
 
 private:
 	

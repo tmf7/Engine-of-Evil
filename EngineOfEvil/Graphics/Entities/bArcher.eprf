@@ -4,7 +4,7 @@
 # if there is an animationController then a default/starting spriteFilename, localBounds, and renderBlockSize must be set
 # Set localBounds mins > maxs if entity has no collision, if so then collisionActive and movementSpeed lines will be ignored. 
 # Set movementSpeed to 0 to avoid allocating an eMovement. 
-prefabShortName: sArcher
+prefabShortName: bArcher
 spriteFilename: Graphics/Animations/bArcher/bArcher_Idle/Textures/Image_defs/bArcher_Idle_All.eimg
 initialSpriteFrame: 0
 animationController: Graphics/Animations/bArcher/Controller_defs/bArcher.ectrl

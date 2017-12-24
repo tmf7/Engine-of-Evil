@@ -52,10 +52,14 @@ void eCamera::Think() {
 	auto & input = game->GetInput();
 	float oldZoomLevel = renderTarget.GetZoom();
 	const eVec2 oldOrigin = renderTarget.GetOrigin();
-	if (input.KeyPressed(SDL_SCANCODE_EQUALS))
+	const eVec2 oldBoundsCenter = absBounds.Center();		// stay centered on the same point when zooming in/out, it's less jarring
+
+	if (input.KeyPressed(SDL_SCANCODE_EQUALS) || input.GetMouseScroll() > 0)
 		ZoomIn();
-	else if (input.KeyPressed(SDL_SCANCODE_MINUS))
+	else if (input.KeyPressed(SDL_SCANCODE_MINUS) || input.GetMouseScroll() < 0)
 		ZoomOut();
+
+	const eVec2 zoomedBoundsCenter = absBounds.Center();
 
 	if (input.KeyHeld(SDL_SCANCODE_SPACE)) {
 //		eVec2 snapFocus = map->GetEntity(0)->CollisionModel().Center();		// FIXME: 0th eEntity should not be the default thing to snap focus to
@@ -64,7 +68,9 @@ void eCamera::Think() {
 	} else {
 		float x = panSpeed * (float)(input.KeyHeld(SDL_SCANCODE_D) - input.KeyHeld(SDL_SCANCODE_A));
 		float y = panSpeed * (float)(input.KeyHeld(SDL_SCANCODE_S) - input.KeyHeld(SDL_SCANCODE_W));
-		SetOrigin( oldOrigin + eVec2( x , y ) );
+		float deltaSec = (float)game->GetDeltaTime() / 1000.0f;
+		deltaSec = deltaSec >= 1.0f ? 0.99f : deltaSec;
+		SetOrigin( oldOrigin + (oldBoundsCenter - zoomedBoundsCenter) + (eVec2( x , y ) / (1.0f - deltaSec )) );
 	}
 
 	moved = (renderTarget.GetZoom() != oldZoomLevel || renderTarget.GetOrigin() != oldOrigin);

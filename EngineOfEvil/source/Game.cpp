@@ -111,9 +111,6 @@ void eGame::Run() {
 	while (isRunning) {
 		Uint32 startTime = SDL_GetTicks();
 
-		// TODO: poll events in a separate eWindow class
-		renderer.PollEvents();
-	
 		// system updates
 		input.Update();
 		Update();

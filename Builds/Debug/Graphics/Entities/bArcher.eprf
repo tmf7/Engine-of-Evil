@@ -8,11 +8,11 @@ prefabShortName: bArcher
 spriteFilename: Graphics/Animations/bArcher/bArcher_Idle/Textures/Image_defs/bArcher_Idle_All.eimg
 initialSpriteFrame: 0
 animationController: Graphics/Animations/bArcher/Controller_defs/bArcher.ectrl
-renderBlockSize: 32.0 32.0 128.0
+renderBlockSize: 32.0 32.0 300.0
 renderImageOffset: -64.0 -125.0
 playerSelectable: 1
 isStatic: 0
 localBounds: -16.0 -16.0 16.0 16.0
-colliderOffset: 72 50
+colliderOffset: 64 40		# 72 50 / 64 40 / 55 35
 movementSpeed: 6.0
 collisionActive: 1

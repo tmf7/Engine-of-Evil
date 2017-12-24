@@ -25,6 +25,7 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 ===========================================================================
 */
 #include "Input.h"
+#include "Game.h"
 
 //***************
 // eInput::Init
@@ -58,10 +59,37 @@ eInput::~eInput() {
 }
 
 //***************
+// eInput::SetMouseWheelState
+// updates the state of the the mouse scroll wheel
+//***************
+void eInput::SetMouseWheelState(int wheelDirection) {
+	mouseScroll = wheelDirection;
+}
+
+//***************
+// eRenderer::PollEvents
+// polls all events in the current window/rendering context
+// TODO: allow user to insert different callbacks for different events (eg: MOUSE_PRESSED, etc)
+//***************
+void eInput::PollEvents() {
+	SDL_Event event;
+	while (SDL_PollEvent(&event)) {
+		if (event.type == SDL_QUIT)
+			game->Stop();
+		else if (event.type == SDL_MOUSEWHEEL)
+			SetMouseWheelState(event.wheel.y);
+	}
+}
+
+//***************
 // eInput::Update
 // reads the current state of the keyboard and mouse and saves the previous state
 //***************
 void eInput::Update() {
+	mouseScroll = 0;
+
+	PollEvents();
+
 	oldMouseX = mouseX;
 	oldMouseY = mouseY;
 
@@ -149,6 +177,15 @@ int eInput::MouseReleased(int button) const {
 //***************
 bool eInput::MouseMoved() const {
 	return (mouseX != oldMouseX || mouseY != oldMouseY);
+}
+
+//***************
+// eInput::GetMouseScroll
+// returns the current direction and amount of scroll wheel, if any
+// negative values are towards the user, positive values are away from the user
+//***************
+int eInput::GetMouseScroll() const {
+	return mouseScroll;
 }
 
 //***************
