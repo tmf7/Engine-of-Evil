@@ -187,7 +187,7 @@ const eBounds & eCamera::AbsBounds() const {
 
 //**************
 // eCamera::ScreenToWorldPosition
-// returns current position of screenPoint over the 2D orthographic game world
+// returns current position of screenPoint over the 2D orthographic game world with respect to this camera's position
 //**************
 eVec2 eCamera::ScreenToWorldPosition(const eVec2 & screenPoint) const {
 	eVec2 worldPoint = (screenPoint / renderTarget.GetZoom()) + absBounds[0];
@@ -197,7 +197,7 @@ eVec2 eCamera::ScreenToWorldPosition(const eVec2 & screenPoint) const {
 
 //**************
 // eCamera::MouseWorldPosition
-// returns current position of mouse over the isometric game world
+// returns current position of mouse over the isometric game world with respect to this camera's position
 //**************
 eVec2 eCamera::MouseWorldPosition() const {
 	auto & input = game->GetInput();

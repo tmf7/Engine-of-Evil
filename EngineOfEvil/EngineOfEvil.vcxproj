@@ -139,6 +139,7 @@
     <ClCompile Include="source\Bounds.cpp" />
     <ClCompile Include="source\Bounds3D.cpp" />
     <ClCompile Include="source\Box.cpp" />
+    <ClCompile Include="source\Button.cpp" />
     <ClCompile Include="source\Camera.cpp" />
     <ClCompile Include="source\Collision.cpp" />
     <ClCompile Include="source\CollisionModel.cpp" />
@@ -176,6 +177,7 @@
     <ClInclude Include="source\AnimationState.h" />
     <ClInclude Include="source\Audio.h" />
     <ClInclude Include="source\BlendState.h" />
+    <ClInclude Include="source\Button.h" />
     <ClInclude Include="source\CreatePrefabStrategies.h" />
     <ClInclude Include="source\Dictionary.h" />
     <ClInclude Include="source\ErrorLogger.h" />

@@ -100,6 +100,7 @@ private:
 
 	// returns true if add was successful, false if the item already exists 
 	bool										AddAnimationState(std::unique_ptr<eStateNode> && newState);
+
 	// transitionHash allows collisions, because it's indexed by eStateTransition::fromState
 	void										AddTransition(eStateTransition && newTransition);
 	void										SortAndHashTransitions();

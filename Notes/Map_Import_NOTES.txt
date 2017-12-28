@@ -1,0 +1,11 @@
+break/avoid iso-cycles somehow (overlap & double/triple/etc-draw has too many edge cases)
+
+TODO:
+- determine the EoE tile numbers from tmx file (ie which numbers to skip/compress)
+- copy/paste the layers and pull the numbers into an eoe .emap file using my utilitiy
+
+- split each tilesheet using unity
+- pull the meta files using my utility
+
+- give each tileset renderblocks and colliders (if any) (w/offsets) (in a master tileset file)
+- load the new map

@@ -37,7 +37,7 @@ bool eGame::InitSystem() {
 	}
 
 	if (!EVIL_ERROR_LOG.Init())			// has its own error popup call
-		;//	return false;				// no consequences if this is running from DVD-ROM
+		return false;
 
 	if (!renderer.Init()) {
 		EVIL_ERROR_LOG.ErrorPopupWindow("RENDERER INIT FAILURE");

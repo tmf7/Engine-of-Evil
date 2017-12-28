@@ -168,6 +168,9 @@
     <ClCompile Include="source\RenderTarget.cpp">
       <Filter>Core\Renderer</Filter>
     </ClCompile>
+    <ClCompile Include="source\Button.cpp">
+      <Filter>Core\GameObjects</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="source\Game.h">
@@ -319,6 +322,9 @@
     </ClInclude>
     <ClInclude Include="source\RenderTarget.h">
       <Filter>Core\Renderer</Filter>
+    </ClInclude>
+    <ClInclude Include="source\Button.h">
+      <Filter>Core\GameObjects</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
