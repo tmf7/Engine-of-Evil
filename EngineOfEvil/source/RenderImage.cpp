@@ -104,11 +104,9 @@ void eRenderImage::SetRenderBlockSize(const eVec3 & newSize) {
 //************
 void eRenderImage::Update() {
 	oldOrigin = origin;
-	auto & ownerOrigin = owner->GetOrigin();
-	eVec2 newOrigin = ownerOrigin;	
-	eMath::CartesianToIsometric(newOrigin.x, newOrigin.y);
-	newOrigin += orthoOriginOffset;
-	origin = newOrigin;
+	origin = owner->GetOrigin();	
+	eMath::CartesianToIsometric(origin.x, origin.y);
+	origin += orthoOriginOffset;
 
 	UpdateWorldClip();
 	if (origin != oldOrigin || (owner->IsStatic() && game->GetGameTime() < 5000)) {

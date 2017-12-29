@@ -37,7 +37,8 @@ typedef struct Collision_s Collision_t;
 
 //*********************************************
 //			eCollisionModel
-// used for movement and collision detection
+// used for movement, collision detection, 
+// and collision response
 // TODO: either templatize this class, or
 // simplify and derive from it for different
 // colliders (eBounds, eBox, etc) to be used

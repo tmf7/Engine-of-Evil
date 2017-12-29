@@ -1,7 +1,7 @@
 #ifndef EVIL_BUTTON_H
 #define EVIL_BUTTON_H
 
-#include "GameObject.h"
+#include "UIElement.h"
 
 //******************************
 //		eButton
@@ -12,7 +12,7 @@
 // TODO: user defines IsTriggered() behavior 
 // TODO: user sets the button image's frame (to allow for extension to radio buttons, or unanimated buttons)
 //******************************
-class eButton : public eGameObject {
+class eButton : public eUIElement {
 public:
 
 	void				Init(const eVec2 & canvasPosition, const eVec2 & size);
@@ -20,18 +20,17 @@ public:
 	bool				IsPressed() const;
 	bool				IsMouseOver() const;
 	void				ClearTrigger();
+
 	void				Think();
 	void				Draw();
 
-	void				SetTriggeredCallback(callbackFn_t callback);
-
 private:
 
-	eBounds				clickRegion;
+	// eRenderImageBase					image;				// simplified version of eRenderImageIsometric for use on an eCanvas instead of with an eGameObject
+	eAnimationController				animController;		// TODO: modify this to have POINTERs to eImage and ImageFrame data (instead of indirect to renderImage through owner) (ie: SetTarget(eImage *, SDL_Rect *))
 
-	// TODO: give eCanvas a list of UI elements to draw in order (no sorting) 
-	// (eg: buttons, plain images, text boxes[?]...all of which may need scaling...eUIElement class w/scale and...offset w/in canvas...and if collision tests occur against their rects)
-	// TODO: UI_Image and eAnimationController compose the eButton, while eButton itself is focused only on the TriggeredCallback....but also setting animcontroller trigger values
+
+	// TODO: eUIImage and eAnimationController compose the eButton, while eButton itself is focused only on animcontroller trigger values, and having its state queried
 
 	// FIXME: make these transition parameters in a default eAnimationController
 	// TODO: Normal, Highlighted, Pressed, Disabled eAnimationStates (in a file)

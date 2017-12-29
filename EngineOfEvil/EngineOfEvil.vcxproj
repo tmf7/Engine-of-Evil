@@ -220,6 +220,8 @@
     <ClInclude Include="source\Sort.h" />
     <ClInclude Include="source\SpatialIndexGrid.h" />
     <ClInclude Include="source\Tile.h" />
+    <ClInclude Include="source\UIElement.h" />
+    <ClInclude Include="source\RenderImageBase.h" />
     <ClInclude Include="source\Vector.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

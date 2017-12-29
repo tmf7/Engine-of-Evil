@@ -55,6 +55,9 @@
     <Filter Include="Core\Audio">
       <UniqueIdentifier>{178bdced-ec57-44d4-b552-76172fdb219f}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Core\UI">
+      <UniqueIdentifier>{cbfb7407-c67c-43d8-9e50-34dbaeeef4dd}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="source\main.cpp">
@@ -169,7 +172,7 @@
       <Filter>Core\Renderer</Filter>
     </ClCompile>
     <ClCompile Include="source\Button.cpp">
-      <Filter>Core\GameObjects</Filter>
+      <Filter>Core\UI</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -323,8 +326,14 @@
     <ClInclude Include="source\RenderTarget.h">
       <Filter>Core\Renderer</Filter>
     </ClInclude>
+    <ClInclude Include="source\UIElement.h">
+      <Filter>Core\UI</Filter>
+    </ClInclude>
     <ClInclude Include="source\Button.h">
-      <Filter>Core\GameObjects</Filter>
+      <Filter>Core\UI</Filter>
+    </ClInclude>
+    <ClInclude Include="source\RenderImageBase.h">
+      <Filter>Core\UI</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

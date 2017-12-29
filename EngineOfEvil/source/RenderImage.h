@@ -30,7 +30,6 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 #include "Definitions.h"
 #include "Bounds.h"
 #include "Bounds3D.h"
-#include "Sort.h"
 #include "Image.h"
 #include "Component.h"
 
@@ -39,8 +38,8 @@ class eGridCell;
 
 //**************************************************
 //				eRenderImage
-// data used by eRenderer for draw-order sorting
-// and drawing to the render target
+// data used by eRenderer for draw-order sorting of eGameObjects
+// and drawing to an eRenderTarget
 //**************************************************
 class eRenderImage : public eComponent {
 private:

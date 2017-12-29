@@ -1,2 +1,33 @@
-﻿  Camera.cpp
+﻿  sHero.cpp
+  main.cpp
+  Tile.cpp
+  StateNode.cpp
+  Renderer.cpp
+  RenderImage.cpp
+  Player.cpp
+  Movement.cpp
+  Map.cpp
+  Input.cpp
+  ImageManager.cpp
+  GridCell.cpp
+  GameObject.cpp
+  GameLocal.cpp
+  Game.cpp
+  EntityPrefabManager.cpp
+  Entity.cpp
+  CreateEntityPrefabStrategies.cpp
+  CollisionModel.cpp
+  Collision.cpp
+  Generating Code...
+  Compiling...
+  Camera.cpp
+  Box.cpp
+  Bounds.cpp
+  BlendState.cpp
+  AnimationState.cpp
+  AnimationManager.cpp
+  AnimationControllerManager.cpp
+  AnimationController.cpp
+  Generating Code...
+  LINK : C:\Users\Tom\Desktop\EngineOfEvil\\Builds\Debug\EngineOfEvil.exe not found or not built by the last incremental link; performing full link
   EngineOfEvil.vcxproj -> C:\Users\Tom\Desktop\EngineOfEvil\\Builds\Debug\EngineOfEvil.exe

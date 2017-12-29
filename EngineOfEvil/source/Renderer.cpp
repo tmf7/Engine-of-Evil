@@ -422,11 +422,10 @@ void eRenderer::Flush() {
 // DEBUG: this unstable quicksort may put renderImages at random draw orders if they have equal priority
 //***************
 void eRenderer::FlushCameraPool(eCamera * registeredCamera) {
-
 	auto & cameraPool = registeredCamera->cameraPool;
 	auto & cameraPoolInserts = registeredCamera->cameraPoolInserts;
 
-	// sort the dynamicPool for the scalableTarget
+	// sort the dynamicPool for the camera's renderTarget
 	QuickSort(	cameraPool.data(),
 				cameraPool.size(),
 				[](auto && a, auto && b) {
@@ -459,7 +458,7 @@ void eRenderer::FlushCameraPool(eCamera * registeredCamera) {
 	// sets the render target, and scales according to camera zoom
 	SetRenderTarget(&registeredCamera->renderTarget);
 
-	// draw to the scalableTarget
+	// draw to the camera's renderTarget
 	for (auto && renderImage : cameraPool)
 		DrawImage(renderImage);
 

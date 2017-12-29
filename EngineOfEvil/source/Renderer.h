@@ -29,6 +29,7 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 
 #include "RenderImage.h"
 #include "Camera.h"
+#include "Sort.h"
 
 //**************************************************
 //				eRenderer
