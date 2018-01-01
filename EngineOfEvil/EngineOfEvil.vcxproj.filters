@@ -111,9 +111,6 @@
     <ClCompile Include="source\Movement.cpp">
       <Filter>Core\Components</Filter>
     </ClCompile>
-    <ClCompile Include="source\RenderImage.cpp">
-      <Filter>Core\Components</Filter>
-    </ClCompile>
     <ClCompile Include="source\Renderer.cpp">
       <Filter>Core\Renderer</Filter>
     </ClCompile>
@@ -173,6 +170,12 @@
     </ClCompile>
     <ClCompile Include="source\Button.cpp">
       <Filter>Core\UI</Filter>
+    </ClCompile>
+    <ClCompile Include="source\RenderImageBase.cpp">
+      <Filter>Core\Components</Filter>
+    </ClCompile>
+    <ClCompile Include="source\RenderImageIsometric.cpp">
+      <Filter>Core\Components</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -251,9 +254,6 @@
     <ClInclude Include="source\Movement.h">
       <Filter>Core\Components</Filter>
     </ClInclude>
-    <ClInclude Include="source\RenderImage.h">
-      <Filter>Core\Components</Filter>
-    </ClInclude>
     <ClInclude Include="source\Renderer.h">
       <Filter>Core\Renderer</Filter>
     </ClInclude>
@@ -326,14 +326,17 @@
     <ClInclude Include="source\RenderTarget.h">
       <Filter>Core\Renderer</Filter>
     </ClInclude>
-    <ClInclude Include="source\UIElement.h">
-      <Filter>Core\UI</Filter>
-    </ClInclude>
     <ClInclude Include="source\Button.h">
       <Filter>Core\UI</Filter>
     </ClInclude>
     <ClInclude Include="source\RenderImageBase.h">
-      <Filter>Core\UI</Filter>
+      <Filter>Core\Components</Filter>
+    </ClInclude>
+    <ClInclude Include="source\RenderImageIsometric.h">
+      <Filter>Core\Components</Filter>
+    </ClInclude>
+    <ClInclude Include="source\Canvas.h">
+      <Filter>Core\Renderer</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

@@ -76,7 +76,7 @@ bool eMap::LoadMap(const char * mapFilename) {
 	if (!read.good()) 
 		return false;
 
-	std::vector<eRenderImage *> sortTiles;
+	std::vector<eRenderImageIsometric *> sortTiles;
 	char buffer[MAX_ESTRING_LENGTH];
 	memset(buffer, 0, sizeof(buffer));
 
@@ -160,11 +160,11 @@ bool eMap::LoadMap(const char * mapFilename) {
 				auto & cell = tileMap.Index(row, column);
 				auto & origin = cell.AbsBounds()[0];
 				cell.AddTileOwned(eTile(&cell, origin, tileType, layer));
-				auto & tileRenderImage = cell.TilesOwned().back().RenderImage();
-				if (tileRenderImage.GetRenderBlock().Depth() > tallestRenderBlock)
-					tallestRenderBlock = (size_t)tileRenderImage.GetRenderBlock().Depth();
+				auto tileRenderImage = static_cast<eRenderImageIsometric *>( &(cell.TilesOwned().back().RenderImage()) );
+				if (tileRenderImage->GetRenderBlock().Depth() > tallestRenderBlock)
+					tallestRenderBlock = (size_t)tileRenderImage->GetRenderBlock().Depth();
 
-				sortTiles.emplace_back(&tileRenderImage);
+				sortTiles.emplace_back(tileRenderImage);
 			}
 
 			if (read.peek() == '\n') {
@@ -324,15 +324,6 @@ void eMap::EntityThink() {
 
 //***************
 // eMap::Draw
-/*
-FIXME: [minimize draw calls]
-1.) at the end of eMap::Load, call an eRenderer fn to create and draw on a mapTexture of the entire map (allocate a texture the size of the map [big big])
-2.) on eMap::Draw, set the visible cells like normal
-3.) on eGridCell::Draw, only add those renderImages in gridcells containing an entity (eRenderImage::isSelectable)
-4.) eRenderer::FlushCameraPool should behave as normal, AND prior to the first RenderCopy, copy the mapTexture to the scalable target (moved with camera)
-RESULTS: does significantly reduce draw calls, but the layering visuals are wrong; also once eMovement pathing starts the fps still drops to 166-200 from 250-500
-(removed this logic)
-*/
 //***************
 void eMap::Draw() {
 	if (viewCamera->Moved() || game->GetGameTime() < 5000) {		// reduce visibleCells setup, except during startup

@@ -47,7 +47,7 @@ typedef struct Collision_s Collision_t;
 class eCollisionModel : public eComponent {
 public:
 
-												eCollisionModel(eGameObject * owner);
+												eCollisionModel(eGameObject * owner, const eBounds & localBounds, const eVec2 & offset = vec2_zero, bool isActive = false);
 	virtual										~eCollisionModel() override;
 
 	void										SetOrigin(const eVec2 & newOrigin);	
@@ -89,20 +89,13 @@ private:
 	eVec2										origin;					// using world coordinates
 	eVec2										oldOrigin;				// for use with collision response
 	eVec2										center;					// cached absBounds.Center() for faster updates
-	eVec2										orthoOriginOffset;		// offset from (eGameObject)owner::orthoOrigin (default: (0,0))
+	eVec2										ownerOriginOffset;		// offset from (eGameObject)owner::orthoOrigin (default: (0,0))
 	eVec2										oldVelocity;			// velocity of the prior frame
 	eVec2										velocity;				// DEBUG: never normalized, only rotated and scaled
 	std::vector<eGridCell *>					areas;					// currently occupied tileMap indexes (between 1 and 4)
 	bool										active = false;			// whether this participates in (dynamic or kinematic) collision detection
 
 };
-
-//*************
-// eCollisionModel::eCollisionModel
-//*************
-inline eCollisionModel::eCollisionModel(eGameObject * owner) {
-	this->owner = owner;
-}
 
 //*************
 // eCollisionModel::Center
@@ -124,7 +117,7 @@ inline eVec2 eCollisionModel::GetOriginDelta() const {
 // x and y distance from owner::orthoOrigin
 //*************
 inline const eVec2 & eCollisionModel::Offset() const {
-	return orthoOriginOffset;
+	return ownerOriginOffset;
 }
 
 //*************
@@ -132,7 +125,7 @@ inline const eVec2 & eCollisionModel::Offset() const {
 // sets the x and y distance from owner::orthoOrigin
 //*************
 inline void eCollisionModel::SetOffset(const eVec2 & newOffset) {
-	orthoOriginOffset = newOffset;
+	ownerOriginOffset = newOffset;
 }
 
 //*************

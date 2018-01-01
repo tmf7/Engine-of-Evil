@@ -103,7 +103,7 @@ bool ePlayer::SelectGroup() {
 	if (selectionBounds.Width() <= 0.0f || selectionBounds.Height() <= 0.0f)
 		return false;
 
-	// similar to eRenderImage::UpdateAreasWorldClipArea (except for camera adjustment)
+	// similar to eRenderImageIsometric::UpdateAreasWorldClipArea (except for camera adjustment)
 	eVec2 corner = selectionBounds[0];
 	eVec2 xAxis(selectionBounds[1].x, selectionBounds[0].y);
 	eVec2 yAxis(selectionBounds[0].x, selectionBounds[1].y);

@@ -27,7 +27,7 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 #ifndef EVIL_GAMEOBJECT_H
 #define EVIL_GAMEOBJECT_H
 
-#include "RenderImage.h"
+#include "RenderImageBase.h"
 #include "CollisionModel.h"
 #include "Movement.h"
 #include "AnimationController.h"
@@ -39,7 +39,7 @@ class eMap;
 // base composite-class for isolating eComponent groups
 // and allowing meaningful intra- and inter-group communication
 // handles the lifetime of all eComponent objects
-// TODO: create AddComponent, RemoveComponent, and GetComponent templates
+// TODO: create a forwarding AddComponent, RemoveComponent, and GetComponent templates
 // to allow more flexible eGameObject extension
 //*************************************************
 class eGameObject : public eClass {
@@ -47,8 +47,8 @@ public:
 
 	// FIXME: don't make component's access dependent on eGameObject definition
 	// especially since derived classes don't get the same access
+	// SOLUTION(~): add more GetMember fns
 	friend class eCollisionModel;
-	friend class eRenderImage;
 	friend class eAnimationController;
 	friend class eMovementPlanner;
 
@@ -79,11 +79,14 @@ public:
 	Uint32									GetWorldLayer()							{ return worldLayer; }
 	void									SetWorldLayer(Uint32 layer);
 	void									SetWorldLayer(float zPosition);
+	int										WorldLayerDelta() const					{ return worldLayer - oldWorldLayer; }
 	void									SetZPosition(float newZPosition);
+	float									GetZPosition() const					{ return zPosition; }
 	bool									IsStatic() const						{ return isStatic; }
 	void									SetStatic(bool isStatic)				{ this->isStatic = isStatic; }
 
-	bool									AddRenderImage(const std::string & spriteFilename, const eVec3 & renderBlockSize, int initialSpriteFrame = 0, const eVec2 & renderImageOffset = vec2_zero, bool isPlayerSelectable = false);
+	bool									AddRenderImageBase(const std::string & spriteFilename, int initialSpriteFrame = 0, const eVec2 & renderImageOffset = vec2_zero, bool isPlayerSelectable = false);
+	bool									AddRenderImageIsometric(const std::string & spriteFilename, const eVec3 & renderBlockSize, int initialSpriteFrame = 0, const eVec2 & renderImageOffset = vec2_zero, bool isPlayerSelectable = false);
 	bool									AddCollisionModel(const eBounds & localBounds, const eVec2 & colliderOffset = vec2_zero, bool collisionActive = false);
 	bool									AddAnimationController(const std::string & animationControllerFilename);
 	bool									AddMovementPlanner(float movementSpeed);
@@ -92,7 +95,7 @@ public:
 	const eCollisionModel &					CollisionModel() const					{ return *collisionModel; }
 
 	// FIXME: make these proper const get, non-const set
-	eRenderImage &							RenderImage()							{ return *renderImage; }
+	eRenderImageBase &						RenderImage()							{ return *renderImage; }
 	eAnimationController &					AnimationController()					{ return *animationController; }
 	eMovementPlanner &						MovementPlanner()						{ return *movementPlanner; }
 
@@ -104,7 +107,7 @@ private:
 protected:
 
 	eMap *									map;								// back-pointer to the eMap object owns *this
-	std::unique_ptr<eRenderImage>			renderImage			= nullptr;		// data relevant to the renderer
+	std::unique_ptr<eRenderImageBase>		renderImage			= nullptr;		// data relevant to the renderer
 	std::unique_ptr<eAnimationController>	animationController = nullptr;		// manipulates the renderImage
 	std::unique_ptr<eCollisionModel>		collisionModel		= nullptr;		// handles collision between bounding volumes
 	std::unique_ptr<eMovementPlanner>		movementPlanner		= nullptr;		// seeks goals by setting collisionModel::velocity

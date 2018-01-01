@@ -27,7 +27,7 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 #ifndef EVIL_RENDERER_H
 #define EVIL_RENDERER_H
 
-#include "RenderImage.h"
+#include "RenderImageIsometric.h"
 #include "Camera.h"
 #include "Sort.h"
 
@@ -56,12 +56,12 @@ public:
 	bool								UnregisterCamera(eCamera * camera);
 	void								UnregisterAllCameras();
 	int									NumRegisteredCameras() const;
-	bool								AddToCameraRenderPool(eCamera * registeredCamera, eRenderImage * renderImage);
-	bool								AddToOverlayRenderPool(eRenderImage * renderImage);
+	bool								AddToCameraRenderPool(eCamera * registeredCamera, eRenderImageIsometric * renderImage);
+	bool								AddToOverlayRenderPool(eRenderImageBase * renderImage);
 	void								Flush();
 
 	void								DrawOutlineText(eRenderTarget * target, const char * text, eVec2 & point, const SDL_Color & color, bool constText);
-	void								DrawImage(eRenderImage * renderImage) const;
+	void								DrawImage(eRenderImageBase * renderImage) const;
 	void								DrawLines(eRenderTarget * target, const SDL_Color & color, std::vector<eVec2> points);
 	void								DrawIsometricPrism(eRenderTarget * target, const SDL_Color & color, const eBounds3D & rect);
 	void								DrawIsometricRect(eRenderTarget * target, const SDL_Color & color, const eBounds & rect);
@@ -77,33 +77,33 @@ public:
 											return eClass::IsClassType(classType); 
 										}
 
-	static void							TopologicalDrawDepthSort(const std::vector<eRenderImage *> & renderImagePool);
+	static void							TopologicalDrawDepthSort(const std::vector<eRenderImageIsometric *> & renderImagePool);
 
 private:
 
-	bool								CheckDrawnStatus(eRenderTarget * renderTarget, eRenderImage * renderImage) const; 
+	bool								CheckDrawnStatus(eRenderTarget * renderTarget, eRenderImageBase * renderImage) const; 
 	void								SetRenderTarget(eRenderTarget *);
 	void								FlushCameraPool(eCamera * registeredCamera);
 	void								FlushOverlayPool();
 
-	static void							VisitTopologicalNode(eRenderImage * renderImage);
+	static void							VisitTopologicalNode(eRenderImageIsometric * renderImage);
 
 private:
 
 	static int							globalDrawDepth;								// for eRenderer::TopologicalDrawDepthSort
 
-	std::vector<eRenderImage *>			overlayPool;									// images static to the screen regardless of camera position
-	std::vector<eRenderImage *>			overlayPoolInserts;								// minimize priority re-calculations	
+	std::vector<eRenderImageBase *>		overlayPool;									// images static to the screen regardless of camera position
+	std::vector<eRenderImageBase *>		overlayPoolInserts;								// minimize priority re-calculations	
 	std::vector<eCamera *>				registeredCameras;								// cameras to copy to the main rendering context during Flush
 
 	SDL_Window *						window;
 	SDL_Renderer *						internal_renderer;
 
 	// swappable render targets
-	// draw-order sorting based on eRenderImage::renderBlock worldPositions
-	eRenderTarget						defaultOverlayTarget;							// DEBUG: default SDL rendertarget (nullptr) is the window texture
-	eRenderTarget						debugOverlayTarget;								// draw straight on the window (no camera adjustment), last, without draw-order sorting
-	eRenderTarget *						currentRenderTarget	= &defaultOverlayTarget;	// current target being drawn to
+	// draw-order sorting based on eRenderImageIsometric::renderBlock worldPositions
+	eRenderTarget						mainRenderTarget;								// DEBUG: default SDL rendertarget (nullptr) is the window texture
+	eRenderTarget						debugMainRenderTarget;							// draw straight on the window (no camera adjustment), last, without draw-order sorting
+	eRenderTarget *						currentRenderTarget	= &mainRenderTarget;		// current target being drawn to
 	
 	TTF_Font *							font;											// FIXME: only one test font for this rendering context for now
 };

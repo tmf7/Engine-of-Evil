@@ -161,7 +161,8 @@
     <ClCompile Include="source\Music.cpp" />
     <ClCompile Include="source\Player.cpp" />
     <ClCompile Include="source\Renderer.cpp" />
-    <ClCompile Include="source\RenderImage.cpp" />
+    <ClCompile Include="source\RenderImageIsometric.cpp" />
+    <ClCompile Include="source\RenderImageBase.cpp" />
     <ClCompile Include="source\RenderTarget.cpp" />
     <ClCompile Include="source\sHero.cpp" />
     <ClCompile Include="source\SoundFx.cpp" />
@@ -178,6 +179,7 @@
     <ClInclude Include="source\Audio.h" />
     <ClInclude Include="source\BlendState.h" />
     <ClInclude Include="source\Button.h" />
+    <ClInclude Include="source\Canvas.h" />
     <ClInclude Include="source\CreatePrefabStrategies.h" />
     <ClInclude Include="source\Dictionary.h" />
     <ClInclude Include="source\ErrorLogger.h" />
@@ -216,11 +218,10 @@
     <ClInclude Include="source\Movement.h" />
     <ClInclude Include="source\Player.h" />
     <ClInclude Include="source\Renderer.h" />
-    <ClInclude Include="source\RenderImage.h" />
+    <ClInclude Include="source\RenderImageIsometric.h" />
     <ClInclude Include="source\Sort.h" />
     <ClInclude Include="source\SpatialIndexGrid.h" />
     <ClInclude Include="source\Tile.h" />
-    <ClInclude Include="source\UIElement.h" />
     <ClInclude Include="source\RenderImageBase.h" />
     <ClInclude Include="source\Vector.h" />
   </ItemGroup>

@@ -39,7 +39,7 @@ eGameObject::eGameObject(const eGameObject & other)
 	  zPosition(other.zPosition) {
 
 	// DEBUG: using std::make_unique and release to prevent leaks in the event an allocation fails
-	if (other.renderImage != nullptr)			renderImage.reset(static_cast<eRenderImage *>(other.renderImage->GetCopy().release()));
+	if (other.renderImage != nullptr)			renderImage.reset(static_cast<eRenderImageBase *>(other.renderImage->GetCopy().release()));
 	if (other.animationController != nullptr)	animationController.reset(static_cast<eAnimationController *>(other.animationController->GetCopy().release()));
 	if (other.collisionModel != nullptr)		collisionModel.reset(static_cast<eCollisionModel *>(other.collisionModel->GetCopy().release()));
 	if (other.movementPlanner != nullptr)		movementPlanner.reset(static_cast<eMovementPlanner *>(other.movementPlanner->GetCopy().release()));	
@@ -140,32 +140,37 @@ void eGameObject::UpdateComponents() {
 
 	if (animationController != nullptr)
 		animationController->Update();
-	else if (renderImage != nullptr)
+
+	if (renderImage != nullptr)
 		renderImage->Update();
 }
 
+
 //*************
-// eGameObject::AddRenderImage
-// returns true if an eRenderImage has been added to *this
+// eGameObject::AddRenderImageBase
+// returns true if an eRenderImageBase object has been added to *this
 // returns false if not because the filename is invalid, or the file is unreadable
 //*************
-bool eGameObject::AddRenderImage( const std::string & spriteFilename, const eVec3 & renderBlockSize, int initialSpriteFrame, const eVec2 & renderImageOffset, bool isPlayerSelectable ) {
-	if (spriteFilename.empty())
+bool eGameObject::AddRenderImageBase( const std::string & spriteFilename, int initialSpriteFrame, const eVec2 & renderImageOffset, bool isPlayerSelectable ) {
+	std::shared_ptr<eImage> initialImage = nullptr;
+	if (!game->GetImageManager().LoadAndGet(spriteFilename.c_str(), initialImage))
 		return false;
 
-	renderImage = std::make_unique<eRenderImage>(this);
-	std::shared_ptr<eImage> spriteImage = nullptr;
-	if (!game->GetImageManager().LoadAndGet(spriteFilename.c_str(), spriteImage))
+	renderImage = std::make_unique<eRenderImageBase>(this, initialImage, initialSpriteFrame, renderImageOffset, isPlayerSelectable);
+	return true;
+}
+
+//*************
+// eGameObject::AddRenderImageIsometric
+// returns true if an eRenderImageIsometric object has been added to *this
+// returns false if not because the filename is invalid, or the file is unreadable
+//*************
+bool eGameObject::AddRenderImageIsometric( const std::string & spriteFilename, const eVec3 & renderBlockSize, int initialSpriteFrame, const eVec2 & renderImageOffset, bool isPlayerSelectable ) {
+	std::shared_ptr<eImage> initialImage = nullptr;
+	if (!game->GetImageManager().LoadAndGet(spriteFilename.c_str(), initialImage))
 		return false;
 
-	renderImage->SetImage(spriteImage->GetManagerIndex());
-	if (initialSpriteFrame < 0 || initialSpriteFrame > spriteImage->NumSubframes())
-		initialSpriteFrame = 0;
-
-	renderImage->SetImageFrame(initialSpriteFrame);
-	renderImage->SetOffset(renderImageOffset);
-	renderImage->SetRenderBlockSize(renderBlockSize);
-	renderImage->SetIsSelectable(isPlayerSelectable);
+	renderImage = std::make_unique<eRenderImageIsometric>(this, initialImage, renderBlockSize, initialSpriteFrame, renderImageOffset, isPlayerSelectable);
 	return true;
 }
 
@@ -178,10 +183,7 @@ bool eGameObject::AddCollisionModel( const eBounds & localBounds, const eVec2 & 
 	if (localBounds.IsEmpty())
 		return false;
 
-	collisionModel = std::make_unique<eCollisionModel>(this);
-	collisionModel->SetLocalBounds(localBounds);
-	collisionModel->SetOffset(colliderOffset);
-	collisionModel->SetActive(collisionActive);
+	collisionModel = std::make_unique<eCollisionModel>(this, localBounds, colliderOffset, collisionActive);
 	return true;
 }
 
@@ -190,7 +192,7 @@ bool eGameObject::AddCollisionModel( const eBounds & localBounds, const eVec2 & 
 // returns true if an eAnimationController has been added to *this
 // returns false if not because the filename is invalid, the file is unreadable, 
 // or there is no eRenderImage attached to *this
-// DEBUG: call AddRenderImage before calling this, because it depends on an eRenderImage object
+// DEBUG: call [AddRenderImageBase|AddRenderImageIsometric] before calling this, because it depends on an eRenderImage-derived object
 //*************
 bool eGameObject::AddAnimationController( const std::string & animationControllerFilename ) {
 	if ( renderImage == nullptr || animationControllerFilename.empty() )

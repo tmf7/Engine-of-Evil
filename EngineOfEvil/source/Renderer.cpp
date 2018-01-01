@@ -52,13 +52,13 @@ bool eRenderer::Init(const char * name, int windowWidth, int windowHeight) {
 	// enable linear anti-aliasing for the renderer context
 //	SDL_SetHintWithPriority(SDL_HINT_RENDER_SCALE_QUALITY, "linear" , SDL_HINT_OVERRIDE);
 
-	// DEBUG: eRenderer::defaultOverlayTarget does not need a new SDL_Texture
-	defaultOverlayTarget.InitDefault(internal_renderer);
+	// DEBUG: eRenderer::mainRenderTarget does not need a new SDL_Texture
+	mainRenderTarget.InitDefault(internal_renderer);
 
-	// initialize debugOverlayTarget for overlay debug info
+	// initialize debugMainRenderTarget for overlay debug info
 	SDL_Rect viewArea;
 	SDL_RenderGetViewport(internal_renderer, &viewArea);
-	if (!debugOverlayTarget.Init(internal_renderer, viewArea.w, viewArea.h))
+	if (!debugMainRenderTarget.Init(internal_renderer, viewArea.w, viewArea.h))
 		return false;
 
 	if (TTF_Init() == -1)
@@ -94,6 +94,7 @@ void eRenderer::Shutdown() const {
 //***************
 // eRenderer::DrawOutlineText
 // param constText caches the text image to accelerate redraw
+// TODO: this is a debug test, make an actual text rendering class
 // DEBUG: immediatly draws to the given render target
 //***************
 void eRenderer::DrawOutlineText(eRenderTarget * target, const char * text, eVec2 & point, const SDL_Color & color, bool constText) {
@@ -240,11 +241,14 @@ void eRenderer::DrawCartesianRect(eRenderTarget * target, const SDL_Color & colo
 // eRenderer::DrawImage
 // DEBUG: immediatly draws to the currently assigned render target
 //***************
-void eRenderer::DrawImage(eRenderImage * renderImage) const {
+void eRenderer::DrawImage(eRenderImageBase * renderImage) const {
 	eVec2 drawPoint = renderImage->origin - currentRenderTarget->origin;
 	drawPoint.SnapInt();
-	renderImage->dstRect = { (int)drawPoint.x, (int)drawPoint.y, renderImage->srcRect->w, renderImage->srcRect->h };
-	SDL_RenderCopy(internal_renderer, renderImage->image->Source(), renderImage->srcRect, &renderImage->dstRect);
+	SDL_Rect dstRect = { (int)drawPoint.x, 
+						 (int)drawPoint.y, 
+						 eMath::NearestInt( (float)renderImage->srcRect->w * renderImage->scale.x ),
+						 eMath::NearestInt( (float)renderImage->srcRect->h * renderImage->scale.y ) };
+	SDL_RenderCopy(internal_renderer, renderImage->image->Source(), renderImage->srcRect, &dstRect);
 }
 
 //***************
@@ -297,9 +301,9 @@ int eRenderer::NumRegisteredCameras() const {
 // the the given renderTarget to be drawn this frame
 // and updates the renderImage's lastDrawnTime according to eGame::gameTime
 // DEBUG: it's quicker to do a linear search of the small drawnTo vector for a eRenderTarget *,
-// than it is to search the larger renderPool for a eRenderImage *
+// than it is to search the larger renderPool for a eRenderImageBase *
 //***************
-bool eRenderer::CheckDrawnStatus(eRenderTarget * renderTarget, eRenderImage * renderImage) const {
+bool eRenderer::CheckDrawnStatus(eRenderTarget * renderTarget, eRenderImageBase * renderImage) const {
 	auto gameTime = game->GetGameTime();
 	if (renderImage->lastDrawnTime < gameTime) {
 		renderImage->lastDrawnTime = gameTime;
@@ -322,7 +326,7 @@ bool eRenderer::CheckDrawnStatus(eRenderTarget * renderTarget, eRenderImage * re
 // and the given camera's pools won't be cleared (as happens during Flush)
 // DEBUG: does not draw any eRenderImages on the eCamera::debugRenderTarget
 //***************
-bool eRenderer::AddToCameraRenderPool(eCamera * registeredCamera, eRenderImage * renderImage) {
+bool eRenderer::AddToCameraRenderPool(eCamera * registeredCamera, eRenderImageIsometric * renderImage) {
 	const auto & renderTarget = &registeredCamera->renderTarget;
 	if (CheckDrawnStatus(renderTarget, renderImage))
 		return false;
@@ -338,10 +342,10 @@ bool eRenderer::AddToCameraRenderPool(eCamera * registeredCamera, eRenderImage *
 // adds param renderImage to one of the overlayPools for later rendering during Flush
 // returns true if param renderImage hasn't already been added to the overlayPool
 // returns false if it's already in the overlayPool
-// DEBUG: does not draw any eRenderImages on the eRenderer::debugOverlayTarget
+// DEBUG: does not draw any eRenderImages on the eRenderer::debugMainRenderTarget
 //***************
-bool eRenderer::AddToOverlayRenderPool(eRenderImage * renderImage) {
-	const auto & renderTarget = &defaultOverlayTarget;			
+bool eRenderer::AddToOverlayRenderPool(eRenderImageBase * renderImage) {
+	const auto & renderTarget = &mainRenderTarget;			
 	if (CheckDrawnStatus(renderTarget, renderImage))
 		return false;
 
@@ -353,13 +357,13 @@ bool eRenderer::AddToOverlayRenderPool(eRenderImage * renderImage) {
 
 //***************
 // eRenderer::TopologicalDrawDepthSort
-// assigns draw order priority to the given eRenderImage(s)
+// assigns draw order priority to the given eRenderImageIsometric(s)
 // based on their positions relative to the camera
 // DEBUG: this is best used on either an entire eRenderer::staticPool/eRenderer::dynamicPool for a frame
-// or ONCE for all static geometry in game at startup, followed by adjusting the eRenderImage::priority of dynamic geometry separately
+// or ONCE for all static geometry in game at startup, followed by adjusting the eRenderImageBase::priority of dynamic geometry separately
 // (starting, for example, with calling this with those items to establish a "localDrawDepth" order amongst them)
 //***************
-void eRenderer::TopologicalDrawDepthSort(const std::vector<eRenderImage *> & renderImagePool) {
+void eRenderer::TopologicalDrawDepthSort(const std::vector<eRenderImageIsometric *> & renderImagePool) {
 	for (auto & self : renderImagePool) {
 		auto & selfClip = self->worldClip;
 
@@ -382,7 +386,7 @@ void eRenderer::TopologicalDrawDepthSort(const std::vector<eRenderImage *> & ren
 //***************
 // eRenderer::VisitTopologicalNode
 //***************
-void eRenderer::VisitTopologicalNode(eRenderImage * renderImage) {
+void eRenderer::VisitTopologicalNode(eRenderImageIsometric * renderImage) {
 	if (!renderImage->visited) {
 		renderImage->visited = true;
 		while (!renderImage->allBehind.empty()) {
@@ -407,14 +411,14 @@ void eRenderer::Flush() {
 	// transfer cameras (and their debugs') info to the main render texture
 	// TODO: determine a simple sorting order for camera textures, back-to-front
 	// possibly use a renderTarget::origin.z value
-	SetRenderTarget(&defaultOverlayTarget);
+	SetRenderTarget(&mainRenderTarget);
 	for (auto && camera : registeredCameras)
 		SDL_RenderCopy(internal_renderer, camera->renderTarget.target, NULL, NULL);
 
 	// draw all overlay (HUD/UI/Screen-Space) info now
 	FlushOverlayPool();
-	SetRenderTarget(&defaultOverlayTarget);
-	SDL_RenderCopy(internal_renderer, debugOverlayTarget.target, NULL, NULL);
+	SetRenderTarget(&mainRenderTarget);
+	SDL_RenderCopy(internal_renderer, debugMainRenderTarget.target, NULL, NULL);
 }
 
 //***************
@@ -469,7 +473,6 @@ void eRenderer::FlushCameraPool(eCamera * registeredCamera) {
 //***************
 // eRenderer::FlushOverlayPool
 // DEBUG: this unstable quicksort may put renderImages at random draw orders if they have equal priority
-// TODO: mirror FlushCameraPool Topological sort an inserts logic here
 //***************
 void eRenderer::FlushOverlayPool() {
 	// sort the staticPool for the default render target
@@ -482,7 +485,7 @@ void eRenderer::FlushOverlayPool() {
 			});
 
 	// set the render target, and scale to 1.0f
-	SetRenderTarget(&defaultOverlayTarget);
+	SetRenderTarget(&mainRenderTarget);
 
 	for (auto && renderImage : overlayPool)
 		DrawImage(renderImage);
@@ -517,14 +520,14 @@ void eRenderer::Show() const {
 // eRenderer::GetDefaultOverlayTarget
 //***************
 eRenderTarget * const eRenderer::GetDefaultOverlayTarget() {
-	return &defaultOverlayTarget;
+	return &mainRenderTarget;
 }
 
 //***************
 // eRenderer::GetDebugOverlayTarget
 //***************
 eRenderTarget * const eRenderer::GetDebugOverlayTarget() {
-	return &debugOverlayTarget;
+	return &debugMainRenderTarget;
 }
 
 //***************

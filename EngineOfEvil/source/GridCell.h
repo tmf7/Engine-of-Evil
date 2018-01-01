@@ -45,44 +45,44 @@ public:
 
 public:
 
-	void															Draw(eCamera * viewCamera);
-	void															DebugDraw(eRenderTarget * renderTarget);
-	void															AddTileOwned(eTile && tile);
-	const std::vector<eTile> &										TilesOwned() const;
-	std::vector<eTile> &											TilesOwned();
-	const std::unordered_map<eRenderImage *, eRenderImage *> &		RenderContents() const;
-	std::unordered_map<eRenderImage *, eRenderImage *> &			RenderContents();
-	std::unordered_map<eCollisionModel *, eCollisionModel *> &		CollisionContents();
-	const eBounds &													AbsBounds() const;
-	void															SetAbsBounds(const eBounds & bounds);
-	eMap * const													GetMap();
+	void																	Draw(eCamera * viewCamera);
+	void																	DebugDraw(eRenderTarget * renderTarget);
+	void																	AddTileOwned(eTile && tile);
+	const std::vector<eTile> &												TilesOwned() const;
+	std::vector<eTile> &													TilesOwned();
+	const std::unordered_map<eRenderImageBase *, eRenderImageBase *> &		RenderContents() const;
+	std::unordered_map<eRenderImageBase *, eRenderImageBase *> &			RenderContents();
+	std::unordered_map<eCollisionModel *, eCollisionModel *> &				CollisionContents();
+	const eBounds &															AbsBounds() const;
+	void																	SetAbsBounds(const eBounds & bounds);
+	eMap * const															GetMap();
 
-	virtual void													Reset() override;
-	virtual int														GetClassType() const override				{ return CLASS_GRIDCELL; }
-	virtual bool													IsClassType(int classType) const override	{ 
-																		if(classType == CLASS_GRIDCELL) 
-																			return true; 
-																		return eGridIndex::IsClassType(classType); 
-																	}
+	virtual void															Reset() override;
+	virtual int																GetClassType() const override				{ return CLASS_GRIDCELL; }
+	virtual bool															IsClassType(int classType) const override	{ 
+																				if(classType == CLASS_GRIDCELL) 
+																					return true; 
+																				return eGridIndex::IsClassType(classType); 
+																			}
 
 private:
 
-	eMap *															map;				// back-pointer to the eMap object owns the eSpatialIndexGrid than owns *this
+	eMap *																	map;				// back-pointer to the eMap object owns the eSpatialIndexGrid than owns *this
 
 	// FIXME (performance): make these std::vectors because most bounds sizes are small (0-30 occupied cells)
-	// be sure to update eCollisionModel and eRenderImage's ::UpdateAreas fns accordingly
-	std::unordered_map<eCollisionModel *, eCollisionModel *>		collisionContents;	// all eCollisionModel::absBounds that overlap this->absBounds
-	std::unordered_map<eRenderImage *, eRenderImage *>				renderContents;		// all eRenderImage::worldClip that overlap this->absBounds
-	std::vector<eTile>												tilesOwned;			// which eTiles' lifetimes are managed
-	eBounds															absBounds;			// using world-coordinates, cached after eSpatialIndexGrid::SetCellSize to expedite collision tests
+	// be sure to update eCollisionModel and eRenderImageIsometric's ::UpdateAreas fns accordingly
+	std::unordered_map<eCollisionModel *, eCollisionModel *>				collisionContents;	// all eCollisionModel::absBounds that overlap this->absBounds
+	std::unordered_map<eRenderImageBase *, eRenderImageBase *>				renderContents;		// all eRenderImageBase::worldClip that overlap this->absBounds
+	std::vector<eTile>														tilesOwned;			// which eTiles' lifetimes are managed
+	eBounds																	absBounds;			// using world-coordinates, cached after eSpatialIndexGrid::SetCellSize to expedite collision tests
 
 /*
 	// pathfinding
 	// TODO: make part of a separate A*	grid
-	eGridCell *														parent		= nullptr;	// originating cell to set the path back from a goal
-	int																gCost		= 0;		// distance from start cell to this cell
-	int																hCost		= 0;		// distance from this cell to a goal
-	int																fCost		= 0;		// sum of gCost and hCost
+	eGridCell *																parent		= nullptr;	// originating cell to set the path back from a goal
+	int																		gCost		= 0;		// distance from start cell to this cell
+	int																		hCost		= 0;		// distance from this cell to a goal
+	int																		fCost		= 0;		// sum of gCost and hCost
 */
 };
 
@@ -110,14 +110,14 @@ inline const std::vector<eTile> & eGridCell::TilesOwned() const {
 //************
 // eGridCell::TilesToDraw
 //************
-inline std::unordered_map<eRenderImage *, eRenderImage *> & eGridCell::RenderContents() {
+inline std::unordered_map<eRenderImageBase *, eRenderImageBase *> & eGridCell::RenderContents() {
 	return renderContents;
 }
 
 //************
 // eGridCell::TilesOwned
 //************
-inline const std::unordered_map<eRenderImage *, eRenderImage *> & eGridCell::RenderContents() const {
+inline const std::unordered_map<eRenderImageBase *, eRenderImageBase *> & eGridCell::RenderContents() const {
 	return renderContents;
 }
 

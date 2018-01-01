@@ -53,8 +53,7 @@ void eRenderTarget::InitDefault(SDL_Renderer * context, float zoomLevel) {
 // returns true on success, false on failure
 //***************************
 bool eRenderTarget::Init(SDL_Renderer * context, int width, int height, const eVec2 & contextPosition, float zoomLevel) {
-	this->context = context;
-	this->zoomLevel = zoomLevel;
+	InitDefault(context, zoomLevel);
 	origin = contextPosition;
 	target = SDL_CreateTexture( context,
 								SDL_PIXELFORMAT_ARGB8888,						// DEBUG: this format may not work for all images

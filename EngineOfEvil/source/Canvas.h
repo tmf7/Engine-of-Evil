@@ -24,34 +24,24 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 
 ===========================================================================
 */
-#include "StateNode.h"
-#include "Game.h"
+#include "Class.h"
 
-//*********************
-// eStateNode::NextFrame
-// updates the target eRenderImage-derived object
-// according to param animation
-//*********************
-void eStateNode::NextFrame(const eAnimation & animation) {
-	time += (float)game->GetFixedTime();
-	if (time > duration) { 
-		switch (animation.loop) {
-			case AnimationLoopState::ONCE:		time = duration; break;
-			case AnimationLoopState::REPEAT:	time = 0.0f; break;
-		}
-	}
+#ifndef EVIL_CANVAS_H
+#define EVIL_CANVAS_H
 
-	// the price-is-right for which animation frame should be active
-	for (auto & frame : animation.frames) {
-		auto animTime = frame.normalizedTime * duration;
-		if (animTime <= time)
-			currentFrame = &frame;
-		else
-			break;
-	}
+//***********************************************
+//				eCanvas
+// Draws eRenderImageBase objects to either of
+// two rendering targets: a main and a debug.
+// The debug target draws on top of the main target.
+// DEBUG: Use eRenderer to draw on an eCanvas
+// and output to a window/rendering context,
+// and to ensure eRenderTargets get cleared properly
+// TODO: this can be a base class for the three types of eCanvas
+// screen overlay, camera overlay, world-space
+//***********************************************
+class eCanvas : public eClass {
 
-	auto & targetRenderImage = stateMachine->Owner()->RenderImage();
-	targetRenderImage.SetImage(currentFrame->imageManagerIndex);
-	targetRenderImage.SetImageFrame(currentFrame->subframeIndex);
-}
+};
 
+#endif /* EVIL_CANVAS_H */

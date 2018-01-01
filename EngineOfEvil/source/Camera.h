@@ -33,7 +33,8 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 //***********************************************
 //				eCamera 
 // Mobile 2D Axis-Aligned Orthographic box 
-// with two rendering targets: a main and a debug.
+// that draws eRenderImageIsometric objects to either
+// of two rendering targets: a main and a debug.
 // The debug target draws on top of the main target.
 // DEBUG: Use eRenderer to draw on an eCamera
 // and output to a window/rendering context,
@@ -83,9 +84,9 @@ public:
 
 private:
 	
-	std::vector<eRenderImage *>						cameraPoolInserts;				// minimizes priority re-calculations of dynamic vs. static eGameObjects
-	std::vector<eRenderImage *>						cameraPool;						// game-world that moves and scales with this camera's renderTargets
-	eRenderTarget									renderTarget;					// move and scale with this->absBounds, with draw-order sorting based on eRenderImage::renderBlock		
+	std::vector<eRenderImageIsometric *>			cameraPoolInserts;				// minimizes priority re-calculations of dynamic vs. static eGameObjects
+	std::vector<eRenderImageIsometric *>			cameraPool;						// game-world that moves and scales with this camera's renderTargets
+	eRenderTarget									renderTarget;					// move and scale with this->absBounds, with draw-order sorting based on eRenderImageIsometric::renderBlock		
 	eRenderTarget									debugRenderTarget;				// move and scale with this->absBounds, but draw last, without draw-order sorting (same size and origin as renderTarget)
 	eBounds											absBounds;						// access to renderTarget size and position within the main rendering context
 	eVec2											defaultSize;					// allows zoom in/out with minimal precision-loss, and allows visible area resize w/o zoom

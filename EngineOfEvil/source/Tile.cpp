@@ -204,7 +204,7 @@ eTile::eTile(eGridCell * cellOwner, const eVec2 & origin, const int type, const 
 	: cellOwner(cellOwner) {
 	map = cellOwner->GetMap();
 	SetWorldLayer(layer);
-	renderImage = std::make_unique<eRenderImage>(this);		// all tiles currently have a renderimage by default
+	renderImage = std::make_unique<eRenderImageIsometric>(this);		// all tiles currently have an isometric renderimage by default
 	SetType(type);
 	SetOrigin(origin);
 	UpdateComponents();
@@ -216,16 +216,17 @@ eTile::eTile(eGridCell * cellOwner, const eVec2 & origin, const int type, const 
 void eTile::SetType(int newType) {
 	// if this is a type change, not just an initialization, then clear the collisionModel properties
 	collisionModel = nullptr;
+	eRenderImageIsometric * isoRenderImage = static_cast<eRenderImageIsometric *>(renderImage.get());
 
-	impl = &eTileImpl::tileTypes[newType];																	// DEBUG: assumes newType is defined
-	renderImage->Image() = game->GetImageManager().GetByResourceID(eTileImpl::tileSet.at(newType).first);	// which image (tile atlas)
-	renderImage->SetImageFrame(eTileImpl::tileSet.at(newType).second);										// which part of that image
+	impl = &eTileImpl::tileTypes[newType];																		// DEBUG: assumes newType is defined
+	isoRenderImage->Image() = game->GetImageManager().GetByResourceID(eTileImpl::tileSet.at(newType).first);	// which image (tile atlas)
+	isoRenderImage->SetImageFrame(eTileImpl::tileSet.at(newType).second);										// which part of that image
 
 	// visual alignment with isometric grid
 	const float isoCellWidthAdjustment = (float)map->TileMap().IsometricCellWidth() * 0.5f;
 	const float isoCellHeightAdjustment = (float)map->TileMap().IsometricCellHeight();
-	renderImage->SetOffset(eVec2(-isoCellWidthAdjustment, isoCellHeightAdjustment - (float)renderImage->GetImageFrame()->h));
-	renderImage->SetRenderBlockSize(impl->renderBlockSize);
+	isoRenderImage->SetOffset(eVec2(-isoCellWidthAdjustment, isoCellHeightAdjustment - (float)isoRenderImage->GetImageFrame()->h));
+	isoRenderImage->SetRenderBlockSize(impl->renderBlockSize);
 
 	if (impl->collider != nullptr) {
 		collisionModel = std::make_unique<eCollisionModel>(this);

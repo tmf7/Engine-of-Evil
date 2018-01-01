@@ -28,6 +28,16 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 #include "Map.h"
 
 //*************
+// eCollisionModel::eCollisionModel
+//*************
+eCollisionModel::eCollisionModel(eGameObject * owner, const eBounds & localBounds, const eVec2 & offset, bool isActive)
+	: localBounds(localBounds),
+	  ownerOriginOffset(offset),
+	  active(isActive) {
+	this->owner = owner;
+}
+
+//*************
 // eCollisionModel::~eCollisionModel
 //*************
 eCollisionModel::~eCollisionModel() {
@@ -45,7 +55,7 @@ void eCollisionModel::Update() {
 	oldOrigin = origin;
 	origin = owner->orthoOrigin;
 	origin += velocity; // * game->GetFixedTime();
-	absBounds = localBounds + origin + orthoOriginOffset;
+	absBounds = localBounds + origin + ownerOriginOffset;
 	center = absBounds.Center();
 
 	// The engines don't move the ship at all. The ship stays where it is and the engines move the universe around it.
