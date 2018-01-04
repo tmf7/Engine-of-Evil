@@ -24,24 +24,39 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 
 ===========================================================================
 */
-#include "Class.h"
-
 #ifndef EVIL_CANVAS_H
 #define EVIL_CANVAS_H
 
-//***********************************************
-//				eCanvas
-// Draws eRenderImageBase objects to either of
-// two rendering targets: a main and a debug.
-// The debug target draws on top of the main target.
-// DEBUG: Use eRenderer to draw on an eCanvas
-// and output to a window/rendering context,
-// and to ensure eRenderTargets get cleared properly
-// TODO: this can be a base class for the three types of eCanvas
-// screen overlay, camera overlay, world-space
-//***********************************************
-class eCanvas : public eClass {
+#include "RenderTarget.h"
+#include "RenderImageBase.h"
 
-};
+//***********************************************
+//				eCanvas 
+// Immobile 2D Axis-Aligned Orthographic box 
+// that draws eRenderImageBase objects to
+// its eRenderTarget texture during eRenderer::Flush
+//***********************************************
+class eCanvas : public eRenderTarget {
+public:
 
-#endif /* EVIL_CANVAS_H */
+	friend class eRenderer;
+
+public:
+
+	void											Configure(const eVec2 & size, const eVec2 & worldPosition, const eVec2 & scale = vec2_one);
+	bool											AddToRenderPool(eRenderImageBase * renderImage);
+	void											ClearRenderPools();
+
+	virtual int										GetClassType() const override				{ return CLASS_CANVAS; }
+	virtual bool									IsClassType(int classType) const override	{ 
+														if(classType == CLASS_CANVAS) 
+															return true; 
+														return eRenderTarget::IsClassType(classType); 
+													}
+private:
+	
+	std::vector<eRenderImageBase *>					dynamicPool;				// dynamic eGameObjects to draw, minimizes priority re-calculations of dynamic vs. static eGameObjects
+	std::vector<eRenderImageBase *>					staticPool;					// static eGameObjects that scale with this eCanvas
+};	
+
+#endif /* EVIL_CAMERA_H */

@@ -77,7 +77,7 @@ bool eGame::InitSystem() {
 	}
 
 	SetFixedFPS(defaultFPS);
-	gameTime = SDL_GetTicks();
+	gameTime = (float)SDL_GetTicks() / 1000.0f;
 	return Init();
 }
 
@@ -109,7 +109,7 @@ void eGame::DrawFPS() {
 void eGame::Run() {	
 	isRunning = true;
 	while (isRunning) {
-		Uint32 startTime = SDL_GetTicks();
+		float startTime = (float)SDL_GetTicks() / 1000.0f;
 
 		// system updates
 		input.Update();
@@ -122,17 +122,18 @@ void eGame::Run() {
 		renderer.Flush();
 		renderer.Show();
 
-		// frame-rate governing delay
-		gameTime = SDL_GetTicks();
+		gameTime = (float)SDL_GetTicks() / 1000.0f;
+
+		// allows frame-rate independent movement
 		deltaTime = gameTime - startTime;
 
-		// DEBUG: breakpoint handling
-		if (deltaTime > 1000)
+		// breakpoint handling
+		if (deltaTime > 1.0f)
 			deltaTime = frameTime;
 
 		// DEBUG: delta time of this last frame is not used as the global update interval,
 		// instead the globally available update interval is fixed to frameTime
-		deltaTime <= frameTime ? SDL_Delay(frameTime - deltaTime) : SDL_Delay(deltaTime - frameTime);
+//		deltaTime <= frameTime ? SDL_Delay(frameTime - deltaTime) : SDL_Delay(deltaTime - frameTime);
 	}
 	Shutdown();
 	ShutdownSystem();

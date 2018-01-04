@@ -28,18 +28,16 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 #include "Camera.h"
 
 //***************
-// eCamera::Init
+// eCamera::Configure
+// DEBUG: use this fn instead of eRenderTarget::Init to initialize *this
 //***************
-void eCamera::Init(const eVec2 & size, const eVec2 & worldPosition, float zoomLevel, float panSpeed) {
+void eCamera::Configure(const eVec2 & size, const eVec2 & worldPosition, float zoomLevel, float panSpeed) {
 	this->panSpeed = panSpeed;
-	defaultSize = size;
 	const auto & context = game->GetRenderer().GetSDLRenderer();
-	SDL_Point intSize = { eMath::NearestInt(defaultSize.x), eMath::NearestInt(defaultSize.y) };
-	renderTarget.Init( context, intSize.x, intSize.y, worldPosition, zoomLevel );
-	debugRenderTarget.Init( context, intSize.x, intSize.y, worldPosition, zoomLevel );
-	UpdateZoom();
-	cameraPool.reserve(MAX_IMAGES);
-	cameraPoolInserts.reserve(MAX_IMAGES);
+	SDL_Point intSize = { eMath::NearestInt(size.x), eMath::NearestInt(size.y) };
+	eRenderTarget::Init( context, intSize.x, intSize.y, worldPosition, vec2_one * zoomLevel );
+	staticPool.reserve(MAX_IMAGES);
+	dynamicPool.reserve(MAX_IMAGES);
 }
 
 //***************
@@ -50,8 +48,6 @@ void eCamera::Init(const eVec2 & size, const eVec2 & worldPosition, float zoomLe
 //***************
 void eCamera::Think() {
 	auto & input = game->GetInput();
-	float oldZoomLevel = renderTarget.GetZoom();
-	const eVec2 oldOrigin = renderTarget.GetOrigin();
 	const eVec2 oldBoundsCenter = absBounds.Center();		// stay centered on the same point when zooming in/out, it's less jarring
 
 	if (input.KeyPressed(SDL_SCANCODE_EQUALS) || input.GetMouseScroll() > 0)
@@ -59,130 +55,67 @@ void eCamera::Think() {
 	else if (input.KeyPressed(SDL_SCANCODE_MINUS) || input.GetMouseScroll() < 0)
 		ZoomOut();
 
-	const eVec2 zoomedBoundsCenter = absBounds.Center();
-
-	if (input.KeyHeld(SDL_SCANCODE_SPACE)) {
-//		eVec2 snapFocus = map->GetEntity(0)->CollisionModel().Center();		// FIXME: 0th eEntity should not be the default thing to snap focus to
-//		eMath::CartesianToIsometric(snapFocus.x, snapFocus.y);
-//		SetOrigin(snapFocus);
-	} else {
-		float x = panSpeed * (float)(input.KeyHeld(SDL_SCANCODE_D) - input.KeyHeld(SDL_SCANCODE_A));
-		float y = panSpeed * (float)(input.KeyHeld(SDL_SCANCODE_S) - input.KeyHeld(SDL_SCANCODE_W));
-		float deltaSec = (float)game->GetDeltaTime() / 1000.0f;
-		deltaSec = deltaSec >= 1.0f ? 0.99f : deltaSec;
-		SetOrigin( oldOrigin + (oldBoundsCenter - zoomedBoundsCenter) + (eVec2( x , y ) / (1.0f - deltaSec )) );
-	}
-
-	moved = (renderTarget.GetZoom() != oldZoomLevel || renderTarget.GetOrigin() != oldOrigin);
-}
-
-//***************
-// eCamera::UpdateZoom
-// ensures the collisionModel bounds
-// is syncronized with the zoomLevel
-//***************
-void eCamera::UpdateZoom() {
-	eVec2 zoomSize = defaultSize / renderTarget.GetZoom();
-	absBounds = eBounds(vec2_zero, zoomSize) + renderTarget.GetOrigin();
-}
-
-//***************
-// eCamera::SetSize
-// resizes both eRenderTargets 
-// by copying their data to targets
-// and destroying the old ones
-//***************
-void eCamera::SetSize(const eVec2 & newSize) {
-	defaultSize = newSize;
-	UpdateZoom();
-	SDL_Point intSize = { eMath::NearestInt(defaultSize.x), eMath::NearestInt(defaultSize.y) };
-	renderTarget.Resize( intSize.x, intSize.y );
-	debugRenderTarget.Resize( intSize.x, intSize.y );
+	float x = panSpeed * (float)(input.KeyHeld(SDL_SCANCODE_D) - input.KeyHeld(SDL_SCANCODE_A));
+	float y = panSpeed * (float)(input.KeyHeld(SDL_SCANCODE_S) - input.KeyHeld(SDL_SCANCODE_W));
+	SetOrigin( origin + (oldBoundsCenter - absBounds.Center()) + (eVec2( x , y ) * game->GetDeltaTime()) );
 }
 
 //***************
 // eCamera::ZoomIn
-// scales both render targets' data
+// uniformly scales up by zoomSpeed
 //***************
 void eCamera::ZoomIn() {
-	float zoom = renderTarget.GetZoom();
+	float zoom = scale.x;
 	zoom += zoomSpeed;
 	if (zoom > maxZoom)
 		zoom = maxZoom;
 
-	renderTarget.SetZoom(zoom);
-	debugRenderTarget.SetZoom(zoom);
-	UpdateZoom();
+	SetScale(vec2_one * zoom);
 }
 
 //***************
 // eCamera::ZoomOut
-// de-scales both render targets' data
+// uniformly scales down by zoomSpeed
 //***************
 void eCamera::ZoomOut() {
-	float zoom = renderTarget.GetZoom();
+	float zoom = scale.x;
 	zoom -= zoomSpeed;
 	if (zoom < minZoom)
 		zoom = minZoom;
 
-	renderTarget.SetZoom(zoom);
-	debugRenderTarget.SetZoom(zoom);
-	UpdateZoom();
+	SetScale(vec2_one * zoom);
 }
 
 //***************
-// eCamera::ResetZoom
-// scales both render targets' data back to 1.0f
+// eCamera::SetZoom
 //***************
-void eCamera::ResetZoom() {
-	renderTarget.ResetZoom();
-	debugRenderTarget.ResetZoom();
-	UpdateZoom();
+void eCamera::SetZoom(float newZoomLevel) {
+	if (newZoomLevel < minZoom)
+		newZoomLevel = minZoom;
+	else if (newZoomLevel > maxZoom)
+		newZoomLevel = maxZoom;
+
+	SetScale(vec2_one * newZoomLevel);
 }
 
 //***************
 // eCamera::GetZoom
-// convenience function to query the renderTarget zoomLevel
-// DEBUG: which is equal to the debugRenderTarget zoomLevel
+// convenience function to query the uniform eRenderTarget::scale
 //***************
 float eCamera::GetZoom() const {
-	return renderTarget.GetZoom();
-}
-
-//***************
-// eCamera::SetOrigin
-// keeps the renderTarget and 
-// debugRenderTarget positions synchronized
-//***************
-void eCamera::SetOrigin(const eVec2 & newOrigin) {
-	renderTarget.SetOrigin(newOrigin);
-	debugRenderTarget.SetOrigin(newOrigin);
-	UpdateZoom();
-}
-
-//***************
-// eCamera::GetOrigin
-// convenience fn to query renderTarget origin
-// DEBUG: with is equal to the debugRenderTarget origin
-//***************
-const eVec2 & eCamera::GetOrigin() const {
-	return renderTarget.GetOrigin();
+	return scale.x;
 }
 
 //***************
 // eCamera::Moved
+// checks if this camera has moved since the last Moved call
 // DEBUG: includes zoom and translation
 //***************
-bool eCamera::Moved() const {
+bool eCamera::Moved() {
+	bool moved = ( GetOriginDelta() != vec2_zero || GetScaleDelta() != vec2_zero );
+	SetOrigin( origin );
+	SetZoom( GetZoom() );
 	return moved;
-}
-
-//***************
-// eCamera::AbsBounds
-// returns the current worldPosition and dimensions of *this
-//***************
-const eBounds & eCamera::AbsBounds() const {
-	return absBounds;
 }
 
 //**************
@@ -190,7 +123,7 @@ const eBounds & eCamera::AbsBounds() const {
 // returns current position of screenPoint over the 2D orthographic game world with respect to this camera's position
 //**************
 eVec2 eCamera::ScreenToWorldPosition(const eVec2 & screenPoint) const {
-	eVec2 worldPoint = (screenPoint / renderTarget.GetZoom()) + absBounds[0];
+	eVec2 worldPoint = (screenPoint / GetZoom()) + absBounds[0];
 	eMath::IsometricToCartesian(worldPoint.x, worldPoint.y);
 	return worldPoint;
 }
@@ -206,16 +139,28 @@ eVec2 eCamera::MouseWorldPosition() const {
 }
 
 //***************
-// eCamera::GetRenderTarget
+// eCamera::AddToRenderPool
+// adds param renderImage to either staticPool or dynamicPool,
+// which later renders during eRenderer::Flush (if the camera is registered to the eRenderer)
+// returns true if param renderImage hasn't already been added to this eCamera's renderPool
+// returns false otherwise
+// DEBUG: doesn't check if the eCamera is genuinely registered with the eRenderer, 
+// if not, then param renderImage won't be drawn to the rendering context
+// and this eCamera's pools won't be cleared (as happens during Flush)
 //***************
-eRenderTarget * const eCamera::GetRenderTarget() {
-	return &renderTarget;
+bool eCamera::AddToRenderPool(eRenderImageIsometric * renderImage) {
+	if (renderImage->UpdateDrawnStatus(this))
+		return false;
+
+	const auto & renderPool = (renderImage->Owner()->IsStatic() ? &staticPool : &dynamicPool);
+	renderPool->emplace_back(renderImage);
+	return true;
 }
 
-//***************
-// eCamera::GetDebugRenderTarget
-//***************
-eRenderTarget * const eCamera::GetDebugRenderTarget() {
-	return &debugRenderTarget;
+//**************
+// eCamera::ClearRenderPools
+//**************
+void eCamera::ClearRenderPools() {
+	staticPool.clear();
+	dynamicPool.clear();
 }
-

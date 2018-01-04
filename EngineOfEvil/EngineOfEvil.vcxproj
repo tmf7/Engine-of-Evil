@@ -141,6 +141,7 @@
     <ClCompile Include="source\Box.cpp" />
     <ClCompile Include="source\Button.cpp" />
     <ClCompile Include="source\Camera.cpp" />
+    <ClCompile Include="source\Canvas.cpp" />
     <ClCompile Include="source\Collision.cpp" />
     <ClCompile Include="source\CollisionModel.cpp" />
     <ClCompile Include="source\CreateEntityPrefabStrategies.cpp" />

@@ -27,53 +27,43 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 #ifndef EVIL_CAMERA_H
 #define EVIL_CAMERA_H
 
-#include "Bounds.h"
 #include "RenderTarget.h"
+#include "RenderImageIsometric.h"
 
 //***********************************************
 //				eCamera 
 // Mobile 2D Axis-Aligned Orthographic box 
-// that draws eRenderImageIsometric objects to either
-// of two rendering targets: a main and a debug.
-// The debug target draws on top of the main target.
-// DEBUG: Use eRenderer to draw on an eCamera
-// and output to a window/rendering context,
-// and to ensure eRenderTargets get cleared properly
+// that draws eRenderImageIsometric objects to
+// its eRenderTarget texture during eRenderer::Flush
+// with draw-order sorting based on eRenderImageIsometric::renderBlock worldPositions
+// adds uniform scaling (zoom) functionality to eRenderTarget,
+// and converts screen coordinates into isometric-world space
 //***********************************************
-class eCamera : public eClass {
+class eCamera : public eRenderTarget {
 public:
 
-	friend class eRenderer;							// for direct access to the cameraPool and cameraPoolInserts
+	friend class eRenderer;
 
 public:
 
-
-	void											Init(const eVec2 & size, const eVec2 & worldPosition, float zoomLevel = 1.0f, float panSpeed = defaultCamSpeed);
+	void											Configure(const eVec2 & size, const eVec2 & worldPosition, float zoomLevel = 1.0f, float panSpeed = defaultCamSpeed);
 	void											Think();
-	const eBounds &									AbsBounds() const;
-	void											SetOrigin(const eVec2 & newOrigin);
-	const eVec2 &									GetOrigin() const;
-	float											GetZoom() const;
 	void											ZoomIn();
 	void											ZoomOut();
-	void											ResetZoom();
-	void											SetSize(const eVec2 & newSize);
-	bool											Moved() const;
+	void											SetZoom(float newZoomLevel);
+	float											GetZoom() const;
+	bool											Moved();
 	eVec2											ScreenToWorldPosition(const eVec2 & screenPoint) const;
 	eVec2											MouseWorldPosition() const;
-	eRenderTarget * const							GetRenderTarget();
-	eRenderTarget * const							GetDebugRenderTarget();
+	bool											AddToRenderPool(eRenderImageIsometric * renderImage);
+	void											ClearRenderPools();
 
 	virtual int										GetClassType() const override				{ return CLASS_CAMERA; }
 	virtual bool									IsClassType(int classType) const override	{ 
 														if(classType == CLASS_CAMERA) 
 															return true; 
-														return eClass::IsClassType(classType); 
+														return eRenderTarget::IsClassType(classType); 
 													}
-private:
-
-	void											UpdateZoom();
-
 public:
 
 	// FIXME: load these from engine config file
@@ -84,14 +74,9 @@ public:
 
 private:
 	
-	std::vector<eRenderImageIsometric *>			cameraPoolInserts;				// minimizes priority re-calculations of dynamic vs. static eGameObjects
-	std::vector<eRenderImageIsometric *>			cameraPool;						// game-world that moves and scales with this camera's renderTargets
-	eRenderTarget									renderTarget;					// move and scale with this->absBounds, with draw-order sorting based on eRenderImageIsometric::renderBlock		
-	eRenderTarget									debugRenderTarget;				// move and scale with this->absBounds, but draw last, without draw-order sorting (same size and origin as renderTarget)
-	eBounds											absBounds;						// access to renderTarget size and position within the main rendering context
-	eVec2											defaultSize;					// allows zoom in/out with minimal precision-loss, and allows visible area resize w/o zoom
+	std::vector<eRenderImageIsometric *>			dynamicPool;				// dynamic eGameObjects to draw, minimizes priority re-calculations of dynamic vs. static eGameObjects
+	std::vector<eRenderImageIsometric *>			staticPool;					// static eGameObjects that move and scale with this camera's renderTargets
 	float											panSpeed;
-	bool											moved;
 };	
 
 #endif /* EVIL_CAMERA_H */

@@ -180,7 +180,7 @@ void ePlayer::DebugDraw(eRenderTarget * renderTarget) {
 	const eVec2 worldPosition = map->GetViewCamera()->MouseWorldPosition();
 	if (tileMap.IsValid(worldPosition)) {
 		auto & tileBounds = tileMap.Index(worldPosition).AbsBounds();
-		game->GetRenderer().DrawIsometricRect(renderTarget,yellowColor, tileBounds);
+		game->GetRenderer().DrawIsometricRect(renderTarget, yellowColor, tileBounds);
 	}
 
 }

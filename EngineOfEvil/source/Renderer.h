@@ -27,8 +27,8 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 #ifndef EVIL_RENDERER_H
 #define EVIL_RENDERER_H
 
-#include "RenderImageIsometric.h"
 #include "Camera.h"
+#include "Canvas.h"
 #include "Sort.h"
 
 //**************************************************
@@ -51,13 +51,19 @@ public:
 
 	SDL_Renderer * const				GetSDLRenderer() const;
 	SDL_Window * const					GetWindow() const;
+	
+	// TODO(!): make some canvases screen-space overlay, others camera-space overlay, and others world-space (with a big canvas renderblock)
+	// AND also give each canvas/camera a draw-order (eg: screen overlay draws last, camera overlays draw after each respective camera, worldspace draws within a cameras renderpool?,
+	// BUT then also AMONGST the screen overlays determine an order, and AMONGST the cameras (ie: base camera + overlay canvas) determine an order
+	bool								RegisterCanvas(eCanvas * newCanvas);
+	bool								UnregisterCanvas(eCamera * camera);
+	void								UnregisterAllCanvases();
+	int									NumRegisteredCanvases() const;
 
 	bool								RegisterCamera(eCamera * newCamera);
 	bool								UnregisterCamera(eCamera * camera);
 	void								UnregisterAllCameras();
 	int									NumRegisteredCameras() const;
-	bool								AddToCameraRenderPool(eCamera * registeredCamera, eRenderImageIsometric * renderImage);
-	bool								AddToOverlayRenderPool(eRenderImageBase * renderImage);
 	void								Flush();
 
 	void								DrawOutlineText(eRenderTarget * target, const char * text, eVec2 & point, const SDL_Color & color, bool constText);
@@ -67,8 +73,7 @@ public:
 	void								DrawIsometricRect(eRenderTarget * target, const SDL_Color & color, const eBounds & rect);
 	void								DrawCartesianRect(eRenderTarget * target, const SDL_Color & color, const eBounds & rect, bool fill);
 
-	eRenderTarget * const				GetDefaultOverlayTarget();
-	eRenderTarget * const				GetDebugOverlayTarget();
+	eRenderTarget * const				GetMainRenderTarget();
 
 	virtual int							GetClassType() const override				{ return CLASS_RENDERER; }
 	virtual bool						IsClassType(int classType) const override	{ 
@@ -81,10 +86,9 @@ public:
 
 private:
 
-	bool								CheckDrawnStatus(eRenderTarget * renderTarget, eRenderImageBase * renderImage) const; 
 	void								SetRenderTarget(eRenderTarget *);
 	void								FlushCameraPool(eCamera * registeredCamera);
-	void								FlushOverlayPool();
+	void								FlushCanvasPool(eCanvas * registeredCanvas);
 
 	static void							VisitTopologicalNode(eRenderImageIsometric * renderImage);
 
@@ -92,17 +96,15 @@ private:
 
 	static int							globalDrawDepth;								// for eRenderer::TopologicalDrawDepthSort
 
-	std::vector<eRenderImageBase *>		overlayPool;									// images static to the screen regardless of camera position
-	std::vector<eRenderImageBase *>		overlayPoolInserts;								// minimize priority re-calculations	
-	std::vector<eCamera *>				registeredCameras;								// cameras to copy to the main rendering context during Flush
+	// eRenderTargets to copy to the main rendering context during Flush	
+	std::vector<eCanvas *>				registeredCanvases;
+	std::vector<eCamera *>				registeredCameras;
 
 	SDL_Window *						window;
 	SDL_Renderer *						internal_renderer;
 
 	// swappable render targets
-	// draw-order sorting based on eRenderImageIsometric::renderBlock worldPositions
 	eRenderTarget						mainRenderTarget;								// DEBUG: default SDL rendertarget (nullptr) is the window texture
-	eRenderTarget						debugMainRenderTarget;							// draw straight on the window (no camera adjustment), last, without draw-order sorting
 	eRenderTarget *						currentRenderTarget	= &mainRenderTarget;		// current target being drawn to
 	
 	TTF_Font *							font;											// FIXME: only one test font for this rendering context for now

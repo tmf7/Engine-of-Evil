@@ -177,6 +177,9 @@
     <ClCompile Include="source\RenderImageIsometric.cpp">
       <Filter>Core\Components</Filter>
     </ClCompile>
+    <ClCompile Include="source\Canvas.cpp">
+      <Filter>Core\Renderer</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="source\Game.h">

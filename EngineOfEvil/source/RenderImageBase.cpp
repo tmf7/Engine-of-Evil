@@ -97,3 +97,26 @@ void eRenderImageBase::Update() {
 void eRenderImageBase::SetOrigin(const eVec2 & newOrigin) {
 	owner->SetOrigin(newOrigin);
 }
+
+//***************
+// eRenderImageBase::UpdateDrawnStatus
+// updates the renderImage's lastDrawnTime according to eGame::gameTime if this is the first call this frame
+// assigns *this to the the given renderTarget to be drawn this frame,
+// returns false if *this has already been assigned, true otherwise
+// DEBUG: it's quicker to do a linear search of the small drawnTo vector for a eRenderTarget *,
+// than it is to search the larger renderPool for a eRenderImageBase *
+//***************
+bool eRenderImageBase::UpdateDrawnStatus(eRenderTarget * renderTarget) {
+	auto gameTime = game->GetGameTime();
+	if (lastDrawnTime < gameTime) {
+		lastDrawnTime = gameTime;
+		drawnTo.clear();			// first time being drawn this frame
+	}
+
+	bool alreadyDrawn = std::find(drawnTo.begin(), drawnTo.end(), renderTarget) != drawnTo.end();
+
+	if (!alreadyDrawn)
+		drawnTo.emplace_back(renderTarget);
+
+	return alreadyDrawn;
+}

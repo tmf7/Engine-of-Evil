@@ -74,10 +74,10 @@ public:
 	// frame-rate metrics
 	void											SetFixedFPS(const Uint32 newFPS);
 	Uint32											GetFixedFPS() const;
-	Uint32											GetFixedTime() const;
 	Uint32											GetDynamicFPS() const;
-	Uint32											GetDeltaTime() const;
-	Uint32											GetGameTime() const;
+	float											GetFixedTime() const;
+	float											GetDeltaTime() const;
+	float											GetGameTime() const;
 	void											DrawFPS();
 
 	virtual int										GetClassType() const override				{ return CLASS_GAME; }
@@ -99,9 +99,9 @@ private:
 
 	const Uint32									defaultFPS = 60;
 	Uint32											fixedFPS;			// constant framerate
-	Uint32											frameTime;			// constant framerate governing time interval (depends on FixedFPS)
-	Uint32											deltaTime;			// actual time a frame takes to execute (to the nearest millisecond)
-	Uint32											gameTime;			// time elapsed since execution began (updated at the end of each frame)
+	float											frameTime;			// constant framerate governing time interval in seconds (depends on FixedFPS)
+	float											deltaTime;			// actual time a frame takes to execute in seconds (to the nearest millisecond)
+	float											gameTime;			// time elapsed since execution began in seconds (updated at the end of each frame)
 	bool											isRunning = false;	// determines whether the game shuts down or continues
 };
 
@@ -169,7 +169,7 @@ inline eEntityPrefabManager & eGame::GetEntityPrefabManager() {
 //****************
 inline void eGame::SetFixedFPS(const Uint32 newFPS) {
 	fixedFPS = newFPS;
-	frameTime = 1000 / fixedFPS;
+	frameTime = 1.0f / (float)fixedFPS;
 }
 
 //****************
@@ -182,7 +182,7 @@ inline Uint32 eGame::GetFixedFPS() const {
 //****************
 // eGame::GetFixedTime
 //****************
-inline Uint32 eGame::GetFixedTime() const {
+inline float eGame::GetFixedTime() const {
 	return frameTime;
 }
 
@@ -191,7 +191,7 @@ inline Uint32 eGame::GetFixedTime() const {
 //****************
 inline Uint32 eGame::GetDynamicFPS() const {
 	if (deltaTime)
-		return 1000 / deltaTime;
+		return (Uint32)eMath::NearestInt(1.0f / deltaTime);
 	else
 		return fixedFPS;
 }
@@ -199,14 +199,14 @@ inline Uint32 eGame::GetDynamicFPS() const {
 //****************
 // eGame::GetDeltaTime
 //****************
-inline Uint32 eGame::GetDeltaTime() const {
+inline float eGame::GetDeltaTime() const {
 	return deltaTime;
 }
 
 //****************
 // eGame::GetGameTime
 //****************
-inline Uint32 eGame::GetGameTime() const {
+inline float eGame::GetGameTime() const {
 	return gameTime;
 }
 

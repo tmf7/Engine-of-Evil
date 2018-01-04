@@ -33,7 +33,7 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 void eGridCell::Draw(eCamera * viewCamera) {
 	auto & renderer = game->GetRenderer();
 	for (auto & contentPair : renderContents)
-		renderer.AddToCameraRenderPool(viewCamera, contentPair.second);
+		viewCamera->AddToRenderPool(contentPair.second);
 }
 
 //************
@@ -63,7 +63,7 @@ void eGridCell::DebugDraw(eRenderTarget * renderTarget) {
 		if (game->debugFlags.COLLISION && &tile.CollisionModel() != nullptr)
 			game->GetRenderer().DrawIsometricRect(renderTarget, pinkColor, tile.CollisionModel().AbsBounds());
 
-		auto & renderBlock = tile.RenderImage().GetRenderBlock();
+		auto & renderBlock = static_cast<eRenderImageIsometric *>(&tile.RenderImage())->GetRenderBlock();
 		if (game->debugFlags.RENDERBLOCKS && renderBlock.Depth() > 0)		// DEBUG(performance): for visual clarity, don't draw flat renderBlocks
 			game->GetRenderer().DrawIsometricPrism(renderTarget, lightBlueColor, renderBlock);
 	}

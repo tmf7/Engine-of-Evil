@@ -28,6 +28,7 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 #define EVIL_TILE_H
 
 #include "GameObject.h"
+#include "RenderImageIsometric.h"
 
 // Flyweight tile design
 

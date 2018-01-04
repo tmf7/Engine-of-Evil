@@ -50,7 +50,7 @@ eBlendState::eBlendState(const std::string & name, int numAnimations, int xBlend
 //*********************
 void eBlendState::Init() {
 	currentFrame = &animations[currentAnimationIndex]->GetFrame(0);
-	duration = (animations[currentAnimationIndex]->Duration() / speed) + (float)game->GetFixedTime();	// BUGFIX: + FixedTime() prevents skipping the last animation frame during playback
+	duration = (animations[currentAnimationIndex]->Duration() / speed) + game->GetFixedTime();	// BUGFIX: + FixedTime() prevents skipping the last animation frame during playback
 }
 
 //*********************
@@ -83,7 +83,7 @@ bool eBlendState::AddBlendNode(const std::string & animationName, float xPositio
 void eBlendState::SwapAnimation(int animationIndex) {
 	const float normalizedTime = (time / duration);
 	currentAnimationIndex = animationIndex;
-	duration = (animations[currentAnimationIndex]->Duration() / speed) + (float)game->GetFixedTime();	// BUGFIX: + FixedTime() prevents skipping the last animation frame during playback
+	duration = (animations[currentAnimationIndex]->Duration() / speed) + game->GetFixedTime();	// BUGFIX: + FixedTime() prevents skipping the last animation frame during playback
 	time = normalizedTime * duration;
 }
 

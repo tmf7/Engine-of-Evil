@@ -33,7 +33,7 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 // according to param animation
 //*********************
 void eStateNode::NextFrame(const eAnimation & animation) {
-	time += (float)game->GetFixedTime();
+	time += (float)game->GetDeltaTime();
 	if (time > duration) { 
 		switch (animation.loop) {
 			case AnimationLoopState::ONCE:		time = duration; break;

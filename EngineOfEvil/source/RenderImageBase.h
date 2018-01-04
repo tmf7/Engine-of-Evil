@@ -34,7 +34,7 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 
 class eRenderTarget;
 
-// TODO: eCanvas is similar to eCamera, but without the draw-order sorting that preserves the isometric illusion
+// TODO: eCanvas is similar to eCamera, but without the renderblock sorting
 // TODO: create derived eCanvas classes for screenspace-overlay, camaeraspace-overlay, worldspace, such that they draw OVER the mainRenderTarget, cameraRenderTarget, 
 // or WITHIN a cameraRenderTarget via an eCanvasWorldSpace::renderBlock-type setup so it can be sorted with the rest of the cameraPool
 
@@ -53,7 +53,7 @@ class eRenderTarget;
 class eRenderImageBase : public eComponent {
 private:
 
-	friend class eRenderer;						// directly sets priority and lastDrawnTime (no other accessors outside *this)
+	friend class eRenderer;						// directly sets priority
 
 public:
 
@@ -72,6 +72,7 @@ public:
 	const eBounds &								GetWorldClip() const;
 	void										SetIsSelectable(bool isSelectable);
 	bool										IsSelectable() const;
+	bool										UpdateDrawnStatus(eRenderTarget * renderTarget);
 
 	virtual void								Update() override;
 	virtual std::unique_ptr<eComponent>			GetCopy() const	override					{ return std::make_unique<eRenderImageBase>(*this); }
@@ -97,7 +98,7 @@ protected:
 	eVec2										ownerOriginOffset;				// offset from (eGameObject)owner::orthoOrigin [default == (0,0)]
 	const SDL_Rect *							srcRect			= nullptr;		// what part of the source image to draw (nullptr for all of it)
 	float										priority;						// lower priority draws first to an eRenderTarget
-	Uint32										lastDrawnTime	= 0;			// allows the drawnTo vector to be cleared before *this is drawn the first time during a frame
+	float										lastDrawnTime	= 0.0f;			// allows the drawnTo vector to be cleared before *this is drawn the first time during a frame
 	bool										isSelectable	= false;		// TODO: use this to add to the grid...AND to "raytrace" against a UI element (ie don't for a disabled button...or just a plain ui image)
 };
 

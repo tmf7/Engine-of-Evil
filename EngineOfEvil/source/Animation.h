@@ -93,7 +93,7 @@ inline eAnimation::eAnimation(const char * sourceFilename, int animationManagerI
 	  frames(frames),
 	  framesPerSecond(framesPerSecond),
 	  loop(loop) {
-	duration = (float)(1000.0f * frames.size()) / (float)framesPerSecond;
+	duration = (float)frames.size() / (float)framesPerSecond;
 }
 
 //*******************
@@ -126,7 +126,7 @@ inline void eAnimation::SetFPS(int newFPS) {
 
 //*******************
 // eAnimation::Duration
-// returns animation's duration in milliseconds
+// returns animation's duration in seconds
 //*******************
 inline float eAnimation::Duration() const { 
 	return duration;

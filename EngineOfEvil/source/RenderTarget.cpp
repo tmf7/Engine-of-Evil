@@ -41,9 +41,10 @@ const SDL_Color yellowColor			= { 255, 255, 0, SDL_ALPHA_OPAQUE };
 // initializes the default render target for a context
 // DEBUG: only do this once per rendering context
 //***************************
-void eRenderTarget::InitDefault(SDL_Renderer * context, float zoomLevel) {
+void eRenderTarget::InitDefault(SDL_Renderer * context, const eVec2 & scale) {
 	this->context = context;
-	this->zoomLevel = zoomLevel;
+	this->scale = scale;
+	UpdateBounds();
 }
 
 //***************************
@@ -52,8 +53,8 @@ void eRenderTarget::InitDefault(SDL_Renderer * context, float zoomLevel) {
 // and sets its rendering position within the context to param contextPosition
 // returns true on success, false on failure
 //***************************
-bool eRenderTarget::Init(SDL_Renderer * context, int width, int height, const eVec2 & contextPosition, float zoomLevel) {
-	InitDefault(context, zoomLevel);
+bool eRenderTarget::Init(SDL_Renderer * context, int width, int height, const eVec2 & contextPosition, const eVec2 & scale) {
+	InitDefault(context, scale);
 	origin = contextPosition;
 	target = SDL_CreateTexture( context,
 								SDL_PIXELFORMAT_ARGB8888,						// DEBUG: this format may not work for all images
@@ -66,6 +67,8 @@ bool eRenderTarget::Init(SDL_Renderer * context, int width, int height, const eV
 
 	// ensure the target can alpha-blend
 	SDL_SetTextureBlendMode(target, SDL_BLENDMODE_BLEND);
+	defaultSize = eVec2((float)width, (float)height);
+	UpdateBounds();
 	return true;
 }
 
@@ -106,6 +109,8 @@ bool eRenderTarget::Resize(int newWidth, int newHeight) {
 
 	SDL_DestroyTexture(target);
 	target = newTarget;
+	defaultSize = eVec2((float)newWidth, (float)newHeight);
+	UpdateBounds();
 	return true;
 }
 
@@ -129,4 +134,40 @@ void eRenderTarget::ClearIfDirty(const Uint32 currentTime)	{
 		lastDrawnTime = currentTime;
 		Clear();
 	}
+}
+
+//***************
+// eRenderTarget::UpdateBounds
+// ensures absBounds is syncronized with the scale
+//***************
+void eRenderTarget::UpdateBounds() {
+	eVec2 scaledSize = eVec2( defaultSize.x / scale.x, defaultSize.y / scale.y );
+	absBounds = eBounds(origin, origin + scaledSize);
+}
+
+//***************
+// eRenderTarget::SetOrigin
+//***************
+void eRenderTarget::SetOrigin(const eVec2 & newOrigin) {
+	oldOrigin = origin;
+	origin = newOrigin; 
+	UpdateBounds(); 
+}
+
+//***************
+// eRenderTarget::SetScale
+//***************
+void eRenderTarget::SetScale(const eVec2 & newScale) { 
+	oldScale = scale;
+	scale = newScale; 
+	UpdateBounds(); 
+}
+
+//***************
+// eRenderTarget::ResetScale
+// resets the scale to vec2_one
+//***************
+void eRenderTarget::ResetScale() {
+	scale = vec2_one; 
+	UpdateBounds(); 
 }

@@ -54,7 +54,7 @@ void eCollisionModel::Update() {
 
 	oldOrigin = origin;
 	origin = owner->orthoOrigin;
-	origin += velocity; // * game->GetFixedTime();
+	origin += velocity * game->GetDeltaTime();
 	absBounds = localBounds + origin + ownerOriginOffset;
 	center = absBounds.Center();
 

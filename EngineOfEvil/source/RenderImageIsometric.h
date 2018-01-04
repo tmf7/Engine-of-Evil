@@ -40,7 +40,7 @@ class eGridCell;
 class eRenderImageIsometric : public eRenderImageBase {
 private:
 
-	friend class eRenderer;						// directly sets priority, lastDrawnTime, allBehind, visited (no other accessors outside *this)
+	friend class eRenderer;						// directly sets priority, allBehind, and visited
 
 public:
 

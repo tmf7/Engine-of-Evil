@@ -45,25 +45,25 @@ public:
 
 public:
 
-	void																	Draw(eCamera * viewCamera);
-	void																	DebugDraw(eRenderTarget * renderTarget);
-	void																	AddTileOwned(eTile && tile);
-	const std::vector<eTile> &												TilesOwned() const;
-	std::vector<eTile> &													TilesOwned();
-	const std::unordered_map<eRenderImageBase *, eRenderImageBase *> &		RenderContents() const;
-	std::unordered_map<eRenderImageBase *, eRenderImageBase *> &			RenderContents();
-	std::unordered_map<eCollisionModel *, eCollisionModel *> &				CollisionContents();
-	const eBounds &															AbsBounds() const;
-	void																	SetAbsBounds(const eBounds & bounds);
-	eMap * const															GetMap();
+	void																			Draw(eCamera * viewCamera);
+	void																			DebugDraw(eRenderTarget * renderTarget);
+	void																			AddTileOwned(eTile && tile);
+	const std::vector<eTile> &														TilesOwned() const;
+	std::vector<eTile> &															TilesOwned();
+	const std::unordered_map<eRenderImageIsometric *, eRenderImageIsometric *> &	RenderContents() const;
+	std::unordered_map<eRenderImageIsometric *, eRenderImageIsometric *> &			RenderContents();
+	std::unordered_map<eCollisionModel *, eCollisionModel *> &						CollisionContents();
+	const eBounds &																	AbsBounds() const;
+	void																			SetAbsBounds(const eBounds & bounds);
+	eMap * const																	GetMap();
 
-	virtual void															Reset() override;
-	virtual int																GetClassType() const override				{ return CLASS_GRIDCELL; }
-	virtual bool															IsClassType(int classType) const override	{ 
-																				if(classType == CLASS_GRIDCELL) 
-																					return true; 
-																				return eGridIndex::IsClassType(classType); 
-																			}
+	virtual void																	Reset() override;
+	virtual int																		GetClassType() const override				{ return CLASS_GRIDCELL; }
+	virtual bool																	IsClassType(int classType) const override	{ 
+																						if(classType == CLASS_GRIDCELL) 
+																							return true; 
+																						return eGridIndex::IsClassType(classType); 
+																					}
 
 private:
 
@@ -72,7 +72,7 @@ private:
 	// FIXME (performance): make these std::vectors because most bounds sizes are small (0-30 occupied cells)
 	// be sure to update eCollisionModel and eRenderImageIsometric's ::UpdateAreas fns accordingly
 	std::unordered_map<eCollisionModel *, eCollisionModel *>				collisionContents;	// all eCollisionModel::absBounds that overlap this->absBounds
-	std::unordered_map<eRenderImageBase *, eRenderImageBase *>				renderContents;		// all eRenderImageBase::worldClip that overlap this->absBounds
+	std::unordered_map<eRenderImageIsometric *, eRenderImageIsometric *>	renderContents;		// all eRenderImageBase::worldClip that overlap this->absBounds
 	std::vector<eTile>														tilesOwned;			// which eTiles' lifetimes are managed
 	eBounds																	absBounds;			// using world-coordinates, cached after eSpatialIndexGrid::SetCellSize to expedite collision tests
 
@@ -108,21 +108,21 @@ inline const std::vector<eTile> & eGridCell::TilesOwned() const {
 }
 
 //************
-// eGridCell::TilesToDraw
+// eGridCell::RenderContents
 //************
-inline std::unordered_map<eRenderImageBase *, eRenderImageBase *> & eGridCell::RenderContents() {
+inline std::unordered_map<eRenderImageIsometric *, eRenderImageIsometric *> & eGridCell::RenderContents() {
 	return renderContents;
 }
 
 //************
-// eGridCell::TilesOwned
+// eGridCell::RenderContents
 //************
-inline const std::unordered_map<eRenderImageBase *, eRenderImageBase *> & eGridCell::RenderContents() const {
+inline const std::unordered_map<eRenderImageIsometric *, eRenderImageIsometric *> & eGridCell::RenderContents() const {
 	return renderContents;
 }
 
 //************
-// eGridCell::Contents
+// eGridCell::CollisionContents
 //************
 inline std::unordered_map<eCollisionModel *, eCollisionModel *> & eGridCell::CollisionContents() {
 	return collisionContents;

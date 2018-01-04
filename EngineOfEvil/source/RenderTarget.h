@@ -28,50 +28,69 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 #define EVIL_RENDER_TARGET_H
 
 #include "SDL.h"
-#include "Vector.h"
+#include "Bounds.h"
+#include "Class.h"
 
 //*******************************
 //		eRenderTarget
-// eRenderer clears this texture
+// wrapper class for drawing to an SDL_Texture
+// attached to a SDL_Renderer context which
+// has a user-defined position 
+// and axis-aligned bounding box
+// DEBUG: eRenderer clears this texture
 // before drawing to it for the 
 // first time each frame, if it's dirty
-// DEBUG: similar(?) to Unity's Canvas object
 //*******************************
-class eRenderTarget {
-public:
-
-	friend class eRenderer;
-
+class eRenderTarget : public eClass {
 public:
 
 									eRenderTarget() = default;
+	virtual						   ~eRenderTarget() = default;
 
-	void							InitDefault(SDL_Renderer * context, float zoomLevel = 1.0f);
-	bool							Init(SDL_Renderer * context, int width, int height, const eVec2 & contextPosition = vec2_zero, float zoomLevel = 1.0f);
+	void							InitDefault(SDL_Renderer * context, const eVec2 & scale = vec2_one);
+	bool							Init(SDL_Renderer * context, int width, int height, const eVec2 & contextPosition = vec2_zero, const eVec2 & scale = vec2_one);
 	bool							Resize(int newWidth, int newHeight);
 	void							ClearIfDirty(const Uint32 currentTime);
 	void							Clear();
-	void							SetOrigin(const eVec2 & newOrigin)								{ origin = newOrigin; }
+	void							SetOrigin(const eVec2 & newOrigin);
+	void							SetScale(const eVec2 & newScale);		
+	void							ResetScale();
 	const eVec2 &					GetOrigin() const												{ return origin; }
-	void							SetZoom(float newZoomLevel)										{ zoomLevel = newZoomLevel; }
-	float							GetZoom() const													{ return zoomLevel; }
-	void							ResetZoom()														{ zoomLevel = 1.0f; }
-	SDL_Texture * const				GetTarget() const												{ return target; }
+	eVec2							GetOriginDelta() const											{ return origin - oldOrigin; }
+	const eVec2 &					GetScale() const												{ return scale; }
+	eVec2							GetScaleDelta() const											{ return scale - oldScale; }
+	const eBounds &					AbsBounds() const												{ return absBounds; }
+	SDL_Texture * const				GetTargetTexture() const										{ return target; }
 	const SDL_Color &				GetClearColor() const											{ return clearColor; }
 	void							SetClearColor(const SDL_Color & newClearColor)					{ clearColor = newClearColor; }
 	Uint32							GetLastDrawnTime() const										{ return lastDrawnTime; }
 	void							SetLastDrawnTime(const Uint32 currentTime)						{ lastDrawnTime = currentTime;}
 	bool							IsNull() const													{ return target == nullptr; }
 
+	virtual int						GetClassType() const override									{ return CLASS_RENDERTARGET; }
+	virtual bool					IsClassType(int classType) const override						{ 
+										if(classType == CLASS_RENDERTARGET) 
+											return true; 
+										return eClass::IsClassType(classType); 
+									}
 
 private:
+
+	void							UpdateBounds();
+
+
+protected:
 
 	SDL_Renderer *					context			= nullptr;										// back-pointer to eRenderer-allocated rendering context for target
 	SDL_Texture *					target			= nullptr;										// DEBUG: nullptr is the default rendering target for an SDL_Renderer context
 	SDL_Color						clearColor		= { 128, 128, 128, SDL_ALPHA_TRANSPARENT };		// clearColor
-	Uint32							lastDrawnTime	= 0;											// governs if *this should be cleared on a new frame
-	float							zoomLevel		= 1.0f;											// scaling multiplier when rendering to the main context
+	eBounds							absBounds;														// target size and position within the main rendering context (world-space)
+	eVec2							defaultSize;													// allows scale up/down with minimal precision-loss
 	eVec2							origin			= vec2_zero;									// position offset when rendering to the main context
+	eVec2							oldOrigin		= vec2_zero;									// origin as of the last SetOrigin call
+	eVec2							scale			= vec2_one;										// scaling multipliers when rendering to the main context
+	eVec2							oldScale		= vec2_one;										// scale as of the last SetScale call
+	float							lastDrawnTime	= 0.0f;											// governs if *this should be cleared on a new frame
 };
 
 // utility colors
