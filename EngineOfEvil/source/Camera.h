@@ -27,7 +27,7 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 #ifndef EVIL_CAMERA_H
 #define EVIL_CAMERA_H
 
-#include "RenderTarget.h"
+#include "Canvas.h"
 #include "RenderImageIsometric.h"
 
 //***********************************************
@@ -35,15 +35,12 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 // Mobile 2D Axis-Aligned Orthographic box 
 // that draws eRenderImageIsometric objects to
 // its eRenderTarget texture during eRenderer::Flush
-// with draw-order sorting based on eRenderImageIsometric::renderBlock worldPositions
+// with draw-order sorting based on eRenderImageIsometric::renderBlock worldPositions.
+// Camera-Overlay type eCanvases also get registered and flushed on *this
 // adds uniform scaling (zoom) functionality to eRenderTarget,
 // and converts screen coordinates into isometric-world space
 //***********************************************
 class eCamera : public eRenderTarget {
-public:
-
-	friend class eRenderer;
-
 public:
 
 	void											Configure(const eVec2 & size, const eVec2 & worldPosition, float zoomLevel = 1.0f, float panSpeed = defaultCamSpeed);
@@ -57,6 +54,13 @@ public:
 	eVec2											MouseWorldPosition() const;
 	bool											AddToRenderPool(eRenderImageIsometric * renderImage);
 	void											ClearRenderPools();
+
+	bool											RegisterOverlayCanvas(eCanvas * newOverlay);
+	bool											UnregisterOverlayCanvas(eCanvas * overlay);
+	void											UnregisterAllOverlayCanvases();
+	int												NumRegisteredOverlayCanvases() const;
+
+	virtual void									Flush() override;
 
 	virtual int										GetClassType() const override				{ return CLASS_CAMERA; }
 	virtual bool									IsClassType(int classType) const override	{ 
@@ -76,6 +80,7 @@ private:
 	
 	std::vector<eRenderImageIsometric *>			dynamicPool;				// dynamic eGameObjects to draw, minimizes priority re-calculations of dynamic vs. static eGameObjects
 	std::vector<eRenderImageIsometric *>			staticPool;					// static eGameObjects that move and scale with this camera's renderTargets
+	std::vector<eCanvas *>							registeredOverlays;			// eCanvases to draw after the staticPool and dynamicPool have flushed
 	float											panSpeed;
 };	
 

@@ -75,7 +75,6 @@ inline eImage::eImage()
 
 //**************
 // eImage::eImage
-// frame is the size of the texture
 //**************
 inline eImage::eImage(SDL_Texture * source, const char * sourceFilename, int imageManagerIndex)
 	: eResource(sourceFilename, imageManagerIndex),

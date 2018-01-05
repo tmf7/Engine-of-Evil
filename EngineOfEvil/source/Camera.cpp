@@ -30,14 +30,17 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 //***************
 // eCamera::Configure
 // DEBUG: use this fn instead of eRenderTarget::Init to initialize *this
+// DEBUG: automatically registers *this with the eGame->eRenderer object
 //***************
 void eCamera::Configure(const eVec2 & size, const eVec2 & worldPosition, float zoomLevel, float panSpeed) {
+	auto & renderer = game->GetRenderer();
+	const auto & context = renderer.GetSDLRenderer();
 	this->panSpeed = panSpeed;
-	const auto & context = game->GetRenderer().GetSDLRenderer();
 	SDL_Point intSize = { eMath::NearestInt(size.x), eMath::NearestInt(size.y) };
 	eRenderTarget::Init( context, intSize.x, intSize.y, worldPosition, vec2_one * zoomLevel );
 	staticPool.reserve(MAX_IMAGES);
 	dynamicPool.reserve(MAX_IMAGES);
+	renderer.RegisterRenderTarget(this);
 }
 
 //***************
@@ -163,4 +166,102 @@ bool eCamera::AddToRenderPool(eRenderImageIsometric * renderImage) {
 void eCamera::ClearRenderPools() {
 	staticPool.clear();
 	dynamicPool.clear();
+}
+
+//**************
+// eCamera::Flush
+// draws all the currently queued eRenderImageIsometric objects to
+// this eCamera's eRenderTarget texture, if any
+//**************
+void eCamera::Flush() {
+	if (!visible)
+		return;
+
+	QuickSort(	staticPool.data(),
+				staticPool.size(),
+				[](auto && a, auto && b) {
+					if (a->priority < b->priority) return -1;
+					else if (a->priority > b->priority) return 1;
+					return 0;
+			});
+
+// FREEHILL BEGIN 3d topological sort
+	
+	// assign a "localDrawDepth" priority amongst the dynamicPool
+	eRenderer::TopologicalDrawDepthSort(dynamicPool);
+
+	for (auto & imageToInsert : dynamicPool) {
+		bool behindAnotherRenderBlock = false;
+
+		// minimize time spent re-sorting static images and just insert the dynamic ones
+		for (auto & iter = staticPool.begin(); iter != staticPool.end(); ++iter) {
+			if (eCollision::AABBAABBTest(imageToInsert->GetWorldClip(), (*iter)->GetWorldClip())) {	
+				if (!eCollision::IsAABB3DInIsometricFront(imageToInsert->GetRenderBlock(), (*iter)->GetRenderBlock())) {
+					behindAnotherRenderBlock = true;
+					staticPool.emplace(iter, imageToInsert);
+					break;
+				}												
+			}
+		}
+
+		if (!behindAnotherRenderBlock)
+			staticPool.emplace_back(imageToInsert);
+	}
+// FREEHILL END 3d topological sort
+
+	auto & renderer = game->GetRenderer();
+	renderer.SetRenderTarget(this);
+
+	for (auto && renderImage : staticPool)
+		renderer.DrawImage(renderImage);
+
+	ClearRenderPools();
+
+	renderer.SetRenderTarget(renderer.GetMainRenderTarget());
+	SDL_RenderCopy(renderer.GetSDLRenderer(), target, NULL, NULL);
+}
+
+//***************
+// eCamera::RegisterOverlayCanvas
+// registered eCanvases can have their renderPools Flushed
+// on top of this eCamera render target
+// returns true if the eCanvas was not already
+// registered to *this, and could be added
+// returns false otherwise
+//***************
+bool eCamera::RegisterOverlayCanvas(eCanvas * newOverlay) {
+	bool addSuccess = (std::find(registeredOverlays.begin(), registeredOverlays.end(), newOverlay) == registeredOverlays.end());
+	if (addSuccess)
+		registeredOverlays.emplace_back(newOverlay);
+
+	return addSuccess;
+}
+
+//***************
+// eCamera::UnregisterOverlayCanvas
+// returns true if the eCanvas existed
+// and was removed from those registered to *this
+// returns false otherwise
+//***************
+bool eCamera::UnregisterOverlayCanvas(eCanvas * overlay) {
+	const auto & searchIndex = std::find(registeredOverlays.begin(), registeredOverlays.end(), overlay);
+	bool removeSuccess = (searchIndex != registeredOverlays.end());
+	if (removeSuccess)
+		registeredOverlays.erase(searchIndex);
+
+	return removeSuccess;
+}
+
+//***************
+// eCamera::UnregisterAllOverlayCanvases
+//***************
+void eCamera::UnregisterAllOverlayCanvases() {
+	registeredOverlays.clear();
+}
+
+//***************
+// eCamera::NumRegisteredOverlayCanvases
+//***************
+int eCamera::NumRegisteredOverlayCanvases() const {
+	return registeredOverlays.size();
 }

@@ -52,19 +52,11 @@ public:
 	SDL_Renderer * const				GetSDLRenderer() const;
 	SDL_Window * const					GetWindow() const;
 	
-	// TODO(!): make some canvases screen-space overlay, others camera-space overlay, and others world-space (with a big canvas renderblock)
-	// AND also give each canvas/camera a draw-order (eg: screen overlay draws last, camera overlays draw after each respective camera, worldspace draws within a cameras renderpool?,
-	// BUT then also AMONGST the screen overlays determine an order, and AMONGST the cameras (ie: base camera + overlay canvas) determine an order
-	bool								RegisterCanvas(eCanvas * newCanvas);
-	bool								UnregisterCanvas(eCamera * camera);
-	void								UnregisterAllCanvases();
-	int									NumRegisteredCanvases() const;
-
-	bool								RegisterCamera(eCamera * newCamera);
-	bool								UnregisterCamera(eCamera * camera);
-	void								UnregisterAllCameras();
-	int									NumRegisteredCameras() const;
-	void								Flush();
+	bool								RegisterRenderTarget(eRenderTarget * newTarget);
+	bool								UnregisterRenderTarget(eRenderTarget * target);
+	void								UnregisterAllRenderTargets();
+	int									NumRegisteredRenderTarget() const;
+	void								FlushRegisteredTargets();
 
 	void								DrawOutlineText(eRenderTarget * target, const char * text, eVec2 & point, const SDL_Color & color, bool constText);
 	void								DrawImage(eRenderImageBase * renderImage) const;
@@ -73,6 +65,7 @@ public:
 	void								DrawIsometricRect(eRenderTarget * target, const SDL_Color & color, const eBounds & rect);
 	void								DrawCartesianRect(eRenderTarget * target, const SDL_Color & color, const eBounds & rect, bool fill);
 
+	void								SetRenderTarget(eRenderTarget *);
 	eRenderTarget * const				GetMainRenderTarget();
 
 	virtual int							GetClassType() const override				{ return CLASS_RENDERER; }
@@ -86,22 +79,16 @@ public:
 
 private:
 
-	void								SetRenderTarget(eRenderTarget *);
-	void								FlushCameraPool(eCamera * registeredCamera);
-	void								FlushCanvasPool(eCanvas * registeredCanvas);
-
 	static void							VisitTopologicalNode(eRenderImageIsometric * renderImage);
 
 private:
 
 	static int							globalDrawDepth;								// for eRenderer::TopologicalDrawDepthSort
 
-	// eRenderTargets to copy to the main rendering context during Flush	
-	std::vector<eCanvas *>				registeredCanvases;
-	std::vector<eCamera *>				registeredCameras;
+	std::vector<eRenderTarget *>		registeredTargets;								// eRenderTargets to copy to the main rendering context during Flush
 
-	SDL_Window *						window;
-	SDL_Renderer *						internal_renderer;
+	SDL_Window *						window;											// the main game window
+	SDL_Renderer *						internal_renderer;								// rendering context associated with the main window
 
 	// swappable render targets
 	eRenderTarget						mainRenderTarget;								// DEBUG: default SDL rendertarget (nullptr) is the window texture

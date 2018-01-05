@@ -34,12 +34,6 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 
 class eRenderTarget;
 
-// TODO: eCanvas is similar to eCamera, but without the renderblock sorting
-// TODO: create derived eCanvas classes for screenspace-overlay, camaeraspace-overlay, worldspace, such that they draw OVER the mainRenderTarget, cameraRenderTarget, 
-// or WITHIN a cameraRenderTarget via an eCanvasWorldSpace::renderBlock-type setup so it can be sorted with the rest of the cameraPool
-
-// TODO(?): rename the eRenderer::AddTo/FlushOverlayPool such that there's a clear distinction between a eCanvas overlaying an eCamera or the mainRenderTarget, and just drawing straight to the mainRenderTarget
-
 // SOLUTION: eButton is an eGameObject, which will have an eRenderImageBase component,
 // then eButton will have an eCanvas * drawTo pointer that will affect its orthoOrigin calculation (ie: a fixed position on the eCanvas)
 // which in-turn affects the eRenderImageBase component position with respect to its eButton owner

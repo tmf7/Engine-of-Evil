@@ -53,7 +53,7 @@ public:
 	void							ClearIfDirty(const Uint32 currentTime);
 	void							Clear();
 	void							SetOrigin(const eVec2 & newOrigin);
-	void							SetScale(const eVec2 & newScale);		
+	void							SetScale(const eVec2 & newScale);
 	void							ResetScale();
 	const eVec2 &					GetOrigin() const												{ return origin; }
 	eVec2							GetOriginDelta() const											{ return origin - oldOrigin; }
@@ -66,6 +66,12 @@ public:
 	Uint32							GetLastDrawnTime() const										{ return lastDrawnTime; }
 	void							SetLastDrawnTime(const Uint32 currentTime)						{ lastDrawnTime = currentTime;}
 	bool							IsNull() const													{ return target == nullptr; }
+	int								GetLayer() const												{ return layer; }
+	void							SetLayer(int newLayer)											{ layer = newLayer; }
+	bool							IsVisible() const												{ return visible; }
+	void							SetVisibility(bool newVisibility)								{ visible = newVisibility; }
+
+	virtual void					Flush();
 
 	virtual int						GetClassType() const override									{ return CLASS_RENDERTARGET; }
 	virtual bool					IsClassType(int classType) const override						{ 
@@ -91,6 +97,8 @@ protected:
 	eVec2							scale			= vec2_one;										// scaling multipliers when rendering to the main context
 	eVec2							oldScale		= vec2_one;										// scale as of the last SetScale call
 	float							lastDrawnTime	= 0.0f;											// governs if *this should be cleared on a new frame
+	int								layer			= 0;											// allows high-level draw-order sorting of eRenderTargets during eRenderer::FlushRegisteredRenderTargets
+	bool							visible			= true;											// whether or not to copy *this to the main render target during eRenderer::FlushRegisteredRenderTargets
 };
 
 // utility colors

@@ -24,7 +24,7 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 
 ===========================================================================
 */
-#include "RenderTarget.h"
+#include "Game.h"
 
 const SDL_Color greyColor_trans		= { 128, 128, 128, SDL_ALPHA_TRANSPARENT };
 const SDL_Color greyColor_opaque	= { 128, 128, 128, SDL_ALPHA_OPAQUE};
@@ -170,4 +170,17 @@ void eRenderTarget::SetScale(const eVec2 & newScale) {
 void eRenderTarget::ResetScale() {
 	scale = vec2_one; 
 	UpdateBounds(); 
+}
+
+//***************
+// eRenderTarget::Flush
+// draws the current state of the target texture to the main render target
+//***************
+void eRenderTarget::Flush() {
+	if (!visible)
+		return;
+
+	auto & renderer = game->GetRenderer();
+	renderer.SetRenderTarget(renderer.GetMainRenderTarget());
+	SDL_RenderCopy(renderer.GetSDLRenderer(), target, NULL, NULL);
 }

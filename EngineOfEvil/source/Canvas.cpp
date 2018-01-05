@@ -31,12 +31,45 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 // eCanvas::Configure
 // DEBUG: use this fn instead of eRenderTarget::Init to initialize *this
 //***************
-void eCanvas::Configure(const eVec2 & size, const eVec2 & worldPosition, const eVec2 & scale) {
-	const auto & context = game->GetRenderer().GetSDLRenderer();
+void eCanvas::Configure(const eVec2 & size, const eVec2 & worldPosition, const eVec2 & scale, CanvasType type, eCamera * cameraToOverlay) {
+	auto & renderer = game->GetRenderer();
+	const auto & context = renderer.GetSDLRenderer();
 	SDL_Point intSize = { eMath::NearestInt(size.x), eMath::NearestInt(size.y) };
 	eRenderTarget::Init( context, intSize.x, intSize.y, worldPosition, scale);
 	staticPool.reserve(MAX_IMAGES);
 	dynamicPool.reserve(MAX_IMAGES);
+
+	switch(type) {
+		case CanvasType::SCREEN_SPACE_OVERLAY: {
+			renderer.RegisterRenderTarget(this);
+			return;
+		}
+
+		case CanvasType::CAMERA_SPACE_OVERLAY: { 
+			targetCamera = cameraToOverlay;
+			targetCamera->RegisterOverlayCanvas(this);
+			return; 
+		}
+
+		case CanvasType::WORLD_SPACE: {
+			// FIXME: should this get registered to the eImageManager?
+			// SOLUTION: no.
+			worldSpaceImage = std::make_unique<eImage>(target, "WorldSpaceCanvasInstance", INVALID_ID);
+			worldSpaceImage->SetSubframes( std::vector<SDL_Rect> ( 
+																	{ SDL_Rect { 0, 0, intSize.x, intSize.y } } 
+																 ) 
+										 );
+
+			// FIXME: eRenderImageIsometric needs to have an eGameObject owner pointer, and to be Updated
+			worldSpaceRenderImage = std::make_unique<eRenderImageIsometric> ( nullptr, 
+																			  worldSpaceImage, 
+																			  eVec3( size.x, 2.0f, size.y ) );
+
+			// FIXME: do this whenever *this moves or resizes (so it gets added to the eMap appropriately)
+			worldSpaceRenderImage->Update();
+			return;				
+		}
+	}
 }
 
 //***************
@@ -64,4 +97,33 @@ bool eCanvas::AddToRenderPool(eRenderImageBase* renderImage) {
 void eCanvas::ClearRenderPools() {
 	staticPool.clear();
 	dynamicPool.clear();
+}
+
+//**************
+// eCanvas::Flush
+// draws all the currently queued eRenderImageBase objects to
+// this eCanvas's eRenderTarget texture, if any
+//**************
+void eCanvas::Flush() {
+	if (!visible)
+		return;
+
+	QuickSort(	staticPool.data(),
+				staticPool.size(),
+				[](auto && a, auto && b) {
+					if (a->priority < b->priority) return -1;
+					else if (a->priority > b->priority) return 1;
+					return 0;
+			});
+
+	auto & renderer = game->GetRenderer();
+	renderer.SetRenderTarget(this);
+
+	for (auto && renderImage : staticPool)
+		renderer.DrawImage(renderImage);
+
+	ClearRenderPools();
+
+	renderer.SetRenderTarget(renderer.GetMainRenderTarget());
+	SDL_RenderCopy(renderer.GetSDLRenderer(), target, NULL, NULL);
 }

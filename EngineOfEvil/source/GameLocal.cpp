@@ -37,8 +37,7 @@ eGame *						game = &gameLocal;	// statically pointed at an eGameLocal
 //***********************
 bool eGameLocal::Init() {
 	auto windowSize = game->GetRenderer().ViewArea();
-	camera.Init(eVec2((float)windowSize.w, (float)windowSize.h), vec2_zero);
-	game->GetRenderer().RegisterCamera(&camera);
+	camera.Configure(eVec2((float)windowSize.w, (float)windowSize.h), vec2_zero);
 
 	game->GetEntityPrefabManager().SetCreatePrefabStrategy(std::make_shared<eCreateEntityPrefabUser>());
 

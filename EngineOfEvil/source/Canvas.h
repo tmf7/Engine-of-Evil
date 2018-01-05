@@ -28,24 +28,35 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 #define EVIL_CANVAS_H
 
 #include "RenderTarget.h"
-#include "RenderImageBase.h"
+#include "RenderImageIsometric.h"
+
+class eCamera;
+
+enum class CanvasType {
+	SCREEN_SPACE_OVERLAY,
+	CAMERA_SPACE_OVERLAY,
+	WORLD_SPACE
+};
 
 //***********************************************
 //				eCanvas 
-// Immobile 2D Axis-Aligned Orthographic box 
+// Mobile 2D Axis-Aligned Orthographic box 
 // that draws eRenderImageBase objects to
 // its eRenderTarget texture during eRenderer::Flush
+// and is either registered to the main rendering context as an overlay
+// a specific camera as an overlay, or
+// given a eRenderImageIsometric that uses the canvas target texture
+// as the eImage, and a renderblock the size of the texture (with minimal depth)
+// at the given param worldPosition
 //***********************************************
 class eCanvas : public eRenderTarget {
 public:
 
-	friend class eRenderer;
-
-public:
-
-	void											Configure(const eVec2 & size, const eVec2 & worldPosition, const eVec2 & scale = vec2_one);
+	void											Configure(const eVec2 & size, const eVec2 & worldPosition, const eVec2 & scale = vec2_one, CanvasType type = CanvasType::SCREEN_SPACE_OVERLAY, eCamera * cameraToOverlay = nullptr);
 	bool											AddToRenderPool(eRenderImageBase * renderImage);
 	void											ClearRenderPools();
+
+	virtual void									Flush() override;
 
 	virtual int										GetClassType() const override				{ return CLASS_CANVAS; }
 	virtual bool									IsClassType(int classType) const override	{ 
@@ -55,8 +66,12 @@ public:
 													}
 private:
 	
-	std::vector<eRenderImageBase *>					dynamicPool;				// dynamic eGameObjects to draw, minimizes priority re-calculations of dynamic vs. static eGameObjects
-	std::vector<eRenderImageBase *>					staticPool;					// static eGameObjects that scale with this eCanvas
+	std::vector<eRenderImageBase *>					dynamicPool;						// dynamic eGameObjects to draw, minimizes priority re-calculations of dynamic vs. static eGameObjects
+	std::vector<eRenderImageBase *>					staticPool;							// static eGameObjects that scale with this eCanvas
+	eCamera *										targetCamera		  = nullptr;	// eCamera to resize with and overlay (to which *this is registered)
+	std::unique_ptr<eImage>							worldSpaceImage		  = nullptr;	// eImage used by the eRenderImageIsometric, which is equivalent to eRenderTarget::target SDL_Texture
+	std::unique_ptr<eRenderImageIsometric>			worldSpaceRenderImage = nullptr;	// initialized only for CanvasType::WORLD_SPACE to properly position and sort it in the eMap::tileMap grid
+
 };	
 
 #endif /* EVIL_CAMERA_H */

@@ -246,47 +246,48 @@ void eRenderer::DrawImage(eRenderImageBase * renderImage) const {
 }
 
 //***************
-// eRenderer::RegisterCamera
-// registered cameras can have their renderPools modified (add/flush)
-// returns true if the camera was not already
+// eRenderer::RegisterRenderTarget
+// registered eRenderTargets can have their renderPools Flushed
+// directly to the main render target
+// returns true if the eRenderTarget was not already
 // registered to *this, and could be added
 // returns false otherwise
 //***************
-bool eRenderer::RegisterCamera(eCamera * newCamera) {
-	bool addSuccess = (std::find(registeredCameras.begin(), registeredCameras.end(), newCamera) == registeredCameras.end());
+bool eRenderer::RegisterRenderTarget(eRenderTarget * newTarget) {
+	bool addSuccess = (std::find(registeredTargets.begin(), registeredTargets.end(), newTarget) == registeredTargets.end());
 	if (addSuccess)
-		registeredCameras.emplace_back(newCamera);
+		registeredTargets.emplace_back(newTarget);
 
 	return addSuccess;
 }
 
 //***************
-// eRenderer::UnregisterCamera
-// returns true if the camera existed
+// eRenderer::UnregisterRenderTarget
+// returns true if the eRenderTarget existed
 // and was removed from those registered to *this
 // returns false otherwise
 //***************
-bool eRenderer::UnregisterCamera(eCamera * camera) {
-	const auto & searchIndex = std::find(registeredCameras.begin(), registeredCameras.end(), camera);
-	bool removeSuccess = (searchIndex != registeredCameras.end());
+bool eRenderer::UnregisterRenderTarget(eRenderTarget * target) {
+	const auto & searchIndex = std::find(registeredTargets.begin(), registeredTargets.end(), target);
+	bool removeSuccess = (searchIndex != registeredTargets.end());
 	if (removeSuccess)
-		registeredCameras.erase(searchIndex);
+		registeredTargets.erase(searchIndex);
 
 	return removeSuccess;
 }
 
 //***************
-// eRenderer::UnregisterAllCameras
+// eRenderer::UnregisterAllRenderTargets
 //***************
-void eRenderer::UnregisterAllCameras() {
-	registeredCameras.clear();
+void eRenderer::UnregisterAllRenderTargets() {
+	registeredTargets.clear();
 }
 
 //***************
-// eRenderer::NumRegisteredCameras
+// eRenderer::NumRegisteredRenderTarget
 //***************
-int eRenderer::NumRegisteredCameras() const {
-	return registeredCameras.size();
+int eRenderer::NumRegisteredRenderTarget() const {
+	return registeredTargets.size();
 }
 
 //***************
@@ -332,97 +333,22 @@ void eRenderer::VisitTopologicalNode(eRenderImageIsometric * renderImage) {
 }
 
 //***************
-// eRenderer::Flush
+// eRenderer::FlushRegisteredTargets
+// calls flush on all registered eRenderTargets that have
+// eRenderImageBase-derived objects queued to be drawn
+// then copys each registered eRenderTarget to the mainRenderTarget
+// according to its type (overlay|world-space) and proximity to the viewer
 //***************
-void eRenderer::Flush() {
-	for (auto && camera : registeredCameras) {
-		FlushCameraPool(camera);
-//		SDL_RenderCopy(internal_renderer, camera->debugRenderTarget.target, NULL, NULL);		// debug targets are overlays on their counterpart renderTarget
-	}
+void eRenderer::FlushRegisteredTargets() {
 
-	// transfer cameras (and their debugs') info to the main render texture
-	// TODO: determine a simple sorting order for camera textures, back-to-front
-	// possibly use a renderTarget::origin.z value
-	SetRenderTarget(&mainRenderTarget);
-	for (auto && camera : registeredCameras)
-		SDL_RenderCopy(internal_renderer, camera->GetTargetTexture(), NULL, NULL);
+	// TODO: any eCanvas renderTargets here are automatically overlays
+	// because camera overlays are registered to them,
+	// and world-space canvases are in the tilemap
+	// SO: sort registeredTargets to put eCanvases first (by layer)
+	// then eCameras (by layer)
 
-	// draw all overlay (HUD/UI/Screen-Space) info now
-	FlushOverlayPool();
-	SetRenderTarget(&mainRenderTarget);
-//	SDL_RenderCopy(internal_renderer, debugMainRenderTarget.GetTargetTexture(), NULL, NULL);
-}
-
-//***************
-// eRenderer::FlushCameraPool
-// DEBUG: this unstable quicksort may put renderImages at random draw orders if they have equal priority
-//***************
-void eRenderer::FlushCameraPool(eCamera * registeredCamera) {
-	auto & cameraPool = registeredCamera->staticPool;
-	auto & cameraPoolInserts = registeredCamera->dynamicPool;
-
-	// sort the dynamicPool for the camera's renderTarget
-	QuickSort(	cameraPool.data(),
-				cameraPool.size(),
-				[](auto && a, auto && b) {
-					if (a->priority < b->priority) return -1;
-					else if (a->priority > b->priority) return 1;
-					return 0;
-			});
-
-// FREEHILL BEGIN 3d topological sort
-	TopologicalDrawDepthSort(cameraPoolInserts);	// assign a "localDrawDepth" priority amongst the cameraPoolInserts
-	for (auto & imageToInsert : cameraPoolInserts) {
-		bool behindAnotherRenderBlock = false;
-
-		// minimize time spent re-sorting static renderImages and just insert the dynamic ones
-		for (auto & iter = cameraPool.begin(); iter != cameraPool.end(); ++iter) {
-			if (eCollision::AABBAABBTest(imageToInsert->worldClip, (*iter)->worldClip)) {	
-				if (!eCollision::IsAABB3DInIsometricFront(imageToInsert->renderBlock, (*iter)->renderBlock)) {
-					behindAnotherRenderBlock = true;
-					cameraPool.emplace(iter, imageToInsert);
-					break;
-				}												
-			}
-		}
-
-		if (!behindAnotherRenderBlock)
-			cameraPool.emplace_back(imageToInsert);
-	}
-// FREEHILL END 3d topological sort
-
-	// sets the render target, and scales according to camera zoom
-	SetRenderTarget(registeredCamera);
-
-	// draw to the camera's renderTarget
-	for (auto && renderImage : cameraPool)
-		DrawImage(renderImage);
-
-	registeredCamera->ClearRenderPools();
-}
-
-//***************
-// eRenderer::FlushCanvasPool
-// DEBUG: this unstable quicksort may put renderImages at random draw orders if they have equal priority
-//***************
-void eRenderer::FlushCanvasPool(eCanvas * registeredCanvas) {
-	// sort the staticPool for the default render target
-	QuickSort(	overlayPool.data(),
-				overlayPool.size(), 
-				[](auto && a, auto && b) { 
-					if (a->priority < b->priority) return -1;
-					else if (a->priority > b->priority) return 1;
-					return 0; 
-			});
-
-	// set the render target, and scale to 1.0f
-	SetRenderTarget(&mainRenderTarget);
-
-	for (auto && renderImage : overlayPool)
-		DrawImage(renderImage);
-
-	overlayPool.clear();
-	overlayPoolInserts.clear();
+	for (auto && target : registeredTargets)
+		target->Flush();
 }
 
 //***************
@@ -446,7 +372,6 @@ void eRenderer::SetRenderTarget(eRenderTarget * target) {
 void eRenderer::Show() const {
 	SDL_RenderPresent(internal_renderer);
 }
-
 
 //***************
 // eRenderer::GetMainRenderTarget
