@@ -48,20 +48,18 @@ eRenderImageIsometric::~eRenderImageIsometric() {
 // eRenderImageIsometric::UpdateRenderBlock
 // snaps the renderblock minimum z value according to owner::worldlayer, and
 // the x,y is positioned using either owner::collisionModel (if non-nullptr), or owner::orthoOrigin,
-// to best prevent renderBlock overlap and minimize draw-order sorting anomolies, otherwise the  is used
+// to best prevent renderBlock overlap and minimize draw-order sorting anomolies
 //************
 void eRenderImageIsometric::UpdateRenderBlock() {
 	auto & renderBlockMins = renderBlock[0];
 
 	// static eGameObjects snap z according to worldLayer
 	// dynamic eGameObjects use the fluid zPosition
-	if (owner->WorldLayerDelta()) {
-		if (owner->IsStatic()) {
-			const float newRBMinZ = (float)owner->GetMap()->TileMap().MinZPositionFromLayer(owner->GetWorldLayer());
-			renderBlock += eVec3(0.0f, 0.0f, newRBMinZ - renderBlockMins.z);
-		} else {
-			renderBlock += eVec3(0.0f, 0.0f, owner->GetZPosition() - renderBlockMins.z);
-		}
+	if (owner->IsStatic()) {
+		const float newRBMinZ = (float)owner->GetMap()->TileMap().MinZPositionFromLayer(owner->GetWorldLayer());
+		renderBlock += eVec3(0.0f, 0.0f, newRBMinZ - renderBlockMins.z);
+	} else {
+		renderBlock += eVec3(0.0f, 0.0f, owner->GetZPosition() - renderBlockMins.z);
 	}
 
 	if (&owner->CollisionModel() != nullptr) {

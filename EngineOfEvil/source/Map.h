@@ -53,7 +53,7 @@ public:
 	void													SetViewCamera(eCamera * newViewCamera);
 	eCamera * const											GetViewCamera();
 
-	int														AddEntity(std::unique_ptr<eEntity> && entity);
+	int														AddEntity(std::unique_ptr<eEntity> && entity, const eVec3 & worldPosition);
 	void													RemoveEntity(int entityID);
 	void													ClearAllEntities();
 	std::unique_ptr<eEntity> &								GetEntity(int entityID);
@@ -72,7 +72,7 @@ public:
 
 private:
 
-	void													ConfigureEntity(int newSpawnID, eEntity * entity);
+	void													ConfigureEntity(int newSpawnID, const eVec3 & worldPosition, eEntity * entity);
 
 private:
 

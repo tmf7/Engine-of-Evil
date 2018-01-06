@@ -33,7 +33,9 @@ class sHero : public eEntity {
 public:
 
 	virtual bool						SpawnCopy( eMap * onMap, const eVec3 & worldPosition ) override;
+
 	virtual void						Think() override;
+
 	virtual int							GetClassType() const override						{ return CLASS_SHERO; }
 	virtual bool						IsClassType( int classType ) const override			{ 
 											if(classType == CLASS_SHERO) 

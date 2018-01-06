@@ -35,13 +35,17 @@ void eCanvas::Configure(const eVec2 & size, const eVec2 & worldPosition, const e
 	auto & renderer = game->GetRenderer();
 	const auto & context = renderer.GetSDLRenderer();
 	SDL_Point intSize = { eMath::NearestInt(size.x), eMath::NearestInt(size.y) };
-	eRenderTarget::Init( context, intSize.x, intSize.y, worldPosition, scale);
+
+//	eRenderTarget::Init( context, intSize.x, intSize.y, worldPosition, scale);
+//	AddComponent<eRenderTarget>(context, intSize.x, intSize.y, worldPosition, scale);		// FIXME/TODO: ctor calls Init? either way AddComponent needs to verify the add was successful (bool or nullptr)
+
+
 	staticPool.reserve(MAX_IMAGES);
 	dynamicPool.reserve(MAX_IMAGES);
 
 	switch(type) {
 		case CanvasType::SCREEN_SPACE_OVERLAY: {
-			renderer.RegisterRenderTarget(this);
+//			renderer.RegisterRenderTarget(GetComponent<eRenderTarget>());					// FIXME/TODO: implement eGameObject::GetComponent
 			return;
 		}
 
@@ -52,6 +56,9 @@ void eCanvas::Configure(const eVec2 & size, const eVec2 & worldPosition, const e
 		}
 
 		case CanvasType::WORLD_SPACE: {
+
+//			AddComponent<eRenderImageIsometric>( this, renderImage->target, eVec3( size.x, 2.0f, size.y ) );		// FIXME: do this (w/target made into an unregistered eImage) instead of the worldSpaceRI hack
+
 			// FIXME: should this get registered to the eImageManager?
 			// SOLUTION: no.
 			worldSpaceImage = std::make_unique<eImage>(target, "WorldSpaceCanvasInstance", INVALID_ID);
@@ -61,6 +68,8 @@ void eCanvas::Configure(const eVec2 & size, const eVec2 & worldPosition, const e
 										 );
 
 			// FIXME: eRenderImageIsometric needs to have an eGameObject owner pointer, and to be Updated
+			// SOLUTIN: ??? a dummy object? (still needs an eMap pointer though)
+			// make a distinciton between world-space/gameworld and a map (ie: a map fills the gameworld)
 			worldSpaceRenderImage = std::make_unique<eRenderImageIsometric> ( nullptr, 
 																			  worldSpaceImage, 
 																			  eVec3( size.x, 2.0f, size.y ) );

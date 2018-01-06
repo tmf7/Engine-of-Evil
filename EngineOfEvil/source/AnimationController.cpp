@@ -29,7 +29,7 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 
 //************
 // eAnimationController::eAnimationController
-// copy ctor needs to allocate new state unique_ptrs
+// DEBUG: copy ctor needs to allocate new state unique_ptrs
 // because animationStates is a std::vector<std::unique_ptr>
 //************
 eAnimationController::eAnimationController(const eAnimationController & other)
@@ -54,6 +54,16 @@ eAnimationController::eAnimationController(const eAnimationController & other)
 			animationStates.emplace_back(std::make_unique<eBlendState>(*static_cast<eBlendState *>(state.get())));
 		}
 	}
+}
+
+//************
+// eAnimationController::eAnimationController
+// DEBUG: copy ctor needs to allocate new state unique_ptrs
+// because animationStates is a std::vector<std::unique_ptr>
+//************
+eAnimationController::eAnimationController(eGameObject * owner, const eAnimationController & other)
+	: eAnimationController(other) {
+	SetOwner(owner);
 }
 
 //************

@@ -54,6 +54,7 @@ public:
 												eAnimationController() = default;
 												eAnimationController(eAnimationController && other) = default;
 												eAnimationController(const eAnimationController & other);
+												eAnimationController(eGameObject * owner, const eAnimationController & other);
 												eAnimationController(const char * sourceFilename, int managerIndex);
 
 	eAnimationController &						operator=(const eAnimationController & other) = default;

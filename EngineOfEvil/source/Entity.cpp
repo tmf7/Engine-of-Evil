@@ -29,28 +29,11 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 
 //***************
 // eEntity::SpawnCopy
-// copies a *this and adds unique details
+// copies a *this and adds it to param onMap
 // DEBUG: *this is typically a prefab from eEntityPrefabManager::SpawnInstance
 //***************
 bool eEntity::SpawnCopy(eMap * onMap, const eVec3 & worldPosition) {
-	auto & newEntity = std::make_unique<eEntity>(*this);
-	newEntity->map = onMap;
-	newEntity->SetZPosition(worldPosition.z);
-	newEntity->SetOrigin(eVec2(worldPosition.x, worldPosition.y));
-	return (onMap->AddEntity(std::move(newEntity)) >= 0);
-}
-
-//***************
-// eEntity::Init
-// FIXME(!): this is an incomplete hack to ensure the map back-pointer is assigned
-// by the time Updates start, but not during default construction/prefab-copying
-// SOLUTION(~): create an InitComponents method for eGameObject
-// (an Init fn in general would be useful for user-defined eGameObject initialization
-// it's just a matter of calling Init at the right time)
-//***************
-void eEntity::Init() {
-	if (movementPlanner != nullptr)
-		movementPlanner->Init();
+	return (onMap->AddEntity(std::make_unique<eEntity>(*this), worldPosition) >= 0);
 }
 
 //***************

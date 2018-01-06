@@ -56,12 +56,11 @@ public:
 
 protected:
 
-												eComponent() = default;		// safety-reminder, disallow outside classes from instantiation without an owner
+												// safety-reminder, disallow derived classes from instantiation without an owner
+												eComponent() = default;
 
-												// called after owner is constructed, or after it Spawns, depending on user needs
-	virtual void								Init()										{}
 												
-												// called every frame before owner::Think in owner::UpdateComponents
+												// called every frame before owner::Think in eGameObject::UpdateComponents
 	virtual void								Update()									{}
 
 												// used to maintain the runtime type of a derived eComponent when copying eGameObjects

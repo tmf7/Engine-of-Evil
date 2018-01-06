@@ -47,12 +47,8 @@ void sHero::Think() {
 
 //***************
 // sHero::SpawnCopy
-// copies a prefab sHero and adds unique details
+// copies a prefab sHero and adds it to param onMap
 //***************
 bool sHero::SpawnCopy(eMap * onMap, const eVec3 & worldPosition) {
-	auto & newHero = std::make_unique<sHero>(*this);
-	newHero->map = onMap;
-	newHero->SetZPosition(worldPosition.z);
-	newHero->SetOrigin(eVec2(worldPosition.x, worldPosition.y));
-	return (onMap->AddEntity(std::move(newHero)) >= 0);
+	return (onMap->AddEntity(std::make_unique<sHero>(*this), worldPosition) >= 0);
 }

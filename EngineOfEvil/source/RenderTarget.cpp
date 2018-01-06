@@ -44,7 +44,6 @@ const SDL_Color yellowColor			= { 255, 255, 0, SDL_ALPHA_OPAQUE };
 void eRenderTarget::InitDefault(SDL_Renderer * context, const eVec2 & scale) {
 	this->context = context;
 	this->scale = scale;
-	UpdateBounds();
 }
 
 //***************************

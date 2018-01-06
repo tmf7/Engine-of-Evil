@@ -33,8 +33,7 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 //**************
 eGameObject::eGameObject(const eGameObject & other) 
 	: orthoOrigin(other.orthoOrigin),
-	  worldLayer(other.worldLayer),		
-	  oldWorldLayer(other.oldWorldLayer),
+	  worldLayer(other.worldLayer),
 	  isStatic(other.isStatic),
 	  zPosition(other.zPosition) {
 
@@ -51,8 +50,7 @@ eGameObject::eGameObject(const eGameObject & other)
 //**************
 eGameObject::eGameObject(eGameObject && other)
 	: orthoOrigin(std::move(other.orthoOrigin)),
-	  worldLayer(other.worldLayer),		
-	  oldWorldLayer(other.oldWorldLayer),
+	  worldLayer(other.worldLayer),
 	  isStatic(other.isStatic),
 	  zPosition(other.zPosition),
 	  renderImage(std::move(other.renderImage)),
@@ -68,7 +66,6 @@ eGameObject::eGameObject(eGameObject && other)
 eGameObject & eGameObject::operator=(eGameObject other) {
 	std::swap(orthoOrigin, other.orthoOrigin);
 	std::swap(worldLayer, other.worldLayer);
-	std::swap(oldWorldLayer, other.oldWorldLayer);
 	std::swap(isStatic, other.isStatic);
 	std::swap(zPosition, other.zPosition);
 	std::swap(renderImage, other.renderImage);
@@ -103,7 +100,6 @@ void eGameObject::SetOrigin(const eVec2 & newOrigin) {
 // directly sets the worldLayer
 //*************
 void eGameObject::SetWorldLayer(Uint32 layer) {
-	oldWorldLayer = worldLayer;
 	worldLayer = layer;
 }
 
@@ -113,7 +109,6 @@ void eGameObject::SetWorldLayer(Uint32 layer) {
 // closest to param zPosition and assigns it to worldLayer
 //*************
 void eGameObject::SetWorldLayer(float zPosition) {
-	oldWorldLayer = worldLayer;
 	worldLayer = map->TileMap().LayerFromZPosition(eMath::NearestInt(zPosition));
 }
 
@@ -191,19 +186,14 @@ bool eGameObject::AddCollisionModel( const eBounds & localBounds, const eVec2 & 
 // eGameObject::AddAnimationController
 // returns true if an eAnimationController has been added to *this
 // returns false if not because the filename is invalid, the file is unreadable, 
-// or there is no eRenderImage attached to *this
 // DEBUG: call [AddRenderImageBase|AddRenderImageIsometric] before calling this, because it depends on an eRenderImage-derived object
 //*************
 bool eGameObject::AddAnimationController( const std::string & animationControllerFilename ) {
-	if ( renderImage == nullptr || animationControllerFilename.empty() )
-		return false;
-
 	std::shared_ptr<eAnimationController> prefabAnimationController = nullptr;
 	if ( !game->GetAnimationControllerManager().LoadAndGet( animationControllerFilename.c_str(), prefabAnimationController ) )
 		return false;
 
-	animationController = std::make_unique< eAnimationController >( *prefabAnimationController );
-	animationController->SetOwner( this );
+	animationController = std::make_unique< eAnimationController >( this, *prefabAnimationController );
 	return true;
 }
 

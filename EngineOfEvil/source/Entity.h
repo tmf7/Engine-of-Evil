@@ -37,7 +37,7 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 class eEntity : public eGameObject, public eResource {
 public:
 
-	friend class eMap;						// for access to assign spawnedEntityID and spawnName
+	friend class eMap;						// for access to assign spawnedEntityID, spawnName, map, and x,y,z position
 	friend class eEntityPrefabManager;		// for access to spawnArgs
 
 public:
@@ -48,7 +48,6 @@ public:
 	const std::string &					SpawnName() const;
 	int									SpawnID() const;
 
-	virtual void						Init() override;
 	virtual bool						SpawnCopy(eMap * onMap, const eVec3 & worldPosition);
 	virtual void						DebugDraw(eRenderTarget * renderTarget) override;
 

@@ -248,11 +248,13 @@ void eMap::UnloadMap() {
 //****************
 // eMap::ConfigureEntity
 //****************
-void eMap::ConfigureEntity(int newSpawnID, eEntity * entity) {
+void eMap::ConfigureEntity(int newSpawnID, const eVec3 & worldPosition, eEntity * entity) {
+	entity->map = this;
+	entity->SetZPosition(worldPosition.z);
+	entity->SetOrigin(eVec2(worldPosition.x, worldPosition.y));
 	entity->spawnedEntityID = newSpawnID;
 	entity->spawnName = entity->spawnArgs.GetString("prefabShortName", TO_STRING(eEntity));
 	entity->spawnName += "_" + newSpawnID;
-	entity->Init();
 }
 
 //****************
@@ -262,11 +264,11 @@ void eMap::ConfigureEntity(int newSpawnID, eEntity * entity) {
 // returns the new spawnID index within game::entities
 // returns -1 if something went wrong
 //****************
-int eMap::AddEntity(std::unique_ptr<eEntity> && entity) {
+int eMap::AddEntity(std::unique_ptr<eEntity> && entity, const eVec3 & worldPosition) {
 	int spawnID = 0;
 	for (auto & entitySlot : entities) {
 		if (entitySlot == nullptr) {
-			ConfigureEntity(spawnID, entity.get());
+			ConfigureEntity(spawnID, worldPosition, entity.get());
 			entitySlot = std::move(entity);
 			return spawnID;
 		} else {
@@ -275,7 +277,7 @@ int eMap::AddEntity(std::unique_ptr<eEntity> && entity) {
 	}
 
 	if (spawnID == entities.size()) {
-		ConfigureEntity(spawnID, entity.get());
+		ConfigureEntity(spawnID, worldPosition, entity.get());
 		entities.emplace_back(std::move(entity));
 		return spawnID;
 	}

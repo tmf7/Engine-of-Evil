@@ -34,7 +34,7 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 eMovementPlanner::eMovementPlanner(eGameObject * owner, float movementSpeed)
 	: maxMoveSpeed(movementSpeed),
 	  goalRange(movementSpeed) {
-	this->owner = owner;
+	SetOwner(owner);
 }
 
 //***************
@@ -42,21 +42,24 @@ eMovementPlanner::eMovementPlanner(eGameObject * owner, float movementSpeed)
 //***************
 void eMovementPlanner::SetOwner(eGameObject * newOwner) {
 	owner = newOwner;
-	currentTile		= &knownMap.Index(owner->CollisionModel().Center());
-	previousTile	= currentTile;
-	StopMoving();
+	initialized = false;
 }
 
 //***************
 // eMovementPlanner::Init
+// DEBUG: automatically called once during the first Update call
 //***************
 void eMovementPlanner::Init() {
-	pathingState = PATHTYPE_COMPASS;
-	moveState = MOVETYPE_GOAL;
-	auto & tileMap = owner->GetMap()->TileMap();
-	knownMap.SetCellSize( tileMap.CellWidth(),
-						  tileMap.CellHeight());
+	currentTile		= &knownMap.Index(owner->CollisionModel().Center());
+	previousTile	= currentTile;
+	pathingState	= PATHTYPE_COMPASS;
+	moveState		= MOVETYPE_GOAL;
+	auto & tileMap	= owner->GetMap()->TileMap();
+
+	knownMap.SetCellSize( tileMap.CellWidth(), tileMap.CellHeight());
 	knownMap.ResetAllCells();
+	StopMoving();
+	initialized = true;
 }
 
 //******************
@@ -74,6 +77,12 @@ void eMovementPlanner::StopMoving() {
 //***************
 void eMovementPlanner::Update() {
 	auto & ownerCollisionModel = owner->CollisionModel();
+	if (&ownerCollisionModel == nullptr)		// BUGFIX: removes load and run-time dependence between eMovementPlanner and eCollisionModel instances
+		return;									// however, eMovementPlanner is useless without an eCollisionModel to control
+	else if (!initialized) {
+		Init();
+	}
+
 	bool wasStopped = false;
 	
 	// only pathfind with a waypoint
@@ -285,7 +294,7 @@ bool eMovementPlanner::CheckVectorPath(decision_t & along) {
 
 	auto & ownerCollisionModel = owner->CollisionModel();
 	auto & boundsCenter = ownerCollisionModel.AbsBounds().Center();
-	float castLength = maxMoveSpeed * maxSteps;
+	float castLength = maxMoveSpeed * maxSteps * game->GetDeltaTime();		// deltaTime synchronizes this check with the frame-rate independence of eCollisionModel::Update that actually moves the collider position
 	float nearestFraction = 1.0f;
 	float mapEdgeFraction = 1.0f;
 

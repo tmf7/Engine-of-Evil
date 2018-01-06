@@ -27,8 +27,7 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 #ifndef EVIL_CANVAS_H
 #define EVIL_CANVAS_H
 
-#include "RenderTarget.h"
-#include "RenderImageIsometric.h"
+#include "GameObject.h"
 
 class eCamera;
 
@@ -49,29 +48,26 @@ enum class CanvasType {
 // as the eImage, and a renderblock the size of the texture (with minimal depth)
 // at the given param worldPosition
 //***********************************************
-class eCanvas : public eRenderTarget {
+class eCanvas : public eGameObject {
 public:
 
 	void											Configure(const eVec2 & size, const eVec2 & worldPosition, const eVec2 & scale = vec2_one, CanvasType type = CanvasType::SCREEN_SPACE_OVERLAY, eCamera * cameraToOverlay = nullptr);
 	bool											AddToRenderPool(eRenderImageBase * renderImage);
 	void											ClearRenderPools();
 
-	virtual void									Flush() override;
+	void											Flush();
 
 	virtual int										GetClassType() const override				{ return CLASS_CANVAS; }
 	virtual bool									IsClassType(int classType) const override	{ 
 														if(classType == CLASS_CANVAS) 
 															return true; 
-														return eRenderTarget::IsClassType(classType); 
+														return eGameObject::IsClassType(classType); 
 													}
 private:
 	
 	std::vector<eRenderImageBase *>					dynamicPool;						// dynamic eGameObjects to draw, minimizes priority re-calculations of dynamic vs. static eGameObjects
 	std::vector<eRenderImageBase *>					staticPool;							// static eGameObjects that scale with this eCanvas
 	eCamera *										targetCamera		  = nullptr;	// eCamera to resize with and overlay (to which *this is registered)
-	std::unique_ptr<eImage>							worldSpaceImage		  = nullptr;	// eImage used by the eRenderImageIsometric, which is equivalent to eRenderTarget::target SDL_Texture
-	std::unique_ptr<eRenderImageIsometric>			worldSpaceRenderImage = nullptr;	// initialized only for CanvasType::WORLD_SPACE to properly position and sort it in the eMap::tileMap grid
-
 };	
 
 #endif /* EVIL_CAMERA_H */

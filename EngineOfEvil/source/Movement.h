@@ -50,7 +50,6 @@ public:
 
 												eMovementPlanner(eGameObject * owner, float movementSpeed);
 
-	void										Init();
 	void										DebugDraw();							
 	void										AddUserWaypoint(const eVec2 & waypoint);
 	void										ClearTrail();
@@ -65,6 +64,7 @@ public:
 	virtual void								Update() override;
 	virtual std::unique_ptr<eComponent>			GetCopy() const	override					{ return std::make_unique<eMovementPlanner>(*this); }
 	virtual void								SetOwner(eGameObject * newOwner) override;
+
 	virtual int									GetClassType() const override				{ return CLASS_MOVEMENT; }
 	virtual bool								IsClassType(int classType) const override	{ 
 													if(classType == CLASS_MOVEMENT) 
@@ -75,7 +75,7 @@ public:
 private:
 
 	// values for known_map_t knownMap;
-	 typedef enum : unsigned char{
+	 typedef enum : unsigned char {
 		UNKNOWN_TILE,
 		VISITED_TILE
 	} tileState_t ;
@@ -100,7 +100,7 @@ private:
 
 	// used to decide on a new movement direction
 	typedef struct decision_s {
-		eVec2				vector		= vec2_zero;
+		eVec2				vector		= vec2_zero;		// unit-vector movement direction
 		float				stepRatio	= 0.0f;				// ratio of valid steps to those that land on previously unvisited tiles
 		float				validSteps	= 0.0f;				// collision-free steps that could be taken along the vector
 	} decision_t;
@@ -141,15 +141,20 @@ private:
 	// pathfinding (wall-follow)
 	decision_t *			wallSide		= nullptr;		// direction to start sweeping from during PATHTYPE_WALL
 
-	bool					moving;
+	bool					moving;							// set true if the controlled eCollisionModel has been given an non-zero velocity this frame
+	bool					initialized		= false;		// set true the first time Update is called (during its call to Init), set false whenever SetOwner is called
 
 private:
+
+	void					Init();
 
 	// pathfinding (general)
 	void					Move();
 	bool					CheckVectorPath(decision_t & along);
 	void					CheckWalls(float * bias);
 	void					UpdateWaypoint(bool getNext = false);
+	void					UpdateKnownMap();
+	void					StopMoving();
 
 	// pathfinding (wall-follow)
 	void					WallFollow();
@@ -158,8 +163,6 @@ private:
 	void					CompassFollow();
 	bool					CheckTrail();
 
-	void					UpdateKnownMap();
-	void					StopMoving();
 };
 
 //*************
