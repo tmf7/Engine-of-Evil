@@ -199,7 +199,6 @@
     <ClInclude Include="source\Box.h" />
     <ClInclude Include="source\Camera.h" />
     <ClInclude Include="source\Class.h" />
-    <ClInclude Include="source\ClassTypes.h" />
     <ClInclude Include="source\Collision.h" />
     <ClInclude Include="source\CollisionModel.h" />
     <ClInclude Include="source\Component.h" />

@@ -29,6 +29,8 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 
 #include "Audio.h"
 
+namespace evil { namespace audio {
+
 //*********************************
 //			eSoundFx
 // handles a single audio sound effect file for output
@@ -47,4 +49,5 @@ private:
     Mix_Chunk *			soundFx;
 };
 
+} }    /* evil::audio */
 #endif /* EVIL_SOUNDFX_H */

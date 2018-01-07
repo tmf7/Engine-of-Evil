@@ -75,11 +75,13 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 #define MAX_LAYER 128
 #define INVALID_ID -1
 
+/*
 #define REGISTER_ENUM(x) x,
 typedef enum {
 	#include "ClassTypes.h"
 	CLASS_INVALID
 } ClassTypes_t;
 #undef REGISTER_ENUM
+*/
 
 #endif /* EVIL_DEFINITIONS_H */

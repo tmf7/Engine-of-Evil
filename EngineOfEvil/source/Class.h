@@ -29,6 +29,12 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 
 #include "Definitions.h"
 
+#define REGISTER_CLASS_TYPE(classname) const size_t classname::Type = std::hash<std::string>()(TO_STRING(classname))
+
+namespace evil {
+
+using ClassType_t = const std::size_t;
+
 //*************************************************
 //					eClass
 // base class for all engine of evil classes that 
@@ -38,15 +44,22 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 class eClass{
 public:
 
-	virtual		   ~eClass() = default;
-					eClass() = default;
-					eClass(const eClass & other) = default;
-					eClass(eClass && other) = default;
-	eClass &		operator=(const eClass & other) = default;
-	eClass &		operator=(eClass && other) = default;
+	virtual					   ~eClass() = default;
+								eClass() = default;
+								eClass(const eClass & other) = default;
+								eClass(eClass && other) = default;
+	eClass &					operator=(const eClass & other) = default;
+	eClass &					operator=(eClass && other) = default;
 
-	virtual	int		GetClassType() const				{ return CLASS_CLASS; }
-	virtual bool	IsClassType(int classType) const	{ return classType == CLASS_CLASS; }
+	virtual bool				IsClassType(ClassType_t classType) const	{ return classType == Type; }
+
+public:
+
+	static ClassType_t			Type;
+
 };
 
+REGISTER_CLASS_TYPE(eClass);
+
+}	   /* evil */
 #endif /* EVIL_CLASS_H */

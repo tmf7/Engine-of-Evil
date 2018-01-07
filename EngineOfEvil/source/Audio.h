@@ -29,6 +29,8 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 
 #include "Definitions.h"
 
+namespace evil { namespace audio {
+
 //*********************************
 //			eAudio
 // handles music and sound fx output channels
@@ -46,4 +48,5 @@ public:
     void			StopChannel(int channel);
 };
 
+} }	   /* evil::audio */
 #endif /* EVIL_AUDIO_H */

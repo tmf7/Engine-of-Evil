@@ -95,36 +95,39 @@ public:
 	// DEBUG: be sure to compare the arguments of this fn to the desired constructor to avoid perfect-forwarding failure cases
 	// EG: initializer lists, decl-only static const int members, 0|NULL instead of nullptr, overloaded fn names, and bitfields
 	template<class ComponentType, typename... Args>
-	bool									AddComponent(Args&&... params) {
-		components.emplace_back( std::make_unique<ComponentType>( std::forward<Args>( params )... ) );
+	ComponentType *							AddComponent(Args&&... params) {
+
+		// FIXME: potentially also add to a eHashIndex and allow collisions for base class types
+		// such that a Get(base) could check the hashIndex and find derived and base a the same index...should work with many collisions (on one gameobject)
+		// BUT only ONE emplace_back on the components vector
+		auto & result = components.emplace_back( std::make_unique<ComponentType>( std::forward<Args>( params )... ) );
+		return &result;
 	}
 
-	template<class ComponentType>
-	ComponentType *							GetComponent() {
-		for (auto && component : components ) {
-			if (std::type_index(typeid(component)) == std::type_index(typeid(ComponentType)))		// FIXME: search the hierarchy too not just the runtime-type
-				return &component;																	// EG: user asks for eRenderImageBase, so this should find eRenderImageBase | eRenderImageIsometric
+	// FIXME: if this is a template fn then it will be more complex to traverse the class hierarchy 
+	// (ie multiple adds to a hashIndex during AddComponent...using typeid(ComponentType) as the hash...or adding an <...int...> template param that takes the CLASS_XYZ int to hash it)
+	// OR a funky call syntax would be necessary: const auto & ri = gameObject.GetComponent<eRenderImageBase>(CLASS_RENDERIMAGE_BASE);
+
+	// UNLESS the ComponentType could have a static ClassType method 
+	// (which is possible, but coordination of the return values may be complex given the new independence of each class [const hash of the classname?])
+	// and just leave the IsClassType virtual???
+	eComponent *							GetComponent(Uint32 classType) {
+		eCollisionModel::Type;
+		for ( auto && component : components ) {
+			if (component->IsClassType(classType))
+				return component.get();												// FIXME: the user will have to perform a static cast to the return value to use its derived fns
 		}
 		return nullptr;
 	}
 
-	template<class ComponentType>
-	const ComponentType *					GetComponent() const {
-		for (auto && component : components ) {
-			if (std::type_index(typeid(component)) == std::type_index(typeid(ComponentType)))
-				return &component;
-		}
-		return nullptr;
-	}
-
-	template<class ComponentType>
-	void									RemoveComponent() {
-
-		auto & index = std::find_if(components.begin(), components.end(), [](auto & component) { std::type_index(typeid(component)) == std::type_index(typeid(ComponentType)) } );
+	void									RemoveComponent(Uint32 classType) {
+		// FIXME: ComponentType may not be captured in the lambda?
+		auto & index = std::find_if(components.begin(), components.end(), [classType](auto & component) { return component->IsClassType(classType); } );
 		if (index != components.end())
 			components.erase(index);
 	}
 
+	// GetComponent (const)
 	// GetComponents (const & non-const)
 	// RemoveComponents (all of a specific type (not base type))
 

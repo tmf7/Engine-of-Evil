@@ -30,6 +30,8 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 #include "Vector.h"
 #include "Class.h"
 
+namespace evil { namespace collision {
+
 //**********************************
 //			eBounds
 // 2D Axis-Aligned bounding box
@@ -38,50 +40,55 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 //**********************************
 class eBounds : public eClass {
 public:
-					eBounds();
-	explicit		eBounds(const eVec2 & mins, const eVec2 & maxs);
-	explicit		eBounds(const eVec2 & point);
-	explicit		eBounds(const eVec2 * points, const int numPoints);
+							eBounds();
+	explicit				eBounds(const eVec2 & mins, const eVec2 & maxs);
+	explicit				eBounds(const eVec2 & point);
+	explicit				eBounds(const eVec2 * points, const int numPoints);
 
-	const eVec2 &	operator[](const int index) const;
-	eVec2 &			operator[](const int index);
-	eBounds			operator+(const eVec2 & translation) const;
-	eBounds &		operator+=(const eVec2 & translation);
-	bool			operator==(const eBounds & a) const;
-	bool			operator!=(const eBounds & a) const;
+	const eVec2 &			operator[](const int index) const;
+	eVec2 &					operator[](const int index);
+	eBounds					operator+(const eVec2 & translation) const;
+	eBounds &				operator+=(const eVec2 & translation);
+	bool					operator==(const eBounds & a) const;
+	bool					operator!=(const eBounds & a) const;
 	
-	bool			Compare(const eBounds & a) const;
-	bool			Compare(const eBounds & a, const float epsilon) const;
+	bool					Compare(const eBounds & a) const;
+	bool					Compare(const eBounds & a, const float epsilon) const;
 
-	eBounds			Intersect(const eBounds & a) const;
-	eBounds			Translate(const eVec2 & translation) const;		
-	eBounds &		TranslateSelf(const eVec2 & translation);		
-	eBounds			Expand(const float range) const;				
-	eBounds &		ExpandSelf(const float range);
+	eBounds					Intersect(const eBounds & a) const;
+	eBounds					Translate(const eVec2 & translation) const;		
+	eBounds &				TranslateSelf(const eVec2 & translation);		
+	eBounds					Expand(const float range) const;				
+	eBounds &				ExpandSelf(const float range);
 
-	void			Zero();		
-	void			Clear();
-	bool			IsEmpty() const;									
-	eVec2			Center() const;									
-	float			Radius() const;									
-	float			Width() const;
-	float			Height() const;
+	void					Zero();		
+	void					Clear();
+	bool					IsEmpty() const;									
+	eVec2					Center() const;									
+	float					Radius() const;									
+	float					Width() const;
+	float					Height() const;
 
-	void			FromIsometricRotation(const eVec2 & origin);
-	void			FromPoints(const eVec2 * points, const int numPoints);
-	void			ToPoints(eVec2 points[4]) const;
+	void					FromIsometricRotation(const eVec2 & origin);
+	void					FromPoints(const eVec2 * points, const int numPoints);
+	void					ToPoints(eVec2 points[4]) const;
 
-	virtual int		GetClassType() const override				{ return CLASS_BOUNDS; }
-	virtual bool	IsClassType(int classType) const override	{ 
-						if(classType == CLASS_BOUNDS) 
-							return true; 
-						return eClass::IsClassType(classType); 
-					}
+	virtual bool			IsClassType(ClassType_t classType) const override	{ 
+								if(classType == Type) 
+									return true; 
+								return eClass::IsClassType(classType); 
+							}
+
+public:
+
+	static ClassType_t		Type;
 
 private:
 
-	eVec2			bounds[2];			// mins at [0] and maxs at [1]
+	eVec2					bounds[2];			// mins at [0] and maxs at [1]
 };
+
+REGISTER_CLASS_TYPE(eBounds);
 
 //*************
 // eBounds::eBounds
@@ -133,7 +140,6 @@ inline eVec2 & eBounds::operator[](const int index) {
 inline eBounds eBounds::operator+(const eVec2 & translation) const {
 	return eBounds(bounds[0] + translation, bounds[1] + translation);
 }
-
 
 //*************
 // eBounds::operator+=
@@ -311,4 +317,6 @@ inline eBounds eBounds::Intersect(const eBounds & a) const {
 	intersection.bounds[1][1] = ( a.bounds[1][1] < bounds[1][1] ) ? a.bounds[1][1] : bounds[1][1];
 	return intersection;
 }
-#endif  /* EVIL_BOUNDS_H */
+
+} }    /* evil::collision */
+#endif /* EVIL_BOUNDS_H */

@@ -67,10 +67,9 @@ public:
 	bool										FindApproachingCollision(const eVec2 & dir, const float length, Collision_t & result) const;
 
 	virtual void								Update() override;
-	virtual std::unique_ptr<eComponent>			GetCopy() const override					{ return std::make_unique<eCollisionModel>(*this); }
-	virtual int									GetClassType() const override				{ return CLASS_COLLISIONMODEL; }
-	virtual bool								IsClassType(int classType) const override	{ 
-													if(classType == CLASS_COLLISIONMODEL) 
+	virtual std::unique_ptr<eComponent>			GetCopy() const override						{ return std::make_unique<eCollisionModel>(*this); }
+	virtual bool								IsClassType(size_t classType) const override	{ 
+													if(classType == Type) 
 														return true; 
 													return eComponent::IsClassType(classType); 
 												}
@@ -82,7 +81,12 @@ private:
 	void										AvoidCollisionSlide();
 	void										AvoidCollisionCorrection();
 
+public:
+
+	static const size_t							Type;
+
 private:
+
 
 	eBounds										localBounds;			// using model coordinates
 	eBounds										absBounds;				// using world coordinates	
@@ -96,6 +100,10 @@ private:
 	bool										active = false;			// whether this participates in (dynamic or kinematic) collision detection
 
 };
+
+
+
+REGISTER_CLASS_TYPE(eCollisionModel);
 
 //*************
 // eCollisionModel::Center

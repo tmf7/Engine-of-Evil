@@ -30,6 +30,8 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 #include "Definitions.h"
 #include "Class.h"
 
+namespace evil { namespace animation {
+
 //**************************************
 //		eStateTransition
 // used by eAnimationController to control
@@ -51,9 +53,8 @@ public:
 													 float exitTime = 0.0f, 
 													 float offset = 0.0f);
 
-	virtual int						GetClassType() const override { return CLASS_STATETRANSITION; }
-	virtual bool					IsClassType(int classType) const override	{ 
-										if(classType == CLASS_STATETRANSITION) 
+	virtual bool					IsClassType(ClassType_t classType) const override	{ 
+										if(classType == Type) 
 											return true; 
 										return eClass::IsClassType(classType); 
 									}
@@ -64,6 +65,10 @@ private:
 	void							AddIntCondition(int controllerIntIndex, COMPARE_ENUM compare, int value);
 	void							AddBoolCondition(int controllerBoolIndex, bool value);
 	void							AddTriggerCondition(int controllerTriggerIndex);
+
+public:
+
+	static ClassType_t				Type;
 
 private:
 
@@ -80,6 +85,8 @@ private:
 	std::vector<std::pair<int, bool>>					boolConditions;		// values can be true or false
 	std::vector<std::pair<int, bool>>					triggerConditions;  // all values are true
 };
+
+REGISTER_CLASS_TYPE(eStateTransition);
 
 //*******************
 // eStateTransition::eStateTransition
@@ -130,4 +137,5 @@ inline void eStateTransition::AddTriggerCondition(int controllerTriggerIndex) {
 	triggerConditions.emplace_back(std::make_pair(controllerTriggerIndex, true));
 }
 
-#endif  /* EVIL_STATE_TRANSITION_H */
+} }	   /* evil::animation */
+#endif /* EVIL_STATE_TRANSITION_H */

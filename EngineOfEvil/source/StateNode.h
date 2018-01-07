@@ -31,6 +31,8 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 
 class eAnimationController;
 
+namespace evil { namespace animation {
+
 //******************************
 //		eStateNode
 // base class for states used by
@@ -55,9 +57,8 @@ public:
 	int											NameHash() const;
 	const AnimationFrame_t &					GetCurrentFrame() const;
 
-	virtual int									GetClassType() const override				{ return CLASS_STATENODE; }
-	virtual bool								IsClassType(int classType) const override	{ 
-													if(classType == CLASS_STATENODE) 
+	virtual bool								IsClassType(ClassType_t classType) const override	{ 
+													if(classType == Type) 
 														return true; 
 													return eClass::IsClassType(classType); 
 												}
@@ -69,6 +70,10 @@ protected:
 	virtual void								Update() = 0;
 	void										NextFrame(const eAnimation & animation);
 
+public:
+
+	static ClassType_t							Type;
+
 protected:
 
 	eAnimationController *						stateMachine;			// back-pointer to handler, for access to the component's gameobject owner->renderImage
@@ -79,6 +84,8 @@ protected:
 	float										time					= 0.0f;
 	const AnimationFrame_t *					currentFrame			= nullptr;
 };
+
+REGISTER_CLASS_TYPE(eStateNode);
 
 //*********************
 // eStateNode::GetNormalizedTime
@@ -98,7 +105,7 @@ inline void eStateNode::SetNormalizedTime(float normalizedTime) {
 
 //*********************
 // eStateNode::Duration
-// returns the duration of this state in milliseconds
+// returns the duration of this state in seconds
 //*********************
 inline float eStateNode::Duration() const {
 	return duration;
@@ -106,7 +113,7 @@ inline float eStateNode::Duration() const {
 
 //*********************
 // eStateNode::Time
-// returns the un-normalized time of this state in milliseconds
+// returns the un-normalized time of this state in seconds
 // range [0, duration]
 //*********************
 inline float eStateNode::Time() const {
@@ -141,4 +148,5 @@ inline void eStateNode::SetAnimationController(eAnimationController * newStateMa
 	stateMachine = newStateMachine;
 }
 
+} }	   /* evil::animation */
 #endif /* EVIL_STATENODE_H */

@@ -36,6 +36,8 @@ class eGridCell;
 class eCollisionModel;
 class eMap;
 
+namespace evil { namespace collision {
+
 // TODO: incorperate the contact point in Collision_t for all geometry 
 // (eg: GJK closest points on convex hulls)
 // Collision_t
@@ -94,7 +96,6 @@ private:
 
 	
 };
-
 
 //***************
 // eCollision::AABBContainsPoint
@@ -164,4 +165,5 @@ inline void eCollision::SetAABBNormal(const Uint8 entryDir, eVec2 & normal) {
 	}
 }
 
+} }    /* evil::collision */
 #endif /* EVIL_COLLISION_H */

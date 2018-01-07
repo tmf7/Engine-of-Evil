@@ -29,6 +29,8 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 
 #include "Audio.h"
 
+namespace evil { namespace audio {
+
 //*********************************
 //			eMusic
 // handles a single audio music file for output
@@ -47,4 +49,5 @@ private:
     Mix_Music *		music = nullptr;
 };
 
+} }    /* evil::audio */
 #endif /* EVIL_MUSIC_H */

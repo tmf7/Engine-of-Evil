@@ -31,6 +31,8 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 #include "Class.h"
 #include "Resource.h"
 
+namespace evil { namespace animation {
+
 typedef struct AnimationFrame_s {
 	int		imageManagerIndex	= 0;	// within eImageManager::resourceList
 	int		subframeIndex		= 0;	// within eImage::subfames
@@ -67,14 +69,15 @@ public:
 	void								SetFPS(int newFPS);
 	float								Duration() const;
 
-	virtual int							GetClassType() const override				{ return CLASS_ANIMATION; }
-	virtual bool						IsClassType(int classType) const override	{ 
-											if(classType == CLASS_ANIMATION) 
+	virtual bool						IsClassType(ClassType_t classType) const override	{ 
+											if(classType == Type) 
 												return true; 
 											return eClass::IsClassType(classType); 
 										}
 
 public:
+
+	static ClassType_t					Type;
 
 	AnimationLoopState					loop;
 
@@ -84,6 +87,8 @@ private:
 	float								duration;
 	int									framesPerSecond;
 };
+
+REGISTER_CLASS_TYPE(eAnimation);
 
 //*******************
 // eAnimation::eAnimation
@@ -132,4 +137,5 @@ inline float eAnimation::Duration() const {
 	return duration;
 }
 
+} }	   /* evil::animation */
 #endif /* EVIL_ANIMATION_H */

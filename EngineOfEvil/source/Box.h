@@ -29,6 +29,8 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 
 #include "Bounds.h"
 
+namespace evil { namespace collision {
+
 //**********************************
 //			eBox
 // 2D Oriented bounding box
@@ -37,41 +39,46 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 //**********************************
 class eBox : public eClass {
 public:
-					eBox();
-	explicit		eBox(const eVec2 & center, const eVec2 & extents, const eVec2 axes[2]);
-	explicit		eBox(const eVec2 & point);
-	explicit		eBox(const eVec2 points[3]);
-	explicit		eBox(const eBounds & bounds);
-	explicit		eBox(const eBounds & bounds, const eVec2 axes[2]);
-	explicit		eBox(const eVec2 & corner, const eVec2 edges[2]);
+							eBox();
+	explicit				eBox(const eVec2 & center, const eVec2 & extents, const eVec2 axes[2]);
+	explicit				eBox(const eVec2 & point);
+	explicit				eBox(const eVec2 points[3]);
+	explicit				eBox(const eBounds & bounds);
+	explicit				eBox(const eBounds & bounds, const eVec2 axes[2]);
+	explicit				eBox(const eVec2 & corner, const eVec2 edges[2]);
 
-	eBox			operator+(const eVec2 & translation) const;
-	eBox &			operator+=(const eVec2 & translation);						
+	eBox					operator+(const eVec2 & translation) const;
+	eBox &					operator+=(const eVec2 & translation);						
 
-	eBox			Translate(const eVec2 & translation) const;
-	eBox &			TranslateSelf(const eVec2 & translation);
-	eBox			Expand(const float range) const;
-	eBox &			ExpandSelf(const float range);
+	eBox					Translate(const eVec2 & translation) const;
+	eBox &					TranslateSelf(const eVec2 & translation);
+	eBox					Expand(const float range) const;
+	eBox &					ExpandSelf(const float range);
 
-	void			Zero();											
-	const eVec2 &	Center() const;
-	const eVec2 &	Extents() const;
-	const eVec2 *	Axes() const;
+	void					Zero();											
+	const eVec2 &			Center() const;
+	const eVec2 &			Extents() const;
+	const eVec2 *			Axes() const;
 
-	virtual int		GetClassType() const override				{ return CLASS_BOX; }
-	virtual bool	IsClassType(int classType) const override	{ 
-						if(classType == CLASS_BOX) 
-							return true; 
-						return eClass::IsClassType(classType); 
-					}
+	virtual bool			IsClassType(ClassType_t classType) const override	{ 
+								if(classType == Type) 
+									return true; 
+								return eClass::IsClassType(classType); 
+							}
+
+public:
+
+	static ClassType_t		Type;
 
 private:
 
-	eVec2			center;			// world-space center
-	eVec2			extents;		// positive distance along local x and y axes
-	eVec2			axes[2];		// unit-length locally oriented x and y axes
-									// DEBUG: column-major matrix
+	eVec2					center;			// world-space center
+	eVec2					extents;		// positive distance along local x and y axes
+	eVec2					axes[2];		// unit-length locally oriented x and y axes
+											// DEBUG: column-major matrix
 };
+
+REGISTER_CLASS_TYPE(eBox);
 
 //*************
 // eBox::eBox
@@ -204,4 +211,5 @@ inline eBox & eBox::TranslateSelf(const eVec2 & translation) {
 	return *this;
 }
 
+} }    /* evil::collision */
 #endif /* EVIL_BOX_H */

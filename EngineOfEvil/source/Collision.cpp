@@ -27,6 +27,8 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 #include "Game.h"
 #include "Map.h"
 
+using namespace evil::collision;
+
 //***************
 // eCollision::OBBOBBTest
 // test for a separating axis using 

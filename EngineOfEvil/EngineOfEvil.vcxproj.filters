@@ -188,9 +188,6 @@
     <ClInclude Include="source\Definitions.h">
       <Filter>Core</Filter>
     </ClInclude>
-    <ClInclude Include="source\ClassTypes.h">
-      <Filter>Core</Filter>
-    </ClInclude>
     <ClInclude Include="source\Class.h">
       <Filter>Core</Filter>
     </ClInclude>

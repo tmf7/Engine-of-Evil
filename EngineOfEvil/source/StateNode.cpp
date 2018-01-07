@@ -27,6 +27,8 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 #include "StateNode.h"
 #include "Game.h"
 
+using namespace evil::animation;
+
 //*********************
 // eStateNode::NextFrame
 // updates the target eRenderImage-derived object

@@ -27,6 +27,8 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 #include "Bounds.h"
 #include "Definitions.h"
 
+using namespace evil::collision;
+
 //*************
 // eBounds::eBounds
 // constructs fitted AABB from list of random points

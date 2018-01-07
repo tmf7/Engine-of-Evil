@@ -30,6 +30,8 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 #include "Vector.h"
 #include "Class.h"
 
+namespace evil { namespace collision {
+
 //**********************************
 //			eBounds3D
 // 3D Axis-Aligned bounding box
@@ -38,49 +40,54 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 //**********************************
 class eBounds3D : public eClass {
 public:
-					eBounds3D();
-	explicit		eBounds3D(const eVec3 & mins, const eVec3 & maxs);
-	explicit		eBounds3D(const eVec3 & point);
+							eBounds3D();
+	explicit				eBounds3D(const eVec3 & mins, const eVec3 & maxs);
+	explicit				eBounds3D(const eVec3 & point);
 
-	const eVec3 &	operator[](const int index) const;
-	eVec3 &			operator[](const int index);
-	eBounds3D		operator+(const eVec3 & translation) const;
-	eBounds3D &		operator+=(const eVec3 & translation);
-	bool			operator==(const eBounds3D & a) const;
-	bool			operator!=(const eBounds3D & a) const;
+	const eVec3 &			operator[](const int index) const;
+	eVec3 &					operator[](const int index);
+	eBounds3D				operator+(const eVec3 & translation) const;
+	eBounds3D &				operator+=(const eVec3 & translation);
+	bool					operator==(const eBounds3D & a) const;
+	bool					operator!=(const eBounds3D & a) const;
 	
-	bool			Compare(const eBounds3D & a) const;
-	bool			Compare(const eBounds3D & a, const float epsilon) const;
+	bool					Compare(const eBounds3D & a) const;
+	bool					Compare(const eBounds3D & a, const float epsilon) const;
 
-	eBounds3D		Translate(const eVec3 & translation) const;		
-	eBounds3D &		TranslateSelf(const eVec3 & translation);		
-	eBounds3D		Expand(const float range) const;				
-	eBounds3D &		ExpandSelf(const float range);
+	eBounds3D				Translate(const eVec3 & translation) const;		
+	eBounds3D &				TranslateSelf(const eVec3 & translation);		
+	eBounds3D				Expand(const float range) const;				
+	eBounds3D &				ExpandSelf(const float range);
 
-	void			Zero();											
-	eVec3			Center() const;									
-	float			Radius() const;	
-	const eVec3 &	Size() const;
-	float			Width() const;
-	float			Height() const;
-	float			Depth() const;
+	void					Zero();											
+	eVec3					Center() const;									
+	float					Radius() const;	
+	const eVec3 &			Size() const;
+	float					Width() const;
+	float					Height() const;
+	float					Depth() const;
 
-	void			FromIsometricRotation(const eVec3 & origin);
-	void			FromPoints(const eVec3 * points, const int numPoints);
-	void			ToPoints(eVec3 points[8]) const;
+	void					FromIsometricRotation(const eVec3 & origin);
+	void					FromPoints(const eVec3 * points, const int numPoints);
+	void					ToPoints(eVec3 points[8]) const;
 
-	virtual int		GetClassType() const override				{ return CLASS_BOUNDS3D; }
-	virtual bool	IsClassType(int classType) const override	{ 
-						if(classType == CLASS_BOUNDS3D) 
-							return true; 
-						return eClass::IsClassType(classType); 
-					}
+	virtual bool			IsClassType(ClassType_t classType) const override	{ 
+								if(classType == Type) 
+									return true; 
+								return eClass::IsClassType(classType); 
+							}
+
+public:
+
+	static ClassType_t		Type;
 
 private:
 
-	eVec3			bounds[2];			// mins at [0] and maxs at [1]
-	eVec3			quickSize;			// cached x=width, y=height, and z=depth
+	eVec3					bounds[2];			// mins at [0] and maxs at [1]
+	eVec3					quickSize;			// cached x=width, y=height, and z=depth
 };
+
+REGISTER_CLASS_TYPE(eBounds3D);
 
 //*************
 // eBounds3D::eBounds3D
@@ -299,4 +306,5 @@ inline void eBounds3D::ToPoints(eVec3 points[8]) const {
 	}
 }
 
+} }    /* evil::collision */
 #endif  /* EVIL_BOUNDS3D_H */

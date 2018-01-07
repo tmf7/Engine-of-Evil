@@ -27,6 +27,8 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 #include "AnimationState.h"
 #include "Game.h"
 
+using namespace evil::animation;
+
 //*********************
 // eAnimationState::eAnimationState
 //*********************

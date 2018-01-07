@@ -26,6 +26,8 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 */
 #include "Audio.h"
 
+using namespace evil::audio;
+
 //*********************
 // eAudio::Init
 // TODO: allow user to configure the number of audio channels

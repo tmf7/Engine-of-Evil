@@ -26,6 +26,8 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 */
 #include "SoundFx.h"
 
+using namespace evil::audio;
+
 //*******************
 // eSoundFx::Load
 //*******************

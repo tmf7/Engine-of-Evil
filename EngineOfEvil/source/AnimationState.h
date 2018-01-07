@@ -31,6 +31,8 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 
 class eAnimationController;
 
+namespace evil { namespace animation {
+
 //******************************
 //		eAnimationState
 // used by eAnimationController
@@ -49,12 +51,15 @@ public:
 															const std::shared_ptr<eAnimation> & animation, 
 															float speed = 1.0f);
 
-	virtual int								GetClassType() const override				{ return CLASS_ANIMATIONSTATE; }
-	virtual bool							IsClassType(int classType) const override	{ 
-												if(classType == CLASS_ANIMATIONSTATE) 
+	virtual bool							IsClassType(ClassType_t classType) const override	{ 
+												if(classType == Type) 
 													return true; 
 												return eStateNode::IsClassType(classType); 
 											}
+
+public:
+
+	static ClassType_t						Type;
 
 private:
 
@@ -65,4 +70,7 @@ private:
 	std::shared_ptr<eAnimation>				animation;				// which animation this state plays
 };
 
+REGISTER_CLASS_TYPE(eAnimationState);
+
+} }	   /* evil::animation */
 #endif /* EVIL_ANIMATION_STATE_H */

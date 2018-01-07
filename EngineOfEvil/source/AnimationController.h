@@ -35,6 +35,7 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 #include "StateTransition.h"
 #include "HashIndex.h"
 
+namespace evil { namespace animation { namespace components {
 
 //*******************************************
 //			eAnimationController
@@ -88,11 +89,11 @@ public:
 	bool										GetTriggerParameter(int nameHash) const;
 
 	virtual void								Update() override;
-	virtual std::unique_ptr<eComponent>			GetCopy() const	override					{ return std::make_unique<eAnimationController>(*this); }
+	virtual std::unique_ptr<eComponent>			GetCopy() const	override							{ return std::make_unique<eAnimationController>(*this); }
 	virtual void								SetOwner(eGameObject * newOwner) override;
-	virtual int									GetClassType() const override				{ return CLASS_ANIMATIONCONTROLLER; }
-	virtual bool								IsClassType(int classType) const override	{ 
-													if(classType == CLASS_ANIMATIONCONTROLLER) 
+
+	virtual bool								IsClassType(ClassType_t classType) const override	{ 
+													if(classType == Type) 
 														return true; 
 													return eComponent::IsClassType(classType); 
 												}
@@ -120,6 +121,10 @@ private:
 	int											GetTriggerParameterIndex(const std::string & name) const;
 	int											GetStateIndex(const std::string & name) const;
 
+public:
+
+	static ClassType_t							Type;
+
 private:
 
 	// eHashIndex allows hash collisions as needed and allows for contiguous memory footprint
@@ -144,6 +149,8 @@ private:
 	bool										paused			= false;
 
 };
+
+REGISTER_CLASS_TYPE(eAnimationController);
 
 //**************
 // eAnimationController::eAnimationController
@@ -451,4 +458,5 @@ inline int eAnimationController::GetStateIndex(const std::string & name) const {
 	return statesHash.First(statesHash.GetHashKey(name));
 }
 
+} } }   /* evil::animation::components */
 #endif /* EVIL_ANIMATION_CONTROLLER_H */

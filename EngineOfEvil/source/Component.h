@@ -29,7 +29,10 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 
 #include "Class.h"
 
+namespace evil { namespace components {
+
 class eGameObject;
+
 
 //*************************************************
 //				eComponent
@@ -46,10 +49,8 @@ public:
 	const eGameObject *							Owner() const								{ return owner; }
 	eGameObject *								Owner()										{ return owner; }
 
-
-	virtual int									GetClassType() const override				{ return CLASS_COMPONENT; }
-	virtual bool								IsClassType( int classType ) const override	{ 
-													if( classType == CLASS_COMPONENT ) 
+	virtual bool								IsClassType( ClassType_t classType ) const override	{ 
+													if( classType == Type ) 
 														return true; 
 													return eClass::IsClassType( classType ); 
 												}
@@ -68,10 +69,17 @@ protected:
 
 	virtual void								SetOwner(eGameObject * newOwner)			{ owner = newOwner; }
 
+public:
+
+	static ClassType_t							Type;
+
 protected:
 
 	eGameObject *								owner = nullptr;			// back-pointer to user managing the lifetime of *this
 };
 
+REGISTER_CLASS_TYPE(eComponent);
+
+} }    /* evil::components */
 #endif /* EVIL_COMPONENT_H */
 

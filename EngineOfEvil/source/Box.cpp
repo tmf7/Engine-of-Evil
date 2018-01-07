@@ -26,6 +26,8 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 */
 #include "Box.h"
 
+using namespace evil::collision;
+
 //*************
 // eBox::eBox
 // DEBUG: assumes all three points are corners of a rectangle
