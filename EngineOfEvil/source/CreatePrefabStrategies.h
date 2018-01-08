@@ -29,6 +29,10 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 
 #include "EntityPrefabManager.h"
 
+namespace logic {
+
+	using namespace evil;
+
 //******************************************
 //			eCreateEntityPrefabUser
 // default strategy for making eEntity base class instances
@@ -39,4 +43,5 @@ public:
 	virtual bool	CreatePrefab(std::shared_ptr<eEntity> & newPrefab, const std::string & prefabShortName, const eDictionary & spawnArgs) override;
 };
 
+}	   /* logic */
 #endif /* EVIL_CREATE_PREFAB_STRATEGIES_H */

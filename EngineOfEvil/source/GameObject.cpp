@@ -41,11 +41,10 @@ eGameObject::eGameObject(const eGameObject & other)
 	  isStatic(other.isStatic),
 	  zPosition(other.zPosition) {
 
-	// DEBUG: using std::make_unique and release to prevent leaks in the event an allocation fails
-	if (other.renderImage != nullptr)			renderImage.reset(static_cast<eRenderImageBase *>(other.renderImage->GetCopy().release()));
-	if (other.animationController != nullptr)	animationController.reset(static_cast<eAnimationController *>(other.animationController->GetCopy().release()));
-	if (other.collisionModel != nullptr)		collisionModel.reset(static_cast<eCollisionModel *>(other.collisionModel->GetCopy().release()));
-	if (other.movementPlanner != nullptr)		movementPlanner.reset(static_cast<eMovementPlanner *>(other.movementPlanner->GetCopy().release()));	
+	for (auto && component : other.components) {
+		if (component != nullptr)
+			components.emplace_back(component->GetCopy());
+	}
 	UpdateComponentsOwner();
 }
 
@@ -56,11 +55,12 @@ eGameObject::eGameObject(eGameObject && other)
 	: orthoOrigin(std::move(other.orthoOrigin)),
 	  worldLayer(other.worldLayer),
 	  isStatic(other.isStatic),
-	  zPosition(other.zPosition),
-	  renderImage(std::move(other.renderImage)),
-	  animationController(std::move(other.animationController)),
-	  collisionModel(std::move(other.collisionModel)),
-	  movementPlanner(std::move(other.movementPlanner)) {
+	  zPosition(other.zPosition) {
+
+	for (auto && component : other.components) {
+		if (component != nullptr)
+			components.emplace_back(std::move(component));
+	}
 	UpdateComponentsOwner();
 }
 
@@ -72,10 +72,7 @@ eGameObject & eGameObject::operator=(eGameObject other) {
 	std::swap(worldLayer, other.worldLayer);
 	std::swap(isStatic, other.isStatic);
 	std::swap(zPosition, other.zPosition);
-	std::swap(renderImage, other.renderImage);
-	std::swap(animationController, other.animationController);
-	std::swap(collisionModel, other.collisionModel);
-	std::swap(movementPlanner, other.movementPlanner);
+	std::swap(components, other.components);
 	UpdateComponentsOwner();
     return *this;
 }
@@ -86,10 +83,10 @@ eGameObject & eGameObject::operator=(eGameObject other) {
 // and not the old eGameObject moved or copied from
 //**************
 void eGameObject::UpdateComponentsOwner(){
-	if (renderImage != nullptr)			renderImage->SetOwner(this);
-	if (animationController != nullptr) animationController->SetOwner(this);
-	if (collisionModel != nullptr)		collisionModel->SetOwner(this);
-	if (movementPlanner != nullptr)		movementPlanner->SetOwner(this);
+	for (auto && component : components) {
+		if (component != nullptr)
+			component->SetOwner(this);
+	}
 }
 
 //*************
@@ -121,62 +118,13 @@ void eGameObject::SetZPosition(float newZPosition) {
 
 //*************
 // eGameObject::UpdateComponents
-// TODO(?): should UpdateComponents be hidden from users... private w/eGame as a friend?
+// TODO(?): should UpdateComponents be hidden from users?
 //*************
 void eGameObject::UpdateComponents() {
-	if (movementPlanner != nullptr)
-		movementPlanner->Update();
-	
-	if (collisionModel != nullptr)
-		collisionModel->Update();
-
-	if (animationController != nullptr)
-		animationController->Update();
-
-	if (renderImage != nullptr)
-		renderImage->Update();
-}
-
-
-//*************
-// eGameObject::AddRenderImageBase
-// returns true if an eRenderImageBase object has been added to *this
-// returns false if not because the filename is invalid, or the file is unreadable
-//*************
-bool eGameObject::AddRenderImageBase( const std::string & spriteFilename, int initialSpriteFrame, const eVec2 & renderImageOffset, bool isPlayerSelectable ) {
-	std::shared_ptr<eImage> initialImage = nullptr;
-	if (!game->GetImageManager().LoadAndGet(spriteFilename.c_str(), initialImage))
-		return false;
-
-	renderImage = std::make_unique<eRenderImageBase>(this, initialImage, initialSpriteFrame, renderImageOffset, isPlayerSelectable);
-	return true;
-}
-
-//*************
-// eGameObject::AddRenderImageIsometric
-// returns true if an eRenderImageIsometric object has been added to *this
-// returns false if not because the filename is invalid, or the file is unreadable
-//*************
-bool eGameObject::AddRenderImageIsometric( const std::string & spriteFilename, const eVec3 & renderBlockSize, int initialSpriteFrame, const eVec2 & renderImageOffset, bool isPlayerSelectable ) {
-	std::shared_ptr<eImage> initialImage = nullptr;
-	if (!game->GetImageManager().LoadAndGet(spriteFilename.c_str(), initialImage))
-		return false;
-
-	renderImage = std::make_unique<eRenderImageIsometric>(this, initialImage, renderBlockSize, initialSpriteFrame, renderImageOffset, isPlayerSelectable);
-	return true;
-}
-
-//*************
-// eGameObject::AddCollisionModel
-// returns true if an eCollisionModel has been added to *this
-// returns false if not because localBounds empty
-//*************
-bool eGameObject::AddCollisionModel( const eBounds & localBounds, const eVec2 & colliderOffset, bool collisionActive ) {
-	if (localBounds.IsEmpty())
-		return false;
-
-	collisionModel = std::make_unique<eCollisionModel>(this, localBounds, colliderOffset, collisionActive);
-	return true;
+	for (auto && component : components) {
+		if (component != nullptr)
+			component->Update();
+	}
 }
 
 //*************
@@ -196,14 +144,8 @@ bool eGameObject::AddAnimationController( const std::string & animationControlle
 
 //*************
 // eGameObject::AddMovementPlanner
-// returns true if a eMovementPlanner has been added to *this
-// returns false if not because there is no eCollisionModel attached
-// DEBUG: call AddCollisionModel before calling this, because it depends on an eCollisionModel object
+// DEBUG: ideally call AddCollisionModel before calling this, because it depends on an eCollisionModel object
 //*************
-bool eGameObject::AddMovementPlanner( float movementSpeed ) {
-	if ( collisionModel == nullptr )
-		return false;
-
+void eGameObject::AddMovementPlanner( float movementSpeed ) {
 	movementPlanner = std::make_unique< eMovementPlanner >( this, movementSpeed );
-	return true;
 }

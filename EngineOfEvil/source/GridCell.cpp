@@ -24,8 +24,10 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 
 ===========================================================================
 */
-#include "GridCell.h"
 #include "Game.h"
+#include "GridCell.h"
+#include "CollisionModel.h"
+#include "RenderTarget.h"
 
 using namespace evil;
 
@@ -64,10 +66,10 @@ void eGridCell::Reset() {
 void eGridCell::DebugDraw(eRenderTarget * renderTarget) {
 	auto & renderer = game->GetRenderer();
 	for (auto & tile : tilesOwned) {
-		if (game->debugFlags.COLLISION && &tile.CollisionModel() != nullptr)
-			game->GetRenderer().DrawIsometricRect(renderTarget, pinkColor, tile.CollisionModel().AbsBounds());
+		if (game->debugFlags.COLLISION && &tile.GetComponent<eCollisionModel>() != nullptr)
+			game->GetRenderer().DrawIsometricRect(renderTarget, pinkColor, tile.GetComponent<eCollisionModel>().AbsBounds());
 
-		auto & renderBlock = static_cast<eRenderImageIsometric *>(&tile.RenderImage())->GetRenderBlock();
+		auto & renderBlock = static_cast<eRenderImageIsometric *>(&tile.GetComponent<eRenderImageIsometric>())->GetRenderBlock();
 		if (game->debugFlags.RENDERBLOCKS && renderBlock.Depth() > 0)		// DEBUG(performance): for visual clarity, don't draw flat renderBlocks
 			game->GetRenderer().DrawIsometricPrism(renderTarget, lightBlueColor, renderBlock);
 	}

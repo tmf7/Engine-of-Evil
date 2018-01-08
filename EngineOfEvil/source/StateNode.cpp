@@ -25,6 +25,7 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 ===========================================================================
 */
 #include "Game.h"
+#include "RenderImageBase.h"
 
 using namespace evil;
 
@@ -54,7 +55,7 @@ void eStateNode::NextFrame(const eAnimation & animation) {
 	}
 
 	
-	auto & targetRenderImage = stateMachine->Owner()->RenderImage();
+	auto & targetRenderImage = stateMachine->Owner()->GetComponent<eRenderImageBase>();
 	if (&targetRenderImage != nullptr) {		// BUGFIX: removes load and run-time dependence between eAnimationController and eRenderImageBase-derived instances
 		targetRenderImage.SetImage(currentFrame->imageManagerIndex);
 		targetRenderImage.SetImageFrame(currentFrame->subframeIndex);

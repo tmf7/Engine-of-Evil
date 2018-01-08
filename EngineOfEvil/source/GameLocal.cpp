@@ -27,7 +27,7 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 #include "GameLocal.h"
 #include "CreatePrefabStrategies.h"
 
-using namespace evil;
+using namespace logic;
 
 // the rest of the engine will only reference the "game" variable, while all local aspects stay hidden
 eGameLocal					gameLocal;			// the user's static game instance

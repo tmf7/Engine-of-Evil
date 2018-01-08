@@ -27,13 +27,14 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 #include "Game.h"
 #include "sHero.h"
 #include "Map.h"
+#include "CollisionModel.h"
 
-using namespace evil;
+using namespace logic;
 
-ECLASS_DEFINITION(evil::eEntity, sHero)
+ECLASS_DEFINITION(eEntity, sHero)
 
 void sHero::Think() {
-	auto & velocity = collisionModel->GetVelocity();
+	auto & velocity = collisionModel.GetVelocity();
 	eVec2 facingDirection;
 	if (velocity != vec2_zero) {
 		facingDirection = velocity.Normalized();
@@ -44,9 +45,9 @@ void sHero::Think() {
 		facingDirection = oldFacingDirection * 0.25f;
 	}
 			
-	animationController->SetFloatParameter(xSpeedParameterHash, facingDirection.x);
-	animationController->SetFloatParameter(ySpeedParameterHash, facingDirection.y);
-	animationController->SetFloatParameter(magnitudeParameterHash, facingDirection.Length());
+	animationController.SetFloatParameter(xSpeedParameterHash, facingDirection.x);
+	animationController.SetFloatParameter(ySpeedParameterHash, facingDirection.y);
+	animationController.SetFloatParameter(magnitudeParameterHash, facingDirection.Length());
 }
 
 //***************
@@ -54,5 +55,8 @@ void sHero::Think() {
 // copies a prefab sHero and adds it to param onMap
 //***************
 bool sHero::SpawnCopy(eMap * onMap, const eVec3 & worldPosition) {
-	return (onMap->AddEntity(std::make_unique<sHero>(*this), worldPosition) >= 0);
+	auto & newHero = std::make_unique<sHero>(*this);
+	newHero->collisionModel = newHero->GetComponent<eCollisionModel>();
+	newHero->animationController = newHero->GetComponent<eAnimationController>();
+	return (onMap->AddEntity(std::move(newHero), worldPosition) >= 0);
 }

@@ -28,9 +28,15 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 #define ENTITY_H
 
 #include "GameObject.h"
+#include "Resource.h"
 #include "Dictionary.h"
 
 namespace evil {
+
+	class eMovementPlanner;
+	class eCollisionModel;
+	class eAnimationController;
+	class eRenderImageIsometric;			// FIXME: assumes an instance is using this instead of eRenderImageBase
 
 //*************************************************
 //					eEntity
@@ -57,6 +63,15 @@ public:
 	virtual void						DebugDraw(eRenderTarget * renderTarget) override;
 
 private:
+
+	// DEBUG: both of these reference members have lifetimes dictated by their eGameObject owner (ie: *this)
+	// DEBUG: this aggregation prevents the compiler from generating an assignment operator
+	// TODO: if needed, write the assignment operator to perform new GetComponent<> on the new object's reference members
+	eCollisionModel &					collisionModel;
+	eMovementPlanner &					movementPlanner;
+	eRenderImageIsometric &				renderImage;
+	eAnimationController &				animationController;
+
 
 	eDictionary							spawnArgs;				// populated during eEntityPrefabManager::CreatePrefab, used for initialization in eCreateEntityPrefabStrategy::CreatePrefab-overridden methods
 	std::string							spawnName;				// unique name for this instance (eg: "prefabShortName_spawnedEntityID")

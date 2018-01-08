@@ -29,7 +29,11 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 
 #include "Entity.h"
 
-class sHero : public evil::eEntity {
+namespace logic {
+
+	using namespace evil;
+
+class sHero : public eEntity {
 
 	ECLASS_DECLARATION(sHero)
 
@@ -40,11 +44,18 @@ public:
 	virtual void						Think() override;
 
 private:
-	
-	eVec2 oldFacingDirection			= vec2_oneZero;
-	const int xSpeedParameterHash		= std::hash< std::string >()( "xSpeed" );
-	const int ySpeedParameterHash		= std::hash< std::string >()( "ySpeed" );
-	const int magnitudeParameterHash	= std::hash< std::string >()( "magnitude" );
+
+	// DEBUG: both of these reference members have lifetimes dictated by their eGameObject owner (ie: *this)
+	// DEBUG: this aggregation prevents the compiler from generating an assignment operator
+	// TODO: if needed, write the assignment operator to perform new GetComponent<> on the new object's reference members
+	eCollisionModel &					collisionModel;
+	eAnimationController &				animationController;
+
+	eVec2								oldFacingDirection			= vec2_oneZero;
+	const int							xSpeedParameterHash		= std::hash< std::string >()( "xSpeed" );
+	const int							ySpeedParameterHash		= std::hash< std::string >()( "ySpeed" );
+	const int							magnitudeParameterHash	= std::hash< std::string >()( "magnitude" );
 };
 
+}	   /* evil */
 #endif /* EVIL_SHERO_H */

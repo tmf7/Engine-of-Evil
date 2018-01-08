@@ -32,25 +32,30 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 #include "Map.h"
 #include "Camera.h"
 
+namespace logic {
+
+	using namespace evil;
+
 //*************************************************
 //					eGameLocal
 // test for user-defined extension of eGame base class
 //*************************************************
-class eGameLocal : public evil::eGame {
+class eGameLocal : public eGame {
 public:
 
-	virtual bool									Init() override;
-	virtual void									Update() override;
-	virtual void									Shutdown() override		{}
+	virtual bool		Init() override;
+	virtual void		Update() override;
+	virtual void		Shutdown() override		{}
 
 private:
 
-	evil::eMap										map;				// FIXME(?): one map instance per game, use eMap::LoadMap/UnloadMap as needed
-	evil::eCamera									camera;				// DEBUG: the main viewport camera
-	ePlayer											player;
+	eMap				map;				// FIXME(?): one map instance per game, use eMap::LoadMap/UnloadMap as needed
+	eCamera				camera;				// DEBUG: the main viewport camera
+	ePlayer				player;
 
 };
 
 extern eGameLocal gameLocal;
 
+}	   /* logic */
 #endif /* EVIL_GAME_LOCAL_H */

@@ -34,6 +34,7 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 #undef main
 
  int main() {
+
 	// TODO: possibly create a single function call here
 	// EngineOfEvil.Start();
 	// that initializes the engine critical systems, and runs on a loop
@@ -49,6 +50,8 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 	// TODO: compile EngineOfEvil as a library to link against
 	// TODO: make all headers clean so the library's implementation isn't easily messed with
 	// and for faster testing compile times
+
+	 using namespace logic;
 
 	if (!gameLocal.InitSystem()) {
 		gameLocal.ShutdownSystem();

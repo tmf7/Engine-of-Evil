@@ -164,7 +164,8 @@ bool eMap::LoadMap(const char * mapFilename) {
 				auto & cell = tileMap.Index(row, column);
 				auto & origin = cell.AbsBounds()[0];
 				cell.AddTileOwned(eTile(&cell, origin, tileType, layer));
-				auto tileRenderImage = static_cast<eRenderImageIsometric *>( &(cell.TilesOwned().back().RenderImage()) );
+
+				auto tileRenderImage = &(cell.TilesOwned().back().GetComponent<eRenderImageIsometric>());
 				if (tileRenderImage->GetRenderBlock().Depth() > tallestRenderBlock)
 					tallestRenderBlock = (size_t)tileRenderImage->GetRenderBlock().Depth();
 

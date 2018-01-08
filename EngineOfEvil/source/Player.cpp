@@ -27,8 +27,11 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 #include "GameLocal.h"
 #include "Player.h"
 #include "sHero.h"
+#include "RenderTarget.h"
+#include "Movement.h"
+#include "CollisionModel.h"
 
-using namespace evil;
+using namespace logic;
 
 ECLASS_DEFINITION(eGameObject, ePlayer)
 
@@ -53,7 +56,7 @@ void ePlayer::Think() {
 
 		} else if (!groupSelection.empty()) {
 			for (auto & entity : groupSelection)
-				entity->MovementPlanner().AddUserWaypoint(map->GetViewCamera()->MouseWorldPosition());
+				entity->GetComponent<eMovementPlanner>().AddUserWaypoint(map->GetViewCamera()->MouseWorldPosition());
 /*
 			if ("small selection area, so set a chase target for the group if there's an eEntity in the selectionArea") {		// TODO: implement
 			} else { // group pathfinding
@@ -68,7 +71,7 @@ void ePlayer::Think() {
 	}
 
 	for (auto & entity : groupSelection) {	
-		auto & entityMovement = entity->MovementPlanner();
+		auto & entityMovement = entity->GetComponent<eMovementPlanner>();
 		if (input.KeyPressed(SDL_SCANCODE_M))
 			entityMovement.TogglePathingState();
 
@@ -83,7 +86,7 @@ void ePlayer::Think() {
 		moveInput.Normalize();
 		moveInput *= moveSpeed;
 		eMath::IsometricToCartesian(moveInput.x, moveInput.y);
-		auto & entityCollisionModel = entity->CollisionModel();
+		auto & entityCollisionModel = entity->GetComponent<eCollisionModel>();
 		entityCollisionModel.SetVelocity(eVec2(moveInput.x, moveInput.y));
 	}
 }
@@ -133,8 +136,13 @@ bool ePlayer::SelectGroup() {
 
 			alreadyTested[entity] = entity;
 
+			// dont select the non-selectabale
+			auto & entityRenderImage = entity->GetComponent<eRenderImageBase>();
+			if (&entityRenderImage != nullptr && !entityRenderImage.IsSelectable())
+				continue;
+
 			// account for current camera zoom level
-			auto & worldClip = entity->RenderImage().GetWorldClip();
+			auto & worldClip = entityRenderImage.GetWorldClip();
 			const float zoom = map->GetViewCamera()->GetZoom();
 			const eVec2 worldClipOrigin = (worldClip[0] - map->GetViewCamera()->AbsBounds()[0]) * zoom;
 			const eVec2 worldClipSize = eVec2(worldClip.Width(), worldClip.Height()) * zoom;
@@ -171,7 +179,7 @@ void ePlayer::Draw() {
 
 	// highlight those selected
 	for (auto & entity : groupSelection)
-		game->GetRenderer().DrawIsometricRect(map->GetViewCamera()->GetDebugRenderTarget(), lightBlueColor, entity->CollisionModel().AbsBounds());
+		game->GetRenderer().DrawIsometricRect(map->GetViewCamera()->GetDebugRenderTarget(), lightBlueColor, entity->GetComponent<eCollisionModel>().AbsBounds());
 }
 
 //***************

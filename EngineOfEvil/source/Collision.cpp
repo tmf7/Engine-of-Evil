@@ -26,6 +26,7 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 */
 #include "Game.h"
 #include "Map.h"
+#include "CollisionModel.h"
 
 using namespace evil;
 

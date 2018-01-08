@@ -54,21 +54,21 @@ class eMovementPlanner : public eComponent {
 
 public:
 
-												eMovementPlanner(eGameObject * owner, float movementSpeed);
+							eMovementPlanner(eGameObject * owner, float movementSpeed);
 
-	void										DebugDraw();							
-	void										AddUserWaypoint(const eVec2 & waypoint);
-	void										ClearTrail();
-	void										TogglePathingState();
-	float										Speed() const;
+	void					DebugDraw();							
+	void					AddUserWaypoint(const eVec2 & waypoint);
+	void					ClearTrail();
+	void					TogglePathingState();
+	float					Speed() const;
 
 	// debugging
-	void										DrawGoalWaypoints();
-	void										DrawTrailWaypoints();
-	void										DrawKnownMap() const;
+	void					DrawGoalWaypoints();
+	void					DrawTrailWaypoints();
+	void					DrawKnownMap() const;
 
-	virtual void								Update() override;
-	virtual void								SetOwner(eGameObject * newOwner) override;
+	virtual void			Update() override;
+	virtual void			SetOwner(eGameObject * newOwner) override;
 
 private:
 

@@ -27,6 +27,7 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 #include "Game.h"
 #include "Map.h"
 #include "RenderImageIsometric.h"
+#include "CollisionModel.h"
 
 using namespace evil;
 
@@ -67,8 +68,8 @@ void eRenderImageIsometric::UpdateRenderBlock() {
 		renderBlock += eVec3(0.0f, 0.0f, owner->GetZPosition() - renderBlockMins.z);
 	}
 
-	if (&owner->CollisionModel() != nullptr) {
-		auto & collisionMins = owner->CollisionModel().AbsBounds()[0];
+	if (&owner->GetComponent<eCollisionModel>() != nullptr) {
+		auto & collisionMins = owner->GetComponent<eCollisionModel>().AbsBounds()[0];
 		renderBlock += eVec3(collisionMins.x - renderBlockMins.x, collisionMins.y - renderBlockMins.y , 0.0f);
 	} else {
 		auto & ownerOrigin = owner->GetOrigin();

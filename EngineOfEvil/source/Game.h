@@ -33,6 +33,7 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 #include "EntityPrefabManager.h"
 #include "Input.h"
 #include "Audio.h"
+#include "Collision.h"
 
 namespace evil {
 

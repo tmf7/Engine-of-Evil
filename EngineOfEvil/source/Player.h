@@ -29,14 +29,17 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 
 #include "Entity.h"
 
+namespace logic {
+
+	using namespace evil;
+
 //*************************************************
 //					ePlayer
 // handles all player input controls
 // this is a higher level game-logic class for testing
 // rather than a generic game-engine class
-// TODO(~): inherit from an eGameObject class
 //*************************************************
-class ePlayer : public evil::eGameObject {
+class ePlayer : public eGameObject {
 
 	ECLASS_DECLARATION(ePlayer)
 
@@ -46,7 +49,8 @@ public:
 	virtual void							DebugDraw(eRenderTarget * renderTarget) override;
 	void									Draw();
 
-	void									SetMap(eMap * newMap)						{ map = newMap; }	// DEBUG: this type of player has static storage outside the eMap it uses, so no re-allocation is needed
+	// DEBUG: this type of player has static storage outside the eMap it uses, so no re-allocation is needed
+	void									SetMap(eMap * newMap)	{ map = newMap; }
 
 private:
 
@@ -56,8 +60,9 @@ private:
 private:
 
 	std::vector<eEntity *>					groupSelection;
-	std::array<eVec2, 2>					selectionPoints;			// for drawing on-screen selection box, and conversion to worldspace for eEntity selection
+	std::array<eVec2, 2>					selectionPoints;			// on-screen selection box, and converts to worldspace for eEntity selection
 	bool									beginSelection = false;
 };
 
+}	   /* logic */
 #endif /* EVIL_PLAYER_H */

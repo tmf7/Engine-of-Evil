@@ -26,6 +26,10 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 */
 #include "Game.h"
 #include "Map.h"
+#include "RenderTarget.h"
+#include "RenderImageIsometric.h"
+#include "CollisionModel.h"
+#include "Movement.h"
 
 using namespace evil;
 
@@ -44,30 +48,30 @@ bool eEntity::SpawnCopy(eMap * onMap, const eVec3 & worldPosition) {
 // eEntity::DebugDraw
 //***************
 void eEntity::DebugDraw(eRenderTarget * renderTarget) {
-	if (game->debugFlags.RENDERBLOCKS && animationController != nullptr)
-		game->GetRenderer().DrawIsometricPrism(renderTarget, lightBlueColor, renderImage->GetRenderBlock());
+	if (game->debugFlags.RENDERBLOCKS && &animationController != nullptr)
+		game->GetRenderer().DrawIsometricPrism(renderTarget, lightBlueColor, renderImage.GetRenderBlock());
 
 //	if (game->debugFlags.WORLDCLIPS)
 //		game->GetRenderer().DrawCartesianRect(lightBlueColor, renderImage->GetWorldClip(), false);
 
 	// TODO: better visual difference b/t cells occupied by both renderImage and collisionmodel
 	if (game->debugFlags.GRID_OCCUPANCY) {
-		if (renderImage != nullptr) {
-			for (auto & cell : renderImage->Areas()) {
+		if (&renderImage != nullptr) {
+			for (auto & cell : renderImage.Areas()) {
 				game->GetRenderer().DrawIsometricRect(renderTarget, yellowColor, cell->AbsBounds());
 			}
 		}
 
-		if (collisionModel != nullptr) {
-			for (auto & cell : collisionModel->Areas()) {
+		if (&collisionModel != nullptr) {
+			for (auto & cell : collisionModel.Areas()) {
 				game->GetRenderer().DrawIsometricRect(renderTarget, lightBlueColor, cell->AbsBounds());
 			}
 		}
 	}
 
-	if (game->debugFlags.COLLISION && collisionModel != nullptr)
-		game->GetRenderer().DrawIsometricRect(renderTarget, yellowColor, collisionModel->AbsBounds());
+	if (game->debugFlags.COLLISION && &collisionModel != nullptr)
+		game->GetRenderer().DrawIsometricRect(renderTarget, yellowColor, collisionModel.AbsBounds());
 
-	if (movementPlanner != nullptr)
-		movementPlanner->DebugDraw();
+	if (&movementPlanner != nullptr)
+		movementPlanner.DebugDraw();
 }
