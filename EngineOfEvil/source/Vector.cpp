@@ -26,6 +26,8 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 */
 #include "Vector.h"
 
+using namespace evil;
+
 eVec2 vec2_zero(0.0f, 0.0f);
 eVec2 vec2_oneZero(1.0f, 0.0f);
 eVec2 vec2_zeroOne(0.0f, 1.0f);

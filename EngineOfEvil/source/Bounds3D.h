@@ -30,7 +30,7 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 #include "Vector.h"
 #include "Class.h"
 
-namespace evil { namespace collision {
+namespace evil {
 
 //**********************************
 //			eBounds3D
@@ -39,6 +39,9 @@ namespace evil { namespace collision {
 // for more general collision shape assignment
 //**********************************
 class eBounds3D : public eClass {
+
+	ECLASS_DECLARATION(eBounds3D)
+
 public:
 							eBounds3D();
 	explicit				eBounds3D(const eVec3 & mins, const eVec3 & maxs);
@@ -71,23 +74,11 @@ public:
 	void					FromPoints(const eVec3 * points, const int numPoints);
 	void					ToPoints(eVec3 points[8]) const;
 
-	virtual bool			IsClassType(ClassType_t classType) const override	{ 
-								if(classType == Type) 
-									return true; 
-								return eClass::IsClassType(classType); 
-							}
-
-public:
-
-	static ClassType_t		Type;
-
 private:
 
 	eVec3					bounds[2];			// mins at [0] and maxs at [1]
 	eVec3					quickSize;			// cached x=width, y=height, and z=depth
 };
-
-REGISTER_CLASS_TYPE(eBounds3D);
 
 //*************
 // eBounds3D::eBounds3D
@@ -306,5 +297,5 @@ inline void eBounds3D::ToPoints(eVec3 points[8]) const {
 	}
 }
 
-} }    /* evil::collision */
+}       /* evil */
 #endif  /* EVIL_BOUNDS3D_H */

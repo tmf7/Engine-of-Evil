@@ -30,6 +30,8 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 #include "SpatialIndexGrid.h"
 #include "GridCell.h"
 
+namespace evil {
+
 typedef eSpatialIndexGrid<eGridCell, MAX_MAP_ROWS, MAX_MAP_COLUMNS> tile_map_t;
 
 //*************************************************
@@ -40,6 +42,9 @@ typedef eSpatialIndexGrid<eGridCell, MAX_MAP_ROWS, MAX_MAP_COLUMNS> tile_map_t;
 // contents of eGridCells in its eSpatialIndexGrid (eMap::tileMap)
 //*************************************************
 class eMap : public eClass {
+
+	ECLASS_DECLARATION(eMap)
+
 public:
 
 	bool													Init();
@@ -62,13 +67,6 @@ public:
 	const std::vector<eGridCell *> &						VisibleCells() const;
 	const std::array<std::pair<eBounds, eVec2>, 4>	&		EdgeColliders() const;
 	const eBounds &											AbsBounds() const;
-
-	virtual int												GetClassType() const override				{ return CLASS_MAP; }
-	virtual bool											IsClassType(int classType) const override	{ 
-																if(classType == CLASS_MAP) 
-																	return true; 
-																return eClass::IsClassType(classType); 
-															}
 
 private:
 
@@ -133,4 +131,5 @@ inline eCamera * const eMap::GetViewCamera() {
 	return viewCamera;
 }
 
+}      /* evil */
 #endif /* EVIL_MAP_H */

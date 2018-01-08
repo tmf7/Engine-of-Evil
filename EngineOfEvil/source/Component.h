@@ -29,17 +29,41 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 
 #include "Class.h"
 
-namespace evil { namespace components {
+//****************
+// ECOMPONENT_DECLARATION
+//
+// This macro must be included in the declaration of any subclass of eComponent.
+// It declares and defines the inline function for instantiating clones
+// which maintain the run-time type when copying an eGameObject's eComponents.
+//****************
+#define ECOMPONENT_DECLARATION(componentsubclass)						\
+virtual std::unique_ptr<eComponent> GetCopy() const override;			\
+
+//****************
+// ECOMPONENT_DEFINITION
+// 
+// This macro must be included in the eComponent subclass definition.
+//****************
+#define ECOMPONENT_DEFINITION(componentsubclass)						\
+std::unique_ptr<eComponent> componentsubclass::GetCopy() const {		\
+	return std::make_unique< componentsubclass >( *this );				\
+}																		\
+
+namespace evil {
 
 class eGameObject;
-
 
 //*************************************************
 //				eComponent
 // base class for all in-game interactive objects
 // eGameObjects handle the lifetime of eComponents
+// DEBUG: enusure the correct owner address is set
+// if it is being used
 //*************************************************
 class eComponent : public eClass {
+
+	ECLASS_DECLARATION(eComponent)
+
 private:
 
 	friend class eGameObject;
@@ -49,37 +73,19 @@ public:
 	const eGameObject *							Owner() const								{ return owner; }
 	eGameObject *								Owner()										{ return owner; }
 
-	virtual bool								IsClassType( ClassType_t classType ) const override	{ 
-													if( classType == Type ) 
-														return true; 
-													return eClass::IsClassType( classType ); 
-												}
+	virtual void								SetOwner(eGameObject * newOwner)			{ owner = newOwner; }
 
-protected:
-
-												// safety-reminder, disallow derived classes from instantiation without an owner
-												eComponent() = default;
-
-												
 												// called every frame before owner::Think in eGameObject::UpdateComponents
 	virtual void								Update()									{}
 
 												// used to maintain the runtime type of a derived eComponent when copying eGameObjects
 	virtual std::unique_ptr<eComponent>			GetCopy() const								{ return std::make_unique< eComponent >( *this ); }
 
-	virtual void								SetOwner(eGameObject * newOwner)			{ owner = newOwner; }
-
-public:
-
-	static ClassType_t							Type;
-
 protected:
 
 	eGameObject *								owner = nullptr;			// back-pointer to user managing the lifetime of *this
 };
 
-REGISTER_CLASS_TYPE(eComponent);
-
-} }    /* evil::components */
+}      /* evil */
 #endif /* EVIL_COMPONENT_H */
 

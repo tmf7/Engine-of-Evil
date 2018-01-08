@@ -27,6 +27,8 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 #include "GameLocal.h"
 #include "CreatePrefabStrategies.h"
 
+using namespace evil;
+
 // the rest of the engine will only reference the "game" variable, while all local aspects stay hidden
 eGameLocal					gameLocal;			// the user's static game instance
 eGame *						game = &gameLocal;	// statically pointed at an eGameLocal
@@ -36,10 +38,10 @@ eGame *						game = &gameLocal;	// statically pointed at an eGameLocal
 // eGameLocal::Init
 //***********************
 bool eGameLocal::Init() {
-	auto windowSize = game->GetRenderer().ViewArea();
+	auto windowSize = gameLocal.GetRenderer().ViewArea();
 	camera.Configure(eVec2((float)windowSize.w, (float)windowSize.h), vec2_zero);
 
-	game->GetEntityPrefabManager().SetCreatePrefabStrategy(std::make_shared<eCreateEntityPrefabUser>());
+	gameLocal.GetEntityPrefabManager().SetCreatePrefabStrategy(std::make_shared<eCreateEntityPrefabUser>());
 
 	map.SetViewCamera(&camera);
 	player.SetMap(&map);

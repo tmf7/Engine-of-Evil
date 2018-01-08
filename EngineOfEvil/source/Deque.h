@@ -30,8 +30,11 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 #include <new.h>		// std::move
 #include <utility>		// std::swap
 
+namespace evil {
+
 template<class type>
 class eDeque;
+
 //*************************************************
 //				eNode
 // to be used with friend class eDeque<type>
@@ -461,4 +464,5 @@ inline bool eDeque<type>::IsEmpty() const {
 	return front == nullptr;
 }
 
+}      /* evil */
 #endif /* EVIL_DEQUE_H */

@@ -27,7 +27,9 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 #include "BlendState.h"
 #include "Game.h"
 
-using namespace evil::animation;
+using namespace evil;
+
+ECLASS_DEFINITION(eStateNode, eBlendState)
 
 //*********************
 // eBlendState::eBlendState

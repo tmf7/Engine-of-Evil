@@ -28,6 +28,11 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 #include "Tile.h"
 #include "Map.h"
 
+using namespace evil;
+
+ECLASS_DEFINITION(eClass, eTileImpl)
+ECLASS_DEFINITION(eGameObject, eTile)
+
 std::vector<std::pair<int, int>> eTileImpl::tileSet;		// first == index within eImageManager::resourceList; second == eImage subframe index;
 std::array<eTileImpl, eTileImpl::maxTileTypes> eTileImpl::tileTypes;
 
@@ -176,7 +181,7 @@ bool eTileImpl::LoadTileset(const char * tilesetFilename, bool appendNew) {
 			tileSet.emplace_back(std::pair<int, int> { imageID, subframeIndex });				// FIXME: verify the subframe exists, 
 																								// otherwise push an error image handle into this tileSet index
 			int type = tileSet.size() - 1;
-			tileTypes[type].type = type;
+			tileTypes[type].tileType = type;
 			if (colliderType > 0)
 				tileTypes[type].collider = defaultAABBList[colliderType - 1];					// DEBUG: see rules for colliderType numbering in function header
 

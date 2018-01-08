@@ -28,8 +28,8 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 #define EVIL_RENDERER_H
 
 #include "Camera.h"
-#include "Canvas.h"
-#include "Sort.h"
+
+namespace evil {
 
 //**************************************************
 //				eRenderer
@@ -42,6 +42,9 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 // and its RENDERTYPE_DYANMIC items
 //***************************************************
 class eRenderer : public eClass {
+
+	ECLASS_DECLARATION(eRenderer)
+
 public:
 					
 	bool								Init(const char * name = "Engine of Evil", int windowWidth = 1500, int windowHeight = 800);
@@ -68,13 +71,6 @@ public:
 	void								SetRenderTarget(eRenderTarget *);
 	eRenderTarget * const				GetMainRenderTarget();
 
-	virtual int							GetClassType() const override				{ return CLASS_RENDERER; }
-	virtual bool						IsClassType(int classType) const override	{ 
-											if(classType == CLASS_RENDERER) 
-												return true; 
-											return eClass::IsClassType(classType); 
-										}
-
 	static void							TopologicalDrawDepthSort(const std::vector<eRenderImageIsometric *> & renderImagePool);
 
 private:
@@ -97,4 +93,5 @@ private:
 	TTF_Font *							font;											// FIXME: only one test font for this rendering context for now
 };
 
+}      /* evil */
 #endif /* EVIL_RENDERER_H */

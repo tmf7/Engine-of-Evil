@@ -27,6 +27,10 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 #include "EntityPrefabManager.h"
 #include "Game.h"
 
+using namespace evil;
+
+ECLASS_DEFINITION(eResourceManager<eEntity>, eEntityPrefabManager)
+
 //**************************
 // eEntityPrefabManager::Init
 //**************************

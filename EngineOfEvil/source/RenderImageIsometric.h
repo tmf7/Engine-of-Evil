@@ -30,6 +30,8 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 #include "RenderImageBase.h"
 #include "Bounds3D.h"
 
+namespace evil {
+
 class eGridCell;
 
 //**************************************************
@@ -38,6 +40,10 @@ class eGridCell;
 // and drawing to an eRenderTarget using isometric projection
 //**************************************************
 class eRenderImageIsometric : public eRenderImageBase {
+
+	ECLASS_DECLARATION(eRenderImageIsometric)
+	ECOMPONENT_DECLARATION(eRenderImageIsometric)
+
 private:
 
 	friend class eRenderer;						// directly sets priority, allBehind, and visited
@@ -52,13 +58,6 @@ public:
 	const std::vector<eGridCell *> &			Areas() const;
 
 	virtual void								Update() override;
-	virtual std::unique_ptr<eComponent>			GetCopy() const	override					{ return std::make_unique<eRenderImageIsometric>(*this); }
-	virtual int									GetClassType() const override				{ return CLASS_RENDERIMAGE_ISOMETRIC; }
-	virtual bool								IsClassType(int classType) const override	{ 
-													if(classType == CLASS_RENDERIMAGE_ISOMETRIC) 
-														return true; 
-													return eRenderImageBase::IsClassType(classType); 
-												}
 
 private:
 
@@ -89,5 +88,6 @@ inline const std::vector<eGridCell *> & eRenderImageIsometric::Areas() const {
 	return areas;
 }
 
+}      /* evil */
 #endif /* EVIL_RENDERIMAGE_ISOMETRIC_H */
 

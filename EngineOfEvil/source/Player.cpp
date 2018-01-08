@@ -28,6 +28,10 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 #include "Player.h"
 #include "sHero.h"
 
+using namespace evil;
+
+ECLASS_DEFINITION(eGameObject, ePlayer)
+
 void ePlayer::Think() {
 	auto & input = game->GetInput();
 	eVec2 screenPosition = eVec2((float)input.GetMouseX(), (float)input.GetMouseY()); 
@@ -118,11 +122,10 @@ bool ePlayer::SelectGroup() {
 		for (auto & kvPair : cell->RenderContents()) {
 			auto owner = kvPair.second->Owner();
 			
-			if (owner == nullptr || !owner->IsClassType(CLASS_ENTITY))
+			if (owner == nullptr || !owner->IsClassType(eEntity::Type))
 				continue;
 
-			const int classType = owner->GetClassType();
-			const auto & entity = (classType == CLASS_ENTITY ? static_cast<eEntity *>(owner) : static_cast<sHero *>(owner));
+			const auto & entity = (owner->IsClassType(eEntity::Type) ? static_cast<eEntity *>(owner) : static_cast<sHero *>(owner));
 			
 			// don't test the same entity twice
 			if (alreadyTested.find(entity) != alreadyTested.end())

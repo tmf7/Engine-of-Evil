@@ -32,6 +32,8 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 #define RAD2DEG(radians) ( radians * (180.0f/((float)M_PI)) )
 #define DEG2RAD(degrees) ( degrees * ((float)(M_PI)/180.0f) )
 
+namespace evil {
+
 enum class COMPARE_ENUM {
 	LESS,
 	LESS_EQUAL,
@@ -159,5 +161,6 @@ bool eMath::CompareUtility(const type & lhs, COMPARE_ENUM compare, const type & 
 	}	
 }
 
+}      /* evil */
 #endif /* EVIL_MATH_H */
 

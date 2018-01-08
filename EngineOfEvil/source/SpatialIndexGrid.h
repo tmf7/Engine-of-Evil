@@ -30,40 +30,7 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 #include "Vector.h"
 #include "Class.h"
 
-//*************************************************
-//				eGridIndex
-//  base class of types expected by eSpatialIndexGrid
-//*************************************************
-class eGridIndex : public eClass {
-public:
-
-	virtual					~eGridIndex() = default;
-
-	void					SetGridPosition(const int row, const int column)	{ gridRow = row; gridColumn = column; }
-	int						GridRow() const										{ return gridRow; }
-	int						GridColumn() const									{ return gridColumn; }
-
-	virtual	void			Reset()												{ inOpenSet = false; inClosedSet = false; }
-	virtual int				GetClassType() const override						{ return CLASS_GRIDINDEX; }
-	virtual bool			IsClassType(int classType) const override			{ 
-								if(classType == CLASS_GRIDINDEX) 
-									return true; 
-								return eClass::IsClassType(classType); 
-							}
-
-public:
-
-	// expidites openSet and closedSet vector searches while systematically traversing the eSpatialIndexGrid to which *this belongs (eg: A* search)
-	// DEBUG: always reset these values after use
-	bool					inOpenSet	= false;	
-	bool					inClosedSet = false;
-
-protected:
-
-	int						gridRow;
-	int						gridColumn;
-
-};
+namespace evil {
 
 //*************************************************
 //				eSpatialIndexGrid
@@ -612,5 +579,6 @@ inline void eSpatialIndexGrid<type, rows, columns>::ResetAllCells() {
 		cell->Reset();
 }
 
+}      /* evil */
 #endif /* EVIL_SPATIAL_INDEX_GRID_H */
 

@@ -36,7 +36,7 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 //					eGameLocal
 // test for user-defined extension of eGame base class
 //*************************************************
-class eGameLocal : public eGame {
+class eGameLocal : public evil::eGame {
 public:
 
 	virtual bool									Init() override;
@@ -45,8 +45,8 @@ public:
 
 private:
 
-	eMap											map;				// FIXME(?): one map instance per game, use eMap::LoadMap/UnloadMap as needed
-	eCamera											camera;				// DEBUG: the main viewport camera
+	evil::eMap										map;				// FIXME(?): one map instance per game, use eMap::LoadMap/UnloadMap as needed
+	evil::eCamera									camera;				// DEBUG: the main viewport camera
 	ePlayer											player;
 
 };

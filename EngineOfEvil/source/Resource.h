@@ -30,6 +30,8 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 #include <string>
 #include <functional>
 
+namespace evil {
+
 //*************************
 //		eResource
 // base class for resources managed
@@ -72,4 +74,5 @@ protected:
 	int									managerIndex		= -1;
 };
 
+}      /* evil */
 #endif  /* EVIL_RESOURCE_H */

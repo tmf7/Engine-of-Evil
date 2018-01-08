@@ -30,15 +30,20 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 #include "GameObject.h"
 #include "Dictionary.h"
 
+namespace evil {
+
 //*************************************************
 //					eEntity
 // objects that dynamically interact with the game environment
 //*************************************************
 class eEntity : public eGameObject, public eResource {
+
+	ECLASS_DECLARATION(eEntity)
+
 public:
 
-	friend class eMap;						// for access to assign spawnedEntityID, spawnName, map, and x,y,z position
-	friend class eEntityPrefabManager;		// for access to spawnArgs
+	friend class eMap;					// for access to assign spawnedEntityID, spawnName, map, and x,y,z position
+	friend class eEntityPrefabManager;	// for access to spawnArgs
 
 public:
 
@@ -50,13 +55,6 @@ public:
 
 	virtual bool						SpawnCopy(eMap * onMap, const eVec3 & worldPosition);
 	virtual void						DebugDraw(eRenderTarget * renderTarget) override;
-
-	virtual int							GetClassType() const override					{ return CLASS_ENTITY; }
-	virtual bool						IsClassType(int classType) const override		{ 
-											if(classType == CLASS_ENTITY) 
-												return true; 
-											return eGameObject::IsClassType(classType);
-										}
 
 private:
 
@@ -104,4 +102,5 @@ inline const std::string &	eEntity::SpawnName() const {
 	return spawnName;
 }
 
+}      /* evil */
 #endif /* ENTITY_H */

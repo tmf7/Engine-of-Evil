@@ -31,6 +31,8 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 #include "Collision.h"
 #include "Component.h"
 
+namespace evil {
+
 class eGridCell;
 
 typedef struct Collision_s Collision_t;
@@ -45,6 +47,10 @@ typedef struct Collision_s Collision_t;
 // TODO: maintain a bounding volume heierarchy using multiple colliders
 //*********************************************
 class eCollisionModel : public eComponent {
+
+	ECLASS_DECLARATION(eCollisionModel)
+	ECOMPONENT_DECLARATION(eCollisionModel)
+
 public:
 
 												eCollisionModel(eGameObject * owner, const eBounds & localBounds, const eVec2 & offset = vec2_zero, bool isActive = false);
@@ -67,12 +73,6 @@ public:
 	bool										FindApproachingCollision(const eVec2 & dir, const float length, Collision_t & result) const;
 
 	virtual void								Update() override;
-	virtual std::unique_ptr<eComponent>			GetCopy() const override						{ return std::make_unique<eCollisionModel>(*this); }
-	virtual bool								IsClassType(size_t classType) const override	{ 
-													if(classType == Type) 
-														return true; 
-													return eComponent::IsClassType(classType); 
-												}
 
 private:
 
@@ -80,10 +80,6 @@ private:
 	void										UpdateAreas();
 	void										AvoidCollisionSlide();
 	void										AvoidCollisionCorrection();
-
-public:
-
-	static const size_t							Type;
 
 private:
 
@@ -100,10 +96,6 @@ private:
 	bool										active = false;			// whether this participates in (dynamic or kinematic) collision detection
 
 };
-
-
-
-REGISTER_CLASS_TYPE(eCollisionModel);
 
 //*************
 // eCollisionModel::Center
@@ -203,5 +195,6 @@ inline const std::vector<eGridCell *> & eCollisionModel::Areas() const {
 	return areas;
 }
 
+}      /* evil */
 #endif /* EVIL_COLLISION_MODEL_H */
 

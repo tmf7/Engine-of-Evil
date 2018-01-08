@@ -50,12 +50,12 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 	// TODO: make all headers clean so the library's implementation isn't easily messed with
 	// and for faster testing compile times
 
-	if (!game->InitSystem()) {
-		game->ShutdownSystem();
+	if (!gameLocal.InitSystem()) {
+		gameLocal.ShutdownSystem();
 		return 1;
 	}
 
-	game->Run();
+	gameLocal.Run();
 
 	return 0;
 }

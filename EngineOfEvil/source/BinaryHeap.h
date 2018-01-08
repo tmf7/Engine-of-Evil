@@ -30,6 +30,8 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 #include <new.h>		// std::move
 #include <utility>		// std::swap
 
+namespace evil {
+
 //********************************************
 //				eHeap
 // The template compare function a user creates 
@@ -647,4 +649,5 @@ inline void eHeap<type, lambdaCompare>::ClearAndResize(const int newCapacity) {
 	capacity = newCapacity;
 }
 
+}      /* evil */
 #endif /* EVIL_BINARY_HEAP_H */

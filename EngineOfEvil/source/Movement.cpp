@@ -28,6 +28,13 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 #include "Movement.h"
 #include "Map.h"
 
+using namespace evil;
+
+ECLASS_DEFINITION(eComponent, eMovementPlanner)
+ECOMPONENT_DEFINITION(eMovementPlanner)
+
+ECLASS_DEFINITION(eGridIndex, eMovementPlanner::eTileKnowledge)		// FIXME(?): intellisence thinks this is trying to access a static member instead of a virtual base class member
+
 //***************
 // eMovementPlanner::eMovementPlanner
 //***************
@@ -376,7 +383,7 @@ void eMovementPlanner::AddUserWaypoint(const eVec2 & waypoint) {
 
 	eBounds waypointBounds = owner->CollisionModel().LocalBounds() + waypoint;
 	if(!eCollision::AABBContainsAABB(owner->GetMap()->AbsBounds(), waypointBounds) ||
-		eCollision::BoxCast(owner->map, collisions, waypointBounds, vec2_zero, 0.0f))
+		eCollision::BoxCast(owner->GetMap(), collisions, waypointBounds, vec2_zero, 0.0f))
 		return;
 
 	goals.PushFront(waypoint);

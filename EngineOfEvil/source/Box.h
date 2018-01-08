@@ -29,7 +29,7 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 
 #include "Bounds.h"
 
-namespace evil { namespace collision {
+namespace evil {
 
 //**********************************
 //			eBox
@@ -38,6 +38,9 @@ namespace evil { namespace collision {
 // for more general collision shape assignment
 //**********************************
 class eBox : public eClass {
+
+	ECLASS_DECLARATION(eBox)
+
 public:
 							eBox();
 	explicit				eBox(const eVec2 & center, const eVec2 & extents, const eVec2 axes[2]);
@@ -60,16 +63,6 @@ public:
 	const eVec2 &			Extents() const;
 	const eVec2 *			Axes() const;
 
-	virtual bool			IsClassType(ClassType_t classType) const override	{ 
-								if(classType == Type) 
-									return true; 
-								return eClass::IsClassType(classType); 
-							}
-
-public:
-
-	static ClassType_t		Type;
-
 private:
 
 	eVec2					center;			// world-space center
@@ -77,8 +70,6 @@ private:
 	eVec2					axes[2];		// unit-length locally oriented x and y axes
 											// DEBUG: column-major matrix
 };
-
-REGISTER_CLASS_TYPE(eBox);
 
 //*************
 // eBox::eBox
@@ -211,5 +202,5 @@ inline eBox & eBox::TranslateSelf(const eVec2 & translation) {
 	return *this;
 }
 
-} }    /* evil::collision */
+}      /* evil */
 #endif /* EVIL_BOX_H */

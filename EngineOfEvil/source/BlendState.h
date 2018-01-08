@@ -31,9 +31,7 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 #include "HashIndex.h"
 #include "Vector.h"
 
-namespace evil { namespace animation {
-
-class eAnimationController;
+namespace evil {
 
 enum class AnimationBlendMode {
 	SIMPLE_1D,
@@ -50,11 +48,13 @@ enum class AnimationBlendMode {
 // see also: eAnimationState
 //*******************************
 class eBlendState : public eStateNode {
+
+	ECLASS_DECLARATION(eBlendState)
+
 public:
 
 	friend class eAnimationController;			// for direct access to Update
 	friend class eAnimationControllerManager;	// for direct access to AddBlendNode
-
 
 public:
 												eBlendState(const std::string & name,
@@ -64,22 +64,12 @@ public:
 															AnimationBlendMode blendMode = AnimationBlendMode::SIMPLE_1D,
 															float speed = 1.0f);
 
-	virtual bool								IsClassType(ClassType_t classType) const override	{ 
-													if(classType == Type) 
-														return true; 
-													return eStateNode::IsClassType(classType); 
-												}
-
 private:
 
 	void										Init();
 	bool										AddBlendNode(const std::string & animationName, float xPosition, float yPosition = 0.0f);
 	virtual void								Update() override;
 	void										SwapAnimation(int animationIndex);
-
-public:
-
-	static ClassType_t							Type;
 
 private:
 
@@ -98,7 +88,5 @@ private:
 
 };
 
-REGISTER_CLASS_TYPE(eBlendState);
-
-} }	   /* evil::animation */
+}      /* evil */
 #endif /* EVIL_BLENDSTATE_H */

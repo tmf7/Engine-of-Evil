@@ -26,6 +26,11 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 */
 #include "Game.h"
 
+using namespace evil;
+
+ECLASS_DEFINITION(eComponent, eRenderImageBase)
+ECOMPONENT_DEFINITION(eRenderImageBase)
+
 //*************
 // eRenderImageBase::eRenderImageBase
 // DEBUG: defaults initialSpriteFrame outside [0, image->NumSubFrames) to 0

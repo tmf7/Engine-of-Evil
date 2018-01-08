@@ -26,6 +26,11 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 */
 #include "Game.h"
 
+using namespace evil;
+
+ECLASS_DEFINITION(eComponent, eRenderTarget)
+ECOMPONENT_DEFINITION(eRenderTarget)
+
 const SDL_Color greyColor_trans		= { 128, 128, 128, SDL_ALPHA_TRANSPARENT };
 const SDL_Color greyColor_opaque	= { 128, 128, 128, SDL_ALPHA_OPAQUE};
 const SDL_Color blackColor			= { 0, 0, 0, SDL_ALPHA_OPAQUE };

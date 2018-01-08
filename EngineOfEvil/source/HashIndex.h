@@ -30,6 +30,8 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 #include <vector>
 #include <functional>
 
+namespace evil {
+
 //************************************
 //			HashIndex
 // Fast hash table for indexes and arrays
@@ -306,4 +308,5 @@ inline size_t eHashIndex::GetHashKey(const Key & key) const {
 	return std::hash<Key>()(key);
 }
 
+}      /* evil */
 #endif /* EVIL_HASH_INDEX_H_ */

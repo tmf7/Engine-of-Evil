@@ -54,6 +54,7 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 #include <array>
 #include <functional>		// std::hash
 #include <regex>
+#include "Sort.h"
 #include "Math.h"
 #include "ErrorLogger.h"
 

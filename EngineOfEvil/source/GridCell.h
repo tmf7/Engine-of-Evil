@@ -28,10 +28,13 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 #define EVIL_GRIDCELL_H
 
 #include "Tile.h"
+#include "GridIndex.h"
+
+namespace evil { 
 
 class eCamera;
-class eRenderTarget;
 class eCollisionModel;
+class eRenderTarget;
 
 //******************************************
 //			eGridCell
@@ -39,6 +42,9 @@ class eCollisionModel;
 // DEBUG: data type used by eSpatialIndexGrid
 //*****************************************
 class eGridCell : public eGridIndex {
+
+	ECLASS_DECLARATION(eGridCell)
+
 public:
 
 	friend class eMap;
@@ -58,12 +64,6 @@ public:
 	eMap * const																	GetMap();
 
 	virtual void																	Reset() override;
-	virtual int																		GetClassType() const override				{ return CLASS_GRIDCELL; }
-	virtual bool																	IsClassType(int classType) const override	{ 
-																						if(classType == CLASS_GRIDCELL) 
-																							return true; 
-																						return eGridIndex::IsClassType(classType); 
-																					}
 
 private:
 
@@ -144,4 +144,5 @@ inline void eGridCell::SetAbsBounds(const eBounds & bounds) {
 	absBounds = bounds;
 }
 
+}      /* evil */
 #endif /* EVIL_GRIDCELL_H */

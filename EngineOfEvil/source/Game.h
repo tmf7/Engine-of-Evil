@@ -34,14 +34,49 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 #include "Input.h"
 #include "Audio.h"
 
+namespace evil {
+
 //*************************************************
 //					eGame
 // handles all sub-system loading, initialization, and unloading
 //*************************************************
 class eGame : public eClass {
+
+	ECLASS_DECLARATION(eGame)
+
 public:
 
-	struct {
+	bool											InitSystem();
+	void											ShutdownSystem();
+	void											Run();
+
+													// ends the main game loop
+	void											Stop()								{ isRunning = false; }
+
+	virtual bool									Init() = 0;
+	virtual void									Shutdown() = 0;
+	virtual void									Update() = 0;
+
+	eAudio &										GetAudio()							{ return audio; }
+	eInput &										GetInput()							{ return input; }
+	eRenderer &										GetRenderer()						{ return renderer; }
+	eImageManager &									GetImageManager()					{ return imageManager; }
+	eAnimationManager &								GetAnimationManager()				{ return animationManager; }
+	eAnimationControllerManager &					GetAnimationControllerManager()		{ return animationControllerManager; }
+	eEntityPrefabManager &							GetEntityPrefabManager()			{ return entityPrefabManager; }
+
+	// frame-rate metrics
+	void											SetFixedFPS(const Uint32 newFPS);
+	Uint32											GetDynamicFPS() const;
+	Uint32											GetFixedFPS() const					{ return fixedFPS; }
+	float											GetFixedTime() const				{ return frameTime; }
+	float											GetDeltaTime() const				{ return deltaTime; }
+	float											GetGameTime() const					{ return gameTime; }
+	void											DrawFPS();
+
+public:
+
+		struct {
 		bool	GOAL_WAYPOINTS		= true;
 		bool	TRAIL_WAYPOINTS		= false;
 		bool	COLLISION			= false;
@@ -51,41 +86,6 @@ public:
 		bool	FRAMERATE			= true;
 		bool	GRID_OCCUPANCY		= false;
 	} debugFlags;
-
-public:
-
-	bool											InitSystem();
-	void											ShutdownSystem();
-	void											Run();
-	void											Stop();
-
-	virtual bool									Init() = 0;
-	virtual void									Shutdown() = 0;
-	virtual void									Update() = 0;
-
-	eAudio &										GetAudio();
-	eInput &										GetInput();
-	eRenderer &										GetRenderer();
-	eImageManager &									GetImageManager();
-	eAnimationManager &								GetAnimationManager();
-	eAnimationControllerManager &					GetAnimationControllerManager();
-	eEntityPrefabManager &							GetEntityPrefabManager();
-
-	// frame-rate metrics
-	void											SetFixedFPS(const Uint32 newFPS);
-	Uint32											GetFixedFPS() const;
-	Uint32											GetDynamicFPS() const;
-	float											GetFixedTime() const;
-	float											GetDeltaTime() const;
-	float											GetGameTime() const;
-	void											DrawFPS();
-
-	virtual int										GetClassType() const override				{ return CLASS_GAME; }
-	virtual bool									IsClassType(int classType) const override	{ 
-														if(classType == CLASS_GAME) 
-															return true; 
-														return eClass::IsClassType(classType); 
-													}
 
 private:
 
@@ -99,7 +99,7 @@ private:
 
 	const Uint32									defaultFPS = 60;
 	Uint32											fixedFPS;			// constant framerate
-	float											frameTime;			// constant framerate governing time interval in seconds (depends on FixedFPS)
+	float											frameTime;			// constant framerate time interval in seconds (depends on FixedFPS)
 	float											deltaTime;			// actual time a frame takes to execute in seconds (to the nearest millisecond)
 	float											gameTime;			// time elapsed since execution began in seconds (updated at the end of each frame)
 	bool											isRunning = false;	// determines whether the game shuts down or continues
@@ -108,82 +108,11 @@ private:
 extern eGame *	game;								// the rest of the engine will only reference this, while all local/derived aspects stay hidden
 
 //****************
-// eGame::Stop
-// ends the main game loop
-//****************
-inline void eGame::Stop() {
-	isRunning = false;
-}
-
-//****************
-// eGame::GetAudio
-//****************
-inline eAudio & eGame::GetAudio() {
-	return audio;
-}
-
-//****************
-// eGame::GetInput
-//****************
-inline eInput & eGame::GetInput() {
-	return input;
-}
-
-//****************
-// eGame::GetRenderer
-//****************
-inline eRenderer & eGame::GetRenderer() {
-	return renderer;
-}
-
-//*****************
-// eGame::GetImageManager
-//*****************
-inline eImageManager & eGame::GetImageManager() {
-	return imageManager;
-}
-
-//*****************
-// eGame::GetAnimationManager
-//*****************
-inline eAnimationManager & eGame::GetAnimationManager() {
-	return animationManager;
-}
-
-//*****************
-// eGame::GetAnimationControllerManager
-//*****************
-inline eAnimationControllerManager & eGame::GetAnimationControllerManager() {
-	return animationControllerManager;
-}
-
-//*****************
-// eGame::GetEntityPrefabManager
-//*****************
-inline eEntityPrefabManager & eGame::GetEntityPrefabManager() {
-	return entityPrefabManager;
-}
-
-//****************
 // eGame::SetFixedFPS
 //****************
 inline void eGame::SetFixedFPS(const Uint32 newFPS) {
 	fixedFPS = newFPS;
 	frameTime = 1.0f / (float)fixedFPS;
-}
-
-//****************
-// eGame::GetFixedFPS
-//****************
-inline Uint32 eGame::GetFixedFPS() const {
-	return fixedFPS;
-}
-
-//****************
-// eGame::GetFixedTime
-//****************
-inline float eGame::GetFixedTime() const {
-	return frameTime;
 }
 
 //****************
@@ -196,18 +125,5 @@ inline Uint32 eGame::GetDynamicFPS() const {
 		return fixedFPS;
 }
 
-//****************
-// eGame::GetDeltaTime
-//****************
-inline float eGame::GetDeltaTime() const {
-	return deltaTime;
-}
-
-//****************
-// eGame::GetGameTime
-//****************
-inline float eGame::GetGameTime() const {
-	return gameTime;
-}
-
+}	   /* evil */
 #endif /* EVIL_GAME_H */

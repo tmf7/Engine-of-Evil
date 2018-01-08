@@ -27,7 +27,7 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 #include "Game.h"
 #include "Map.h"
 
-using namespace evil::collision;
+using namespace evil;
 
 //***************
 // eCollision::OBBOBBTest

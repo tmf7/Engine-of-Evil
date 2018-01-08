@@ -30,23 +30,22 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 #include "AnimationController.h"
 #include "ResourceManager.h"
 
+namespace evil {
+
 //***********************************************
 //		eAnimationControllerManager
 // Handles all eAnimationController allocation and freeing
 // see also: eResourceManager template
 //***********************************************
 class eAnimationControllerManager : public eResourceManager<eAnimationController> {
+
+	ECLASS_DECLARATION(eAnimationControllerManager)
+
 public:
 
 	virtual bool							Init() override;
 	virtual bool							LoadAndGet(const char * resourceFilename, std::shared_ptr<eAnimationController> & result) override;
-
-	virtual int								GetClassType() const override				{ return CLASS_ANIMATIONCONTROLLER_MANAGER; }
-	virtual bool							IsClassType(int classType) const override	{ 
-												if(classType == CLASS_ANIMATIONCONTROLLER_MANAGER) 
-													return true; 
-												return eResourceManager<eAnimationController>::IsClassType(classType); 
-											}
 };
 
+}      /* evil */
 #endif /* EVIL_ANIMATION_CONTROLLER_MANAGER_H */

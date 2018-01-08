@@ -27,6 +27,17 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 #include "Input.h"
 #include "Game.h"
 
+using namespace evil;
+
+ECLASS_DEFINITION(eClass, eInput)
+
+//***************
+// eInput::eInput
+//***************
+eInput::eInput() 
+	: keys(nullptr), prevKeys(nullptr) {
+}
+
 //***************
 // eInput::Init
 //***************

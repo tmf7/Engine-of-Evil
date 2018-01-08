@@ -75,9 +75,6 @@
     <ClCompile Include="source\Box.cpp">
       <Filter>Core\Collision\BoundingVolumes</Filter>
     </ClCompile>
-    <ClCompile Include="source\Camera.cpp">
-      <Filter>Core\Renderer</Filter>
-    </ClCompile>
     <ClCompile Include="source\Collision.cpp">
       <Filter>Core\Collision</Filter>
     </ClCompile>
@@ -165,9 +162,6 @@
     <ClCompile Include="source\GameLocal.cpp">
       <Filter>Core\TestLogic</Filter>
     </ClCompile>
-    <ClCompile Include="source\RenderTarget.cpp">
-      <Filter>Core\Renderer</Filter>
-    </ClCompile>
     <ClCompile Include="source\Button.cpp">
       <Filter>Core\UI</Filter>
     </ClCompile>
@@ -177,7 +171,31 @@
     <ClCompile Include="source\RenderImageIsometric.cpp">
       <Filter>Core\Components</Filter>
     </ClCompile>
+    <ClCompile Include="source\Component.cpp">
+      <Filter>Core\Components</Filter>
+    </ClCompile>
+    <ClCompile Include="source\Class.cpp">
+      <Filter>Core</Filter>
+    </ClCompile>
+    <ClCompile Include="source\Animation.cpp">
+      <Filter>Core\Animation</Filter>
+    </ClCompile>
+    <ClCompile Include="source\StateTransition.cpp">
+      <Filter>Core\Animation</Filter>
+    </ClCompile>
+    <ClCompile Include="source\GridIndex.cpp">
+      <Filter>Core\Map</Filter>
+    </ClCompile>
+    <ClCompile Include="source\RenderTarget.cpp">
+      <Filter>Core\Components</Filter>
+    </ClCompile>
+    <ClCompile Include="source\Camera.cpp">
+      <Filter>Core\GameObjects</Filter>
+    </ClCompile>
     <ClCompile Include="source\Canvas.cpp">
+      <Filter>Core\GameObjects</Filter>
+    </ClCompile>
+    <ClCompile Include="source\Image.cpp">
       <Filter>Core\Renderer</Filter>
     </ClCompile>
   </ItemGroup>
@@ -205,9 +223,6 @@
     </ClInclude>
     <ClInclude Include="source\Box.h">
       <Filter>Core\Collision\BoundingVolumes</Filter>
-    </ClInclude>
-    <ClInclude Include="source\Camera.h">
-      <Filter>Core\Renderer</Filter>
     </ClInclude>
     <ClInclude Include="source\Collision.h">
       <Filter>Core\Collision</Filter>
@@ -323,9 +338,6 @@
     <ClInclude Include="source\GameLocal.h">
       <Filter>Core\TestLogic</Filter>
     </ClInclude>
-    <ClInclude Include="source\RenderTarget.h">
-      <Filter>Core\Renderer</Filter>
-    </ClInclude>
     <ClInclude Include="source\Button.h">
       <Filter>Core\UI</Filter>
     </ClInclude>
@@ -335,8 +347,17 @@
     <ClInclude Include="source\RenderImageIsometric.h">
       <Filter>Core\Components</Filter>
     </ClInclude>
+    <ClInclude Include="source\GridIndex.h">
+      <Filter>Core\Map</Filter>
+    </ClInclude>
+    <ClInclude Include="source\RenderTarget.h">
+      <Filter>Core\Components</Filter>
+    </ClInclude>
+    <ClInclude Include="source\Camera.h">
+      <Filter>Core\GameObjects</Filter>
+    </ClInclude>
     <ClInclude Include="source\Canvas.h">
-      <Filter>Core\Renderer</Filter>
+      <Filter>Core\GameObjects</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

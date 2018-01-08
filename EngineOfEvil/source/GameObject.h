@@ -27,11 +27,17 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 #ifndef EVIL_GAMEOBJECT_H
 #define EVIL_GAMEOBJECT_H
 
+// TODO: replace these eComponent-derived header includes with just #include "eComponent.h" 
+// once the generalized Add/Get/RemoveComponent methods are finalized
+// to allow users to attach ANY new eComponent-derived object to *this
+#include "RenderTarget.h"
 #include "RenderImageBase.h"
 #include "CollisionModel.h"
 #include "Movement.h"
 #include "AnimationController.h"
-#include <typeindex>
+#include <typeindex>					// FIXME: no longer needed?
+
+namespace evil { 
 
 class eMap;
 
@@ -48,14 +54,8 @@ class eMap;
 // SOLUTION: RemoveComponent would have to take a templated type...and or an index value w/in eGameObject::components
 //*************************************************
 class eGameObject : public eClass {
-public:
 
-	// FIXME: don't make component's access dependent on eGameObject definition
-	// especially since derived classes don't get the same access
-	// SOLUTION(~): add more GetMember fns to these classes
-	friend class eCollisionModel;
-	friend class eAnimationController;
-	friend class eMovementPlanner;
+	ECLASS_DECLARATION(eGameObject)
 
 public:
 	
@@ -66,20 +66,13 @@ public:
 	eGameObject &							operator=(eGameObject other);
 
 
-	virtual int								GetClassType() const override				{ return CLASS_GAMEOBJECT; }
-	virtual bool							IsClassType(int classType) const override	{ 
-												if(classType == CLASS_GAMEOBJECT) 
-													return true; 
-												return eClass::IsClassType(classType); 
-											}
-
 	virtual void							Think()									{}
 	virtual void							DebugDraw(eRenderTarget * renderTarget)	{}
 
 	void									UpdateComponents();	
 	eMap * const							GetMap()								{ return map; }
 	const eVec2 &							GetOrigin()								{ return orthoOrigin; }
-	void									SetOrigin(const eVec2 & newOrigin);
+	void									SetOrigin(const eVec2 & newOrigin)		{ orthoOrigin = newOrigin; }
 	Uint32									GetWorldLayer()							{ return worldLayer; }
 	void									SetWorldLayer(Uint32 layer);
 	void									SetWorldLayer(float zPosition);
@@ -88,6 +81,7 @@ public:
 	bool									IsStatic() const						{ return isStatic; }
 	void									SetStatic(bool isStatic)				{ this->isStatic = isStatic; }
 
+/*
 
 	std::vector<std::unique_ptr<eComponent>> components;
 
@@ -103,7 +97,6 @@ public:
 		auto & result = components.emplace_back( std::make_unique<ComponentType>( std::forward<Args>( params )... ) );
 		return &result;
 	}
-
 	// FIXME: if this is a template fn then it will be more complex to traverse the class hierarchy 
 	// (ie multiple adds to a hashIndex during AddComponent...using typeid(ComponentType) as the hash...or adding an <...int...> template param that takes the CLASS_XYZ int to hash it)
 	// OR a funky call syntax would be necessary: const auto & ri = gameObject.GetComponent<eRenderImageBase>(CLASS_RENDERIMAGE_BASE);
@@ -130,7 +123,7 @@ public:
 	// GetComponent (const)
 	// GetComponents (const & non-const)
 	// RemoveComponents (all of a specific type (not base type))
-
+*/
 
 	bool									AddRenderImageBase(const std::string & spriteFilename, int initialSpriteFrame = 0, const eVec2 & renderImageOffset = vec2_zero, bool isPlayerSelectable = false);
 	bool									AddRenderImageIsometric(const std::string & spriteFilename, const eVec3 & renderBlockSize, int initialSpriteFrame = 0, const eVec2 & renderImageOffset = vec2_zero, bool isPlayerSelectable = false);
@@ -167,5 +160,6 @@ private:
 	bool									isStatic			= true;			// if orthoOrigin ever changes at runtime, speeds up draw-order sorting
 };
 
+}      /* evil */
 #endif /* EVIL_GAMEOBJECT_H */
 

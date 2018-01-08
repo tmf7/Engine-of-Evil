@@ -27,6 +27,11 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 #include "AnimationController.h"
 #include "Game.h"
 
+using namespace evil;
+
+ECLASS_DEFINITION(eComponent, eAnimationController)
+ECOMPONENT_DEFINITION(eAnimationController)
+
 //************
 // eAnimationController::eAnimationController
 // DEBUG: copy ctor needs to allocate new state unique_ptrs
@@ -48,9 +53,9 @@ eAnimationController::eAnimationController(const eAnimationController & other)
 	  currentState(other.currentState),
 	  paused(other.paused) {
 	for (auto & state : other.animationStates) {
-		if (state->GetClassType() == CLASS_ANIMATIONSTATE) {
+		if (state->Type == eAnimationState::Type) {
 			animationStates.emplace_back(std::make_unique<eAnimationState>(*static_cast<eAnimationState *>(state.get())));
-		} else if (state->GetClassType() == CLASS_BLENDSTATE){
+		} else if (state->Type == eAnimationState::Type){
 			animationStates.emplace_back(std::make_unique<eBlendState>(*static_cast<eBlendState *>(state.get())));
 		}
 	}

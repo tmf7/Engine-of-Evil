@@ -26,6 +26,8 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 */
 #include "ErrorLogger.h"
 
+using namespace evil;
+
 eErrorLogger eErrorLogger::errorLog;
 
 //******************
@@ -108,6 +110,6 @@ void eErrorLogger::CheckSDLError(const char * sourceFilepath, int lineOfCode) {
 // AutoLogSDLError
 // callback given to SDL to log errors
 //******************
-void AutoLogSDLError(void * userdata, int category, SDL_LogPriority priority, const char * message) {
+void evil::AutoLogSDLError(void * userdata, int category, SDL_LogPriority priority, const char * message) {
 	EVIL_ERROR_LOG.logStream << "\n\n[SDL ERROR] Category: " << category << "\tPriority: " << priority << "\nMessage: " << message << "\n(See SDL Documentation for category/priority enums)";
 }

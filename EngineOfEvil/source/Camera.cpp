@@ -27,6 +27,10 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 #include "Game.h"
 #include "Camera.h"
 
+using namespace evil;
+
+ECLASS_DEFINITION(eGameObject, eCamera)
+
 //***************
 // eCamera::Configure
 // DEBUG: use this fn instead of eRenderTarget::Init to initialize *this

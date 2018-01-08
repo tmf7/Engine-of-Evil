@@ -29,7 +29,7 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 
 #include "Definitions.h"
 
-namespace evil { namespace audio {
+namespace evil {
 
 //*********************************
 //			eAudio
@@ -48,5 +48,5 @@ public:
     void			StopChannel(int channel);
 };
 
-} }	   /* evil::audio */
+}      /* evil */
 #endif /* EVIL_AUDIO_H */

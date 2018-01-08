@@ -30,6 +30,8 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 #include <new.h>		// std::move
 #include <utility>		// std::swap
 
+namespace evil {
+
 //*****************************************************************************
 // global quicksort
 // only works on contiguous memory
@@ -281,4 +283,5 @@ void InsertionSort(type * data, const int numElements, lambdaCompare & compare) 
 }
 #endif /* MergeSort and InsertionSort*/
 
+}      /* evil */
 #endif /* EVIL_SORT_H */

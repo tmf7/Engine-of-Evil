@@ -36,20 +36,15 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 // rather than a generic game-engine class
 // TODO(~): inherit from an eGameObject class
 //*************************************************
-class ePlayer : public eGameObject {
+class ePlayer : public evil::eGameObject {
+
+	ECLASS_DECLARATION(ePlayer)
 
 public:
 
 	virtual void							Think() override;
 	virtual void							DebugDraw(eRenderTarget * renderTarget) override;
 	void									Draw();
-
-	virtual int								GetClassType() const override				{ return CLASS_PLAYER; }
-	virtual bool							IsClassType(int classType) const override	{ 
-												if(classType == CLASS_PLAYER) 
-													return true; 
-												return eClass::IsClassType(classType); 
-											}
 
 	void									SetMap(eMap * newMap)						{ map = newMap; }	// DEBUG: this type of player has static storage outside the eMap it uses, so no re-allocation is needed
 

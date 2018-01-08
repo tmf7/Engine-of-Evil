@@ -24,34 +24,8 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 
 ===========================================================================
 */
-#ifndef EVIL_IMAGE_MANAGER_H
-#define EVIL_IMAGE_MANAGER_H
+#include "GridIndex.h"
 
-#include "Renderer.h"
-#include "ResourceManager.h"
+using namespace evil;
 
-namespace evil {
-
-//******************************************
-//			eImageManager
-// Handles all texture allocation and freeing
-// see also: eResourceManager template
-//******************************************
-class eImageManager : public eResourceManager<eImage> {
-
-	ECLASS_DECLARATION(eImageManager)
-
-public:
-
-	virtual bool							Init() override;
-	virtual bool							LoadAndGet(const char * resourceFilename, std::shared_ptr<eImage> & result) override;
-
-	bool									LoadAndGetConstantText(TTF_Font * font, const char * text, const SDL_Color & color, std::shared_ptr<eImage> & result);
-
-private:
-
-	bool									LoadSubframes(std::ifstream & read, std::shared_ptr<eImage> & result);
-};
-
-}      /* evil */
-#endif /* EVIL_IMAGE_MANAGER_H */
+ECLASS_DEFINITION(eClass, eGridIndex)

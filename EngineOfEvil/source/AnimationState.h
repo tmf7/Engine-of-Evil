@@ -29,10 +29,8 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 
 #include "StateNode.h"
 
-class eAnimationController;
-
-namespace evil { namespace animation {
-
+namespace evil {
+	
 //******************************
 //		eAnimationState
 // used by eAnimationController
@@ -41,6 +39,9 @@ namespace evil { namespace animation {
 // see also: eBlendState
 //*******************************
 class eAnimationState : public eStateNode {
+
+	ECLASS_DECLARATION(eAnimationState)
+
 public:
 
 	friend class eAnimationController;		// sole access to Update
@@ -51,16 +52,6 @@ public:
 															const std::shared_ptr<eAnimation> & animation, 
 															float speed = 1.0f);
 
-	virtual bool							IsClassType(ClassType_t classType) const override	{ 
-												if(classType == Type) 
-													return true; 
-												return eStateNode::IsClassType(classType); 
-											}
-
-public:
-
-	static ClassType_t						Type;
-
 private:
 
 	virtual void							Update() override;
@@ -70,7 +61,5 @@ private:
 	std::shared_ptr<eAnimation>				animation;				// which animation this state plays
 };
 
-REGISTER_CLASS_TYPE(eAnimationState);
-
-} }	   /* evil::animation */
+}	   /* evil */
 #endif /* EVIL_ANIMATION_STATE_H */

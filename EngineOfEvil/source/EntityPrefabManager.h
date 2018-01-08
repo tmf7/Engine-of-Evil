@@ -30,6 +30,8 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 #include "Entity.h"
 #include "ResourceManager.h"
 
+namespace evil {
+
 //******************************************
 //			eCreateEntityPrefabStrategy
 // base class for setting how an eEntityPrefabManager
@@ -62,12 +64,16 @@ public:
 	virtual bool												CreatePrefab(std::shared_ptr<eEntity> & newPrefab, const std::string & prefabShortName, const eDictionary & spawnArgs) override;
 };
 
+
 //******************************************
 //			eEntityPrefabManager
 // Handles all entity prefab allocation and freeing
 // see also: eResourceManager template
 //******************************************
 class eEntityPrefabManager : public eResourceManager<eEntity> {
+
+	ECLASS_DECLARATION(eEntityPrefabManager)
+
 public:
 
 	std::shared_ptr<eEntity> &									GetByShortName(const std::string & prefabShortName);
@@ -77,13 +83,6 @@ public:
 
 	virtual bool												Init() override;
 	virtual bool												LoadAndGet(const char * resourceFilename, std::shared_ptr<eEntity> & result) override;
-
-	virtual int													GetClassType() const override				{ return CLASS_ENTITYPREFAB_MANAGER; }
-	virtual bool												IsClassType(int classType) const override	{ 
-																	if(classType == CLASS_ENTITYPREFAB_MANAGER) 
-																		return true; 
-																	return eResourceManager<eEntity>::IsClassType(classType); 
-																}
 
 private:
 
@@ -96,5 +95,6 @@ private:
 	std::shared_ptr<eCreateEntityPrefabStrategy>				createPrefabStrategy = std::make_shared<eCreateEntityPrefabBasic>();
 };
 
+}      /* evil */
 #endif /* EVIL_ENTITY_PREFAB_MANAGER_H */
 

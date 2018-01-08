@@ -26,6 +26,12 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 */
 #include "Game.h"
 
+using namespace evil;
+
+eGame * game;				// DEBUG: default external definition, so library links properly without the test logic eGameLocal class definition
+
+ECLASS_DEFINITION(eClass, eGame)
+
 //****************
 // eGame::InitSystem
 //****************
@@ -90,7 +96,6 @@ void eGame::ShutdownSystem() {
 	SDL_Quit();
 }
 
-
 //****************
 // eGame::DrawFPS
 // add fps text to the renderPool
@@ -119,7 +124,7 @@ void eGame::Run() {
 		if (debugFlags.FRAMERATE)
 			DrawFPS();
 
-		renderer.Flush();
+		renderer.FlushRegisteredTargets();
 		renderer.Show();
 
 		gameTime = (float)SDL_GetTicks() / 1000.0f;

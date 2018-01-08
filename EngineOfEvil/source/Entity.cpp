@@ -27,6 +27,10 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 #include "Game.h"
 #include "Map.h"
 
+using namespace evil;
+
+ECLASS_DEFINITION(eGameObject, eEntity)
+
 //***************
 // eEntity::SpawnCopy
 // copies a *this and adds it to param onMap

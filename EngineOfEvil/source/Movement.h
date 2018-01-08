@@ -33,6 +33,8 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 #include "Bounds.h"
 #include "Component.h"
 
+namespace evil {
+
 class eEntity;
 
 //*************************************************
@@ -46,6 +48,10 @@ class eEntity;
 // based on external decisions, and to make this a more flexible class
 //*************************************************
 class eMovementPlanner : public eComponent {
+
+	ECLASS_DECLARATION(eMovementPlanner)
+	ECOMPONENT_DECLARATION(eMovementPlanner)
+
 public:
 
 												eMovementPlanner(eGameObject * owner, float movementSpeed);
@@ -62,15 +68,7 @@ public:
 	void										DrawKnownMap() const;
 
 	virtual void								Update() override;
-	virtual std::unique_ptr<eComponent>			GetCopy() const	override					{ return std::make_unique<eMovementPlanner>(*this); }
 	virtual void								SetOwner(eGameObject * newOwner) override;
-
-	virtual int									GetClassType() const override				{ return CLASS_MOVEMENT; }
-	virtual bool								IsClassType(int classType) const override	{ 
-													if(classType == CLASS_MOVEMENT) 
-														return true; 
-													return eComponent::IsClassType(classType); 
-												}
 
 private:
 
@@ -82,15 +80,13 @@ private:
 
 	// if owner->collisionModel has been on a tile
 	class eTileKnowledge : public eGridIndex {
+
+			ECLASS_DECLARATION(eTileKnowledge)
+
 		public:
 
-			virtual void	Reset() override							{ eGridIndex::Reset(); value = UNKNOWN_TILE; }
-			virtual int		GetClassType() const override				{ return CLASS_TILEKNOWLEDGE; }
-			virtual bool	IsClassType(int classType) const override	{ 
-								if(classType == CLASS_TILEKNOWLEDGE) 
-									return true; 
-								return eGridIndex::IsClassType(classType); 
-							}
+			virtual void	Reset() override	{ eGridIndex::Reset(); value = UNKNOWN_TILE; }
+
 		public:
 
 			unsigned char value = UNKNOWN_TILE;
@@ -149,7 +145,7 @@ private:
 	void					Init();
 
 	// pathfinding (general)
-	void					Move();
+	void					Move();										// FIXME(?): intellisense loses the namespace scope after eTileKnowledge declaration so these fns have bad scope?
 	bool					CheckVectorPath(decision_t & along);
 	void					CheckWalls(float * bias);
 	void					UpdateWaypoint(bool getNext = false);
@@ -162,7 +158,6 @@ private:
 	// pathfinding (compass)
 	void					CompassFollow();
 	bool					CheckTrail();
-
 };
 
 //*************
@@ -180,5 +175,6 @@ inline float eMovementPlanner::Speed() const {
 	return maxMoveSpeed;
 }
 
+}      /* evil */
 #endif /* EVIL_MOVEMENTPLANNER_H */
 

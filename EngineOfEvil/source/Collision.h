@@ -32,11 +32,11 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 #include "Bounds.h"
 #include "Box.h"
 
-class eGridCell;
-class eCollisionModel;
-class eMap;
+namespace evil {
 
-namespace evil { namespace collision {
+class eCollisionModel;
+class eGridCell;
+class eMap;
 
 // TODO: incorperate the contact point in Collision_t for all geometry 
 // (eg: GJK closest points on convex hulls)
@@ -165,5 +165,5 @@ inline void eCollision::SetAABBNormal(const Uint8 entryDir, eVec2 & normal) {
 	}
 }
 
-} }    /* evil::collision */
+}      /* evil */
 #endif /* EVIL_COLLISION_H */

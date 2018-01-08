@@ -29,7 +29,9 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 
 #include "SDL.h"
 #include "Bounds.h"
-#include "Class.h"
+#include "Component.h"
+
+namespace evil {
 
 //*******************************
 //		eRenderTarget
@@ -41,7 +43,11 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 // before drawing to it for the 
 // first time each frame, if it's dirty
 //*******************************
-class eRenderTarget : public eClass {
+class eRenderTarget : public eComponent {
+
+	ECLASS_DECLARATION(eRenderTarget)
+	ECOMPONENT_DECLARATION(eRenderTarget)
+
 public:
 
 									eRenderTarget() = default;
@@ -70,15 +76,7 @@ public:
 	void							SetLayer(int newLayer)											{ layer = newLayer; }
 	bool							IsVisible() const												{ return visible; }
 	void							SetVisibility(bool newVisibility)								{ visible = newVisibility; }
-
-	virtual void					Flush();
-
-	virtual int						GetClassType() const override									{ return CLASS_RENDERTARGET; }
-	virtual bool					IsClassType(int classType) const override						{ 
-										if(classType == CLASS_RENDERTARGET) 
-											return true; 
-										return eClass::IsClassType(classType); 
-									}
+	void							Flush();
 
 private:
 
@@ -111,5 +109,8 @@ extern const SDL_Color blueColor;
 extern const SDL_Color pinkColor;
 extern const SDL_Color lightBlueColor;
 extern const SDL_Color yellowColor;
+
+
+}      /* evil */
 
 #endif /* EVIL_RENDER_TARGET_H */

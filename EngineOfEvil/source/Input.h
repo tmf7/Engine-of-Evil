@@ -30,11 +30,16 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 #include "Definitions.h"
 #include "Class.h"
 
+namespace evil {
+
 //*************************************
 //				eInput
 // handles user input from mouse and keyboard
 //*************************************
 class eInput : public eClass {
+
+	ECLASS_DECLARATION(eInput)
+
 public:
 
 	friend class eGame;
@@ -65,13 +70,6 @@ public:
 	int					GetMouseScroll() const;
 	void				HideCursor(bool hide = true) const;
 
-	virtual int			GetClassType() const override				{ return CLASS_INPUT; }
-	virtual bool		IsClassType(int classType) const override	{ 
-							if(classType == CLASS_INPUT) 
-								return true; 
-							return eClass::IsClassType(classType); 
-						}
-
 private:
 
 	void				PollEvents();
@@ -92,12 +90,6 @@ private:
 	int					oldMouseY;
 };
 
-//***************
-// eInput::eInput
-//***************
-inline eInput::eInput() 
-	: keys(nullptr), prevKeys(nullptr) {
-}
-
+}      /* evil */
 #endif /* EVIL_INPUT_H */
 

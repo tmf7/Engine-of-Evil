@@ -30,7 +30,7 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 #include "Vector.h"
 #include "Class.h"
 
-namespace evil { namespace collision {
+namespace evil {
 
 //**********************************
 //			eBounds
@@ -39,6 +39,9 @@ namespace evil { namespace collision {
 // for more general collision shape assignment
 //**********************************
 class eBounds : public eClass {
+
+	ECLASS_DECLARATION(eBounds)
+
 public:
 							eBounds();
 	explicit				eBounds(const eVec2 & mins, const eVec2 & maxs);
@@ -73,22 +76,10 @@ public:
 	void					FromPoints(const eVec2 * points, const int numPoints);
 	void					ToPoints(eVec2 points[4]) const;
 
-	virtual bool			IsClassType(ClassType_t classType) const override	{ 
-								if(classType == Type) 
-									return true; 
-								return eClass::IsClassType(classType); 
-							}
-
-public:
-
-	static ClassType_t		Type;
-
 private:
 
 	eVec2					bounds[2];			// mins at [0] and maxs at [1]
 };
-
-REGISTER_CLASS_TYPE(eBounds);
 
 //*************
 // eBounds::eBounds
@@ -318,5 +309,5 @@ inline eBounds eBounds::Intersect(const eBounds & a) const {
 	return intersection;
 }
 
-} }    /* evil::collision */
+}      /* evil */
 #endif /* EVIL_BOUNDS_H */

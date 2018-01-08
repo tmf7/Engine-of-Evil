@@ -28,6 +28,10 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 #include "sHero.h"
 #include "Map.h"
 
+using namespace evil;
+
+ECLASS_DEFINITION(evil::eEntity, sHero)
+
 void sHero::Think() {
 	auto & velocity = collisionModel->GetVelocity();
 	eVec2 facingDirection;

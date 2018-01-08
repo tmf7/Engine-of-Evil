@@ -29,9 +29,9 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 
 #include "Animation.h"
 
-class eAnimationController;
+namespace evil {
 
-namespace evil { namespace animation {
+class eAnimationController;
 
 //******************************
 //		eStateNode
@@ -40,6 +40,9 @@ namespace evil { namespace animation {
 // eg: eAnimationState, eStateNode
 //*******************************
 class eStateNode : public eClass {
+
+	ECLASS_DECLARATION(eStateNode)
+
 public:
 
 	friend class eAnimationController;
@@ -48,20 +51,15 @@ public:
 
 	virtual									   ~eStateNode() = default;
 
-	void										SetAnimationController(eAnimationController * newStateMachine);
-	float										GetNormalizedTime() const;
-	void										SetNormalizedTime(float normalizedTime);
-	float										Duration() const;
-	float										Time() const;
-	const std::string &							Name() const;
-	int											NameHash() const;
-	const AnimationFrame_t &					GetCurrentFrame() const;
-
-	virtual bool								IsClassType(ClassType_t classType) const override	{ 
-													if(classType == Type) 
-														return true; 
-													return eClass::IsClassType(classType); 
-												}
+												// fraction of duration that this state is currently at, range [0, 1]
+	float										GetNormalizedTime() const											{ return (time / duration); }
+	void										SetNormalizedTime(float normalizedTime)								{ time = normalizedTime * duration; }
+	float										Duration() const													{ return duration; }
+	float										Time() const														{ return time; }
+	const std::string &							Name() const														{ return name; }
+	int											NameHash() const													{ return nameHash; }
+	const AnimationFrame_t &					GetCurrentFrame() const												{ return *currentFrame; }
+	void										SetAnimationController(eAnimationController * newStateMachine)		{ stateMachine = newStateMachine; }
 
 protected:
 
@@ -70,83 +68,16 @@ protected:
 	virtual void								Update() = 0;
 	void										NextFrame(const eAnimation & animation);
 
-public:
-
-	static ClassType_t							Type;
-
 protected:
 
-	eAnimationController *						stateMachine;			// back-pointer to handler, for access to the component's gameobject owner->renderImage
-	std::string									name;
+	eAnimationController *						stateMachine;						// back-pointer to handler, for access to the component's gameobject owner->renderImage
+	std::string									name;								// user-defined label
 	int											nameHash;
-	float										speed;
-	float										duration;
-	float										time					= 0.0f;
+	float										speed;								// non-destructively scales duration of this sstate
+	float										duration;							// duration of this state in seconds
+	float										time					= 0.0f;		// un-normalized time of this state in seconds, range [0, duration]
 	const AnimationFrame_t *					currentFrame			= nullptr;
 };
 
-REGISTER_CLASS_TYPE(eStateNode);
-
-//*********************
-// eStateNode::GetNormalizedTime
-// returns the fraction of its duration that this state is currently at
-// range [0, 1]
-//*********************
-inline float eStateNode::GetNormalizedTime() const {
-	return (time / duration);
-}
-
-//*********************
-// eStateNode::SetNormalizedTime
-//*********************
-inline void eStateNode::SetNormalizedTime(float normalizedTime) {
-	time = normalizedTime * duration;
-}
-
-//*********************
-// eStateNode::Duration
-// returns the duration of this state in seconds
-//*********************
-inline float eStateNode::Duration() const {
-	return duration;
-}
-
-//*********************
-// eStateNode::Time
-// returns the un-normalized time of this state in seconds
-// range [0, duration]
-//*********************
-inline float eStateNode::Time() const {
-	return time;
-}
-
-//*********************
-// eStateNode::Name
-//*********************
-inline const std::string & eStateNode::Name() const {
-	return name;
-}
-
-//*********************
-// eStateNode::NameHash
-//*********************
-inline int eStateNode::NameHash() const {
-	return nameHash;
-}
-
-//*********************
-// eStateNode::GetCurrentFrame
-//*********************
-inline const AnimationFrame_t & eStateNode::GetCurrentFrame() const {
-	return *currentFrame;
-}
-
-//*********************
-// eStateNode::SetAnimationController
-//*********************
-inline void eStateNode::SetAnimationController(eAnimationController * newStateMachine) {
-	stateMachine = newStateMachine;
-}
-
-} }	   /* evil::animation */
+}      /* evil */
 #endif /* EVIL_STATENODE_H */

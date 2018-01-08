@@ -31,6 +31,8 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 #include "HashIndex.h"
 #include "Class.h"
 
+namespace evil {
+
 //***************************************************************
 //					eResourceManager
 // abstract template for resource allocation and freeing by type
@@ -42,6 +44,9 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 //***************************************************************
 template<class type>
 class eResourceManager : public eClass {
+
+	ECLASS_DECLARATION(eResourceManager<type>)
+
 public:
 
 	// NOTE: no primary template definition is provided to prevent that being used if an implicit template instantiation takes place before an explicit definition,
@@ -49,13 +54,6 @@ public:
 	// and to allow derived classes to override them, and still have access to protected data members
 	virtual bool							Init() = 0;
 	virtual bool							LoadAndGet(const char * resourceFilename, std::shared_ptr<type> & result) = 0;
-
-	virtual int								GetClassType() const override				{ return CLASS_RESOURCE_MANAGER; }
-	virtual bool							IsClassType(int classType) const override	{ 
-												if(classType == CLASS_RESOURCE_MANAGER) 
-													return true; 
-												return eClass::IsClassType(classType); 
-											}
 
 	// no need to specialize these, but if needed do so in a derived class to avoid removing functionality
 	// DEBUG: however, obscuring visibility of the base class function can lead to undefined behavior (especially through base-class pointers/references)
@@ -72,6 +70,26 @@ protected:
 	std::vector<std::shared_ptr<type>>		resourceList;		// dynamically allocated resources
 	eHashIndex								resourceHash;		// quick access to resourceList, indexed by resourceFilename
 };
+
+//***************************
+// eResourceManager::Type (static member variable default initialization)
+// DEBUG: ECLASS_DEFINITION(eClass, eResourceManager<type>) 
+// needed two template<class type> attributes, so its expanded here
+//***************************
+template<class type>
+ClassType_t eResourceManager<type>::Type = std::hash<std::string>()(TO_STRING(eResourceManager<type>));	
+
+//***************************
+// eResourceManager::IsClassType
+// DEBUG: ECLASS_DEFINITION(eClass, eResourceManager<type>) 
+// needed two template<class type> attributes, so its expanded here
+//***************************
+template<class type>
+inline bool eResourceManager<type>::IsClassType( ClassType_t classType ) const {					
+	if( classType == eResourceManager<type>::Type )											
+		return true;															
+	return eClass::IsClassType( classType );							
+}
 
 //***************************
 // eResourceManager::Load
@@ -202,4 +220,5 @@ inline bool eResourceManager<type>::BatchLoad(const char * resourceBatchFilename
 	return numLoadFailures == 0;
 }
 
+}      /* evil */
 #endif /* EVIL_RESOURCE_MANAGER_H */

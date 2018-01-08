@@ -29,7 +29,7 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 
 #include "Audio.h"
 
-namespace evil { namespace audio {
+namespace evil {
 
 //*********************************
 //			eMusic
@@ -49,5 +49,5 @@ private:
     Mix_Music *		music = nullptr;
 };
 
-} }    /* evil::audio */
+}      /* evil */
 #endif /* EVIL_MUSIC_H */

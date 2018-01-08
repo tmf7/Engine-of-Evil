@@ -29,6 +29,8 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 
 #include "GameObject.h"
 
+namespace evil {
+
 class eCamera;
 
 enum class CanvasType {
@@ -49,6 +51,9 @@ enum class CanvasType {
 // at the given param worldPosition
 //***********************************************
 class eCanvas : public eGameObject {
+
+	ECLASS_DECLARATION(eCanvas)
+
 public:
 
 	void											Configure(const eVec2 & size, const eVec2 & worldPosition, const eVec2 & scale = vec2_one, CanvasType type = CanvasType::SCREEN_SPACE_OVERLAY, eCamera * cameraToOverlay = nullptr);
@@ -57,12 +62,6 @@ public:
 
 	void											Flush();
 
-	virtual int										GetClassType() const override				{ return CLASS_CANVAS; }
-	virtual bool									IsClassType(int classType) const override	{ 
-														if(classType == CLASS_CANVAS) 
-															return true; 
-														return eGameObject::IsClassType(classType); 
-													}
 private:
 	
 	std::vector<eRenderImageBase *>					dynamicPool;						// dynamic eGameObjects to draw, minimizes priority re-calculations of dynamic vs. static eGameObjects
@@ -70,4 +69,5 @@ private:
 	eCamera *										targetCamera		  = nullptr;	// eCamera to resize with and overlay (to which *this is registered)
 };	
 
+}      /* evil */
 #endif /* EVIL_CAMERA_H */

@@ -26,7 +26,7 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 */
 #include "Audio.h"
 
-using namespace evil::audio;
+using namespace evil;
 
 //*********************
 // eAudio::Init

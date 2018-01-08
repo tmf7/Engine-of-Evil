@@ -33,7 +33,11 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 
 #define ROTATION_INCREMENT 1.0f
 
-// handles vectors, quaternions, and their operations
+namespace evil {
+
+//***********************************************************************
+// handles 2D and 3D direction vectors, quaternions, and their operations
+//***********************************************************************
 
 class eVec3;
 
@@ -830,5 +834,5 @@ inline void eQuat::Zero() {
 	w = 0.0f;
 }
 
+}      /* evil */
 #endif /* EVIL_VECTOR_H */
-

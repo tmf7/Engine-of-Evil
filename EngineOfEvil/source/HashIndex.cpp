@@ -26,6 +26,8 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 */
 #include "HashIndex.h"
 
+using namespace evil;
+
 //*******************
 // eHashIndex::GetSpread
 // returns an int in the range [0-100] representing the spread over the hash table

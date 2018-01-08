@@ -30,6 +30,8 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 #include "Canvas.h"
 #include "RenderImageIsometric.h"
 
+namespace evil {
+
 //***********************************************
 //				eCamera 
 // Mobile 2D Axis-Aligned Orthographic box 
@@ -40,7 +42,10 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 // adds uniform scaling (zoom) functionality to eRenderTarget,
 // and converts screen coordinates into isometric-world space
 //***********************************************
-class eCamera : public eRenderTarget {
+class eCamera : public eGameObject {
+
+	ECLASS_DECLARATION(eCamera)
+
 public:
 
 	void											Configure(const eVec2 & size, const eVec2 & worldPosition, float zoomLevel = 1.0f, float panSpeed = defaultCamSpeed);
@@ -60,14 +65,8 @@ public:
 	void											UnregisterAllOverlayCanvases();
 	int												NumRegisteredOverlayCanvases() const;
 
-	virtual void									Flush() override;
+	void											Flush();
 
-	virtual int										GetClassType() const override				{ return CLASS_CAMERA; }
-	virtual bool									IsClassType(int classType) const override	{ 
-														if(classType == CLASS_CAMERA) 
-															return true; 
-														return eRenderTarget::IsClassType(classType); 
-													}
 public:
 
 	// FIXME: load these from engine config file
@@ -84,5 +83,6 @@ private:
 	float											panSpeed;
 };	
 
+}      /* evil */
 #endif /* EVIL_CAMERA_H */
 

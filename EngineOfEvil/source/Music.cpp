@@ -26,7 +26,7 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 */
 #include "Music.h"
 
-using namespace evil::audio;
+using namespace evil;
 
 //*******************
 // eMusic::Load

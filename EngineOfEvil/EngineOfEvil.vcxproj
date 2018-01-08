@@ -130,6 +130,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="source\Animation.cpp" />
     <ClCompile Include="source\AnimationController.cpp" />
     <ClCompile Include="source\AnimationControllerManager.cpp" />
     <ClCompile Include="source\AnimationManager.cpp" />
@@ -142,8 +143,10 @@
     <ClCompile Include="source\Button.cpp" />
     <ClCompile Include="source\Camera.cpp" />
     <ClCompile Include="source\Canvas.cpp" />
+    <ClCompile Include="source\Class.cpp" />
     <ClCompile Include="source\Collision.cpp" />
     <ClCompile Include="source\CollisionModel.cpp" />
+    <ClCompile Include="source\Component.cpp" />
     <ClCompile Include="source\CreateEntityPrefabStrategies.cpp" />
     <ClCompile Include="source\Dictionary.cpp" />
     <ClCompile Include="source\Entity.cpp" />
@@ -153,7 +156,9 @@
     <ClCompile Include="source\GameLocal.cpp" />
     <ClCompile Include="source\GameObject.cpp" />
     <ClCompile Include="source\GridCell.cpp" />
+    <ClCompile Include="source\GridIndex.cpp" />
     <ClCompile Include="source\HashIndex.cpp" />
+    <ClCompile Include="source\Image.cpp" />
     <ClCompile Include="source\ImageManager.cpp" />
     <ClCompile Include="source\Input.cpp" />
     <ClCompile Include="source\main.cpp" />
@@ -168,6 +173,7 @@
     <ClCompile Include="source\sHero.cpp" />
     <ClCompile Include="source\SoundFx.cpp" />
     <ClCompile Include="source\StateNode.cpp" />
+    <ClCompile Include="source\StateTransition.cpp" />
     <ClCompile Include="source\Tile.cpp" />
     <ClCompile Include="source\Vector.cpp" />
   </ItemGroup>
@@ -185,6 +191,7 @@
     <ClInclude Include="source\Dictionary.h" />
     <ClInclude Include="source\ErrorLogger.h" />
     <ClInclude Include="source\GameLocal.h" />
+    <ClInclude Include="source\GridIndex.h" />
     <ClInclude Include="source\Music.h" />
     <ClInclude Include="source\RenderTarget.h" />
     <ClInclude Include="source\Resource.h" />

@@ -29,6 +29,8 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 
 #include "GameObject.h"
 
+namespace evil {
+
 //******************************
 //		eButton
 // interactive animated graphic
@@ -36,6 +38,9 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 // pressed, triggered, mouse-over, and disabled
 //******************************
 class eButton : public eGameObject {
+
+	ECLASS_DECLARATION(eButton)
+
 public:
 
 	void				Init(const eVec2 & canvasPosition, const eVec2 & size);		// TODO: add an eAnimationController and eRenderImageBase so *this can draw to an eCanvas
@@ -44,16 +49,10 @@ public:
 	bool				IsMouseOver() const;
 	void				ClearTrigger();
 
-	virtual int								GetClassType() const override				{ return CLASS_GAMEOBJECT; }
-	virtual bool							IsClassType(int classType) const override	{ 
-												if(classType == CLASS_GAMEOBJECT) 
-													return true; 
-												return eGameObject::IsClassType(classType); 
-											}
 
-	virtual void							Init() override;
-	virtual void							Think()	override;
-	virtual void							DebugDraw(eRenderTarget * renderTarget)	override;
+	void				Init(const eVec2 & position, const eVec2 & size);
+	virtual void		Think()	override;
+	virtual void		DebugDraw(eRenderTarget * renderTarget)	override;
 
 private:
 
@@ -93,4 +92,5 @@ inline void eButton::ClearTrigger() {
 	triggered = false;
 }
 
+}      /* evil */
 #endif /* EVIL_BUTTON_H */

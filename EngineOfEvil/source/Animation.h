@@ -31,7 +31,7 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 #include "Class.h"
 #include "Resource.h"
 
-namespace evil { namespace animation {
+namespace evil {
 
 typedef struct AnimationFrame_s {
 	int		imageManagerIndex	= 0;	// within eImageManager::resourceList
@@ -52,6 +52,9 @@ enum class AnimationLoopState {
 // used to produce animations
 //*****************************
 class eAnimation : public eClass, public eResource {
+
+	ECLASS_DECLARATION(eAnimation)
+
 public:
 
 	friend class eStateNode;
@@ -63,21 +66,14 @@ public:
 												   int framesPerSecond,
 												   AnimationLoopState loop = AnimationLoopState::ONCE);
 
-	const AnimationFrame_t &			GetFrame(int frameIndex) const;
-	int									NumFrames() const;
-	int									GetFPS() const;
-	void								SetFPS(int newFPS);
-	float								Duration() const;
-
-	virtual bool						IsClassType(ClassType_t classType) const override	{ 
-											if(classType == Type) 
-												return true; 
-											return eClass::IsClassType(classType); 
-										}
+										// length of animation in seconds
+	float								Duration() const					{ return duration; }
+	const AnimationFrame_t &			GetFrame(int frameIndex) const		{ return frames[frameIndex]; }
+	int									NumFrames() const					{ return frames.size(); }
+	int									GetFPS() const						{ return framesPerSecond; }
+	void								SetFPS(int newFPS)					{ framesPerSecond = newFPS; }
 
 public:
-
-	static ClassType_t					Type;
 
 	AnimationLoopState					loop;
 
@@ -88,54 +84,5 @@ private:
 	int									framesPerSecond;
 };
 
-REGISTER_CLASS_TYPE(eAnimation);
-
-//*******************
-// eAnimation::eAnimation
-//*******************
-inline eAnimation::eAnimation(const char * sourceFilename, int animationManagerIndex, std::vector<AnimationFrame_t> & frames, int framesPerSecond, AnimationLoopState loop)
-	: eResource(sourceFilename, animationManagerIndex),
-	  frames(frames),
-	  framesPerSecond(framesPerSecond),
-	  loop(loop) {
-	duration = (float)frames.size() / (float)framesPerSecond;
-}
-
-//*******************
-// eAnimation::GetFrame
-//*******************
-inline const AnimationFrame_t & eAnimation::GetFrame(int frameIndex) const {
-	return frames[frameIndex];
-}
-
-//*******************
-// eAnimation::NumFrames
-//*******************
-inline int eAnimation::NumFrames() const { 
-	return frames.size(); 
-}
-
-//*******************
-// eAnimation::GetFPS
-//*******************
-inline int eAnimation::GetFPS() const {
-	return framesPerSecond; 
-}
-
-//*******************
-// eAnimation::SetFPS
-//*******************
-inline void eAnimation::SetFPS(int newFPS) { 
-	framesPerSecond = newFPS; 
-}
-
-//*******************
-// eAnimation::Duration
-// returns animation's duration in seconds
-//*******************
-inline float eAnimation::Duration() const { 
-	return duration;
-}
-
-} }	   /* evil::animation */
+}	   /* evil */
 #endif /* EVIL_ANIMATION_H */

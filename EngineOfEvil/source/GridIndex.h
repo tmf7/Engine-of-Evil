@@ -24,34 +24,44 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 
 ===========================================================================
 */
-#ifndef EVIL_IMAGE_MANAGER_H
-#define EVIL_IMAGE_MANAGER_H
+#ifndef EVIL_GRID_INDEX_H
+#define EVIL_GRID_INDEX_H
 
-#include "Renderer.h"
-#include "ResourceManager.h"
+#include "Class.h"
 
 namespace evil {
 
-//******************************************
-//			eImageManager
-// Handles all texture allocation and freeing
-// see also: eResourceManager template
-//******************************************
-class eImageManager : public eResourceManager<eImage> {
+//*************************************************
+//				eGridIndex
+//  base class of types expected by eSpatialIndexGrid
+//*************************************************
+class eGridIndex : public eClass {
 
-	ECLASS_DECLARATION(eImageManager)
+	ECLASS_DECLARATION(eGridIndex)
 
 public:
 
-	virtual bool							Init() override;
-	virtual bool							LoadAndGet(const char * resourceFilename, std::shared_ptr<eImage> & result) override;
+	virtual				   ~eGridIndex() = default;
 
-	bool									LoadAndGetConstantText(TTF_Font * font, const char * text, const SDL_Color & color, std::shared_ptr<eImage> & result);
+	void					SetGridPosition(const int row, const int column)	{ gridRow = row; gridColumn = column; }
+	int						GridRow() const										{ return gridRow; }
+	int						GridColumn() const									{ return gridColumn; }
 
-private:
+	virtual	void			Reset()												{ inOpenSet = false; inClosedSet = false; }
 
-	bool									LoadSubframes(std::ifstream & read, std::shared_ptr<eImage> & result);
+public:
+
+	// expidites openSet and closedSet vector searches while systematically traversing the eSpatialIndexGrid to which *this belongs (eg: A* search)
+	// DEBUG: always reset these values after use
+	bool					inOpenSet	= false;	
+	bool					inClosedSet = false;
+
+protected:
+
+	int						gridRow;
+	int						gridColumn;
+
 };
 
 }      /* evil */
-#endif /* EVIL_IMAGE_MANAGER_H */
+#endif /* EVIL_GRID_INDEX_H */

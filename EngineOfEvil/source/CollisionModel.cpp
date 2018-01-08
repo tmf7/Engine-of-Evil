@@ -27,6 +27,11 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 #include "Game.h"
 #include "Map.h"
 
+using namespace evil;
+
+ECLASS_DEFINITION(eComponent, eCollisionModel)
+ECOMPONENT_DEFINITION(eComponent, eCollisionModel)
+
 //*************
 // eCollisionModel::eCollisionModel
 //*************
@@ -53,13 +58,13 @@ void eCollisionModel::Update() {
 		AvoidCollisionSlide();		// TODO: alternatively push the collider away if it can be moved (non-static)
 
 	oldOrigin = origin;
-	origin = owner->orthoOrigin;
+	origin = owner->GetOrigin();
 	origin += velocity * game->GetDeltaTime();
 	absBounds = localBounds + origin + ownerOriginOffset;
 	center = absBounds.Center();
 
 	// The engines don't move the ship at all. The ship stays where it is and the engines move the universe around it.
-	owner->orthoOrigin = origin;
+	owner->SetOrigin(origin);
 
 	if (active && origin != oldOrigin)
 		UpdateAreas();
@@ -67,6 +72,8 @@ void eCollisionModel::Update() {
 
 //*************
 // eCollisionModel::SetOrigin
+// DEBUG: this relies on the next Update call to adjust the collider offset,
+// which actually offsets the owner instead of the collider itself (to prevent offsetting into collision)
 //*************
 void eCollisionModel::SetOrigin(const eVec2 & newOrigin) {
 	owner->SetOrigin(newOrigin);
@@ -106,7 +113,7 @@ void eCollisionModel::UpdateAreas() {
 	auto & tileMap = owner->GetMap()->TileMap();
 	auto & cell = tileMap.IndexValidated(origin);
 	if (cell.AbsBounds() != absBounds) {
-		eCollision::GetAreaCells(owner->map, absBounds, areas);
+		eCollision::GetAreaCells(owner->GetMap(), absBounds, areas);
 	} else {							// BUGFIX: edge case where bounds matches its cell and winds up adding 4 areas instead of 1
 		areas.emplace_back(&cell);
 	}
@@ -126,7 +133,7 @@ bool eCollisionModel::FindApproachingCollision(const eVec2 & dir, const float le
 	static std::vector<Collision_t> collisions;		// FIXME(~): make this a private data member instead of per-fn, if more than one fn uses it
 	collisions.clear();								// DEBUG: lazy clearing
 
-	if(eCollision::BoxCast(owner->map, collisions, absBounds, dir, length)) {
+	if(eCollision::BoxCast(owner->GetMap(), collisions, absBounds, dir, length)) {
 		for (auto & collision : collisions) {
 			float movingAway = collision.normal * dir;
 			float movingAwayThreshold = ((abs(collision.normal.x) < 1.0f && abs(collision.normal.y) < 1.0f) ? -0.707f : 0.0f); // vertex : edge

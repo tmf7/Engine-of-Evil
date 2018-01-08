@@ -27,7 +27,9 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 #include "Bounds.h"
 #include "Definitions.h"
 
-using namespace evil::collision;
+using namespace evil;
+
+ECLASS_DEFINITION(eClass, eBounds)
 
 //*************
 // eBounds::eBounds

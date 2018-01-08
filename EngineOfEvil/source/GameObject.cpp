@@ -28,6 +28,10 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 #include "GameObject.h"
 #include "Map.h"
 
+using namespace evil;
+
+ECLASS_DEFINITION(eClass, eGameObject)
+
 //**************
 // eGameObject::eGameObject
 //**************
@@ -86,13 +90,6 @@ void eGameObject::UpdateComponentsOwner(){
 	if (animationController != nullptr) animationController->SetOwner(this);
 	if (collisionModel != nullptr)		collisionModel->SetOwner(this);
 	if (movementPlanner != nullptr)		movementPlanner->SetOwner(this);
-}
-
-//*************
-// eGameObject::SetOrigin
-//*************
-void eGameObject::SetOrigin(const eVec2 & newOrigin) {
-	orthoOrigin = newOrigin;
 }
 
 //*************

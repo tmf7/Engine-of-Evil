@@ -28,6 +28,11 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 #include "Map.h"
 #include "RenderImageIsometric.h"
 
+using namespace evil;
+
+ECLASS_DEFINITION(eRenderImageBase, eRenderImageIsometric)
+ECOMPONENT_DEFINITION(eRenderImageIsometric)
+
 //*************
 // eRenderImageIsometric::eRenderImageIsometric
 // DEBUG: defaults initialSpriteFrame outside [0, image->NumSubFrames) to 0

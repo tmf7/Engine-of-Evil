@@ -32,22 +32,28 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 #include "Image.h"
 #include "Component.h"
 
-class eRenderTarget;
-
 // SOLUTION: eButton is an eGameObject, which will have an eRenderImageBase component,
 // then eButton will have an eCanvas * drawTo pointer that will affect its orthoOrigin calculation (ie: a fixed position on the eCanvas)
 // which in-turn affects the eRenderImageBase component position with respect to its eButton owner
 // which means eRenderImageBase can have an orthoOriginOffset field...which should be ownerOriginOffset instead (for all)
 // (otherwise eRenderImageBase::origin == owner->orthoOrigin for an eButton, which isn't too flexible)
 
+namespace evil {
+
+class eRenderTarget;
+
 //**************************************************
 //				eRenderImageBase
 // data used by eRenderer to draw textures to eRenderTargets
 //**************************************************
 class eRenderImageBase : public eComponent {
-private:
 
-	friend class eRenderer;						// directly sets priority
+	ECLASS_DECLARATION(eRenderImageBase)
+	ECOMPONENT_DECLARATION(eRenderImageBase)
+
+public:
+
+	friend class eRenderer;	// directly sets priority
 
 public:
 
@@ -69,13 +75,6 @@ public:
 	bool										UpdateDrawnStatus(eRenderTarget * renderTarget);
 
 	virtual void								Update() override;
-	virtual std::unique_ptr<eComponent>			GetCopy() const	override					{ return std::make_unique<eRenderImageBase>(*this); }
-	virtual int									GetClassType() const override				{ return CLASS_RENDERIMAGE_BASE; }
-	virtual bool								IsClassType(int classType) const override	{ 
-													if(classType == CLASS_RENDERIMAGE_BASE) 
-														return true; 
-													return eComponent::IsClassType(classType); 
-												}
 
 protected:
 
@@ -161,4 +160,5 @@ inline bool eRenderImageBase::IsSelectable() const {
 	return isSelectable;
 }
 
+}      /* evil */
 #endif /* EVIL_RENDERIMAGE_BASE_H */

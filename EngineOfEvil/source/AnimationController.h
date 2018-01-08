@@ -35,19 +35,23 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 #include "StateTransition.h"
 #include "HashIndex.h"
 
-namespace evil { namespace animation { namespace components {
+namespace evil { 
 
 //*******************************************
 //			eAnimationController
 // Handles sequencing of image data
 // for owner->renderImage through eStateNodes
-// DEBUG: always call eComponent::SetOwner(eGameObject * newOwner)
-// after COPYING *this (eg: std::make_unique<eAnimationController>)
+// DEBUG: always SetOwner after copy|move of
+// *this over to another eGameObject
 //*******************************************
 class eAnimationController : public eComponent, public eResource {
+
+	ECLASS_DECLARATION(eAnimationController)
+	ECOMPONENT_DECLARATION(eAnimationController)
+
 public:
 
-	friend class eAnimationControllerManager;		// sole access to Add/GetXYZParameterIndex functionality
+	friend class eAnimationControllerManager;	// sole access to Add/GetXYZParameterIndex functionality
 
 public:
 
@@ -89,14 +93,7 @@ public:
 	bool										GetTriggerParameter(int nameHash) const;
 
 	virtual void								Update() override;
-	virtual std::unique_ptr<eComponent>			GetCopy() const	override							{ return std::make_unique<eAnimationController>(*this); }
 	virtual void								SetOwner(eGameObject * newOwner) override;
-
-	virtual bool								IsClassType(ClassType_t classType) const override	{ 
-													if(classType == Type) 
-														return true; 
-													return eComponent::IsClassType(classType); 
-												}
 
 private:
 
@@ -120,10 +117,6 @@ private:
 	int											GetBoolParameterIndex(const std::string & name) const;
 	int											GetTriggerParameterIndex(const std::string & name) const;
 	int											GetStateIndex(const std::string & name) const;
-
-public:
-
-	static ClassType_t							Type;
 
 private:
 
@@ -149,8 +142,6 @@ private:
 	bool										paused			= false;
 
 };
-
-REGISTER_CLASS_TYPE(eAnimationController);
 
 //**************
 // eAnimationController::eAnimationController
@@ -458,5 +449,5 @@ inline int eAnimationController::GetStateIndex(const std::string & name) const {
 	return statesHash.First(statesHash.GetHashKey(name));
 }
 
-} } }   /* evil::animation::components */
+}      /* evil */
 #endif /* EVIL_ANIMATION_CONTROLLER_H */

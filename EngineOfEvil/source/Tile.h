@@ -30,6 +30,8 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 #include "GameObject.h"
 #include "RenderImageIsometric.h"
 
+namespace evil {
+
 // Flyweight tile design
 
 //***********************************************
@@ -39,7 +41,10 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 // and make tileSet a separate flyweight class, with tileTypes a pseudo-singleton object/class
 //***********************************************
 class eTileImpl : public eClass {
-private:
+
+	ECLASS_DECLARATION(eTileImpl)
+
+public:
 
 //	typedef void (*eTileBehavior_f)();
 	friend class				eTile;
@@ -47,19 +52,12 @@ private:
 public:
 								eTileImpl();
 
-	int							Type() const;
+	int							TileType() const;
 //	void						(*tileBehavior)();
 
 	static bool					LoadTileset(const char * tilesetFilename, bool appendNew = false);
 	static int					NumTileTypes();
 	static bool					HasCollider(int type);
-
-	virtual int					GetClassType() const override				{ return CLASS_TILEIMPL; }
-	virtual bool				IsClassType(int classType) const override	{ 
-									if(classType == CLASS_TILEIMPL) 
-										return true; 
-									return eClass::IsClassType(classType); 
-								}
 
 private:
 
@@ -68,9 +66,9 @@ private:
 	static std::vector<std::pair<int, int>>			tileSet;		// first == index within eImageManager::resourceList; second == eImage subframe index;
 	static std::array<eTileImpl, maxTileTypes>		tileTypes;
 	
-	eVec3						renderBlockSize;		// draw order sorting
-	std::shared_ptr<eBounds>	collider = nullptr;		// FIXME: make this a generic collider shape (aabb, obb, circle, line, polyline)
-	int							type = invalidTileType;	// index within the tileSet
+	eVec3						renderBlockSize;					// draw order sorting
+	std::shared_ptr<eBounds>	collider = nullptr;					// FIXME: make this a generic collider shape (aabb, obb, circle, line, polyline)
+	int							tileType = invalidTileType;			// index within the tileSet
 };
 
 //************
@@ -91,15 +89,15 @@ inline bool eTileImpl::HasCollider(int type) {
 // eTileImpl::eTileImpl
 //************
 inline eTileImpl::eTileImpl() 
-	: type(invalidTileType), 
+	: tileType(invalidTileType), 
 	  collider(nullptr) {
 }
 
 //************
-// eTileImpl::Type
+// eTileImpl::TileType
 //************
-inline int eTileImpl::Type() const {
-	return type;
+inline int eTileImpl::TileType() const {
+	return tileType;
 }
 
 //***********************************************
@@ -107,20 +105,16 @@ inline int eTileImpl::Type() const {
 // localized tile data that describes the game environment
 //***********************************************
 class eTile : public eGameObject {
+
+	ECLASS_DECLARATION(eTile)
+
 public:
 
 										eTile(eGridCell * owner, const eVec2 & origin, const int type, const Uint32 layer);
 	
-	int									Type() const;
+	int									TileType() const;
 	void								SetType(int newType);
 	eGridCell *							GetCellOwner();
-
-	virtual int							GetClassType() const override				{ return CLASS_TILE; }
-	virtual bool						IsClassType(int classType) const override	{ 
-											if(classType == CLASS_TILE) 
-												return true; 
-											return eGameObject::IsClassType(classType); 
-										}
 
 private:
 
@@ -131,8 +125,8 @@ private:
 //************
 // eTile::Type
 //************
-inline int eTile::Type() const {
-	return impl->type;
+inline int eTile::TileType() const {
+	return impl->tileType;
 }
 
 //************
@@ -142,4 +136,5 @@ inline eGridCell * eTile::GetCellOwner() {
 	return cellOwner;
 }
 
+}      /* evil */
 #endif /* EVIL_TILE_H */

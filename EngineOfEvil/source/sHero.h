@@ -29,19 +29,15 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 
 #include "Entity.h"
 
-class sHero : public eEntity {
+class sHero : public evil::eEntity {
+
+	ECLASS_DECLARATION(sHero)
+
 public:
 
 	virtual bool						SpawnCopy( eMap * onMap, const eVec3 & worldPosition ) override;
 
 	virtual void						Think() override;
-
-	virtual int							GetClassType() const override						{ return CLASS_SHERO; }
-	virtual bool						IsClassType( int classType ) const override			{ 
-											if(classType == CLASS_SHERO) 
-												return true; 
-											return eEntity::IsClassType( classType );
-										}
 
 private:
 	

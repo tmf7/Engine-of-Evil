@@ -34,6 +34,8 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 
 #define EVIL_ERROR_LOG (eErrorLogger::errorLog)
 
+namespace evil {
+
 //*******************************************
 //			eErrorLogger
 // "singleton" class for output to error log file
@@ -108,4 +110,5 @@ inline bool VerifyRead(std::ifstream & read) {
 	return true;
 }
 
+}      /* evil */
 #endif /* EVIL_ERROR_LOGGER_H */

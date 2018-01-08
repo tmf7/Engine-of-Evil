@@ -33,7 +33,7 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 //			eCreateEntityPrefabUser
 // default strategy for making eEntity base class instances
 //******************************************
-class eCreateEntityPrefabUser: public eCreateEntityPrefabStrategy {
+class eCreateEntityPrefabUser: public evil::eCreateEntityPrefabStrategy {
 public:
 
 	virtual bool	CreatePrefab(std::shared_ptr<eEntity> & newPrefab, const std::string & prefabShortName, const eDictionary & spawnArgs) override;

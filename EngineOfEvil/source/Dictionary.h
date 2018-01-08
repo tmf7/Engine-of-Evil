@@ -30,6 +30,8 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 #include "Definitions.h"
 #include "Vector.h"
 
+namespace evil {
+
 //*************************************************
 //				eDictionary
 // uses std::unordered_map to store key-values pairs
@@ -186,4 +188,5 @@ inline void eDictionary::SetVec4( const char *key, const eQuat & value ) {
 	Set( key, setBuffer.data()  );
 }
 
+}      /* evil */
 #endif /* EVIL_DICTIONARY_H */

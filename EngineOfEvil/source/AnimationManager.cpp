@@ -27,6 +27,10 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 #include "AnimationManager.h"
 #include "Game.h"
 
+using namespace evil;
+
+ECLASS_DEFINITION(eResourceManager<eAnimation>, eAnimationManager)
+
 //***********************
 // eAnimationManager::Init
 //***********************

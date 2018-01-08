@@ -31,12 +31,17 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 #include "Class.h"
 #include "Resource.h"
 
+namespace evil {
+
 //***************************************
 //				eImage
 // stores access pointer to SDL_Texture 
 // and is handled by eImageManager
 //***************************************
 class eImage : public eClass , public eResource {
+
+	ECLASS_DECLARATION(eImage)
+
 public:
 							eImage();
 							eImage(SDL_Texture * source, const char * sourceFilename, int imageManagerIndex);
@@ -49,13 +54,6 @@ public:
 	void					SetSubframes(const std::vector<SDL_Rect> & frames);
 	const SDL_Rect &		GetSubframe(int subframeIndex) const;
 	int						NumSubframes() const;
-
-	virtual int				GetClassType() const override				{ return CLASS_IMAGE; }
-	virtual bool			IsClassType(int classType) const override	{ 
-								if(classType == CLASS_IMAGE) 
-									return true; 
-								return eClass::IsClassType(classType); 
-							}
 
 private:
 
@@ -132,5 +130,6 @@ inline int eImage::NumSubframes() const {
 	return subframes.size();
 }
 
+}      /* evil */
 #endif /* EVIL_IMAGE_H */
 

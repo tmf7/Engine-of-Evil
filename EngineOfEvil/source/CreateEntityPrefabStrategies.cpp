@@ -27,6 +27,8 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 #include "CreatePrefabStrategies.h"
 #include "sHero.h"
 
+using namespace evil;
+
 //***************
 // eCreateEntityPrefabUser::CreatePrefab
 //***************
