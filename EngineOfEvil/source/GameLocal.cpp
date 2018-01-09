@@ -30,8 +30,8 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 using namespace logic;
 
 // the rest of the engine will only reference the "game" variable, while all local aspects stay hidden
-eGameLocal					gameLocal;			// the user's static game instance
-eGame *						game = &gameLocal;	// statically pointed at an eGameLocal
+eGameLocal					gameLocal;					// the user's static game instance
+eGame *						game = &logic::gameLocal;	// statically pointed at an eGameLocal
 
 // FIXME: change this logic a bit (different eCamera object use, no eMap::Init, just load one/assign a viewCamera and renderer/window)
 //***********************
@@ -39,7 +39,7 @@ eGame *						game = &gameLocal;	// statically pointed at an eGameLocal
 //***********************
 bool eGameLocal::Init() {
 	auto windowSize = gameLocal.GetRenderer().ViewArea();
-	camera.Configure(eVec2((float)windowSize.w, (float)windowSize.h), vec2_zero);
+	camera.Init(eVec2((float)windowSize.w, (float)windowSize.h), vec2_zero);
 
 	gameLocal.GetEntityPrefabManager().SetCreatePrefabStrategy(std::make_shared<eCreateEntityPrefabUser>());
 

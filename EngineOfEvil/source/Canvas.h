@@ -28,10 +28,13 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 #define EVIL_CANVAS_H
 
 #include "GameObject.h"
+#include "RenderTarget.h"
 
 namespace evil {
 
 class eCamera;
+class eRenderImageBase;
+class eRenderImageIsometric;
 
 enum class CanvasType {
 	SCREEN_SPACE_OVERLAY,
@@ -41,14 +44,12 @@ enum class CanvasType {
 
 //***********************************************
 //				eCanvas 
-// Mobile 2D Axis-Aligned Orthographic box 
-// that draws eRenderImageBase objects to
-// its eRenderTarget texture during eRenderer::Flush
-// and is either registered to the main rendering context as an overlay
-// a specific camera as an overlay, or
-// given a eRenderImageIsometric that uses the canvas target texture
-// as the eImage, and a renderblock the size of the texture (with minimal depth)
-// at the given param worldPosition
+// Mobile 2D texture for drawing eRenderImageBase objects.
+// Registered to either the main rendering context as an overlay,
+// a specific camera as an overlay, or given a eRenderImageIsometric
+// that uses the eRenderTarget's texture as the eImage,
+// and a renderblock the size of the texture (with minimal depth)
+// at the current eGameObject::orthoOrigin converted to isometric worldspace
 //***********************************************
 class eCanvas : public eGameObject {
 
@@ -56,17 +57,25 @@ class eCanvas : public eGameObject {
 
 public:
 
-	void											Configure(const eVec2 & size, const eVec2 & worldPosition, const eVec2 & scale = vec2_one, CanvasType type = CanvasType::SCREEN_SPACE_OVERLAY, eCamera * cameraToOverlay = nullptr);
+	void											Init(const eVec2 & size, const eVec2 & worldPosition, const eVec2 & scale = vec2_one, CanvasType type = CanvasType::SCREEN_SPACE_OVERLAY, eCamera * cameraToOverlay = nullptr);
 	bool											AddToRenderPool(eRenderImageBase * renderImage);
 	void											ClearRenderPools();
-
 	void											Flush();
+
+	virtual void									Think() override;
 
 private:
 	
-	std::vector<eRenderImageBase *>					dynamicPool;						// dynamic eGameObjects to draw, minimizes priority re-calculations of dynamic vs. static eGameObjects
-	std::vector<eRenderImageBase *>					staticPool;							// static eGameObjects that scale with this eCanvas
-	eCamera *										targetCamera		  = nullptr;	// eCamera to resize with and overlay (to which *this is registered)
+	// DEBUG: both of these reference members have lifetimes dictated by their eGameObject owner (ie: *this)
+	// DEBUG: this aggregation prevents the compiler from generating an assignment operator
+	// TODO: if needed, write the assignment operator to perform new GetComponent<> on the new object's reference members
+	eRenderTarget &									renderTarget;
+	eRenderImageIsometric &							renderImage;
+
+	std::vector<eRenderImageBase *>					dynamicPool;					// dynamic eGameObjects to draw, minimizes priority re-calculations of dynamic vs. static eGameObjects
+	std::vector<eRenderImageBase *>					staticPool;						// static eGameObjects that scale with this eCanvas
+	eCamera *										targetCamera	= nullptr;		// eCamera to resize with and overlay (to which *this is registered)
+	CanvasType										canvasType		= CanvasType::SCREEN_SPACE_OVERLAY;
 };	
 
 }      /* evil */

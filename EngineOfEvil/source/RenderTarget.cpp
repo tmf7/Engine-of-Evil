@@ -42,39 +42,42 @@ const SDL_Color pinkColor			= { 255, 0, 255, SDL_ALPHA_OPAQUE };
 const SDL_Color lightBlueColor		= { 0, 255, 255, SDL_ALPHA_OPAQUE };
 const SDL_Color yellowColor			= { 255, 255, 0, SDL_ALPHA_OPAQUE };
 
-//***************************
-// eRenderTarget::InitDefault
-// initializes the default render target for a context
-// DEBUG: only do this once per rendering context
-//***************************
-void eRenderTarget::InitDefault(SDL_Renderer * context, const eVec2 & scale) {
-	this->context = context;
-	this->scale = scale;
-}
 
 //***************************
-// eRenderTarget::Init
+// eRenderTarget::InitDefault
+// the default render target for the context
+// does not need a position, size, or SDL_Texture
+//***************************
+ void eRenderTarget::InitDefault(SDL_Renderer * context, const eVec2 & scale) {
+	this->context = context;
+	this->scale = scale;
+	isDefault = true;
+ }
+
+//***************************
+// eRenderTarget::eRenderTarget
 // creates a new SDL_Texture within the given param context
 // and sets its rendering position within the context to param contextPosition
 // returns true on success, false on failure
 //***************************
-bool eRenderTarget::Init(SDL_Renderer * context, int width, int height, const eVec2 & contextPosition, const eVec2 & scale) {
+eRenderTarget::eRenderTarget(SDL_Renderer * context, int width, int height, const eVec2 & contextPosition, const eVec2 & scale)
+	: defaultSize(eVec2((float)width, (float)height)) {
 	InitDefault(context, scale);
-	origin = contextPosition;
+	isDefault = false;
+	SetOrigin(contextPosition);
+	UpdateBounds();
+
 	target = SDL_CreateTexture( context,
 								SDL_PIXELFORMAT_ARGB8888,						// DEBUG: this format may not work for all images
 								SDL_TEXTUREACCESS_TARGET,
 								width,
 								height );
 
-	if (!target)
-		return false;
+	if (IsNull())
+		return;
 
 	// ensure the target can alpha-blend
 	SDL_SetTextureBlendMode(target, SDL_BLENDMODE_BLEND);
-	defaultSize = eVec2((float)width, (float)height);
-	UpdateBounds();
-	return true;
 }
 
 //***************************
@@ -119,11 +122,20 @@ bool eRenderTarget::Resize(int newWidth, int newHeight) {
 	return true;
 }
 
+//***************************
+// eRenderTarget::Update
+//***************************
+void eRenderTarget::Update() {
+	SetOrigin( owner->GetOrigin() );	// synchronize owner origin and absBounds
+}
 
 //***************************
 // eRenderTarget::Clear
 //***************************
 void eRenderTarget::Clear()	{ 
+	if ( IsNull() && !Resize( ( int )defaultSize.x, ( int )defaultSize.y ) )
+		return;
+
 	auto currentTarget = SDL_GetRenderTarget(context);
 	SDL_SetRenderTarget(context, target); 
 	SDL_SetRenderDrawColor(context, clearColor.r, clearColor.g, clearColor.b, clearColor.a);
@@ -147,6 +159,7 @@ void eRenderTarget::ClearIfDirty(const Uint32 currentTime)	{
 //***************
 void eRenderTarget::UpdateBounds() {
 	eVec2 scaledSize = eVec2( defaultSize.x / scale.x, defaultSize.y / scale.y );
+	const auto & origin = GetOrigin();
 	absBounds = eBounds(origin, origin + scaledSize);
 }
 
@@ -154,8 +167,8 @@ void eRenderTarget::UpdateBounds() {
 // eRenderTarget::SetOrigin
 //***************
 void eRenderTarget::SetOrigin(const eVec2 & newOrigin) {
-	oldOrigin = origin;
-	origin = newOrigin; 
+	oldOrigin = owner->GetOrigin();
+	owner->SetOrigin(newOrigin);
 	UpdateBounds(); 
 }
 
@@ -178,14 +191,11 @@ void eRenderTarget::ResetScale() {
 }
 
 //***************
-// eRenderTarget::Flush
-// draws the current state of the target texture to the main render target
+// eRenderTarget::Validate
+// returns false if *this can't or shouldn't be drawn to
+// returns true otherwise
+// DEBUG: attempts to validate if IsNull is true
 //***************
-void eRenderTarget::Flush() {
-	if (!visible)
-		return;
-
-	auto & renderer = game->GetRenderer();
-	renderer.SetRenderTarget(renderer.GetMainRenderTarget());
-	SDL_RenderCopy(renderer.GetSDLRenderer(), target, NULL, NULL);
+bool eRenderTarget::Validate() {
+	return (visible && ( !IsNull() || Resize( ( int )defaultSize.x, ( int )defaultSize.y ) ) );
 }

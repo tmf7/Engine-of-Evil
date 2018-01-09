@@ -69,7 +69,7 @@ private:
 	// TODO: if needed, write the assignment operator to perform new GetComponent<> on the new object's reference members
 	eCollisionModel &					collisionModel;
 	eMovementPlanner &					movementPlanner;
-	eRenderImageIsometric &				renderImage;
+	eRenderImageIsometric &				renderImage;			// FIXME: assumes this isn't a eRenderImageBase
 	eAnimationController &				animationController;
 
 

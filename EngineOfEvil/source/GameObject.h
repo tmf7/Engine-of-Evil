@@ -28,6 +28,8 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 #define EVIL_GAMEOBJECT_H
 
 #include "Component.h"
+#include "HashIndex.h"
+#include "Vector.h"
 
 namespace evil { 
 
@@ -70,7 +72,7 @@ public:
 
 // FREEHILL BEGIN generic component test
 	template< class ComponentType, typename... Args >
-	void									AddComponent(eGameObject * owner, Args&&... params );
+	void									AddComponent( eGameObject * owner, Args&&... params );
 
 	template< class ComponentType >
 	ComponentType &							GetComponent();
@@ -97,9 +99,9 @@ private:
 
 protected:
 
-	std::vector<std::unique_ptr<eComponent>> components;
-
-	eMap *									map;								// back-pointer to the eMap object owns *this
+	eHashIndex								 componentsTypeHash;				// reduces component lookup time to average case O(1) using the types as hash keys
+	std::vector<std::unique_ptr<eComponent>> components;						// all eComponent-derived objects *this owns
+	eMap *									 map;								// back-pointer to the eMap object owns *this
 	
 private:
 
@@ -113,27 +115,44 @@ private:
 
 //***************
 // eGameObject::AddComponent
-// perfect-forwards all params to the ComponentType constructor with the matching parameter list
+// finds the first empty element of the components vector to construct the requested component in, then
+// perfect-forwards all params to the ComponentType constructor with the matching parameter list.
 // DEBUG: be sure to compare the arguments of this fn to the desired constructor to avoid perfect-forwarding failure cases
 // EG: deduced initializer lists, decl-only static const int members, 0|NULL instead of nullptr, overloaded fn names, and bitfields
 //***************
 template< class ComponentType, typename... Args >
-void eGameObject::AddComponent(eGameObject * owner, Args&&... params ) {
-	components.emplace_back( std::make_unique< ComponentType >(owner, std::forward< Args >( params )... ) );
+void eGameObject::AddComponent( eGameObject * owner, Args&&... params ) {
+	if ( components.empty() )
+		componentsTypeHash.ClearAndResize( MAX_COMPONENTS );
+
+	auto & componentToAdd = std::make_unique< ComponentType >( owner, std::forward< Args >( params )... );
+
+	int index = 0;
+	for ( auto && componentSlot : components ) {
+		if ( componentSlot == nullptr ) {
+			componentSlot = std::move( componentToAdd );
+			break;
+		} 
+		++index;
+	}
+
+	componentsTypeHash.Add( ComponentType::Type, index );
+	if ( index >= components.size() )
+		components.emplace_back( std::move( componentToAdd ) );
 }
 
 //***************
 // eGameObject::GetComponent
-// returns the first component that matches the template type
-// or that is derived from the template type
-// EG: if the template type is Component, and components[0] type is BoxCollider
-// then components[0] will be returned because it derives from Component
+// returns the most recently added component that matches the template type
+// or that is derived from the template type in average case O(1) time
+// EG: if the template type is eComponent, and components[0] type is eCollisionModel
+// then components[0] will be returned because it derives from eComponent
 //***************
 template< class ComponentType >
 ComponentType &	eGameObject::GetComponent() {
-	for ( auto && component : components ) {
-		if ( component->IsClassType( ComponentType::Type ) )
-			return *static_cast< ComponentType * >( component.get() );
+	for ( int index = componentsTypeHash.First( ComponentType::Type ); index != INVALID_ID; index = componentsTypeHash.Next( index ) ) {
+		if ( components[ index ]->IsClassType( ComponentType::Type ) )
+			return *static_cast< ComponentType * >( components[ index ].get() );
 	}
 
 	return *std::unique_ptr< ComponentType >( nullptr );
@@ -141,6 +160,10 @@ ComponentType &	eGameObject::GetComponent() {
 
 //***************
 // eGameObject::RemoveComponent
+// sets the most recently added matching template type component pointer to nullptr,
+// causing std::unique_ptr to delete the owned resource, and allowing
+// another component to be constructed using the now-empty slot without
+// modifying any other vector elements, size, or capacity
 // returns true on successful removal
 // returns false if components is empty, or no such component exists
 //***************
@@ -149,18 +172,14 @@ bool eGameObject::RemoveComponent() {
 	if ( components.empty() )
 		return false;
 
-	auto & index = std::find_if( components.begin(), 
-									components.end(), 
-									[ classType = ComponentType::Type ]( auto & component ) { 
-									return component->IsClassType( classType ); 
-									} );
+	for ( int index = componentsTypeHash.First( ComponentType::Type ); index != INVALID_ID; index = componentsTypeHash.Next( index ) ) {
+		if ( components[ index ]->IsClassType( ComponentType::Type ) ) {
+			components[ index ] = nullptr;
+			return true;
+		}
+	}
 
-	bool success = index != components.end();
-
-	if ( success )
-		components.erase( index );
-
-	return success;
+	return false;
 }
 
 //***************
@@ -175,9 +194,9 @@ template< class ComponentType >
 std::vector< ComponentType * > eGameObject::GetComponents() {
 	std::vector< ComponentType * > componentsOfType;
 
-	for ( auto && component : components ) {
-		if ( component->IsClassType( ComponentType::Type ) )
-			componentsOfType.emplace_back( static_cast< ComponentType * >( component.get() ) );
+	for ( int index = componentsTypeHash.First( ComponentType::Type ); index != INVALID_ID; index = componentsTypeHash.Next( index ) ) {
+		if ( components[ index ]->IsClassType( ComponentType::Type ) )
+			componentsOfType.emplace_back( static_cast< ComponentType * >( components[ index ].get() ) );
 	}
 
 	return componentsOfType;
@@ -193,22 +212,9 @@ int eGameObject::RemoveComponents() {
 		return 0;
 
 	int numRemoved = 0;
-	bool success = false;
-
-	do {
-		auto & index = std::find_if( components.begin(), 
-										components.end(), 
-										[ classType = ComponentType::Type ]( auto & component ) { 
-										return component->IsClassType( classType ); 
-										} );
-
-		success = index != components.end();
-
-		if ( success ) {
-			components.erase( index );
-			++numRemoved;
-		}
-	} while ( success );
+	while ( RemoveComponent<ComponentType>() ) {
+		++numRemoved;
+	}
 
 	return numRemoved;
 }

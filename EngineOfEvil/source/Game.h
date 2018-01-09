@@ -34,6 +34,7 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 #include "Input.h"
 #include "Audio.h"
 #include "Collision.h"
+#include "Renderer.h"
 
 namespace evil {
 

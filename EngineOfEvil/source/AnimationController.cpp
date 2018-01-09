@@ -102,9 +102,9 @@ bool eAnimationController::CheckTransitionConditions(const eStateTransition & tr
 		updateState = (boolParameters[conditionPair.first] == conditionPair.second);
 	}
 
-	static std::vector<size_t> resetTriggers;					// static to reduce dynamic allocations
+	static std::vector<std::size_t> resetTriggers;				// static to reduce dynamic allocations
 	resetTriggers.clear();										// lazy clearing
-	for (size_t i = 0; i < transition.triggerConditions.size(); ++i) {
+	for (std::size_t i = 0; i < transition.triggerConditions.size(); ++i) {
 		const auto & conditionPair = transition.triggerConditions[i];
 		updateState = (triggerParameters[conditionPair.first] == conditionPair.second);
 		if (updateState)
@@ -202,7 +202,7 @@ void eAnimationController::SortAndHashTransitions() {
 					return 0; 
 	});
 
-	for (size_t i = 0; i < stateTransitions.size(); ++i) {
+	for (std::size_t i = 0; i < stateTransitions.size(); ++i) {
 		const int hashKey = animationStates[stateTransitions[i].fromState]->nameHash;
 		transitionsHash.Add(hashKey, i);
 	}

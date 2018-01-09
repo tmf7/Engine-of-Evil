@@ -63,11 +63,11 @@ public:
 	int					GetSpread() const;
 
 	// slots allocated by std::vector<int>
-	size_t				HashCapacity() const;
-	size_t				IndexCapacity() const;
+	std::size_t				HashCapacity() const;
+	std::size_t				IndexCapacity() const;
 
 						template<class Key>
-	size_t				GetHashKey(const Key & key) const;
+	std::size_t				GetHashKey(const Key & key) const;
 
 private:
 
@@ -173,7 +173,7 @@ inline int eHashIndex::Next(const int index) const {
 //*******************
 inline void eHashIndex::InsertIndex(const int hashkey, const int index) {
 	int max = index;
-	for (size_t i = 0; i < hash.size(); i++) {
+	for (std::size_t i = 0; i < hash.size(); i++) {
 		if (hash[i] >= index) {
 			hash[i]++;
 			if (hash[i] > max) {
@@ -181,7 +181,7 @@ inline void eHashIndex::InsertIndex(const int hashkey, const int index) {
 			}
 		}
 	}
-	for (size_t i = 0; i < indexChain.size(); i++) {
+	for (std::size_t i = 0; i < indexChain.size(); i++) {
 		if (indexChain[i] >= index) {
 			indexChain[i]++;
 			if (indexChain[i] > max) {
@@ -209,7 +209,7 @@ inline void eHashIndex::InsertIndex(const int hashkey, const int index) {
 inline void eHashIndex::RemoveIndex(const int hashkey, const int index) {
 	Remove(hashkey, index);
 	int max = index;
-	for (size_t i = 0; i < hash.size(); i++) {
+	for (std::size_t i = 0; i < hash.size(); i++) {
 		if (hash[i] >= index) {
 			if (hash[i] > max) {
 				max = hash[i];
@@ -217,7 +217,7 @@ inline void eHashIndex::RemoveIndex(const int hashkey, const int index) {
 			hash[i]--;
 		}
 	}
-	for (size_t i = 0; i < indexChain.size(); i++) {
+	for (std::size_t i = 0; i < indexChain.size(); i++) {
 		if (indexChain[i] >= index) {
 			if (indexChain[i] > max) {
 				max = indexChain[i];
@@ -264,7 +264,7 @@ inline void eHashIndex::ClearAndResize(int newHashSize) {
 //*******************
 inline int eHashIndex::NumUniqueKeys() const {
 	int uniqueCount = 0;
-	for (size_t i = 0; i < hash.size(); i++) {
+	for (std::size_t i = 0; i < hash.size(); i++) {
 		if (hash[i] != -1)
 			uniqueCount++;
 	}
@@ -278,7 +278,7 @@ inline int eHashIndex::NumUniqueKeys() const {
 //*******************
 inline int eHashIndex::NumDuplicateKeys() const {
 	int duplicateCount = 0;
-	for (size_t i = 0; i < indexChain.size(); i++) {
+	for (std::size_t i = 0; i < indexChain.size(); i++) {
 		if (indexChain[i] != -1)
 			duplicateCount++;
 	}
@@ -288,14 +288,14 @@ inline int eHashIndex::NumDuplicateKeys() const {
 //*******************
 // eHashIndex::HashCapacity
 //*******************
-inline size_t eHashIndex::HashCapacity() const {
+inline std::size_t eHashIndex::HashCapacity() const {
 	return hash.capacity();
 }
 
 //*******************
 // eHashIndex::IndexCapacity
 //*******************
-inline size_t eHashIndex::IndexCapacity() const {
+inline std::size_t eHashIndex::IndexCapacity() const {
 	return indexChain.capacity();
 }
 
@@ -304,7 +304,7 @@ inline size_t eHashIndex::IndexCapacity() const {
 // DEBUG: uses std::hash<Key> to hash the key param
 //*******************
 template<class Key>
-inline size_t eHashIndex::GetHashKey(const Key & key) const {
+inline std::size_t eHashIndex::GetHashKey(const Key & key) const {
 	return std::hash<Key>()(key);
 }
 

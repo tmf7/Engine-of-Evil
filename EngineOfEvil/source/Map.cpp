@@ -148,7 +148,7 @@ bool eMap::LoadMap(const char * mapFilename) {
 	while (read.peek() != '}') {
 		row = 0;
 		column = 0;
-		size_t tallestRenderBlock = 0;
+		std::size_t tallestRenderBlock = 0;
 		read.ignore(std::numeric_limits<std::streamsize>::max(), '{');			// ignore up past "layer_# {"
 		read.ignore(1, '\n');													// ignore the '\n' past '{'
 
@@ -167,7 +167,7 @@ bool eMap::LoadMap(const char * mapFilename) {
 
 				auto tileRenderImage = &(cell.TilesOwned().back().GetComponent<eRenderImageIsometric>());
 				if (tileRenderImage->GetRenderBlock().Depth() > tallestRenderBlock)
-					tallestRenderBlock = (size_t)tileRenderImage->GetRenderBlock().Depth();
+					tallestRenderBlock = (std::size_t)tileRenderImage->GetRenderBlock().Depth();
 
 				sortTiles.emplace_back(tileRenderImage);
 			}

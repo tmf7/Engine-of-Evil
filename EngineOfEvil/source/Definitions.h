@@ -74,6 +74,7 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 #define MAX_ANIMATIONS 1024
 #define MAX_ANIMATION_CONTROLLERS 512
 #define MAX_LAYER 128
+#define MAX_COMPONENTS 128
 #define INVALID_ID -1
 
 /*

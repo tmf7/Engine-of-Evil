@@ -26,36 +26,37 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 */
 #include "Game.h"
 #include "Camera.h"
+#include "RenderImageIsometric.h"
 
 using namespace evil;
 
 ECLASS_DEFINITION(eGameObject, eCamera)
 
 //***************
-// eCamera::Configure
-// DEBUG: use this fn instead of eRenderTarget::Init to initialize *this
+// eCamera::Init
 // DEBUG: automatically registers *this with the eGame->eRenderer object
 //***************
-void eCamera::Configure(const eVec2 & size, const eVec2 & worldPosition, float zoomLevel, float panSpeed) {
+void eCamera::Init(const eVec2 & size, const eVec2 & worldPosition, float zoomLevel, float panSpeed) {
 	auto & renderer = game->GetRenderer();
 	const auto & context = renderer.GetSDLRenderer();
 	this->panSpeed = panSpeed;
 	SDL_Point intSize = { eMath::NearestInt(size.x), eMath::NearestInt(size.y) };
-	eRenderTarget::Init( context, intSize.x, intSize.y, worldPosition, vec2_one * zoomLevel );
 	staticPool.reserve(MAX_IMAGES);
 	dynamicPool.reserve(MAX_IMAGES);
-	renderer.RegisterRenderTarget(this);
+
+	AddComponent<eRenderTarget>(this, context, intSize.x, intSize.y, worldPosition, vec2_one * zoomLevel);
+	renderTarget = GetComponent<eRenderTarget>();
+	renderer.RegisterRenderTarget(&renderTarget);
 }
 
 //***************
 // eCamera::Think
-// FIXME(?): a different fn should control the camera movement, and any of its restrictions
+// FIXME/TODO: a different fn should control the camera movement, and any of its restrictions
 // because there can be more than one eCamera instance in a game
-// SOLUTION(?): derive from a base eCamera class and override Think
 //***************
 void eCamera::Think() {
 	auto & input = game->GetInput();
-	const eVec2 oldBoundsCenter = absBounds.Center();		// stay centered on the same point when zooming in/out, it's less jarring
+	const eVec2 oldBoundsCenter = renderTarget.AbsBounds().Center();		// stay centered on the same point when zooming in/out, it's less jarring
 
 	if (input.KeyPressed(SDL_SCANCODE_EQUALS) || input.GetMouseScroll() > 0)
 		ZoomIn();
@@ -64,7 +65,29 @@ void eCamera::Think() {
 
 	float x = panSpeed * (float)(input.KeyHeld(SDL_SCANCODE_D) - input.KeyHeld(SDL_SCANCODE_A));
 	float y = panSpeed * (float)(input.KeyHeld(SDL_SCANCODE_S) - input.KeyHeld(SDL_SCANCODE_W));
-	SetOrigin( origin + (oldBoundsCenter - absBounds.Center()) + (eVec2( x , y ) * game->GetDeltaTime()) );
+	SetOrigin( GetOrigin() + (oldBoundsCenter - renderTarget.AbsBounds().Center()) + (eVec2( x , y ) * game->GetDeltaTime()) );
+
+	moved = ( renderTarget.GetOriginDelta() != vec2_zero || renderTarget.GetScaleDelta() != vec2_zero );
+	renderTarget.SetScale(renderTarget.GetScale());		// BUGFIX: ensures GetScaleDelta updates each frame instead of staying constant after each SetScale event
+}
+
+//***************
+// eCamera::Resize
+// convenience fn for resizing the eRenderTexture
+// resizing an eCamera makes more of the gameworld visible,
+// and does not scale/stretch the rendered texture, which
+// means whats being drawn to the camera doesn't get re-positioned
+//***************
+bool eCamera::Resize(int newWidth, int newHeight) {
+	return renderTarget.Resize(newWidth, newHeight);
+}
+
+//***************
+// eCamera::AbsBounds
+// renderTarget absBounds
+//***************
+const eBounds & eCamera::AbsBounds() const {
+	return renderTarget.AbsBounds();
 }
 
 //***************
@@ -72,12 +95,12 @@ void eCamera::Think() {
 // uniformly scales up by zoomSpeed
 //***************
 void eCamera::ZoomIn() {
-	float zoom = scale.x;
+	float zoom = renderTarget.GetScale().x;
 	zoom += zoomSpeed;
 	if (zoom > maxZoom)
 		zoom = maxZoom;
 
-	SetScale(vec2_one * zoom);
+	renderTarget.SetScale(vec2_one * zoom);
 }
 
 //***************
@@ -85,12 +108,12 @@ void eCamera::ZoomIn() {
 // uniformly scales down by zoomSpeed
 //***************
 void eCamera::ZoomOut() {
-	float zoom = scale.x;
+	float zoom = renderTarget.GetScale().x;
 	zoom -= zoomSpeed;
 	if (zoom < minZoom)
 		zoom = minZoom;
 
-	SetScale(vec2_one * zoom);
+	renderTarget.SetScale(vec2_one * zoom);
 }
 
 //***************
@@ -102,7 +125,7 @@ void eCamera::SetZoom(float newZoomLevel) {
 	else if (newZoomLevel > maxZoom)
 		newZoomLevel = maxZoom;
 
-	SetScale(vec2_one * newZoomLevel);
+	renderTarget.SetScale(vec2_one * newZoomLevel);
 }
 
 //***************
@@ -110,18 +133,14 @@ void eCamera::SetZoom(float newZoomLevel) {
 // convenience function to query the uniform eRenderTarget::scale
 //***************
 float eCamera::GetZoom() const {
-	return scale.x;
+	return renderTarget.GetScale().x;
 }
 
 //***************
 // eCamera::Moved
-// checks if this camera has moved since the last Moved call
-// DEBUG: includes zoom and translation
+// DEBUG: includes changes in zoom and translation
 //***************
-bool eCamera::Moved() {
-	bool moved = ( GetOriginDelta() != vec2_zero || GetScaleDelta() != vec2_zero );
-	SetOrigin( origin );
-	SetZoom( GetZoom() );
+bool eCamera::Moved() const {
 	return moved;
 }
 
@@ -130,7 +149,7 @@ bool eCamera::Moved() {
 // returns current position of screenPoint over the 2D orthographic game world with respect to this camera's position
 //**************
 eVec2 eCamera::ScreenToWorldPosition(const eVec2 & screenPoint) const {
-	eVec2 worldPoint = (screenPoint / GetZoom()) + absBounds[0];
+	eVec2 worldPoint = (screenPoint / GetZoom()) + renderTarget.AbsBounds()[0];
 	eMath::IsometricToCartesian(worldPoint.x, worldPoint.y);
 	return worldPoint;
 }
@@ -156,7 +175,7 @@ eVec2 eCamera::MouseWorldPosition() const {
 // and this eCamera's pools won't be cleared (as happens during Flush)
 //***************
 bool eCamera::AddToRenderPool(eRenderImageIsometric * renderImage) {
-	if (renderImage->UpdateDrawnStatus(this))
+	if (renderImage->UpdateDrawnStatus(&renderTarget))
 		return false;
 
 	const auto & renderPool = (renderImage->Owner()->IsStatic() ? &staticPool : &dynamicPool);
@@ -178,7 +197,7 @@ void eCamera::ClearRenderPools() {
 // this eCamera's eRenderTarget texture, if any
 //**************
 void eCamera::Flush() {
-	if (!visible)
+	if (!renderTarget.Validate())
 		return;
 
 	QuickSort(	staticPool.data(),
@@ -214,7 +233,7 @@ void eCamera::Flush() {
 // FREEHILL END 3d topological sort
 
 	auto & renderer = game->GetRenderer();
-	renderer.SetRenderTarget(this);
+	renderer.SetRenderTarget(&renderTarget);
 
 	for (auto && renderImage : staticPool)
 		renderer.DrawImage(renderImage);
@@ -222,7 +241,7 @@ void eCamera::Flush() {
 	ClearRenderPools();
 
 	renderer.SetRenderTarget(renderer.GetMainRenderTarget());
-	SDL_RenderCopy(renderer.GetSDLRenderer(), target, NULL, NULL);
+	SDL_RenderCopy(renderer.GetSDLRenderer(), renderTarget.GetTargetTexture(), NULL, NULL);
 }
 
 //***************

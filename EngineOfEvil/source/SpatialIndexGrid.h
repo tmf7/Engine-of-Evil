@@ -80,7 +80,7 @@ public:
 	int						CellHeight() const;
 	void					SetGridSize(const int numRows, const int numColumns);
 	void					SetCellSize(const int cellWidth, const int cellHeight);
-	void					AddLayerDepth(const size_t depth);
+	void					AddLayerDepth(const std::size_t depth);
 
 	// iterator hooks
 	// DEBUG: if (usedRows < rows && usedColumns < columns) iteration reads unused cells
@@ -487,7 +487,7 @@ inline void eSpatialIndexGrid<type, rows, columns>::SetCellSize(const int cellWi
 // DEBUG: depth >= 0
 //******************
 template< class type, int rows, int columns>
-inline void eSpatialIndexGrid<type, rows, columns>::AddLayerDepth(const size_t depth) {
+inline void eSpatialIndexGrid<type, rows, columns>::AddLayerDepth(const std::size_t depth) {
 	layerDepths.emplace_back(depth);
 }
 

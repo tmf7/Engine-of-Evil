@@ -42,6 +42,9 @@ namespace evil {
 // DEBUG: eRenderer clears this texture
 // before drawing to it for the 
 // first time each frame, if it's dirty
+// DEBUG: this component does not provide
+// a relative offset from its owner's origin,
+// so SetOrigin on one affects both equally
 //*******************************
 class eRenderTarget : public eComponent {
 
@@ -50,19 +53,17 @@ class eRenderTarget : public eComponent {
 
 public:
 
-									eRenderTarget() = default;
-	virtual						   ~eRenderTarget() = default;
+									eRenderTarget(SDL_Renderer * context, int width, int height, const eVec2 & contextPosition = vec2_zero, const eVec2 & scale = vec2_one);
 
 	void							InitDefault(SDL_Renderer * context, const eVec2 & scale = vec2_one);
-	bool							Init(SDL_Renderer * context, int width, int height, const eVec2 & contextPosition = vec2_zero, const eVec2 & scale = vec2_one);
 	bool							Resize(int newWidth, int newHeight);
 	void							ClearIfDirty(const Uint32 currentTime);
 	void							Clear();
 	void							SetOrigin(const eVec2 & newOrigin);
 	void							SetScale(const eVec2 & newScale);
 	void							ResetScale();
-	const eVec2 &					GetOrigin() const												{ return origin; }
-	eVec2							GetOriginDelta() const											{ return origin - oldOrigin; }
+	const eVec2 &					GetOrigin() const												{ return owner->GetOrigin(); }
+	eVec2							GetOriginDelta() const											{ return owner->GetOrigin() - oldOrigin; }
 	const eVec2 &					GetScale() const												{ return scale; }
 	eVec2							GetScaleDelta() const											{ return scale - oldScale; }
 	const eBounds &					AbsBounds() const												{ return absBounds; }
@@ -71,12 +72,14 @@ public:
 	void							SetClearColor(const SDL_Color & newClearColor)					{ clearColor = newClearColor; }
 	Uint32							GetLastDrawnTime() const										{ return lastDrawnTime; }
 	void							SetLastDrawnTime(const Uint32 currentTime)						{ lastDrawnTime = currentTime;}
-	bool							IsNull() const													{ return target == nullptr; }
 	int								GetLayer() const												{ return layer; }
 	void							SetLayer(int newLayer)											{ layer = newLayer; }
 	bool							IsVisible() const												{ return visible; }
 	void							SetVisibility(bool newVisibility)								{ visible = newVisibility; }
-	void							Flush();
+	bool							IsNull() const													{ return (!isDefault && target == nullptr); }
+	bool							Validate();
+
+	virtual void					Update() override;
 
 private:
 
@@ -90,13 +93,13 @@ protected:
 	SDL_Color						clearColor		= { 128, 128, 128, SDL_ALPHA_TRANSPARENT };		// clearColor
 	eBounds							absBounds;														// target size and position within the main rendering context (world-space)
 	eVec2							defaultSize;													// allows scale up/down with minimal precision-loss
-	eVec2							origin			= vec2_zero;									// position offset when rendering to the main context
 	eVec2							oldOrigin		= vec2_zero;									// origin as of the last SetOrigin call
 	eVec2							scale			= vec2_one;										// scaling multipliers when rendering to the main context
 	eVec2							oldScale		= vec2_one;										// scale as of the last SetScale call
 	float							lastDrawnTime	= 0.0f;											// governs if *this should be cleared on a new frame
 	int								layer			= 0;											// allows high-level draw-order sorting of eRenderTargets during eRenderer::FlushRegisteredRenderTargets
 	bool							visible			= true;											// whether or not to copy *this to the main render target during eRenderer::FlushRegisteredRenderTargets
+	bool							isDefault		= false;										// if this is the default render target for the given context, where targets should be nullptr
 };
 
 // utility colors
@@ -109,7 +112,6 @@ extern const SDL_Color blueColor;
 extern const SDL_Color pinkColor;
 extern const SDL_Color lightBlueColor;
 extern const SDL_Color yellowColor;
-
 
 }      /* evil */
 

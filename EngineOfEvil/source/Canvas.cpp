@@ -25,31 +25,30 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 ===========================================================================
 */
 #include "Game.h"
-#include "Canvas.h"
+#include "Camera.h"
+#include "RenderImageIsometric.h"
 
 using namespace evil;
 
 ECLASS_DEFINITION(eGameObject, eCanvas)
 
 //***************
-// eCanvas::Configure
-// DEBUG: use this fn instead of eRenderTarget::Init to initialize *this
+// eCanvas::Init
 //***************
-void eCanvas::Configure(const eVec2 & size, const eVec2 & worldPosition, const eVec2 & scale, CanvasType type, eCamera * cameraToOverlay) {
+void eCanvas::Init(const eVec2 & size, const eVec2 & worldPosition, const eVec2 & scale, CanvasType type, eCamera * cameraToOverlay ) {
 	auto & renderer = game->GetRenderer();
 	const auto & context = renderer.GetSDLRenderer();
+	canvasType = type;
 	SDL_Point intSize = { eMath::NearestInt(size.x), eMath::NearestInt(size.y) };
-
-//	eRenderTarget::Init( context, intSize.x, intSize.y, worldPosition, scale);
-//	AddComponent<eRenderTarget>(context, intSize.x, intSize.y, worldPosition, scale);		// FIXME/TODO: ctor calls Init? either way AddComponent needs to verify the add was successful (bool or nullptr)
-
-
 	staticPool.reserve(MAX_IMAGES);
 	dynamicPool.reserve(MAX_IMAGES);
 
+	AddComponent<eRenderTarget>(this, context, intSize.x, intSize.y, worldPosition, scale);
+	renderTarget = GetComponent<eRenderTarget>();
+	
 	switch(type) {
 		case CanvasType::SCREEN_SPACE_OVERLAY: {
-//			renderer.RegisterRenderTarget(GetComponent<eRenderTarget>());					// FIXME/TODO: implement eGameObject::GetComponent
+			renderer.RegisterRenderTarget(&renderTarget);
 			return;
 		}
 
@@ -60,27 +59,45 @@ void eCanvas::Configure(const eVec2 & size, const eVec2 & worldPosition, const e
 		}
 
 		case CanvasType::WORLD_SPACE: {
+			// DEBUG: eRenderImageIsometric maintains the lifetime of eRenderTarget::target via its std::shared_ptr<eImage>,
+			// meaning eImageManager doesn't need to manage this image because it wil only ever be used by *this, and no other eGameObject
+			auto & initialImage = std::make_unique<eImage>(renderTarget.GetTargetTexture(), "WorldSpaceCanvasInstance", INVALID_ID);
+			initialImage->SetSubframes( std::vector<SDL_Rect> ( { SDL_Rect { 0, 0, intSize.x, intSize.y } } ) );
+			AddComponent< eRenderImageIsometric >( this, initialImage, eVec3( size.x, 2.0f, size.y ) );
+			renderImage = GetComponent< eRenderImageIsometric >();
 
-//			AddComponent<eRenderImageIsometric>( this, renderImage->target, eVec3( size.x, 2.0f, size.y ) );		// FIXME: do this (w/target made into an unregistered eImage) instead of the worldSpaceRI hack
-
-			// FIXME: should this get registered to the eImageManager?
-			// SOLUTION: no.
-			worldSpaceImage = std::make_unique<eImage>(target, "WorldSpaceCanvasInstance", INVALID_ID);
-			worldSpaceImage->SetSubframes( std::vector<SDL_Rect> ( 
-																	{ SDL_Rect { 0, 0, intSize.x, intSize.y } } 
-																 ) 
-										 );
-
-			// FIXME: eRenderImageIsometric needs to have an eGameObject owner pointer, and to be Updated
-			// SOLUTIN: ??? a dummy object? (still needs an eMap pointer though)
-			// make a distinciton between world-space/gameworld and a map (ie: a map fills the gameworld)
-			worldSpaceRenderImage = std::make_unique<eRenderImageIsometric> ( nullptr, 
-																			  worldSpaceImage, 
-																			  eVec3( size.x, 2.0f, size.y ) );
-
-			// FIXME: do this whenever *this moves or resizes (so it gets added to the eMap appropriately)
-			worldSpaceRenderImage->Update();
+			// FIXME(!!): eCanvas as a eGameObject still needs an eMap pointer set
 			return;				
+		}
+	}
+}
+
+//***************
+// eCanvas::Think
+// TODO: should the renderTarget also scale as if stretched? considering that the goal
+// is to have overlays display the same elements in the same relative positions
+// FIXME: make sure this eCanvas calls renderImage.Update() fn called whenever it moves or resizes (so it gets added to the eMap appropriately)
+// TODO: add an eCanvas::Resize that can resize the window or camera it overlays WHILE using a bool to decide if the contents should be scaled or just re-positioned...somehow,
+// meanwhile a worldspace eCanvas Resize should....just resize itself not the window|camera
+// SOLUITON: the renderPool objects have origins...which can have a non-destructive(?) offset applied if the canvas has been resized (w|w/o scaling...)
+// PROBLEM: if an eCamera::Resize changes the renderTarget size...but the camera has several registered eCanvas overlays...should
+// eCamera call resize on them...or should it wait for each eCanvas::Think to be called (when would they?)
+// PROBLEM(?): resizing the window should not resize the *main* camera? ... arguably it should...AND stretch/scale it...
+// SOLUTION: mark a camera as a percentage of the screen, then just maintain the percentage?... as its argubably an "overlay" on the main target
+// PROBLEM: and what does that mean for worldspace eCanvas size and scales??? nothing because theyre rendered through the eCamera...???
+//***************
+void eCanvas::Think() {
+	switch(canvasType) {
+		case CanvasType::SCREEN_SPACE_OVERLAY: {
+			// TODO: get the current window size and Resize the renderTexture
+		}
+
+		case CanvasType::CAMERA_SPACE_OVERLAY: { 
+			// TODO: get the current camera size???? and Resize the renderTexture
+		}
+
+		case CanvasType::WORLD_SPACE: {
+			return;							// TODO(?): is there something else the canvas needs to do in worldspace besides have its renderImage Updated
 		}
 	}
 }
@@ -96,7 +113,7 @@ void eCanvas::Configure(const eVec2 & size, const eVec2 & worldPosition, const e
 // and this eCamera's pools won't be cleared (as happens during Flush)
 //***************
 bool eCanvas::AddToRenderPool(eRenderImageBase* renderImage) {
-	if (renderImage->UpdateDrawnStatus(this))
+	if (renderImage->UpdateDrawnStatus(&renderTarget))
 		return false;
 
 	const auto & renderPool = (renderImage->Owner()->IsStatic() ? &staticPool : &dynamicPool);
@@ -118,7 +135,7 @@ void eCanvas::ClearRenderPools() {
 // this eCanvas's eRenderTarget texture, if any
 //**************
 void eCanvas::Flush() {
-	if (!visible)
+	if (!renderTarget.Validate())
 		return;
 
 	QuickSort(	staticPool.data(),
@@ -130,7 +147,7 @@ void eCanvas::Flush() {
 			});
 
 	auto & renderer = game->GetRenderer();
-	renderer.SetRenderTarget(this);
+	renderer.SetRenderTarget(&renderTarget);
 
 	for (auto && renderImage : staticPool)
 		renderer.DrawImage(renderImage);
@@ -138,5 +155,5 @@ void eCanvas::Flush() {
 	ClearRenderPools();
 
 	renderer.SetRenderTarget(renderer.GetMainRenderTarget());
-	SDL_RenderCopy(renderer.GetSDLRenderer(), target, NULL, NULL);
+	SDL_RenderCopy(renderer.GetSDLRenderer(), renderTarget.GetTargetTexture(), NULL, NULL);
 }

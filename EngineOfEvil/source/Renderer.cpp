@@ -25,6 +25,7 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 ===========================================================================
 */
 #include "Game.h"
+#include "RenderImageIsometric.h"
 
 using namespace evil;
 
@@ -133,7 +134,7 @@ void eRenderer::DrawOutlineText(eRenderTarget * target, const char * text, eVec2
 void eRenderer::DrawLines(eRenderTarget * target, const SDL_Color & color, std::vector<eVec2>  points) {
 	std::vector<SDL_Point> iPoints;
 	iPoints.reserve(points.size());
-	for (size_t i = 0; i < points.size(); ++i) {
+	for (std::size_t i = 0; i < points.size(); ++i) {
 		eMath::CartesianToIsometric(points[i].x, points[i].y);
 		points[i] -= target->GetOrigin();
 		points[i].SnapInt();
@@ -164,7 +165,7 @@ void eRenderer::DrawIsometricPrism(eRenderTarget * target, const SDL_Color & col
 	// convert to isometric rhombus
 	// and translate with camera
 	std::array<SDL_Point, 10> iPoints;
-	for (size_t i = 0; i < fPoints.size(); ++i) {
+	for (std::size_t i = 0; i < fPoints.size(); ++i) {
 		fPoints[i].x -= fPoints[i].z;
 		fPoints[i].y -= fPoints[i].z;
 		eMath::CartesianToIsometric(fPoints[i].x, fPoints[i].y);
@@ -204,7 +205,7 @@ void eRenderer::DrawIsometricRect(eRenderTarget * target, const SDL_Color & colo
 	// convert to isometric rhombus
 	// and translate with camera
 	std::array<SDL_Point, 5> iPoints;
-	for (size_t i = 0; i < fPoints.size(); ++i) {
+	for (std::size_t i = 0; i < fPoints.size(); ++i) {
 		eMath::CartesianToIsometric(fPoints[i].x, fPoints[i].y);
 		fPoints[i] -= target->GetOrigin();
 		fPoints[i].SnapInt();

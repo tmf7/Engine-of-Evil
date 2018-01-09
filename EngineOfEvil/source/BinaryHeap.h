@@ -77,7 +77,7 @@ public:
 	bool					IsEmpty() const;
 
 	// memory management
-	size_t					Allocated() const;
+	std::size_t					Allocated() const;
 	void					SetGranularity(const int newGranularity);
 	void					Resize(const int newCapacity);
 	void					Clear();
@@ -562,7 +562,7 @@ inline void eHeap<type, lambdaCompare>::Allocate(const int newCapacity) {
 // returns the total memory allocated 
 //**************
 template<class type, class lambdaCompare>
-inline size_t eHeap<type, lambdaCompare>::Allocated() const {
+inline std::size_t eHeap<type, lambdaCompare>::Allocated() const {
 	return (heap == nullptr) * capacity * sizeof(type);
 }
 

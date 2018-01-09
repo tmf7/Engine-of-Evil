@@ -146,7 +146,7 @@ bool eTileImpl::LoadTileset(const char * tilesetFilename, bool appendNew) {
 
 	// read how many tiles are about to be loaded
 	// to minimize dynamic allocations
-	size_t numTiles = 0;
+	std::size_t numTiles = 0;
 	read >> numTiles;
 	if (!VerifyRead(read))
 		return false;
@@ -209,7 +209,14 @@ eTile::eTile(eGridCell * cellOwner, const eVec2 & origin, const int type, const 
 	: cellOwner(cellOwner) {
 	map = cellOwner->GetMap();
 	SetWorldLayer(layer);
-	renderImage = std::make_unique<eRenderImageIsometric>(this);		// all tiles currently have an isometric renderimage by default
+
+	// currently all tiles have an eRenderImageIsometric by default
+	// DEBUG: the call to SetType duplicates some of the eRenderImageIsometric component initialization here, 
+	// so the minimum complex arguments are used in this call
+	AddComponent<eRenderImageIsometric>( this, 
+										 game->GetImageManager().GetByResourceID(eTileImpl::tileSet.at(type).first),
+										 eTileImpl::tileTypes[type].renderBlockSize
+									   );
 	SetType(type);
 	SetOrigin(origin);
 	UpdateComponents();
@@ -219,9 +226,9 @@ eTile::eTile(eGridCell * cellOwner, const eVec2 & origin, const int type, const 
 // eTile::SetType
 //************
 void eTile::SetType(int newType) {
-	// if this is a type change, not just an initialization, then clear the collisionModel properties
-	collisionModel = nullptr;
-	eRenderImageIsometric * isoRenderImage = static_cast<eRenderImageIsometric *>(renderImage.get());
+	// changing to a different tile type that may not have a collider
+	RemoveComponent<eCollisionModel>();
+	auto isoRenderImage = &GetComponent<eRenderImageIsometric>();
 
 	impl = &eTileImpl::tileTypes[newType];																		// DEBUG: assumes newType is defined
 	isoRenderImage->Image() = game->GetImageManager().GetByResourceID(eTileImpl::tileSet.at(newType).first);	// which image (tile atlas)
@@ -233,10 +240,6 @@ void eTile::SetType(int newType) {
 	isoRenderImage->SetOffset(eVec2(-isoCellWidthAdjustment, isoCellHeightAdjustment - (float)isoRenderImage->GetImageFrame()->h));
 	isoRenderImage->SetRenderBlockSize(impl->renderBlockSize);
 
-	if (impl->collider != nullptr) {
-		collisionModel = std::make_unique<eCollisionModel>(this);
-		collisionModel->SetActive(true);
-		collisionModel->SetLocalBounds(*(impl->collider));
-//		collisionModel->SetOffset(vec2_zero);
-	}
+	if (impl->collider != nullptr) 
+		AddComponent<eCollisionModel>(this, *(impl->collider), vec2_zero, true);		// currently no collider offset and all tile colliders are set active
 }

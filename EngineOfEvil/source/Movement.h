@@ -27,11 +27,11 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 #ifndef EVIL_MOVEMENTPLANNER_H
 #define EVIL_MOVEMENTPLANNER_H
 
-#include "Definitions.h"
-#include "Deque.h"
 #include "SpatialIndexGrid.h"
+#include "CollisionModel.h"
+#include "GridIndex.h"
 #include "Bounds.h"
-#include "Component.h"
+#include "Deque.h"
 
 namespace evil {
 
@@ -114,6 +114,8 @@ private:
 	} pathfindingType_t;
 
 private:
+
+	eCollisionModel &		ownerCollisionModel;			// always confirmed
 
 	known_map_t				knownMap;						// tracks visited tiles 
 	movementType_t			moveState;						// backtracking or heading to a goal
