@@ -57,15 +57,14 @@ const SDL_Color yellowColor			= { 255, 255, 0, SDL_ALPHA_OPAQUE };
 //***************************
 // eRenderTarget::eRenderTarget
 // creates a new SDL_Texture within the given param context
-// and sets its rendering position within the context to param contextPosition
 // returns true on success, false on failure
 //***************************
-eRenderTarget::eRenderTarget(SDL_Renderer * context, int width, int height, const eVec2 & contextPosition, const eVec2 & scale)
-	: defaultSize(eVec2((float)width, (float)height)) {
+eRenderTarget::eRenderTarget(eGameObject * owner, SDL_Renderer * context, int width, int height, const eVec2 & scale)
+	: width(width),
+	  height(height) {
+	this->owner = owner;
 	InitDefault(context, scale);
 	isDefault = false;
-	SetOrigin(contextPosition);
-	UpdateBounds();
 
 	target = SDL_CreateTexture( context,
 								SDL_PIXELFORMAT_ARGB8888,						// DEBUG: this format may not work for all images
@@ -73,8 +72,10 @@ eRenderTarget::eRenderTarget(SDL_Renderer * context, int width, int height, cons
 								width,
 								height );
 
-	if (IsNull())
+	if (IsNull()) {
+		EVIL_ERROR_LOG.LogError("Failed to allocate new eRenderTarget texture.", __FILE__, __LINE__);
 		return;
+	}
 
 	// ensure the target can alpha-blend
 	SDL_SetTextureBlendMode(target, SDL_BLENDMODE_BLEND);
@@ -112,28 +113,32 @@ bool eRenderTarget::Resize(int newWidth, int newHeight) {
 		SDL_RenderCopy(context, target, nullptr, nullptr) == -1 ||
 		SDL_SetRenderTarget(context, currentTarget) == -1) {
 		SDL_DestroyTexture(newTarget);
+		EVIL_ERROR_LOG.LogError("Failed to allocate new eRenderTarget texture.", __FILE__, __LINE__);
 		return false;
 	}
 
 	SDL_DestroyTexture(target);
 	target = newTarget;
-	defaultSize = eVec2((float)newWidth, (float)newHeight);
-	UpdateBounds();
+	width = newWidth;
+	height = newHeight;
 	return true;
 }
 
-//***************************
-// eRenderTarget::Update
-//***************************
-void eRenderTarget::Update() {
-	SetOrigin( owner->GetOrigin() );	// synchronize owner origin and absBounds
+//***************
+// eRenderTarget::Validate
+// attempts to validate if IsNull is true
+// returns false if *this can't be drawn to
+// returns true otherwise
+//***************
+bool eRenderTarget::Validate() {
+	return ( !IsNull() || Resize( width, height ) );
 }
 
 //***************************
 // eRenderTarget::Clear
 //***************************
 void eRenderTarget::Clear()	{ 
-	if ( IsNull() && !Resize( ( int )defaultSize.x, ( int )defaultSize.y ) )
+	if ( !Validate() )
 		return;
 
 	auto currentTarget = SDL_GetRenderTarget(context);
@@ -153,49 +158,12 @@ void eRenderTarget::ClearIfDirty(const Uint32 currentTime)	{
 	}
 }
 
-//***************
-// eRenderTarget::UpdateBounds
-// ensures absBounds is syncronized with the scale
-//***************
-void eRenderTarget::UpdateBounds() {
-	eVec2 scaledSize = eVec2( defaultSize.x / scale.x, defaultSize.y / scale.y );
-	const auto & origin = GetOrigin();
-	absBounds = eBounds(origin, origin + scaledSize);
-}
-
-//***************
-// eRenderTarget::SetOrigin
-//***************
-void eRenderTarget::SetOrigin(const eVec2 & newOrigin) {
-	oldOrigin = owner->GetOrigin();
-	owner->SetOrigin(newOrigin);
-	UpdateBounds(); 
-}
-
-//***************
-// eRenderTarget::SetScale
-//***************
-void eRenderTarget::SetScale(const eVec2 & newScale) { 
-	oldScale = scale;
-	scale = newScale; 
-	UpdateBounds(); 
-}
-
-//***************
-// eRenderTarget::ResetScale
-// resets the scale to vec2_one
-//***************
-void eRenderTarget::ResetScale() {
-	scale = vec2_one; 
-	UpdateBounds(); 
-}
-
-//***************
-// eRenderTarget::Validate
-// returns false if *this can't or shouldn't be drawn to
-// returns true otherwise
-// DEBUG: attempts to validate if IsNull is true
-//***************
-bool eRenderTarget::Validate() {
-	return (visible && ( !IsNull() || Resize( ( int )defaultSize.x, ( int )defaultSize.y ) ) );
+//***************************
+// eRenderTarget::GetOrigin
+// if the eGameObject owner is nullptr (as for the main/default render target)
+// returns vec2_zero, otherwise
+// returns the owner's orthoOrigin
+//***************************
+const eVec2 & eRenderTarget::GetOrigin() const {
+	return ( owner == nullptr ? vec2_zero : owner->GetOrigin() );
 }

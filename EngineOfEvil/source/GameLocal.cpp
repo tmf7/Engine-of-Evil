@@ -39,15 +39,14 @@ eGame *						game = &logic::gameLocal;	// statically pointed at an eGameLocal
 //***********************
 bool eGameLocal::Init() {
 	auto windowSize = gameLocal.GetRenderer().ViewArea();
-	camera.Init(eVec2((float)windowSize.w, (float)windowSize.h), vec2_zero);
+	camera.Init(&map, eVec2((float)windowSize.w, (float)windowSize.h), vec2_zero);
 
 	gameLocal.GetEntityPrefabManager().SetCreatePrefabStrategy(std::make_shared<eCreateEntityPrefabUser>());
 
 	map.SetViewCamera(&camera);
 	player.SetMap(&map);
 
-	// TODO: just load a map, there's no real init...unless setting the view camera were it (and that can't fail)
-	if (!map.Init()) {
+	if (!map.LoadMap("Graphics/Maps/EvilTown2.emap")) {
 		EVIL_ERROR_LOG.ErrorPopupWindow("MAP INIT FAILURE");
 		return false;
 	}

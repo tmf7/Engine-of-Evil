@@ -53,52 +53,36 @@ class eRenderTarget : public eComponent {
 
 public:
 
-									eRenderTarget(SDL_Renderer * context, int width, int height, const eVec2 & contextPosition = vec2_zero, const eVec2 & scale = vec2_one);
+									eRenderTarget(eGameObject * owner, SDL_Renderer * context, int width, int height, const eVec2 & scale = vec2_one);
 
 	void							InitDefault(SDL_Renderer * context, const eVec2 & scale = vec2_one);
 	bool							Resize(int newWidth, int newHeight);
 	void							ClearIfDirty(const Uint32 currentTime);
 	void							Clear();
-	void							SetOrigin(const eVec2 & newOrigin);
-	void							SetScale(const eVec2 & newScale);
-	void							ResetScale();
-	const eVec2 &					GetOrigin() const												{ return owner->GetOrigin(); }
-	eVec2							GetOriginDelta() const											{ return owner->GetOrigin() - oldOrigin; }
+	const eVec2 &					GetOrigin() const;
+	int								GetWidth() const												{ return width; }
+	int								GetHeight() const												{ return height; }
+	void							SetScale(const eVec2 & newScale)								{ scale = newScale; }
+	void							ResetScale()													{ scale = vec2_one; }
 	const eVec2 &					GetScale() const												{ return scale; }
-	eVec2							GetScaleDelta() const											{ return scale - oldScale; }
-	const eBounds &					AbsBounds() const												{ return absBounds; }
 	SDL_Texture * const				GetTargetTexture() const										{ return target; }
 	const SDL_Color &				GetClearColor() const											{ return clearColor; }
 	void							SetClearColor(const SDL_Color & newClearColor)					{ clearColor = newClearColor; }
 	Uint32							GetLastDrawnTime() const										{ return lastDrawnTime; }
 	void							SetLastDrawnTime(const Uint32 currentTime)						{ lastDrawnTime = currentTime;}
-	int								GetLayer() const												{ return layer; }
-	void							SetLayer(int newLayer)											{ layer = newLayer; }
-	bool							IsVisible() const												{ return visible; }
-	void							SetVisibility(bool newVisibility)								{ visible = newVisibility; }
 	bool							IsNull() const													{ return (!isDefault && target == nullptr); }
+	bool							IsDefaultTarget() const											{ return isDefault; }
 	bool							Validate();
-
-	virtual void					Update() override;
-
-private:
-
-	void							UpdateBounds();
-
 
 protected:
 
 	SDL_Renderer *					context			= nullptr;										// back-pointer to eRenderer-allocated rendering context for target
 	SDL_Texture *					target			= nullptr;										// DEBUG: nullptr is the default rendering target for an SDL_Renderer context
 	SDL_Color						clearColor		= { 128, 128, 128, SDL_ALPHA_TRANSPARENT };		// clearColor
-	eBounds							absBounds;														// target size and position within the main rendering context (world-space)
-	eVec2							defaultSize;													// allows scale up/down with minimal precision-loss
-	eVec2							oldOrigin		= vec2_zero;									// origin as of the last SetOrigin call
 	eVec2							scale			= vec2_one;										// scaling multipliers when rendering to the main context
-	eVec2							oldScale		= vec2_one;										// scale as of the last SetScale call
 	float							lastDrawnTime	= 0.0f;											// governs if *this should be cleared on a new frame
-	int								layer			= 0;											// allows high-level draw-order sorting of eRenderTargets during eRenderer::FlushRegisteredRenderTargets
-	bool							visible			= true;											// whether or not to copy *this to the main render target during eRenderer::FlushRegisteredRenderTargets
+	int								width			= 0;
+	int								height			= 0;
 	bool							isDefault		= false;										// if this is the default render target for the given context, where targets should be nullptr
 };
 

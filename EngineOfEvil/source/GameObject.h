@@ -48,70 +48,69 @@ class eGameObject : public eClass {
 
 public:
 	
-	virtual								   ~eGameObject() = default;
-											eGameObject() = default;
-											eGameObject( const eGameObject & other );
-											eGameObject( eGameObject && other );
-	eGameObject &							operator=( eGameObject other );
+	virtual									   ~eGameObject() = default;
+												eGameObject() = default;
+												eGameObject( const eGameObject & other );
+												eGameObject( eGameObject && other );
+	eGameObject &								operator=( eGameObject other );
 
+	virtual void								Think()										{}
+	virtual void								DebugDraw( eRenderTarget * renderTarget )	{}
 
-	virtual void							Think()										{}
-	virtual void							DebugDraw( eRenderTarget * renderTarget )	{}
+	void										UpdateComponents();	
+	eMap * const								GetMap()								{ return map; }
+	const eVec2 &								GetOrigin()								{ return orthoOrigin; }
+	void										SetOrigin( const eVec2 & newOrigin )	{ orthoOrigin = newOrigin; }
+	Uint32										GetWorldLayer()							{ return worldLayer; }
+	void										SetWorldLayer( Uint32 layer );
+	void										SetWorldLayer( float zPosition );
+	void										SetZPosition( float newZPosition );
+	float										GetZPosition() const					{ return zPosition; }
+	bool										IsStatic() const						{ return isStatic; }
+	void										SetStatic( bool isStatic )				{ this->isStatic = isStatic; }
+	bool										IsEnabled() const						{ return enabled; }
+	void										Enable()								{ enabled = true; }
+	void										Disable()								{ enabled = false; }
 
-	void									UpdateComponents();	
-	eMap * const							GetMap()								{ return map; }
-	const eVec2 &							GetOrigin()								{ return orthoOrigin; }
-	void									SetOrigin( const eVec2 & newOrigin )	{ orthoOrigin = newOrigin; }
-	Uint32									GetWorldLayer()							{ return worldLayer; }
-	void									SetWorldLayer( Uint32 layer );
-	void									SetWorldLayer( float zPosition );
-	void									SetZPosition( float newZPosition );
-	float									GetZPosition() const					{ return zPosition; }
-	bool									IsStatic() const						{ return isStatic; }
-	void									SetStatic( bool isStatic )				{ this->isStatic = isStatic; }
-
-// FREEHILL BEGIN generic component test
 	template< class ComponentType, typename... Args >
-	void									AddComponent( eGameObject * owner, Args&&... params );
+	void										AddComponent( eGameObject * owner, Args&&... params );
 
 	template< class ComponentType >
-	ComponentType &							GetComponent();
+	ComponentType &								GetComponent();
 
 	template< class ComponentType >
-	bool									RemoveComponent();
+	const ComponentType &						GetComponent() const;
 
 	template< class ComponentType >
-	std::vector< ComponentType * >			GetComponents();
+	std::vector< ComponentType * >				GetComponents();
 
 	template< class ComponentType >
-	int										RemoveComponents();
+	std::vector< ComponentType * const>			GetComponents() const;
 
-/*
-	// GetComponent (const)
-	// GetComponents (const)
-	// TODO: ??? something ???
-*/
-// FREEHILL END generic component test
+	template< class ComponentType >
+	bool										RemoveComponent();
+
+	template< class ComponentType >
+	int											RemoveComponents();
 
 private:
 
-	void									UpdateComponentsOwner();
+	void										UpdateComponentsOwner();
 
 protected:
 
-	eHashIndex								 componentsTypeHash;				// reduces component lookup time to average case O(1) using the types as hash keys
-	std::vector<std::unique_ptr<eComponent>> components;						// all eComponent-derived objects *this owns
-	eMap *									 map;								// back-pointer to the eMap object owns *this
+	eMap *										map;								// back-pointer to the eMap object owns *this
 	
 private:
 
-	eVec2									orthoOrigin;						// orthographic 2D global transfrom coordinates
-	float									zPosition			= 0.0f;			// 3D position used for fluid renderBlock positioning (TODO: and other 3D related tasks)
-	Uint32									worldLayer			= MAX_LAYER;	// common layer on the eMap::tileMap (can position renderBlock and TODO: filters collision)
-	bool									isStatic			= true;			// if orthoOrigin ever changes at runtime, speeds up draw-order sorting
+	eHashIndex									componentsTypeHash;					// reduces component lookup time to average case O(1) using the types as hash keys
+	std::vector<std::unique_ptr<eComponent>>	components;							// all eComponent-derived objects *this owns
+	eVec2										orthoOrigin;						// orthographic 2D global transfrom coordinates
+	float										zPosition			= 0.0f;			// 3D position used for fluid renderBlock positioning (TODO: and other 3D related tasks)
+	Uint32										worldLayer			= MAX_LAYER;	// common layer on the eMap::tileMap (can position renderBlock and TODO: filters collision)
+	bool										isStatic			= true;			// if orthoOrigin ever changes at runtime, speeds up draw-order sorting
+	bool										enabled				= true;			// if *this should be updated and/or drawn
 };
-
-// FREEHILL BEGIN generic component test
 
 //***************
 // eGameObject::AddComponent
@@ -158,6 +157,52 @@ ComponentType &	eGameObject::GetComponent() {
 	return *std::unique_ptr< ComponentType >( nullptr );
 }
 
+
+//***************
+// eGameObject::GetComponent
+// see non-const GetComponent
+//***************
+template< class ComponentType >
+const ComponentType &	eGameObject::GetComponent() const {
+	return GetComponent<ComponentType>();
+}
+
+//***************
+// eGameObject::GetComponents
+// returns a vector of pointers to the the requested component template type following the same match criteria as GetComponent
+// DEGUG: the compiler has the option to copy-elide or move-construct componentsOfType into the return value here
+// TODO: pass in the number of elements desired (eg: up to 7, or only the first 2) which would allow a std::array return value,
+// except there'd need to be a separate fn for getting them *all* if the user doesn't know how many such Components the GameObject has
+// TODO: define a GetComponentAt<ComponentType, int>() that can directly grab up to the the n-th component of the requested type
+//***************
+template< class ComponentType >
+std::vector< ComponentType * > eGameObject::GetComponents() {
+	std::vector< ComponentType * > componentsOfType;
+
+	for ( int index = componentsTypeHash.First( ComponentType::Type ); index != INVALID_ID; index = componentsTypeHash.Next( index ) ) {
+		if ( components[ index ]->IsClassType( ComponentType::Type ) )
+			componentsOfType.emplace_back( static_cast< ComponentType * >( components[ index ].get() ) );
+	}
+
+	return componentsOfType;
+}
+
+//***************
+// eGameObject::GetComponents
+// see non-const GetComponents
+//***************
+template< class ComponentType >
+std::vector< ComponentType * const> eGameObject::GetComponents() const {
+	std::vector< ComponentType * const> componentsOfType;
+
+	for ( int index = componentsTypeHash.First( ComponentType::Type ); index != INVALID_ID; index = componentsTypeHash.Next( index ) ) {
+		if ( components[ index ]->IsClassType( ComponentType::Type ) )
+			componentsOfType.emplace_back( static_cast< ComponentType * const>( components[ index ].get() ) );
+	}
+
+	return componentsOfType;
+}
+
 //***************
 // eGameObject::RemoveComponent
 // sets the most recently added matching template type component pointer to nullptr,
@@ -183,26 +228,6 @@ bool eGameObject::RemoveComponent() {
 }
 
 //***************
-// eGameObject::GetComponents
-// returns a vector of pointers to the the requested component template type following the same match criteria as GetComponent
-// DEGUG: the compiler has the option to copy-elide or move-construct componentsOfType into the return value here
-// TODO: pass in the number of elements desired (eg: up to 7, or only the first 2) which would allow a std::array return value,
-// except there'd need to be a separate fn for getting them *all* if the user doesn't know how many such Components the GameObject has
-// TODO: define a GetComponentAt<ComponentType, int>() that can directly grab up to the the n-th component of the requested type
-//***************
-template< class ComponentType >
-std::vector< ComponentType * > eGameObject::GetComponents() {
-	std::vector< ComponentType * > componentsOfType;
-
-	for ( int index = componentsTypeHash.First( ComponentType::Type ); index != INVALID_ID; index = componentsTypeHash.Next( index ) ) {
-		if ( components[ index ]->IsClassType( ComponentType::Type ) )
-			componentsOfType.emplace_back( static_cast< ComponentType * >( components[ index ].get() ) );
-	}
-
-	return componentsOfType;
-}
-
-//***************
 // eGameObject::RemoveComponents
 // returns the number of successful removals, or 0 if none are removed
 //***************
@@ -218,8 +243,6 @@ int eGameObject::RemoveComponents() {
 
 	return numRemoved;
 }
-
-// FREEHILL END generic component test
 
 }      /* evil */
 #endif /* EVIL_GAMEOBJECT_H */

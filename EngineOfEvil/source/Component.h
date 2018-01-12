@@ -72,6 +72,9 @@ public:
 
 	const eGameObject *							Owner() const								{ return owner; }
 	eGameObject *								Owner()										{ return owner; }
+	bool										IsEnabled() const							{ return enabled; }
+	void										Enable()									{ enabled = true; }
+	void										Disable()									{ enabled = false; }
 
 	virtual void								SetOwner(eGameObject * newOwner)			{ owner = newOwner; }
 
@@ -83,7 +86,8 @@ public:
 
 protected:
 
-	eGameObject *								owner = nullptr;			// back-pointer to user managing the lifetime of *this
+	eGameObject *								owner		= nullptr;			// back-pointer to user managing the lifetime of *this
+	bool										enabled		= true;				// if *this should be updated
 };
 
 }      /* evil */

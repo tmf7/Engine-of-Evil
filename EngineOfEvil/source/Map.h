@@ -47,7 +47,8 @@ class eMap : public eClass {
 
 public:
 
-	bool													Init();
+															eMap();
+
 	void													EntityThink();
 	void													Draw();
 	void													DebugDraw();

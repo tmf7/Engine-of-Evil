@@ -33,13 +33,12 @@ namespace evil {
 
 //***********************************************
 //				eCamera 
-// Mobile 2D Axis-Aligned Orthographic box 
-// that draws eRenderImageIsometric objects to
-// its eRenderTarget texture during eRenderer::Flush
-// with draw-order sorting based on eRenderImageIsometric::renderBlock worldPositions.
-// Camera-Overlay type eCanvases also get registered and flushed on *this.
-// Adds uniform scaling (zoom) functionality to eRenderTarget,
-// and converts screen coordinates into isometric-world space.
+// Mobile/Resizable/Zoomable 2D Axis-Aligned Orthographic box 
+// that observes the game world and draws both
+// its registered overlay eCanvases and what's within
+// its bounds in the game world to the main rendering texture during eRenderer::Flush. 
+// Performs draw-order sorting based on eRenderImageIsometric::renderBlock worldPositions.
+// Performs conversions from mouse coordinates into isometric-world space coordinates.
 //***********************************************
 class eCamera : public eGameObject {
 
@@ -47,13 +46,14 @@ class eCamera : public eGameObject {
 
 public:
 
-	void											Init(const eVec2 & size, const eVec2 & worldPosition, float zoomLevel = 1.0f, float panSpeed = defaultCamSpeed);
-	bool											Resize(int newWidth, int newHeight);
+	void											Init(eMap * onMap, const eVec2 & size, const eVec2 & worldPosition, float zoomLevel = 1.0f, float panSpeed = defaultCamSpeed);
 	const eBounds &									AbsBounds() const;
+	void											Resize(const eVec2 & newSize);
 	void											ZoomIn();
 	void											ZoomOut();
 	void											SetZoom(float newZoomLevel);
 	float											GetZoom() const;
+	void											ResetZoom();
 	bool											Moved() const;
 	eVec2											ScreenToWorldPosition(const eVec2 & screenPoint) const;
 	eVec2											MouseWorldPosition() const;
@@ -80,12 +80,14 @@ private:
 
 	// DEBUG: this reference member has a lifetime dictated by its eGameObject owner (ie: *this)
 	// DEBUG: this aggregation prevents the compiler from generating an assignment operator
-	// TODO: if needed, write the assignment operator to perform new GetComponent<> on the new object's reference member
-	eRenderTarget &									renderTarget;
-	
+	// TODO: if needed, write the assignment operator to perform new GetComponent<> on the new object's reference members
+	eCollisionModel &								collisionModel;
+
 	std::vector<eRenderImageIsometric *>			dynamicPool;				// dynamic eGameObjects to draw, minimizes priority re-calculations of dynamic vs. static eGameObjects
 	std::vector<eRenderImageIsometric *>			staticPool;					// static eGameObjects that move and scale with this camera's renderTargets
-	std::vector<eCanvas *>							registeredOverlays;			// eCanvases to draw after the staticPool and dynamicPool have flushed
+	std::vector<eCanvas *>							registeredOverlays;			// eCanvases to draw after the staticPool and dynamicPool have flushe
+	eVec2											defaultSize;				// allows for uniform zoom in|out and zoom reset
+	float											zoom;						// defaultSize multiplier
 	float											panSpeed;
 	bool											moved;						// if position or zoom has changed since the last frame
 };	

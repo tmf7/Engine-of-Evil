@@ -251,48 +251,93 @@ void eRenderer::DrawImage(eRenderImageBase * renderImage) const {
 }
 
 //***************
-// eRenderer::RegisterRenderTarget
-// registered eRenderTargets can have their renderPools Flushed
+// eRenderer::RegisterCamera
+// registered eCameras can have their renderPools Flushed
 // directly to the main render target
-// returns true if the eRenderTarget was not already
+// returns true if the eCamera was not already
 // registered to *this, and could be added
 // returns false otherwise
 //***************
-bool eRenderer::RegisterRenderTarget(eRenderTarget * newTarget) {
-	bool addSuccess = (std::find(registeredTargets.begin(), registeredTargets.end(), newTarget) == registeredTargets.end());
+bool eRenderer::RegisterCamera(eCamera * newCamera) {
+	bool addSuccess = (std::find(registeredCameras.begin(), registeredCameras.end(), newCamera) == registeredCameras.end());
 	if (addSuccess)
-		registeredTargets.emplace_back(newTarget);
+		registeredCameras.emplace_back(newCamera);
 
 	return addSuccess;
 }
 
 //***************
-// eRenderer::UnregisterRenderTarget
-// returns true if the eRenderTarget existed
+// eRenderer::UnregisterCamera
+// returns true if the eCamera existed
 // and was removed from those registered to *this
 // returns false otherwise
 //***************
-bool eRenderer::UnregisterRenderTarget(eRenderTarget * target) {
-	const auto & searchIndex = std::find(registeredTargets.begin(), registeredTargets.end(), target);
-	bool removeSuccess = (searchIndex != registeredTargets.end());
+bool eRenderer::UnregisterCamera(eCamera * camera) {
+	const auto & searchIndex = std::find(registeredCameras.begin(), registeredCameras.end(), camera);
+	bool removeSuccess = (searchIndex != registeredCameras.end());
 	if (removeSuccess)
-		registeredTargets.erase(searchIndex);
+		registeredCameras.erase(searchIndex);
 
 	return removeSuccess;
 }
 
 //***************
-// eRenderer::UnregisterAllRenderTargets
+// eRenderer::UnregisterAllCameras
 //***************
-void eRenderer::UnregisterAllRenderTargets() {
-	registeredTargets.clear();
+void eRenderer::UnregisterAllCameras() {
+	registeredCameras.clear();
 }
 
 //***************
-// eRenderer::NumRegisteredRenderTarget
+// eRenderer::NumRegisteredCameras
 //***************
-int eRenderer::NumRegisteredRenderTarget() const {
-	return registeredTargets.size();
+int eRenderer::NumRegisteredCameras() const {
+	return registeredCameras.size();
+}
+
+//***************
+// eRenderer::RegisterOverlayCanvas
+// registered overlay eCanvases can have their renderPools Flushed
+// directly to the main render target
+// returns true if the eCanvas was not already
+// registered to *this, and could be added
+// returns false otherwise
+//***************
+bool eRenderer::RegisterOverlayCanvas(eCanvas * newCanvas) {
+	bool addSuccess = (std::find(registeredOverlayCanvases.begin(), registeredOverlayCanvases.end(), newCanvas) == registeredOverlayCanvases.end());
+	if (addSuccess)
+		registeredOverlayCanvases.emplace_back(newCanvas);
+
+	return addSuccess;
+}
+
+//***************
+// eRenderer::UnregisterOverlayCanvas
+// returns true if the eCanvas existed
+// and was removed from those registered to *this
+// returns false otherwise
+//***************
+bool eRenderer::UnregisterOverlayCanvas(eCanvas * canvas) {
+	const auto & searchIndex = std::find(registeredOverlayCanvases.begin(), registeredOverlayCanvases.end(), canvas);
+	bool removeSuccess = (searchIndex != registeredOverlayCanvases.end());
+	if (removeSuccess)
+		registeredOverlayCanvases.erase(searchIndex);
+
+	return removeSuccess;
+}
+
+//***************
+// eRenderer::UnregisterAllOverlayCanvases
+//***************
+void eRenderer::UnregisterAllOverlayCanvases() {
+	registeredOverlayCanvases.clear();
+}
+
+//***************
+// eRenderer::NumRegisteredOverlayCanvases
+//***************
+int eRenderer::NumRegisteredOverlayCanvases() const {
+	return registeredOverlayCanvases.size();
 }
 
 //***************
@@ -338,13 +383,13 @@ void eRenderer::VisitTopologicalNode(eRenderImageIsometric * renderImage) {
 }
 
 //***************
-// eRenderer::FlushRegisteredTargets
-// calls flush on all registered eRenderTargets that have
+// eRenderer::Flush
+// calls flush on all registered eCameras and eCanvases that have
 // eRenderImageBase-derived objects queued to be drawn
 // then copys each registered eRenderTarget to the mainRenderTarget
 // according to its type (overlay|world-space) and proximity to the viewer
 //***************
-void eRenderer::FlushRegisteredTargets() {
+void eRenderer::Flush() {
 
 	// TODO: any eCanvas renderTargets here are automatically overlays
 	// because camera overlays are registered to them,

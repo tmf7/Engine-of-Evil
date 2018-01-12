@@ -25,8 +25,8 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 ===========================================================================
 */
 #include "Game.h"
-#include "Camera.h"
 #include "RenderImageIsometric.h"
+#include "CollisionModel.h"
 
 using namespace evil;
 
@@ -35,29 +35,36 @@ ECLASS_DEFINITION(eGameObject, eCamera)
 //***************
 // eCamera::Init
 // DEBUG: automatically registers *this with the eGame->eRenderer object
+// FIXME: a user may neglect to call Init, leaving collisionModel undefined
+// SOLUTION: check for bool initialized or nullptr collisionModel in fns that use collisionModel
+// SOLUTION: collisionModel may need a default construction anyway (ie define eCamera::eCamera)
+// FIXME/BUG: eRenderer::DrawWhatever performs point -= target->GetOrigin(); which gets the owner's origin (if any)
+// BUT if eCamera draws directly to the mainRenderTarget, then there is no owner to query the origin of (ie vec2_zero),
+// SOLUTION: ??? give eCamera a renderTarget again?
 //***************
-void eCamera::Init(const eVec2 & size, const eVec2 & worldPosition, float zoomLevel, float panSpeed) {
-	auto & renderer = game->GetRenderer();
-	const auto & context = renderer.GetSDLRenderer();
+void eCamera::Init(eMap * onMap, const eVec2 & size, const eVec2 & worldPosition, float zoomLevel, float panSpeed) {
 	this->panSpeed = panSpeed;
-	SDL_Point intSize = { eMath::NearestInt(size.x), eMath::NearestInt(size.y) };
+	map = onMap;
+	SetOrigin(worldPosition);
 	staticPool.reserve(MAX_IMAGES);
 	dynamicPool.reserve(MAX_IMAGES);
 
-	AddComponent<eRenderTarget>(this, context, intSize.x, intSize.y, worldPosition, vec2_one * zoomLevel);
-	renderTarget = GetComponent<eRenderTarget>();
-	renderer.RegisterRenderTarget(&renderTarget);
+	// DEBUG: leaves this eCollisionModel with active == false so no collision detection occurs
+	AddComponent<eCollisionModel>(this, eBounds(-size * 0.5f, size * 0.5f));
+	collisionModel = GetComponent<eCollisionModel>();
+	game->GetRenderer().RegisterCamera(this);
 }
 
 //***************
 // eCamera::Think
 // FIXME/TODO: a different fn should control the camera movement, and any of its restrictions
 // because there can be more than one eCamera instance in a game
+// FIXME(~): stay centered on the same origin when zooming (should be fixed already)
 //***************
 void eCamera::Think() {
-	auto & input = game->GetInput();
-	const eVec2 oldBoundsCenter = renderTarget.AbsBounds().Center();		// stay centered on the same point when zooming in/out, it's less jarring
+	moved = false;
 
+	auto & input = game->GetInput();
 	if (input.KeyPressed(SDL_SCANCODE_EQUALS) || input.GetMouseScroll() > 0)
 		ZoomIn();
 	else if (input.KeyPressed(SDL_SCANCODE_MINUS) || input.GetMouseScroll() < 0)
@@ -65,59 +72,55 @@ void eCamera::Think() {
 
 	float x = panSpeed * (float)(input.KeyHeld(SDL_SCANCODE_D) - input.KeyHeld(SDL_SCANCODE_A));
 	float y = panSpeed * (float)(input.KeyHeld(SDL_SCANCODE_S) - input.KeyHeld(SDL_SCANCODE_W));
-	SetOrigin( GetOrigin() + (oldBoundsCenter - renderTarget.AbsBounds().Center()) + (eVec2( x , y ) * game->GetDeltaTime()) );
 
-	moved = ( renderTarget.GetOriginDelta() != vec2_zero || renderTarget.GetScaleDelta() != vec2_zero );
-	renderTarget.SetScale(renderTarget.GetScale());		// BUGFIX: ensures GetScaleDelta updates each frame instead of staying constant after each SetScale event
+	const eVec2 panAmount = eVec2( x, y ) * game->GetDeltaTime();
+	if ( panAmount != vec2_zero ) {
+		SetOrigin( GetOrigin() + panAmount );
+		moved = true;
+	}
 }
 
 //***************
 // eCamera::Resize
-// convenience fn for resizing the eRenderTexture
-// resizing an eCamera makes more of the gameworld visible,
-// and does not scale/stretch the rendered texture, which
-// means whats being drawn to the camera doesn't get re-positioned
+// resizing an eCamera makes more|less of the gameworld visible
 //***************
-bool eCamera::Resize(int newWidth, int newHeight) {
-	return renderTarget.Resize(newWidth, newHeight);
-}
-
-//***************
-// eCamera::AbsBounds
-// renderTarget absBounds
-//***************
-const eBounds & eCamera::AbsBounds() const {
-	return renderTarget.AbsBounds();
+void eCamera::Resize(const eVec2 & newSize) {
+	collisionModel.SetLocalBounds( eBounds( -newSize * 0.5f, newSize * 0.5f ) );
+	moved = true;
 }
 
 //***************
 // eCamera::ZoomIn
-// uniformly scales up by zoomSpeed
+// decreases camera viewport size
+// effectively scaling up a smaller visible
+// portion of the gameworld
 //***************
 void eCamera::ZoomIn() {
-	float zoom = renderTarget.GetScale().x;
 	zoom += zoomSpeed;
 	if (zoom > maxZoom)
 		zoom = maxZoom;
 
-	renderTarget.SetScale(vec2_one * zoom);
+	Resize( defaultSize / zoom );
 }
 
 //***************
 // eCamera::ZoomOut
-// uniformly scales down by zoomSpeed
+// increases camera viewport size
+// effectively scaling up a smaller visible
+// portion of the gameworld
 //***************
 void eCamera::ZoomOut() {
-	float zoom = renderTarget.GetScale().x;
 	zoom -= zoomSpeed;
 	if (zoom < minZoom)
 		zoom = minZoom;
 
-	renderTarget.SetScale(vec2_one * zoom);
+	Resize( defaultSize / zoom );
 }
 
 //***************
 // eCamera::SetZoom
+// sets the zoom within the range [minZoom, maxZoom]
+// see also: ZoomIn, ZoomOut
 //***************
 void eCamera::SetZoom(float newZoomLevel) {
 	if (newZoomLevel < minZoom)
@@ -125,15 +128,26 @@ void eCamera::SetZoom(float newZoomLevel) {
 	else if (newZoomLevel > maxZoom)
 		newZoomLevel = maxZoom;
 
-	renderTarget.SetScale(vec2_one * newZoomLevel);
+	zoom = newZoomLevel;
+	Resize( defaultSize / zoom );
 }
 
 //***************
+// eCamera::ResetZoom
+// sets the zoom within the range [minZoom, maxZoom]
+// see also: ZoomIn, ZoomOut
+//***************
+void eCamera::ResetZoom() {
+	zoom = 1.0f;
+	Resize( defaultSize / zoom );
+}
+
+
+//***************
 // eCamera::GetZoom
-// convenience function to query the uniform eRenderTarget::scale
 //***************
 float eCamera::GetZoom() const {
-	return renderTarget.GetScale().x;
+	return zoom;
 }
 
 //***************
@@ -144,12 +158,19 @@ bool eCamera::Moved() const {
 	return moved;
 }
 
+//***************
+// eCamera::AbsBounds
+//***************
+const eBounds & eCamera::AbsBounds() const {
+	return collisionModel.AbsBounds();
+}
+
 //**************
 // eCamera::ScreenToWorldPosition
 // returns current position of screenPoint over the 2D orthographic game world with respect to this camera's position
 //**************
 eVec2 eCamera::ScreenToWorldPosition(const eVec2 & screenPoint) const {
-	eVec2 worldPoint = (screenPoint / GetZoom()) + renderTarget.AbsBounds()[0];
+	eVec2 worldPoint = (screenPoint / zoom) + collisionModel.AbsBounds()[0];
 	eMath::IsometricToCartesian(worldPoint.x, worldPoint.y);
 	return worldPoint;
 }
@@ -175,7 +196,9 @@ eVec2 eCamera::MouseWorldPosition() const {
 // and this eCamera's pools won't be cleared (as happens during Flush)
 //***************
 bool eCamera::AddToRenderPool(eRenderImageIsometric * renderImage) {
-	if (renderImage->UpdateDrawnStatus(&renderTarget))
+	static eRenderTarget * const mainRenderTarget = game->GetRenderer().GetMainRenderTarget();
+
+	if (renderImage->UpdateDrawnStatus(mainRenderTarget))
 		return false;
 
 	const auto & renderPool = (renderImage->Owner()->IsStatic() ? &staticPool : &dynamicPool);
@@ -193,13 +216,12 @@ void eCamera::ClearRenderPools() {
 
 //**************
 // eCamera::Flush
-// draws all the currently queued eRenderImageIsometric objects to
-// this eCamera's eRenderTarget texture, if any
+// draws the currently gameworld within this eCamera's bounds,
+// and any registered overlay eCanvases
 //**************
 void eCamera::Flush() {
-	if (!renderTarget.Validate())
-		return;
 
+	// draw the visible gameworld
 	QuickSort(	staticPool.data(),
 				staticPool.size(),
 				[](auto && a, auto && b) {
@@ -233,15 +255,29 @@ void eCamera::Flush() {
 // FREEHILL END 3d topological sort
 
 	auto & renderer = game->GetRenderer();
-	renderer.SetRenderTarget(&renderTarget);
+	renderer.SetRenderTarget(renderer.GetMainRenderTarget());
 
 	for (auto && renderImage : staticPool)
 		renderer.DrawImage(renderImage);
 
 	ClearRenderPools();
 
-	renderer.SetRenderTarget(renderer.GetMainRenderTarget());
-	SDL_RenderCopy(renderer.GetSDLRenderer(), renderTarget.GetTargetTexture(), NULL, NULL);
+
+	// registered eCanvas orders may haved shifted between frames
+	// or a new eCanvas may have been registered
+	QuickSort(	registeredOverlays.data(),
+				registeredOverlays.size(),
+				[](auto && a, auto && b) {
+					const int aLayer = a->GetWorldLayer();
+					const int bLayer = b->GetWorldLayer();
+
+					if (aLayer < bLayer) return -1;
+					else if (aLayer > bLayer) return 1;
+					return 0;
+			});
+
+	for (auto && canvas : registeredOverlays)
+		canvas->Flush();
 }
 
 //***************

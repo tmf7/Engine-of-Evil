@@ -33,11 +33,10 @@ using namespace evil;
 ECLASS_DEFINITION(eClass, eMap)
 
 //**************
-// eMap::Init
+// eMap::eMap
 //**************
-bool eMap::Init () {
+eMap::eMap () {
 	entities.reserve(MAX_ENTITIES);
-	return LoadMap("Graphics/Maps/EvilTown2.emap");
 }
 
 //**************

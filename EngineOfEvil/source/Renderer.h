@@ -31,6 +31,9 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 
 namespace evil {
 
+class eBounds;
+class eBounds3D;
+
 //**************************************************
 //				eRenderer
 // Base class for all window/fullscreen drawing. 
@@ -55,11 +58,19 @@ public:
 	SDL_Renderer * const				GetSDLRenderer() const;
 	SDL_Window * const					GetWindow() const;
 	
-	bool								RegisterRenderTarget(eRenderTarget * newTarget);
-	bool								UnregisterRenderTarget(eRenderTarget * target);
-	void								UnregisterAllRenderTargets();
-	int									NumRegisteredRenderTarget() const;
-	void								FlushRegisteredTargets();
+	bool								RegisterCamera(eCamera * newCamera);
+	bool								UnregisterCamera(eCamera * camera);
+	void								UnregisterAllCameras();
+	int									NumRegisteredCameras() const;
+
+	bool								RegisterOverlayCanvas(eCanvas * newCanvas);
+	bool								UnregisterOverlayCanvas(eCanvas * canvas);
+	void								UnregisterAllOverlayCanvases();
+	int									NumRegisteredOverlayCanvases() const;
+
+
+
+	void								Flush();
 
 	void								DrawOutlineText(eRenderTarget * target, const char * text, eVec2 & point, const SDL_Color & color, bool constText);
 	void								DrawImage(eRenderImageBase * renderImage) const;
@@ -81,7 +92,9 @@ private:
 
 	static int							globalDrawDepth;								// for eRenderer::TopologicalDrawDepthSort
 
-	std::vector<eRenderTarget *>		registeredTargets;								// eRenderTargets to copy to the main rendering context during Flush
+	// what gets copied to the main rendering context during Flush
+	std::vector<eCamera *>				registeredCameras;
+	std::vector<eCanvas *>				registeredOverlayCanvases;
 
 	SDL_Window *						window;											// the main game window
 	SDL_Renderer *						internal_renderer;								// rendering context associated with the main window

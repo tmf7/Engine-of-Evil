@@ -35,26 +35,27 @@ ECLASS_DEFINITION(eGameObject, eCanvas)
 //***************
 // eCanvas::Init
 //***************
-void eCanvas::Init(const eVec2 & size, const eVec2 & worldPosition, const eVec2 & scale, CanvasType type, eCamera * cameraToOverlay ) {
+void eCanvas::Init(eMap * onMap, const eVec2 & size, const eVec2 & worldPosition, const eVec2 & scale, CanvasType type, eCamera * cameraToOverlay ) {
 	auto & renderer = game->GetRenderer();
 	const auto & context = renderer.GetSDLRenderer();
 	canvasType = type;
+	map = onMap;
 	SDL_Point intSize = { eMath::NearestInt(size.x), eMath::NearestInt(size.y) };
 	staticPool.reserve(MAX_IMAGES);
 	dynamicPool.reserve(MAX_IMAGES);
 
-	AddComponent<eRenderTarget>(this, context, intSize.x, intSize.y, worldPosition, scale);
+	AddComponent<eRenderTarget>(this, context, intSize.x, intSize.y, scale);
 	renderTarget = GetComponent<eRenderTarget>();
 	
 	switch(type) {
 		case CanvasType::SCREEN_SPACE_OVERLAY: {
-			renderer.RegisterRenderTarget(&renderTarget);
+			renderer.RegisterOverlayCanvas(this);
 			return;
 		}
 
 		case CanvasType::CAMERA_SPACE_OVERLAY: { 
-			targetCamera = cameraToOverlay;
-			targetCamera->RegisterOverlayCanvas(this);
+			targetCamera = cameraToOverlay;						// FIXME/BUG: user may neglect to set cameraToOverlay
+			targetCamera->RegisterOverlayCanvas(this);			// SOLUTION: make Init a bool return value, log an error, set bool intialized like eCamera
 			return; 
 		}
 
@@ -65,8 +66,6 @@ void eCanvas::Init(const eVec2 & size, const eVec2 & worldPosition, const eVec2 
 			initialImage->SetSubframes( std::vector<SDL_Rect> ( { SDL_Rect { 0, 0, intSize.x, intSize.y } } ) );
 			AddComponent< eRenderImageIsometric >( this, initialImage, eVec3( size.x, 2.0f, size.y ) );
 			renderImage = GetComponent< eRenderImageIsometric >();
-
-			// FIXME(!!): eCanvas as a eGameObject still needs an eMap pointer set
 			return;				
 		}
 	}
