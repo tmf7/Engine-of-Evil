@@ -40,7 +40,8 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 
 namespace evil {
 
-class eRenderTarget;
+class eCamera;
+class eCanvas;
 
 //**************************************************
 //				eRenderImageBase
@@ -53,7 +54,7 @@ class eRenderImageBase : public eComponent {
 
 public:
 
-	friend class eRenderer;	// directly sets priority
+	friend class eRenderer;						// directly sets priority
 
 public:
 
@@ -72,7 +73,8 @@ public:
 	const eBounds &								GetWorldClip() const;
 	void										SetIsSelectable(bool isSelectable);
 	bool										IsSelectable() const;
-	bool										UpdateDrawnStatus(eRenderTarget * renderTarget);
+	bool										AddDrawnToItem(eCamera * drawnToCamera);
+	bool										AddDrawnToItem(eCanvas * drawnToCanvas);
 
 	virtual void								Update() override;
 
@@ -80,9 +82,16 @@ protected:
 
 	void										UpdateWorldClip();
 
+private:
+
+	void										SetLastDrawnTime();
+
 protected:
 
-	std::vector<eRenderTarget *>				drawnTo;						// prevent attempts to draw this more than once per renderTarget per frame
+	// only draw *this once per eCamera|eCanvas per frame
+	std::vector<eCamera *>						drawnToCameras;
+	std::vector<eCanvas *>						drawnToCanvases;
+
 	std::shared_ptr<eImage>						image			= nullptr;		// source image (ie texture wrapper)
 	eBounds										worldClip;						// scaled srcRect positioned with respect to origin, primarily used for occlusion tests
 	eVec2										scale			= vec2_one;		// how much to up/down-scale the srcRect in x and y independently

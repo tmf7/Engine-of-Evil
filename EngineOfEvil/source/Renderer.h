@@ -68,16 +68,14 @@ public:
 	void								UnregisterAllOverlayCanvases();
 	int									NumRegisteredOverlayCanvases() const;
 
-
-
 	void								Flush();
 
-	void								DrawOutlineText(eRenderTarget * target, const char * text, eVec2 & point, const SDL_Color & color, bool constText);
-	void								DrawImage(eRenderImageBase * renderImage) const;
-	void								DrawLines(eRenderTarget * target, const SDL_Color & color, std::vector<eVec2> points);
-	void								DrawIsometricPrism(eRenderTarget * target, const SDL_Color & color, const eBounds3D & rect);
-	void								DrawIsometricRect(eRenderTarget * target, const SDL_Color & color, const eBounds & rect);
-	void								DrawCartesianRect(eRenderTarget * target, const SDL_Color & color, const eBounds & rect, bool fill);
+	void								DrawOutlineText(eRenderTarget * target, const eVec2 & targetOffset, const char * text, const eVec2 & point, const SDL_Color & color, bool constText);
+	void								DrawImage(eRenderImageBase * renderImage, const eVec2 & targetOffset) const;
+	void								DrawLines(eRenderTarget * target, const eVec2 & targetOffset, const SDL_Color & color, std::vector<eVec2> points);
+	void								DrawIsometricPrism(eRenderTarget * target, const eVec2 & targetOffset, const SDL_Color & color, const eBounds3D & rect);
+	void								DrawIsometricRect(eRenderTarget * target, const eVec2 & targetOffset, const SDL_Color & color, const eBounds & rect);
+	void								DrawCartesianRect(eRenderTarget * target, const eVec2 & targetOffset, const SDL_Color & color, const eBounds & rect, bool fill);
 
 	void								SetRenderTarget(eRenderTarget *);
 	eRenderTarget * const				GetMainRenderTarget();

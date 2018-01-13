@@ -104,25 +104,60 @@ void eRenderImageBase::SetOrigin(const eVec2 & newOrigin) {
 	owner->SetOrigin(newOrigin);
 }
 
+
 //***************
-// eRenderImageBase::UpdateDrawnStatus
-// updates the renderImage's lastDrawnTime according to eGame::gameTime if this is the first call this frame
-// assigns *this to the the given renderTarget to be drawn this frame,
-// returns false if *this has already been assigned, true otherwise
-// DEBUG: it's quicker to do a linear search of the small drawnTo vector for a eRenderTarget *,
-// than it is to search the larger renderPool for a eRenderImageBase *
+// eRenderImageBase::SetLastDrawnTime
+// updates the lastDrawnTime and clears all
+// drawnTo eCamera/eCanvas pointers if this is
+// the first time *this is being drawn this frame
 //***************
-bool eRenderImageBase::UpdateDrawnStatus(eRenderTarget * renderTarget) {
+void eRenderImageBase::SetLastDrawnTime() {
 	auto gameTime = game->GetGameTime();
 	if (lastDrawnTime < gameTime) {
 		lastDrawnTime = gameTime;
-		drawnTo.clear();			// first time being drawn this frame
+		drawnToCameras.clear();
+		drawnToCanvases.clear();
 	}
+}
 
-	bool alreadyDrawn = std::find(drawnTo.begin(), drawnTo.end(), renderTarget) != drawnTo.end();
+//***************
+// eRenderImageBase::AddDrawnToItem
+// updates the renderImage's lastDrawnTime according to eGame::gameTime if this is the first call this frame
+// returns false if *this has already been assigned to param drawnToCamera, true otherwise
+// DEBUG: it's quicker to do a linear search of the small drawnToCameras vector for an eCamera *,
+// than it is to search an eCamera's larger renderPools for an eRenderImageBase *
+//***************
+bool eRenderImageBase::AddDrawnToItem(eCamera * drawnToCamera) {
+	SetLastDrawnTime();
 
-	if (!alreadyDrawn)
-		drawnTo.emplace_back(renderTarget);
+	bool notDrawnYet = std::find(	drawnToCameras.begin(), 
+									drawnToCameras.end(), 
+									drawnToCamera
+								) == drawnToCameras.end();
 
-	return alreadyDrawn;
+	if (notDrawnYet)
+		drawnToCameras.emplace_back(drawnToCamera);
+
+	return notDrawnYet;
+}
+
+//***************
+// eRenderImageBase::AddDrawnToItem
+// updates the renderImage's lastDrawnTime according to eGame::gameTime if this is the first call this frame
+// returns false if *this has already been assigned to param drawnToCanvas, true otherwise
+// DEBUG: it's quicker to do a linear search of the small drawnToCanvases vector for an eCanvas *,
+// than it is to search an eCanvas's larger renderPools for an eRenderImageBase *
+//***************
+bool eRenderImageBase::AddDrawnToItem(eCanvas * drawnToCanvas) {
+	SetLastDrawnTime();
+
+	bool notDrawnYet = std::find(	drawnToCanvases.begin(), 
+									drawnToCanvases.end(), 
+									drawnToCanvas
+								) == drawnToCanvases.end();
+
+	if (notDrawnYet)
+		drawnToCanvases.emplace_back(drawnToCanvas);
+
+	return notDrawnYet;
 }

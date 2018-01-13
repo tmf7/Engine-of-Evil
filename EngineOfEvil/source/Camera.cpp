@@ -38,9 +38,6 @@ ECLASS_DEFINITION(eGameObject, eCamera)
 // FIXME: a user may neglect to call Init, leaving collisionModel undefined
 // SOLUTION: check for bool initialized or nullptr collisionModel in fns that use collisionModel
 // SOLUTION: collisionModel may need a default construction anyway (ie define eCamera::eCamera)
-// FIXME/BUG: eRenderer::DrawWhatever performs point -= target->GetOrigin(); which gets the owner's origin (if any)
-// BUT if eCamera draws directly to the mainRenderTarget, then there is no owner to query the origin of (ie vec2_zero),
-// SOLUTION: ??? give eCamera a renderTarget again?
 //***************
 void eCamera::Init(eMap * onMap, const eVec2 & size, const eVec2 & worldPosition, float zoomLevel, float panSpeed) {
 	this->panSpeed = panSpeed;
@@ -196,9 +193,7 @@ eVec2 eCamera::MouseWorldPosition() const {
 // and this eCamera's pools won't be cleared (as happens during Flush)
 //***************
 bool eCamera::AddToRenderPool(eRenderImageIsometric * renderImage) {
-	static eRenderTarget * const mainRenderTarget = game->GetRenderer().GetMainRenderTarget();
-
-	if (renderImage->UpdateDrawnStatus(mainRenderTarget))
+	if (!renderImage->AddDrawnToItem(this))
 		return false;
 
 	const auto & renderPool = (renderImage->Owner()->IsStatic() ? &staticPool : &dynamicPool);
@@ -232,7 +227,8 @@ void eCamera::Flush() {
 
 // FREEHILL BEGIN 3d topological sort
 	
-	// assign a "localDrawDepth" priority amongst the dynamicPool
+	// assign a "localDrawDepth" priority
+	// to avoid multiple passes over the dynamicPool
 	eRenderer::TopologicalDrawDepthSort(dynamicPool);
 
 	for (auto & imageToInsert : dynamicPool) {
@@ -254,14 +250,25 @@ void eCamera::Flush() {
 	}
 // FREEHILL END 3d topological sort
 
+	// scale camera contents based on its size relative to the window
+	// DEBUG: this also adjusts x/y image coordinates accordingly
+	// TODO: give a camera its own viewportRect and add that into the scale calculation
 	auto & renderer = game->GetRenderer();
-	renderer.SetRenderTarget(renderer.GetMainRenderTarget());
+	const SDL_Rect windowBounds = renderer.ViewArea();
+	const eBounds & cameraBounds = collisionModel.LocalBounds();
+	const eVec2 cameraScale( (float)windowBounds.w / cameraBounds.Width(), 
+							 (float)windowBounds.h / cameraBounds.Height() );
 
+	auto mainRenderTarget = renderer.GetMainRenderTarget();
+	mainRenderTarget->SetScale(cameraScale);
+	renderer.SetRenderTarget(mainRenderTarget);
+
+	// draw calls
+	const auto & cameraOffset = GetOrigin();
 	for (auto && renderImage : staticPool)
-		renderer.DrawImage(renderImage);
+		renderer.DrawImage(renderImage, cameraOffset);
 
 	ClearRenderPools();
-
 
 	// registered eCanvas orders may haved shifted between frames
 	// or a new eCanvas may have been registered
@@ -276,8 +283,11 @@ void eCamera::Flush() {
 					return 0;
 			});
 
+	// draw calls
 	for (auto && canvas : registeredOverlays)
 		canvas->Flush();
+
+	mainRenderTarget->ResetScale();
 }
 
 //***************

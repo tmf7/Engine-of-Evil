@@ -54,7 +54,7 @@ bool eRenderer::Init(const char * name, int windowWidth, int windowHeight) {
 	if (!internal_renderer)
 		return false;
 
-	// enable linear anti-aliasing for the renderer context
+	// enable linear anti-aliasing for the renderer context when scaling
 //	SDL_SetHintWithPriority(SDL_HINT_RENDER_SCALE_QUALITY, "linear" , SDL_HINT_OVERRIDE);
 
 	// DEBUG: eRenderer::mainRenderTarget does not need a new SDL_Texture
@@ -95,7 +95,7 @@ void eRenderer::Shutdown() const {
 // TODO: this is a debug test, make an actual text rendering class
 // DEBUG: immediatly draws to the given render target
 //***************
-void eRenderer::DrawOutlineText(eRenderTarget * target, const char * text, eVec2 & point, const SDL_Color & color, bool constText) {
+void eRenderer::DrawOutlineText(eRenderTarget * target, const eVec2 & targetOffset, const char * text, const eVec2 & point, const SDL_Color & color, bool constText) {
 	SDL_Texture * renderedText = NULL;
 	if (constText) {
 		// check if the image already exists, if not then load it and set result
@@ -115,9 +115,9 @@ void eRenderer::DrawOutlineText(eRenderTarget * target, const char * text, eVec2
 		SDL_SetTextureBlendMode(renderedText, SDL_BLENDMODE_BLEND);
 	}
 	
-	point -= target->GetOrigin();
-	point.SnapInt();
-	SDL_Rect dstRect = { (int)point.x, (int)point.y, 0, 0 };
+	auto drawPoint = point - targetOffset;
+	drawPoint.SnapInt();
+	SDL_Rect dstRect = { (int)drawPoint.x, (int)drawPoint.y, 0, 0 };
 	SDL_QueryTexture(renderedText, NULL, NULL, &dstRect.w, &dstRect.h);
 	SetRenderTarget(target);
 	SDL_RenderCopy(internal_renderer, renderedText, nullptr, &dstRect);
@@ -131,12 +131,12 @@ void eRenderer::DrawOutlineText(eRenderTarget * target, const char * text, eVec2
 // draws points.size()-1 lines from front to back
 // DEBUG: immediatly draws to the given render target
 //***************
-void eRenderer::DrawLines(eRenderTarget * target, const SDL_Color & color, std::vector<eVec2>  points) {
+void eRenderer::DrawLines(eRenderTarget * target, const eVec2 & targetOffset, const SDL_Color & color, std::vector<eVec2> points) {
 	std::vector<SDL_Point> iPoints;
 	iPoints.reserve(points.size());
 	for (std::size_t i = 0; i < points.size(); ++i) {
 		eMath::CartesianToIsometric(points[i].x, points[i].y);
-		points[i] -= target->GetOrigin();
+		points[i] -= targetOffset;
 		points[i].SnapInt();
 		iPoints[i] = { (int)points[i].x, (int)points[i].y };
 	}
@@ -151,7 +151,7 @@ void eRenderer::DrawLines(eRenderTarget * target, const SDL_Color & color, std::
 // converts the given rect into an isomectric box
 // DEBUG: immediatly draws to the given render target
 //***************
-void eRenderer::DrawIsometricPrism(eRenderTarget * target, const SDL_Color & color, const eBounds3D & rect) {
+void eRenderer::DrawIsometricPrism(eRenderTarget * target, const eVec2 & targetOffset, const SDL_Color & color, const eBounds3D & rect) {
 	std::array<eVec3, 10> fPoints;
 	rect.ToPoints(fPoints.data());
 	
@@ -169,7 +169,7 @@ void eRenderer::DrawIsometricPrism(eRenderTarget * target, const SDL_Color & col
 		fPoints[i].x -= fPoints[i].z;
 		fPoints[i].y -= fPoints[i].z;
 		eMath::CartesianToIsometric(fPoints[i].x, fPoints[i].y);
-		fPoints[i] -= (eVec3)target->GetOrigin();
+		fPoints[i] -= (eVec3)targetOffset;
 		fPoints[i].SnapInt();
 		iPoints[i] = { (int)fPoints[i].x, (int)fPoints[i].y };
 	}
@@ -197,7 +197,7 @@ void eRenderer::DrawIsometricPrism(eRenderTarget * target, const SDL_Color & col
 // converts the given rect into an isomectric box
 // DEBUG: immediatly draws to the given render target
 //***************
-void eRenderer::DrawIsometricRect(eRenderTarget * target, const SDL_Color & color, const eBounds & rect) {
+void eRenderer::DrawIsometricRect(eRenderTarget * target, const eVec2 & targetOffset, const SDL_Color & color, const eBounds & rect) {
 	std::array<eVec2, 5> fPoints;
 	rect.ToPoints(fPoints.data());
 	fPoints[4] = fPoints[0];
@@ -207,7 +207,7 @@ void eRenderer::DrawIsometricRect(eRenderTarget * target, const SDL_Color & colo
 	std::array<SDL_Point, 5> iPoints;
 	for (std::size_t i = 0; i < fPoints.size(); ++i) {
 		eMath::CartesianToIsometric(fPoints[i].x, fPoints[i].y);
-		fPoints[i] -= target->GetOrigin();
+		fPoints[i] -= targetOffset;
 		fPoints[i].SnapInt();
 		iPoints[i] = { (int)fPoints[i].x, (int)fPoints[i].y };
 	}
@@ -223,10 +223,9 @@ void eRenderer::DrawIsometricRect(eRenderTarget * target, const SDL_Color & colo
 // dynamic moves and scales with the camera
 // DEBUG: immediatly draws to the given render target
 //***************
-void eRenderer::DrawCartesianRect(eRenderTarget * target, const SDL_Color & color, const eBounds & rect, bool fill) {
-	const auto & targetOrigin = target->GetOrigin();
-	SDL_Rect drawRect = {	eMath::NearestInt(rect[0].x - targetOrigin.x), 
-							eMath::NearestInt(rect[0].y - targetOrigin.y), 
+void eRenderer::DrawCartesianRect(eRenderTarget * target, const eVec2 & targetOffset, const SDL_Color & color, const eBounds & rect, bool fill) {
+	SDL_Rect drawRect = {	eMath::NearestInt(rect[0].x - targetOffset.x), 
+							eMath::NearestInt(rect[0].y - targetOffset.y), 
 							eMath::NearestInt(rect.Width()), 
 							eMath::NearestInt(rect.Height()) };
 
@@ -240,8 +239,8 @@ void eRenderer::DrawCartesianRect(eRenderTarget * target, const SDL_Color & colo
 // eRenderer::DrawImage
 // DEBUG: immediatly draws to the currently assigned render target
 //***************
-void eRenderer::DrawImage(eRenderImageBase * renderImage) const {
-	eVec2 drawPoint = renderImage->origin - currentRenderTarget->GetOrigin();
+void eRenderer::DrawImage(eRenderImageBase * renderImage, const eVec2 & targetOffset) const {
+	auto drawPoint = renderImage->origin - targetOffset;
 	drawPoint.SnapInt();
 	SDL_Rect dstRect = { (int)drawPoint.x, 
 						 (int)drawPoint.y, 
@@ -396,7 +395,7 @@ void eRenderer::Flush() {
 	// and world-space canvases are in the tilemap
 	// SO: sort registeredTargets to put eCanvases first (by layer)
 	// then eCameras (by layer)
-
+	SDL_HINT_RENDER_VSYNC;
 	for (auto && target : registeredTargets)
 		target->Flush();
 }

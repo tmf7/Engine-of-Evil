@@ -173,7 +173,7 @@ void ePlayer::ClearGroupSelection() {
 void ePlayer::Draw() {
 	// draw the selection box
 	if (beginSelection)
-		game->GetRenderer().DrawCartesianRect(game->GetRenderer().GetDebugOverlayTarget(), greenColor, eBounds(selectionPoints.data(), selectionPoints.size()) , false);
+		game->GetRenderer().DrawCartesianRect(game->GetRenderer().GetDebugOverlayTarget(), greenColor, eBounds(selectionPoints.data(), selectionPoints.size()), false);
 	else
 		selectionPoints[0] = selectionPoints[1];
 

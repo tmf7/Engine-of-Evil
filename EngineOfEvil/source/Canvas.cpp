@@ -44,6 +44,9 @@ void eCanvas::Init(eMap * onMap, const eVec2 & size, const eVec2 & worldPosition
 	staticPool.reserve(MAX_IMAGES);
 	dynamicPool.reserve(MAX_IMAGES);
 
+	// FIXME(?): possibly only add this for worldspace eCanvas types,
+	// and let overlays copy straight onto a modified scale mainRenderTarget
+	// ...although, eCanvas would need to save the size and scale 
 	AddComponent<eRenderTarget>(this, context, intSize.x, intSize.y, scale);
 	renderTarget = GetComponent<eRenderTarget>();
 	
@@ -73,26 +76,19 @@ void eCanvas::Init(eMap * onMap, const eVec2 & size, const eVec2 & worldPosition
 
 //***************
 // eCanvas::Think
-// TODO: should the renderTarget also scale as if stretched? considering that the goal
-// is to have overlays display the same elements in the same relative positions
-// FIXME: make sure this eCanvas calls renderImage.Update() fn called whenever it moves or resizes (so it gets added to the eMap appropriately)
-// TODO: add an eCanvas::Resize that can resize the window or camera it overlays WHILE using a bool to decide if the contents should be scaled or just re-positioned...somehow,
-// meanwhile a worldspace eCanvas Resize should....just resize itself not the window|camera
-// SOLUITON: the renderPool objects have origins...which can have a non-destructive(?) offset applied if the canvas has been resized (w|w/o scaling...)
-// PROBLEM: if an eCamera::Resize changes the renderTarget size...but the camera has several registered eCanvas overlays...should
-// eCamera call resize on them...or should it wait for each eCanvas::Think to be called (when would they?)
-// PROBLEM(?): resizing the window should not resize the *main* camera? ... arguably it should...AND stretch/scale it...
-// SOLUTION: mark a camera as a percentage of the screen, then just maintain the percentage?... as its argubably an "overlay" on the main target
-// PROBLEM: and what does that mean for worldspace eCanvas size and scales??? nothing because theyre rendered through the eCamera...???
+// FIXME: make sure this eCanvas calls eRenderImageIsometric::Update() whenever it moves or Resizes (so it gets added to the eMap appropriately)
+// FIXME: should an eCanvas::Resize also resize the window or camera it overlays? (only canvas.renderTarget.scale scales items, not eCanvas::Resize)
+// FIXME: if an eCamera with several registered eCanvas overlays Resizes, how should the eCanvases get Resized? During eCanvas::Think?
+// SOLUITON(?): apply a non-destructive calculated OFFSET to renderPool item origins (eg: if the canvas has been Resized)...ANCHOR points (and default top-left image PIVOTs/origin)
 //***************
 void eCanvas::Think() {
 	switch(canvasType) {
 		case CanvasType::SCREEN_SPACE_OVERLAY: {
-			// TODO: get the current window size and Resize the renderTexture
+			// TODO: get the current window size and Resize (DON'T resize the renderTexture)
 		}
 
 		case CanvasType::CAMERA_SPACE_OVERLAY: { 
-			// TODO: get the current camera size???? and Resize the renderTexture
+			// TODO: get the current camera size???? and Resize (DON'T resize the renderTexture)
 		}
 
 		case CanvasType::WORLD_SPACE: {
@@ -112,7 +108,7 @@ void eCanvas::Think() {
 // and this eCamera's pools won't be cleared (as happens during Flush)
 //***************
 bool eCanvas::AddToRenderPool(eRenderImageBase* renderImage) {
-	if (renderImage->UpdateDrawnStatus(&renderTarget))
+	if (!renderImage->AddDrawnToItem(this))
 		return false;
 
 	const auto & renderPool = (renderImage->Owner()->IsStatic() ? &staticPool : &dynamicPool);
@@ -148,8 +144,9 @@ void eCanvas::Flush() {
 	auto & renderer = game->GetRenderer();
 	renderer.SetRenderTarget(&renderTarget);
 
+	const auto & canvasOffset = GetOrigin();
 	for (auto && renderImage : staticPool)
-		renderer.DrawImage(renderImage);
+		renderer.DrawImage(renderImage, canvasOffset);
 
 	ClearRenderPools();
 

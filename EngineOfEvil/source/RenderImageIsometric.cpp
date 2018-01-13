@@ -96,7 +96,7 @@ void eRenderImageIsometric::Update() {
 	oldOrigin = origin;
 	origin = owner->GetOrigin();	
 	eMath::CartesianToIsometric(origin.x, origin.y);
-	origin += ownerOriginOffset;
+	origin += ownerOriginOffset;						// DEBUG: post-conversion offsetting ensures that (eg: eTile) image offsets remain in orthogonal screenspace, and not in isometric worldspace
 
 	UpdateWorldClip();
 	if (origin != oldOrigin || (owner->IsStatic() && game->GetGameTime() < 5000)) {

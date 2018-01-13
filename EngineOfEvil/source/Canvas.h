@@ -44,10 +44,9 @@ enum class CanvasType {
 
 //***********************************************
 //				eCanvas 
-// Mobile 2D texture for drawing eRenderImageBase objects.
-// Registered to either the main rendering context as an overlay,
-// a specific camera as an overlay, or given a eRenderImageIsometric
-// that uses the eRenderTarget's texture as the eImage,
+// Mobile/Resizable 2D texture(?) for drawing eRenderImageBase objects.
+// Registered to either the main rendering context, or an eCamera as an overlay,
+// or given a eRenderImageIsometric that uses an eRenderTarget's texture as the eImage,
 // and a renderblock the size of the texture (with minimal depth)
 // at the current eGameObject::orthoOrigin converted to isometric worldspace
 //***********************************************
