@@ -34,6 +34,9 @@ ECLASS_DEFINITION(eGameObject, eCanvas)
 
 //***************
 // eCanvas::Init
+// FIXME: what about zPosition/worldLayer, especially given that camera's and canvases need to be sorted to begin with
+// FIXME: size, and x/y of worldPosition are meaningless to overlays as they are driven by their owners' sizes
+// SOLUTION: create InitAsWorldSpace, InitAsScreenOverlay, InitAsCameraOverlay that can each call a private Init for common functionality
 //***************
 void eCanvas::Init(eMap * onMap, const eVec2 & size, const eVec2 & worldPosition, const eVec2 & scale, CanvasType type, eCamera * cameraToOverlay ) {
 	auto & renderer = game->GetRenderer();
@@ -44,9 +47,6 @@ void eCanvas::Init(eMap * onMap, const eVec2 & size, const eVec2 & worldPosition
 	staticPool.reserve(MAX_IMAGES);
 	dynamicPool.reserve(MAX_IMAGES);
 
-	// FIXME(?): possibly only add this for worldspace eCanvas types,
-	// and let overlays copy straight onto a modified scale mainRenderTarget
-	// ...although, eCanvas would need to save the size and scale 
 	AddComponent<eRenderTarget>(this, context, intSize.x, intSize.y, scale);
 	renderTarget = GetComponent<eRenderTarget>();
 	
@@ -69,30 +69,56 @@ void eCanvas::Init(eMap * onMap, const eVec2 & size, const eVec2 & worldPosition
 			initialImage->SetSubframes( std::vector<SDL_Rect> ( { SDL_Rect { 0, 0, intSize.x, intSize.y } } ) );
 			AddComponent< eRenderImageIsometric >( this, initialImage, eVec3( size.x, 2.0f, size.y ) );
 			renderImage = GetComponent< eRenderImageIsometric >();
+			renderImage.SetOrigin(worldPosition);
 			return;				
 		}
 	}
 }
 
 //***************
+// eCanvas::Resize
+//***************
+bool eCanvas::Resize(int newWidth, int newHeight) {
+	if (canvasType != CanvasType::WORLD_SPACE)				// TODO: log an error "Trying to resize an eCamera|Screen overlay eCanvas"
+		return false;
+
+	// TODO: eCanvas::Resize should only be allowed for worldspace canvases, while overlay sizes a driven by their owners 
+	// FIXME: resizing the renderTarget should also resize the renderImageIsometric's renderblock
+	// FIXME: resizing the worldspace eCanvas in Unity doesn't scale what's on it, only setting the child size|scale values (or parent scale value) does
+	// ... meaning the renderTarget DOES get resized, and the drawing scale of the canvas is additionally affected by the camSize (rel. to the window) as usual
+	// ... however ... if drawing new items on the resized (not scaled) canvas ... then the coordinate range would change... hence the use for anchor/pivot/offsets
+}
+
+//***************
 // eCanvas::Think
-// FIXME: make sure this eCanvas calls eRenderImageIsometric::Update() whenever it moves or Resizes (so it gets added to the eMap appropriately)
-// FIXME: should an eCanvas::Resize also resize the window or camera it overlays? (only canvas.renderTarget.scale scales items, not eCanvas::Resize)
-// FIXME: if an eCamera with several registered eCanvas overlays Resizes, how should the eCanvases get Resized? During eCanvas::Think?
-// SOLUITON(?): apply a non-destructive calculated OFFSET to renderPool item origins (eg: if the canvas has been Resized)...ANCHOR points (and default top-left image PIVOTs/origin)
+
+// SOLUTION: Resizing an eCamera with several registered eCanvas overlays does nothing to the canvases at that point, but during eCanvas::Flush the canvas' renderTarget scale is adjusted.
+// IE: camScale = windowSize / camSize; and camOverlayScale = camSize / canvasSize; during eCamera::Flush and eCanvas::Flush, respectively.
+// SIMILARLY: windowOverlayScale = windowSize / canvasSize; during eCanvas::Flush
+
+// TODO(~): resize the renderTarget to match the window size so nothing gets clipped, which requires calculating new coordinates for renderPool items. 
+// TODO(~): bool scaleWithWindow = true; (ie const renderTexture size just scaled), and = false (ie variable renderTexture size and const scale, w/anchor point offsets for renderPool items)
+// SOLUITON(~): apply a non-destructive calculated OFFSET to renderPool item origins (eg: if the canvas has been Resized)
+// IE: ANCHOR and PIVOT points are NORMALIZED positions within the parent and child (so 0.5f, 0.5f is the center and 1,1 is th bottom-right)
+// THEN x/y positions of elements' top-left corner == (ANCHOR * parent dims) + (PIVOT * child dims) + offset
+// HOWEVER: generally, the offset must always be within the bounds of the parent eCanvas size for the child to be visible
+// SOLUTION(~): RectTransform eComponent that contains all these anchor/pivot/size values (instead of an eTransform, or eCollisionModel, or eBounds)
+
 //***************
 void eCanvas::Think() {
 	switch(canvasType) {
 		case CanvasType::SCREEN_SPACE_OVERLAY: {
-			// TODO: get the current window size and Resize (DON'T resize the renderTexture)
+			// TODO: get the current window size and re-scale the renderTarget
+
 		}
 
 		case CanvasType::CAMERA_SPACE_OVERLAY: { 
-			// TODO: get the current camera size???? and Resize (DON'T resize the renderTexture)
+			// TODO: get the current camera size???? and Resize (should the renderTexture also resize to match the main renderTexure so nothing gets clipped?)
 		}
 
 		case CanvasType::WORLD_SPACE: {
-			return;							// TODO(?): is there something else the canvas needs to do in worldspace besides have its renderImage Updated
+			renderImage.Update();				// TODO(?): is there something else the canvas needs to do? eCamera already scales its observations of this up if the window stretches
+			return;							
 		}
 	}
 }

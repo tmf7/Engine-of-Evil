@@ -55,10 +55,9 @@ class eGameObject;
 
 //*************************************************
 //				eComponent
-// base class for all in-game interactive objects
+// base class for all eGameObject behaviors
 // eGameObjects handle the lifetime of eComponents
-// DEBUG: enusure the correct owner address is set
-// if it is being used
+// DEBUG: always enusure the correct owner address is set
 //*************************************************
 class eComponent : public eClass {
 
@@ -69,6 +68,14 @@ private:
 	friend class eGameObject;
 
 public:
+
+	virtual									   ~eComponent() = default;
+												eComponent() = default;
+												eComponent( const eComponent & other ) = default;
+												eComponent( eComponent && other ) = default;
+	eComponent &								operator=( const eComponent & other ) = default;
+	eComponent &								operator=( eComponent && other ) = default;
+
 
 	const eGameObject *							Owner() const								{ return owner; }
 	eGameObject *								Owner()										{ return owner; }

@@ -35,16 +35,14 @@ namespace evil {
 
 //*******************************
 //		eRenderTarget
-// wrapper class for drawing to an SDL_Texture
-// attached to a SDL_Renderer context which
-// has a user-defined position 
-// and axis-aligned bounding box
+// wrapper class for drawing to an 
+// SDL_TEXTUREACCESS_TARGET type
+// SDL_Texture not handled by eImageManager.
+// As an eComponent, its lifetime is instead 
+// managed by its eGameObject owner.
 // DEBUG: eRenderer clears this texture
 // before drawing to it for the 
-// first time each frame, if it's dirty
-// DEBUG: this component does not provide
-// a relative offset from its owner's origin,
-// so SetOrigin on one affects both equally
+// first time each frame.
 //*******************************
 class eRenderTarget : public eComponent {
 
@@ -53,6 +51,7 @@ class eRenderTarget : public eComponent {
 
 public:
 
+	virtual						   ~eRenderTarget();
 									eRenderTarget(eGameObject * owner, SDL_Renderer * context, int width, int height, const eVec2 & scale = vec2_one);
 
 	void							InitDefault(SDL_Renderer * context, const eVec2 & scale = vec2_one);

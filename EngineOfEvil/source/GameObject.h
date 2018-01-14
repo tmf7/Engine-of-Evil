@@ -105,6 +105,17 @@ private:
 
 	eHashIndex									componentsTypeHash;					// reduces component lookup time to average case O(1) using the types as hash keys
 	std::vector<std::unique_ptr<eComponent>>	components;							// all eComponent-derived objects *this owns
+
+	eGameObject *								parent;								// TODO: this is a test for future RectTransform logic on things drawn to eCanvases (like buttons and text)
+	std::vector<eGameObject *>					children;							// TODO: the lifetimes of any children are handled elsewhere?
+																					// TODO: what about un-parenting children, or deleting the parent gameobject,
+																					// or disabling the parent gameobject, or layer/tag of the parent gameobject?
+																					// TODO: what about making the main Window a parent for RectTransform offset calculation?
+																					// ... give the window a RectTransform/dummy-eGameObject
+																					// child origins are always offsets w/respect to their parent gameobject...
+																					// the child's computed worldspace origin is the parent origin + offset, but in the case of
+																					// a gameobject child of a gameobject there is no "offset" member, only orthoOrigin....hmm
+
 	eVec2										orthoOrigin;						// orthographic 2D global transfrom coordinates
 	float										zPosition			= 0.0f;			// 3D position used for fluid renderBlock positioning (TODO: and other 3D related tasks)
 	Uint32										worldLayer			= MAX_LAYER;	// common layer on the eMap::tileMap (can position renderBlock and TODO: filters collision)

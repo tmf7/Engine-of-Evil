@@ -395,7 +395,7 @@ void eRenderer::Flush() {
 	// and world-space canvases are in the tilemap
 	// SO: sort registeredTargets to put eCanvases first (by layer)
 	// then eCameras (by layer)
-	SDL_HINT_RENDER_VSYNC;
+
 	for (auto && target : registeredTargets)
 		target->Flush();
 }

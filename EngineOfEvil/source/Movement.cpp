@@ -201,7 +201,7 @@ void eMovementPlanner::WallFollow() {
 // Determines the optimal movement vector to reach the current waypoint
 //******************
 void eMovementPlanner::CompassFollow() {
-	decision_t	waypoint;				// from the collisionModel::origin to the next waypoint
+	decision_t	waypoint;				// from the collisionModel::center to the next waypoint
 	decision_t	test;					// vector tested for optimal travel decision
 	decision_t	best;					// optimal movement
 	float		rotationAngle;			// cumulative amount the testVector has rotated in its search

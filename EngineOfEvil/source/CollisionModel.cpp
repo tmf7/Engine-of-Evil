@@ -56,7 +56,7 @@ eCollisionModel::~eCollisionModel() {
 //*************
 void eCollisionModel::Update() {
 	if (active)
-		AvoidCollisionSlide();		// TODO: alternatively push the collider away if it can be moved (non-static)
+		AvoidCollisionSlide();		// TODO: alternatively, push the collider away if it can be moved (non-static)
 
 	oldOrigin = origin;
 	origin = owner->GetOrigin();
@@ -64,6 +64,10 @@ void eCollisionModel::Update() {
 	absBounds = localBounds + origin + ownerOriginOffset;
 	center = absBounds.Center();
 
+	// sync the owner and collider positions
+	// TODO: don't have the collisionModel alone drive the eGameObject position
+	// eg: what happens once physics objects get involved? should that be the only driver?
+	// and give all items with collisionModels a default physics object (even if not simulated)?
 	owner->SetOrigin(origin);
 
 	if (active && origin != oldOrigin)
@@ -72,8 +76,8 @@ void eCollisionModel::Update() {
 
 //*************
 // eCollisionModel::SetOrigin
-// DEBUG: this relies on the next Update call to adjust the collider offset,
-// which actually offsets the owner instead of the collider itself (to prevent offsetting into collision)
+// DEBUG: this relies on the next Update call to adjust the collider offset
+// after resolving one step of collision
 //*************
 void eCollisionModel::SetOrigin(const eVec2 & newOrigin) {
 	owner->SetOrigin(newOrigin);
@@ -111,7 +115,7 @@ void eCollisionModel::UpdateAreas() {
 	ClearAreas();
 
 	auto & tileMap = owner->GetMap()->TileMap();
-	auto & cell = tileMap.IndexValidated(origin);
+	auto & cell = tileMap.IndexValidated(center);
 	if (cell.AbsBounds() != absBounds) {
 		eCollision::GetAreaCells(owner->GetMap(), absBounds, areas);
 	} else {							// BUGFIX: edge case where bounds matches its cell and winds up adding 4 areas instead of 1

@@ -126,26 +126,3 @@ void eGameObject::UpdateComponents() {
 			component->Update();
 	}
 }
-
-//*************
-// eGameObject::AddAnimationController
-// returns true if an eAnimationController has been added to *this
-// returns false if not because the filename is invalid, the file is unreadable, 
-// DEBUG: call [AddRenderImageBase|AddRenderImageIsometric] before calling this, because it depends on an eRenderImage-derived object
-//*************
-bool eGameObject::AddAnimationController( const std::string & animationControllerFilename ) {
-	std::shared_ptr<eAnimationController> prefabAnimationController = nullptr;
-	if ( !game->GetAnimationControllerManager().LoadAndGet( animationControllerFilename.c_str(), prefabAnimationController ) )
-		return false;
-
-	animationController = std::make_unique< eAnimationController >( this, *prefabAnimationController );
-	return true;
-}
-
-//*************
-// eGameObject::AddMovementPlanner
-// DEBUG: ideally call AddCollisionModel before calling this, because it depends on an eCollisionModel object
-//*************
-void eGameObject::AddMovementPlanner( float movementSpeed ) {
-	movementPlanner = std::make_unique< eMovementPlanner >( this, movementSpeed );
-}

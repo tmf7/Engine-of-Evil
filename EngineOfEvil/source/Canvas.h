@@ -57,6 +57,7 @@ class eCanvas : public eGameObject {
 public:
 
 	void											Init(eMap * onMap, const eVec2 & size, const eVec2 & worldPosition, const eVec2 & scale = vec2_one, CanvasType type = CanvasType::SCREEN_SPACE_OVERLAY, eCamera * cameraToOverlay = nullptr);
+	bool											Resize(int newWidth, int newHeight);
 	bool											AddToRenderPool(eRenderImageBase * renderImage);
 	void											ClearRenderPools();
 	void											Flush();

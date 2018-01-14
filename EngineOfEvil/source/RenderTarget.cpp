@@ -81,6 +81,13 @@ eRenderTarget::eRenderTarget(eGameObject * owner, SDL_Renderer * context, int wi
 	SDL_SetTextureBlendMode(target, SDL_BLENDMODE_BLEND);
 }
 
+//**************
+// eRenderTarget::~eRenderTarget
+//**************
+eRenderTarget::~eRenderTarget() {
+	SDL_DestroyTexture(target);
+}
+
 //***************************
 // eRenderTarget::Resize
 // creates a new SDL_Texture, 
