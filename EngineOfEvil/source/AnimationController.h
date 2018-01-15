@@ -93,6 +93,7 @@ public:
 	bool										GetTriggerParameter(int nameHash) const;
 
 	virtual void								Update() override;
+	virtual bool								VerifyAdd() const override;
 	virtual void								SetOwner(eGameObject * newOwner) override;
 
 private:

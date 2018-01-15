@@ -88,6 +88,21 @@ eRenderTarget::~eRenderTarget() {
 	SDL_DestroyTexture(target);
 }
 
+//************
+// eRenderTarget::VerifyAdd
+// only one instance per eGameObject allowed
+// TODO: add a unique identifier for the eGameObject being added to
+// for more accurate debug logging
+//************
+bool eRenderTarget::VerifyAdd() const {
+	if ( owner->GetComponent<eRenderTarget>() != nullptr ) {
+		EVIL_ERROR_LOG.LogError( "Only one eRenderTarget allowed per eGameObject.", __FILE__, __LINE__ );
+		return false;
+	}
+
+	return true;
+}
+
 //***************************
 // eRenderTarget::Resize
 // creates a new SDL_Texture, 

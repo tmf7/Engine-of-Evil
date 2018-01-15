@@ -58,9 +58,12 @@ public:
 	virtual void								DebugDraw( eRenderTarget * renderTarget )	{}
 
 	void										UpdateComponents();	
+	void										SetParent( eGameObject * newParent );
+	eGameObject *								GetParent() const						{ return parent; }
+	eGameObject *								GetFirstChild() const					{ return ( children.empty() ? nullptr : children.front() ); }
 	eMap * const								GetMap()								{ return map; }
 	const eVec2 &								GetOrigin()								{ return orthoOrigin; }
-	void										SetOrigin( const eVec2 & newOrigin )	{ orthoOrigin = newOrigin; }
+	void										SetOrigin( const eVec2 & newOrigin );
 	Uint32										GetWorldLayer()							{ return worldLayer; }
 	void										SetWorldLayer( Uint32 layer );
 	void										SetWorldLayer( float zPosition );
@@ -73,13 +76,13 @@ public:
 	void										Disable()								{ enabled = false; }
 
 	template< class ComponentType, typename... Args >
-	void										AddComponent( eGameObject * owner, Args&&... params );
+	bool										AddComponent( eGameObject * owner, Args&&... params );
 
 	template< class ComponentType >
-	ComponentType &								GetComponent();
+	ComponentType *								GetComponent();
 
 	template< class ComponentType >
-	const ComponentType &						GetComponent() const;
+	ComponentType * const						GetComponent() const;
 
 	template< class ComponentType >
 	std::vector< ComponentType * >				GetComponents();
@@ -106,17 +109,13 @@ private:
 	eHashIndex									componentsTypeHash;					// reduces component lookup time to average case O(1) using the types as hash keys
 	std::vector<std::unique_ptr<eComponent>>	components;							// all eComponent-derived objects *this owns
 
-	eGameObject *								parent;								// TODO: this is a test for future RectTransform logic on things drawn to eCanvases (like buttons and text)
-	std::vector<eGameObject *>					children;							// TODO: the lifetimes of any children are handled elsewhere?
-																					// TODO: what about un-parenting children, or deleting the parent gameobject,
-																					// or disabling the parent gameobject, or layer/tag of the parent gameobject?
-																					// TODO: what about making the main Window a parent for RectTransform offset calculation?
-																					// ... give the window a RectTransform/dummy-eGameObject
-																					// child origins are always offsets w/respect to their parent gameobject...
-																					// the child's computed worldspace origin is the parent origin + offset, but in the case of
-																					// a gameobject child of a gameobject there is no "offset" member, only orthoOrigin....hmm
+	// parent and children lifetimes are handled by eMap::entities
+	// FIXME/BUG: if *this is copied, then these have undefined behavior
+	eGameObject *								parent;
+	std::vector<eGameObject *>					children;
 
 	eVec2										orthoOrigin;						// orthographic 2D global transfrom coordinates
+	eVec2										relativeOrigin;						// position with respect to parent's orthoOrigin, if moving the parent, then this remains constant
 	float										zPosition			= 0.0f;			// 3D position used for fluid renderBlock positioning (TODO: and other 3D related tasks)
 	Uint32										worldLayer			= MAX_LAYER;	// common layer on the eMap::tileMap (can position renderBlock and TODO: filters collision)
 	bool										isStatic			= true;			// if orthoOrigin ever changes at runtime, speeds up draw-order sorting
@@ -125,17 +124,22 @@ private:
 
 //***************
 // eGameObject::AddComponent
-// finds the first empty element of the components vector to construct the requested component in, then
-// perfect-forwards all params to the ComponentType constructor with the matching parameter list.
+// perfect-forwards all params to the ComponentType constructor with the matching parameter list, then
+// calls eComponent::Verify to check any user-defined pre-requesites for attaching the new component.
+// If Verify returns true, then the new component is moved into the first empty element of the components vector.
+// returns true on a successful add, false otherwise.
 // DEBUG: be sure to compare the arguments of this fn to the desired constructor to avoid perfect-forwarding failure cases
 // EG: deduced initializer lists, decl-only static const int members, 0|NULL instead of nullptr, overloaded fn names, and bitfields
 //***************
 template< class ComponentType, typename... Args >
-void eGameObject::AddComponent( eGameObject * owner, Args&&... params ) {
+bool eGameObject::AddComponent( eGameObject * owner, Args&&... params ) {
+	auto & componentToAdd = std::make_unique< ComponentType >( owner, std::forward< Args >( params )... );
+
+	if ( !componentToAdd->Verify() )
+		return false;
+
 	if ( components.empty() )
 		componentsTypeHash.ClearAndResize( MAX_COMPONENTS );
-
-	auto & componentToAdd = std::make_unique< ComponentType >( owner, std::forward< Args >( params )... );
 
 	int index = 0;
 	for ( auto && componentSlot : components ) {
@@ -149,6 +153,8 @@ void eGameObject::AddComponent( eGameObject * owner, Args&&... params ) {
 	componentsTypeHash.Add( ComponentType::Type, index );
 	if ( index >= components.size() )
 		components.emplace_back( std::move( componentToAdd ) );
+
+	return true;
 }
 
 //***************
@@ -159,22 +165,22 @@ void eGameObject::AddComponent( eGameObject * owner, Args&&... params ) {
 // then components[0] will be returned because it derives from eComponent
 //***************
 template< class ComponentType >
-ComponentType &	eGameObject::GetComponent() {
+ComponentType *	eGameObject::GetComponent() {
 	for ( int index = componentsTypeHash.First( ComponentType::Type ); index != INVALID_ID; index = componentsTypeHash.Next( index ) ) {
 		if ( components[ index ]->IsClassType( ComponentType::Type ) )
-			return *static_cast< ComponentType * >( components[ index ].get() );
+			return static_cast< ComponentType * >( components[ index ].get() );
 	}
 
-	return *std::unique_ptr< ComponentType >( nullptr );
+	return nullptr;
 }
 
 
 //***************
 // eGameObject::GetComponent
-// see non-const GetComponent
+// see non-const GetComponent<>
 //***************
 template< class ComponentType >
-const ComponentType &	eGameObject::GetComponent() const {
+ComponentType * const	eGameObject::GetComponent() const {
 	return GetComponent<ComponentType>();
 }
 

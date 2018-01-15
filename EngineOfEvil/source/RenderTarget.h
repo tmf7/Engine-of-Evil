@@ -73,6 +73,8 @@ public:
 	bool							IsDefaultTarget() const											{ return isDefault; }
 	bool							Validate();
 
+	virtual bool					VerifyAdd() const override;
+
 protected:
 
 	SDL_Renderer *					context			= nullptr;										// back-pointer to eRenderer-allocated rendering context for target

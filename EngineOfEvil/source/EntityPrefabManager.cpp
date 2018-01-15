@@ -197,11 +197,19 @@ void eEntityPrefabManager::RegisterPrefab(const std::shared_ptr<eEntity> & newPr
 // param spawnArgs can be used in this fn to initialize the instance
 // or copy them into the instance 
 // DEBUG: allows hash collisions when registering prefabs
-// DEBUG: hooray a template-method design pattern that uses the Strategy design pattern
+// DEBUG: template-method design pattern that uses the Strategy design pattern
 //***************
 bool eEntityPrefabManager::CreatePrefab(const char * sourceFilename, const std::string & prefabShortName, const eDictionary & spawnArgs, int & prefabManagerIndex) {
 	std::shared_ptr<eEntity> newPrefab = nullptr;
 	prefabManagerIndex = resourceList.size();
+
+	// log
+	std::string message = "Creating (";
+	message += prefabShortName;
+	message += '_';
+	message += std::to_string( prefabManagerIndex );
+	message += ") prefab.";
+	EVIL_ERROR_LOG.LogError( message.c_str(), __FILE__, __LINE__ );
 
 	if (createPrefabStrategy->CreatePrefab(newPrefab, prefabShortName, spawnArgs) && newPrefab != nullptr) {
 		newPrefab->spawnArgs = std::move(spawnArgs);
@@ -233,60 +241,66 @@ bool eEntityPrefabManager::SpawnInstance(eMap * onMap, const std::string & prefa
 // param spawnArgs can be used in this fn to initialize the instance
 // DEBUG: do not copy/move spawnArgs into param newPrefab, eEntityPrefabManager moves them automatically after this fn 
 //***************
-bool eCreateEntityPrefabBasic::CreatePrefab(std::shared_ptr<eEntity> & newPrefab, const std::string & prefabShortName, const eDictionary & spawnArgs) {
-	if (prefabShortName == "Entity")
-		newPrefab = std::make_shared<eEntity>();
-	else
+bool eCreateEntityPrefabBasic::CreatePrefab( std::shared_ptr< eEntity > & newPrefab, const std::string & prefabShortName, const eDictionary & spawnArgs ) {
+	if ( prefabShortName == "Entity" ) {
+		newPrefab = std::make_shared< eEntity >();
+
+	} else {
+		std::string message;
+		message = "Invalid prefabShortName: ";
+		message += prefabShortName;
+		EVIL_ERROR_LOG.LogError( message.c_str(), __FILE__, __LINE__ );
 		return false;
+	}
 
 	// eRenderImage
-	std::shared_ptr<eImage> initialImage = nullptr;
+	std::shared_ptr< eImage > initialImage = nullptr;
 	if ( game->GetImageManager().LoadAndGet( spawnArgs.GetString("spriteFilename", ""), initialImage) ) {
 		const eVec3 renderBlockSize = spawnArgs.GetVec3("renderBlockSize", "0 0 0");
 
-		if (renderBlockSize != vec3_zero){
-			newPrefab->AddComponent<eRenderImageIsometric>(	newPrefab.get(),
-															initialImage,
-															renderBlockSize, 
-															spawnArgs.GetInt("initialSpriteFrame", "0"), 
-															spawnArgs.GetVec2("renderImageOffset", "0 0"), 
-															spawnArgs.GetBool("playerSelectable", "0")
-														 );
+		if ( renderBlockSize != vec3_zero ) {
+			newPrefab->AddComponent< eRenderImageIsometric >(	newPrefab.get(),
+																initialImage,
+																renderBlockSize, 
+																spawnArgs.GetInt( "initialSpriteFrame", "0" ), 
+																spawnArgs.GetVec2( "renderImageOffset", "0 0" ), 
+																spawnArgs.GetBool( "playerSelectable", "0" )
+															 );
 		} else {
-			newPrefab->AddComponent<eRenderImageBase>(	newPrefab.get(),
-														initialImage,
-														spawnArgs.GetInt("initialSpriteFrame", "0"), 
-														spawnArgs.GetVec2("renderImageOffset", "0 0"), 
-														spawnArgs.GetBool("playerSelectable", "0")
-													 );
+			newPrefab->AddComponent< eRenderImageBase >(	newPrefab.get(),
+															initialImage,
+															spawnArgs.GetInt( "initialSpriteFrame", "0" ), 
+															spawnArgs.GetVec2( "renderImageOffset", "0 0" ), 
+															spawnArgs.GetBool( "playerSelectable", "0" )
+														 );
 		}
 	}
 
 	// eAnimationController
-	std::shared_ptr<eAnimationController> prefabAnimationController = nullptr;
-	if ( game->GetAnimationControllerManager().LoadAndGet( spawnArgs.GetString("animationController", ""), prefabAnimationController ) ) {
-		newPrefab->AddComponent<eAnimationController>( newPrefab.get(), *prefabAnimationController );
+	std::shared_ptr< eAnimationController > prefabAnimationController = nullptr;
+	if ( game->GetAnimationControllerManager().LoadAndGet( spawnArgs.GetString("animationController", "" ), prefabAnimationController ) ) {
+		newPrefab->AddComponent< eAnimationController >( newPrefab.get(), *prefabAnimationController );
 	}
 
 	// eCollisionModel
-	eQuat minMax = spawnArgs.GetVec4("localBounds", "1 1 0 0");					// default empty bounds
-	eBounds localBounds(eVec2(minMax.x, minMax.y), eVec2(minMax.z, minMax.w));
+	eQuat minMax = spawnArgs.GetVec4( "localBounds", "1 1 0 0" );					// default empty bounds
+	eBounds localBounds (eVec2( minMax.x, minMax.y ), eVec2( minMax.z, minMax.w ) );
 	if ( !localBounds.IsEmpty() ) {
-		newPrefab->AddComponent<eCollisionModel>( newPrefab.get(), 
-												  localBounds,
-												  spawnArgs.GetVec2("colliderOffset", "0 0"),
-												  spawnArgs.GetBool("collisionActive", "0")
-												);
+		newPrefab->AddComponent< eCollisionModel >( newPrefab.get(), 
+												    localBounds,
+												    spawnArgs.GetVec2( "colliderOffset", "0 0" ),
+												    spawnArgs.GetBool( "collisionActive", "0" )
+												  );
 	}
 	
 	// eMovementPlanner
-	const float movementSpeed = spawnArgs.GetFloat("movementSpeed", "0");
+	const float movementSpeed = spawnArgs.GetFloat( "movementSpeed", "0" );
 	if ( movementSpeed ) {
-		newPrefab->AddComponent<eMovementPlanner>( newPrefab.get(), 
-												   movementSpeed 
-												 );
+		newPrefab->AddComponent< eMovementPlanner >( newPrefab.get(), 
+												     movementSpeed 
+												   );
 	}
 
-	newPrefab->SetStatic(spawnArgs.GetBool("isStatic", "1"));
+	newPrefab->SetStatic( spawnArgs.GetBool( "isStatic", "1" ) );
 	return true;
 }

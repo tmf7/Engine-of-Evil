@@ -64,13 +64,12 @@ public:
 
 private:
 
-	// DEBUG: both of these reference members have lifetimes dictated by their eGameObject owner (ie: *this)
-	// DEBUG: this aggregation prevents the compiler from generating an assignment operator
-	// TODO: if needed, write the assignment operator to perform new GetComponent<> on the new object's reference members
-	eCollisionModel &					collisionModel;
-	eMovementPlanner &					movementPlanner;
-	eRenderImageIsometric &				renderImage;			// FIXME: assumes this isn't a eRenderImageBase
-	eAnimationController &				animationController;
+	// lifetimes handled in eGameObject base object
+	// FIXME/BUG: if *this is copied, then these dangle
+	eCollisionModel *					collisionModel;
+	eMovementPlanner *					movementPlanner;
+	eRenderImageIsometric *				renderImage;			// FIXME: assumes this isn't a eRenderImageBase
+	eAnimationController *				animationController;
 
 
 	eDictionary							spawnArgs;				// populated during eEntityPrefabManager::CreatePrefab, used for initialization in eCreateEntityPrefabStrategy::CreatePrefab-overridden methods

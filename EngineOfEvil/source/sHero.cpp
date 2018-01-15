@@ -33,8 +33,12 @@ using namespace logic;
 
 ECLASS_DEFINITION(eEntity, sHero)
 
+//***************
+// sHero::Think
+// FIXME/BUG: this assumes collisionModel and animationController are valid
+//***************
 void sHero::Think() {
-	auto & velocity = collisionModel.GetVelocity();
+	auto & velocity = collisionModel->GetVelocity();
 	eVec2 facingDirection;
 	if (velocity != vec2_zero) {
 		facingDirection = velocity.Normalized();
@@ -45,9 +49,9 @@ void sHero::Think() {
 		facingDirection = oldFacingDirection * 0.25f;
 	}
 			
-	animationController.SetFloatParameter(xSpeedParameterHash, facingDirection.x);
-	animationController.SetFloatParameter(ySpeedParameterHash, facingDirection.y);
-	animationController.SetFloatParameter(magnitudeParameterHash, facingDirection.Length());
+	animationController->SetFloatParameter(xSpeedParameterHash, facingDirection.x);
+	animationController->SetFloatParameter(ySpeedParameterHash, facingDirection.y);
+	animationController->SetFloatParameter(magnitudeParameterHash, facingDirection.Length());
 }
 
 //***************

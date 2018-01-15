@@ -56,7 +56,7 @@ void ePlayer::Think() {
 
 		} else if (!groupSelection.empty()) {
 			for (auto & entity : groupSelection)
-				entity->GetComponent<eMovementPlanner>().AddUserWaypoint(map->GetViewCamera()->MouseWorldPosition());
+				entity->GetComponent<eMovementPlanner>()->AddUserWaypoint(map->GetViewCamera()->MouseWorldPosition());
 /*
 			if ("small selection area, so set a chase target for the group if there's an eEntity in the selectionArea") {		// TODO: implement
 			} else { // group pathfinding
@@ -71,14 +71,14 @@ void ePlayer::Think() {
 	}
 
 	for (auto & entity : groupSelection) {	
-		auto & entityMovement = entity->GetComponent<eMovementPlanner>();
+		auto entityMovement = entity->GetComponent<eMovementPlanner>();
 		if (input.KeyPressed(SDL_SCANCODE_M))
-			entityMovement.TogglePathingState();
+			entityMovement->TogglePathingState();
 
 		if (game->debugFlags.KNOWN_MAP_CLEAR && input.KeyPressed(SDL_SCANCODE_R))
-			entityMovement.ClearTrail();
+			entityMovement->ClearTrail();
 
-		const float moveSpeed = entityMovement.Speed();
+		const float moveSpeed = entityMovement->Speed();
 		const float xMove = moveSpeed * (float)(input.KeyHeld(SDL_SCANCODE_RIGHT) - input.KeyHeld(SDL_SCANCODE_LEFT));
 		const float yMove = moveSpeed * (float)(input.KeyHeld(SDL_SCANCODE_DOWN) - input.KeyHeld(SDL_SCANCODE_UP));
 
@@ -86,8 +86,8 @@ void ePlayer::Think() {
 		moveInput.Normalize();
 		moveInput *= moveSpeed;
 		eMath::IsometricToCartesian(moveInput.x, moveInput.y);
-		auto & entityCollisionModel = entity->GetComponent<eCollisionModel>();
-		entityCollisionModel.SetVelocity(eVec2(moveInput.x, moveInput.y));
+		auto entityCollisionModel = entity->GetComponent<eCollisionModel>();
+		entityCollisionModel->SetVelocity(eVec2(moveInput.x, moveInput.y));
 	}
 }
 
@@ -137,12 +137,12 @@ bool ePlayer::SelectGroup() {
 			alreadyTested[entity] = entity;
 
 			// dont select the non-selectabale
-			auto & entityRenderImage = entity->GetComponent<eRenderImageBase>();
-			if (&entityRenderImage != nullptr && !entityRenderImage.IsSelectable())
+			auto entityRenderImage = entity->GetComponent<eRenderImageBase>();
+			if (entityRenderImage != nullptr && !entityRenderImage->IsSelectable())
 				continue;
 
 			// account for current camera zoom level
-			auto & worldClip = entityRenderImage.GetWorldClip();
+			auto & worldClip = entityRenderImage->GetWorldClip();
 			const float zoom = map->GetViewCamera()->GetZoom();
 			const eVec2 worldClipOrigin = (worldClip[0] - map->GetViewCamera()->AbsBounds()[0]) * zoom;
 			const eVec2 worldClipSize = eVec2(worldClip.Width(), worldClip.Height()) * zoom;
@@ -179,7 +179,7 @@ void ePlayer::Draw() {
 
 	// highlight those selected
 	for (auto & entity : groupSelection)
-		game->GetRenderer().DrawIsometricRect(map->GetViewCamera()->GetDebugRenderTarget(), lightBlueColor, entity->GetComponent<eCollisionModel>().AbsBounds());
+		game->GetRenderer().DrawIsometricRect(map->GetViewCamera()->GetDebugRenderTarget(), lightBlueColor, entity->GetComponent<eCollisionModel>()->AbsBounds());
 }
 
 //***************

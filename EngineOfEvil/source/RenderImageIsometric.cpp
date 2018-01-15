@@ -68,8 +68,8 @@ void eRenderImageIsometric::UpdateRenderBlock() {
 		renderBlock += eVec3(0.0f, 0.0f, owner->GetZPosition() - renderBlockMins.z);
 	}
 
-	if (&owner->GetComponent<eCollisionModel>() != nullptr) {
-		auto & collisionMins = owner->GetComponent<eCollisionModel>().AbsBounds()[0];
+	if (owner->GetComponent<eCollisionModel>() != nullptr) {
+		auto & collisionMins = owner->GetComponent<eCollisionModel>()->AbsBounds()[0];
 		renderBlock += eVec3(collisionMins.x - renderBlockMins.x, collisionMins.y - renderBlockMins.y , 0.0f);
 	} else {
 		auto & ownerOrigin = owner->GetOrigin();

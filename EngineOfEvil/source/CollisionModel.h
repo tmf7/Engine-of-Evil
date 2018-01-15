@@ -73,6 +73,7 @@ public:
 	bool										FindApproachingCollision(const eVec2 & dir, const float length, Collision_t & result) const;
 
 	virtual void								Update() override;
+	virtual bool								VerifyAdd() const override;
 
 private:
 

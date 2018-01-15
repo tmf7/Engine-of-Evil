@@ -68,6 +68,7 @@ public:
 	void					DrawKnownMap() const;
 
 	virtual void			Update() override;
+	virtual bool			VerifyAdd() const override;
 	virtual void			SetOwner(eGameObject * newOwner) override;
 
 private:
@@ -115,7 +116,7 @@ private:
 
 private:
 
-	eCollisionModel &		ownerCollisionModel;			// always confirmed
+	eCollisionModel *		ownerCollisionModel = nullptr;	// confirmed each Update, lifetime handled in eGameObject base object
 
 	known_map_t				knownMap;						// tracks visited tiles 
 	movementType_t			moveState;						// backtracking or heading to a goal

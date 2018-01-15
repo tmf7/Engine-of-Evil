@@ -82,7 +82,7 @@ void eCamera::Think() {
 // resizing an eCamera makes more|less of the gameworld visible
 //***************
 void eCamera::Resize(const eVec2 & newSize) {
-	collisionModel.SetLocalBounds( eBounds( -newSize * 0.5f, newSize * 0.5f ) );
+	collisionModel->SetLocalBounds( eBounds( -newSize * 0.5f, newSize * 0.5f ) );
 	moved = true;
 }
 
@@ -139,7 +139,6 @@ void eCamera::ResetZoom() {
 	Resize( defaultSize / zoom );
 }
 
-
 //***************
 // eCamera::GetZoom
 //***************
@@ -159,7 +158,7 @@ bool eCamera::Moved() const {
 // eCamera::AbsBounds
 //***************
 const eBounds & eCamera::AbsBounds() const {
-	return collisionModel.AbsBounds();
+	return collisionModel->AbsBounds();
 }
 
 //**************
@@ -167,7 +166,7 @@ const eBounds & eCamera::AbsBounds() const {
 // returns current position of screenPoint over the 2D orthographic game world with respect to this camera's position
 //**************
 eVec2 eCamera::ScreenToWorldPosition(const eVec2 & screenPoint) const {
-	eVec2 worldPoint = (screenPoint / zoom) + collisionModel.AbsBounds()[0];
+	eVec2 worldPoint = (screenPoint / zoom) + collisionModel->AbsBounds()[0];
 	eMath::IsometricToCartesian(worldPoint.x, worldPoint.y);
 	return worldPoint;
 }
@@ -255,7 +254,7 @@ void eCamera::Flush() {
 	// TODO: give a camera its own viewportRect and add that into the scale calculation
 	auto & renderer = game->GetRenderer();
 	const SDL_Rect windowBounds = renderer.ViewArea();
-	const eBounds & cameraBounds = collisionModel.LocalBounds();
+	const eBounds & cameraBounds = collisionModel->LocalBounds();
 	const eVec2 cameraScale( (float)windowBounds.w / cameraBounds.Width(), 
 							 (float)windowBounds.h / cameraBounds.Height() );
 

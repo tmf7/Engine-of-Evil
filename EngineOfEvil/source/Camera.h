@@ -78,10 +78,8 @@ public:
 
 private:
 
-	// DEBUG: this reference member has a lifetime dictated by its eGameObject owner (ie: *this)
-	// DEBUG: this aggregation prevents the compiler from generating an assignment operator
-	// TODO: if needed, write the assignment operator to perform new GetComponent<> on the new object's reference members
-	eCollisionModel &								collisionModel;
+	// FIXME/BUG: if *this is copied, then this dangles
+	eCollisionModel *								collisionModel = nullptr;	// lifetime handled in eGameObject base object
 
 	std::vector<eRenderImageIsometric *>			dynamicPool;				// dynamic eGameObjects to draw, minimizes priority re-calculations of dynamic vs. static eGameObjects
 	std::vector<eRenderImageIsometric *>			staticPool;					// static eGameObjects that move and scale with this camera's renderTargets

@@ -50,37 +50,62 @@ eCollisionModel::~eCollisionModel() {
 	ClearAreas();
 }
 
-//*************
-// eCollisionModel::Update
-// TODO: move velocity to physics/rigidbody class (this will affect eMovementPlanner logic)
-//*************
-void eCollisionModel::Update() {
-	if (active)
-		AvoidCollisionSlide();		// TODO: alternatively, push the collider away if it can be moved (non-static)
+//************
+// eCollisionModel::VerifyAdd
+// only one instance per eGameObject allowed
+// TODO: add a unique identifier for the eGameObject being added to
+// for more accurate debug logging
+//************
+bool eCollisionModel::VerifyAdd() const {
+	if ( owner->GetComponent<eCollisionModel>() != nullptr ) {
+		EVIL_ERROR_LOG.LogError( "Only one eCollisionModel allowed per eGameObject.", __FILE__, __LINE__ );
+		return false;
+	}
 
-	oldOrigin = origin;
-	origin = owner->GetOrigin();
-	origin += velocity * game->GetDeltaTime();
-	absBounds = localBounds + origin + ownerOriginOffset;
-	center = absBounds.Center();
-
-	// sync the owner and collider positions
-	// TODO: don't have the collisionModel alone drive the eGameObject position
-	// eg: what happens once physics objects get involved? should that be the only driver?
-	// and give all items with collisionModels a default physics object (even if not simulated)?
-	owner->SetOrigin(origin);
-
-	if (active && origin != oldOrigin)
-		UpdateAreas();
+	return true;
 }
 
 //*************
 // eCollisionModel::SetOrigin
-// DEBUG: this relies on the next Update call to adjust the collider offset
-// after resolving one step of collision
 //*************
-void eCollisionModel::SetOrigin(const eVec2 & newOrigin) {
-	owner->SetOrigin(newOrigin);
+void eCollisionModel::SetOrigin( const eVec2 & newOrigin ) {
+	oldOrigin = origin;
+	origin = newOrigin;
+	absBounds = localBounds + origin + ownerOriginOffset;
+	center = absBounds.Center();
+
+	// sync the owner and collider positions
+	// FIXME: should owner->SetOrigin call anything else? (probably not. to prevent overflow) ???
+	// and/or should owner->SetOrigin even be called here???
+	owner->SetOrigin( newOrigin );
+}
+
+//*************
+// eCollisionModel::Update
+// TODO: move velocity member to physics/rigidbody class
+// TODO: use ePhysics to also set the velocity (same as eMovementPlanner) while eCollisionModel alone updates origins
+
+// FIXME: eMovementPlanner::Update occurs before eCollisionModel::Update, meaning it works with the old
+// version of collisionModel.absBounds if the user called eGameObject::SetOrigin
+// SOLUTION: have eMovementPlanner call collisionModel.SetOrigin(owner->GetOrigin()) at the start of Update
+// FIXME/BUG(!!!): NO, eMovementPlanner::Update is NOT necessarily called before eCollisionModel::Update if 
+// the eCollisionModel component was added BEFORE the eMovementPlanner component!!
+// ...which results in eMovementPlanner being one frame behind where the eCollisionModel is
+//*************
+void eCollisionModel::Update() {
+
+	// FIXME: if user called eGameObject::SetOrigin, then absBounds would be out of sync
+	// SOLUTION(?): create and eComponent::SyncOrigin called by eGameObject::SetOrigin
+	// SOLUTION(?): ...or call SetOrigin on each non-nullptr component? (would currently cause stack overflow)
+	// SetOrigin( owner->GetOrigin() );		// always work from the current owner.origin before casting/adjusting velocity
+
+	if ( active )
+		AvoidCollisionSlide();		// TODO: alternatively, push the collider away if it can be moved (non-static)
+
+	SetOrigin( owner->GetOrigin() + velocity * game->GetDeltaTime() );
+
+	if ( active && origin != oldOrigin )
+		UpdateAreas();
 }
 
 //***************
@@ -174,6 +199,11 @@ void eCollisionModel::AvoidCollisionCorrection() {
 void eCollisionModel::AvoidCollisionSlide() {
 	if (velocity == vec2_zero)
 		return;
+
+//	FIXME: if a user calls eGameObject::SetOrigin, then collisionModel.FindApproachingCollision
+//	eg: during eGameObject::Think (before which UpdateComponents was called...)
+//	... then will FindAppColl be using the wrong absBounds?
+//	absBounds = localBounds + owner->GetOrigin() + ownerOriginOffset;
 
 	Collision_t collision;
 	eVec2 collisionTangent;

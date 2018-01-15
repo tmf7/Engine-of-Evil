@@ -54,11 +54,10 @@ void eStateNode::NextFrame(const eAnimation & animation) {
 			break;
 	}
 
-	
-	auto & targetRenderImage = stateMachine->Owner()->GetComponent<eRenderImageBase>();
-	if (&targetRenderImage != nullptr) {		// BUGFIX: removes load and run-time dependence between eAnimationController and eRenderImageBase-derived instances
-		targetRenderImage.SetImage(currentFrame->imageManagerIndex);
-		targetRenderImage.SetImageFrame(currentFrame->subframeIndex);
+	auto targetRenderImage = stateMachine->Owner()->GetComponent<eRenderImageBase>();
+	if (targetRenderImage != nullptr) {		// BUGFIX: removes load and run-time dependence between eAnimationController and eRenderImageBase-derived instances
+		targetRenderImage->SetImage(currentFrame->imageManagerIndex);
+		targetRenderImage->SetImageFrame(currentFrame->subframeIndex);
 	}
 }
 

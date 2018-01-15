@@ -45,11 +45,10 @@ public:
 
 private:
 
-	// DEBUG: both of these reference members have lifetimes dictated by their eGameObject owner (ie: *this)
-	// DEBUG: this aggregation prevents the compiler from generating an assignment operator
-	// TODO: if needed, write the assignment operator to perform new GetComponent<> on the new object's reference members
-	eCollisionModel &					collisionModel;
-	eAnimationController &				animationController;
+	// lifetime handled in eGameObject base object
+	// FIXME: if *this is COPIED, these pointers dangle
+	eCollisionModel *					collisionModel;
+	eAnimationController *				animationController;
 
 	eVec2								oldFacingDirection			= vec2_oneZero;
 	const int							xSpeedParameterHash		= std::hash< std::string >()( "xSpeed" );

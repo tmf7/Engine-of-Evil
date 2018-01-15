@@ -65,11 +65,11 @@ void eCanvas::Init(eMap * onMap, const eVec2 & size, const eVec2 & worldPosition
 		case CanvasType::WORLD_SPACE: {
 			// DEBUG: eRenderImageIsometric maintains the lifetime of eRenderTarget::target via its std::shared_ptr<eImage>,
 			// meaning eImageManager doesn't need to manage this image because it wil only ever be used by *this, and no other eGameObject
-			auto & initialImage = std::make_unique<eImage>(renderTarget.GetTargetTexture(), "WorldSpaceCanvasInstance", INVALID_ID);
+			auto & initialImage = std::make_unique<eImage>(renderTarget->GetTargetTexture(), "WorldSpaceCanvasInstance", INVALID_ID);
 			initialImage->SetSubframes( std::vector<SDL_Rect> ( { SDL_Rect { 0, 0, intSize.x, intSize.y } } ) );
 			AddComponent< eRenderImageIsometric >( this, initialImage, eVec3( size.x, 2.0f, size.y ) );
 			renderImage = GetComponent< eRenderImageIsometric >();
-			renderImage.SetOrigin(worldPosition);
+			renderImage->SetOrigin(worldPosition);
 			return;				
 		}
 	}
@@ -117,7 +117,7 @@ void eCanvas::Think() {
 		}
 
 		case CanvasType::WORLD_SPACE: {
-			renderImage.Update();				// TODO(?): is there something else the canvas needs to do? eCamera already scales its observations of this up if the window stretches
+			renderImage->Update();				// TODO(?): is there something else the canvas needs to do? eCamera already scales its observations of this up if the window stretches
 			return;							
 		}
 	}
@@ -156,7 +156,7 @@ void eCanvas::ClearRenderPools() {
 // this eCanvas's eRenderTarget texture, if any
 //**************
 void eCanvas::Flush() {
-	if (!renderTarget.Validate())
+	if (!renderTarget->Validate())
 		return;
 
 	QuickSort(	staticPool.data(),
@@ -168,7 +168,7 @@ void eCanvas::Flush() {
 			});
 
 	auto & renderer = game->GetRenderer();
-	renderer.SetRenderTarget(&renderTarget);
+	renderer.SetRenderTarget(renderTarget);
 
 	const auto & canvasOffset = GetOrigin();
 	for (auto && renderImage : staticPool)
@@ -177,5 +177,5 @@ void eCanvas::Flush() {
 	ClearRenderPools();
 
 	renderer.SetRenderTarget(renderer.GetMainRenderTarget());
-	SDL_RenderCopy(renderer.GetSDLRenderer(), renderTarget.GetTargetTexture(), NULL, NULL);
+	SDL_RenderCopy(renderer.GetSDLRenderer(), renderTarget->GetTargetTexture(), NULL, NULL);
 }

@@ -228,17 +228,17 @@ eTile::eTile(eGridCell * cellOwner, const eVec2 & origin, const int type, const 
 void eTile::SetType(int newType) {
 	// changing to a different tile type that may not have a collider
 	RemoveComponent<eCollisionModel>();
-	auto & isoRenderImage = GetComponent<eRenderImageIsometric>();
+	auto isoRenderImage = GetComponent<eRenderImageIsometric>();
 
 	impl = &eTileImpl::tileTypes[newType];																		// DEBUG: assumes newType is defined
-	isoRenderImage.Image() = game->GetImageManager().GetByResourceID(eTileImpl::tileSet.at(newType).first);	// which image (tile atlas)
-	isoRenderImage.SetImageFrame(eTileImpl::tileSet.at(newType).second);										// which part of that image
+	isoRenderImage->Image() = game->GetImageManager().GetByResourceID(eTileImpl::tileSet.at(newType).first);	// which image (tile atlas)
+	isoRenderImage->SetImageFrame(eTileImpl::tileSet.at(newType).second);										// which part of that image
 
 	// visual alignment with isometric grid
 	const float isoCellWidthAdjustment = (float)map->TileMap().IsometricCellWidth() * 0.5f;
 	const float isoCellHeightAdjustment = (float)map->TileMap().IsometricCellHeight();
-	isoRenderImage.SetOffset(eVec2(-isoCellWidthAdjustment, isoCellHeightAdjustment - (float)isoRenderImage.GetImageFrame()->h));
-	isoRenderImage.SetRenderBlockSize(impl->renderBlockSize);
+	isoRenderImage->SetOffset(eVec2(-isoCellWidthAdjustment, isoCellHeightAdjustment - (float)isoRenderImage->GetImageFrame()->h));
+	isoRenderImage->SetRenderBlockSize(impl->renderBlockSize);
 
 	if (impl->collider != nullptr) 
 		AddComponent<eCollisionModel>(this, *(impl->collider), vec2_zero, true);		// currently no collider offset and all tile colliders are set active

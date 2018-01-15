@@ -83,6 +83,9 @@ public:
 	void										Enable()									{ enabled = true; }
 	void										Disable()									{ enabled = false; }
 
+												// checks any user-defined requirements before adding *this to the owner
+	virtual bool								VerifyAdd() const							{ return true; }
+
 	virtual void								SetOwner(eGameObject * newOwner)			{ owner = newOwner; }
 
 												// called every frame before owner::Think in eGameObject::UpdateComponents

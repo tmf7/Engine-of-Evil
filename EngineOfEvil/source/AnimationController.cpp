@@ -72,6 +72,21 @@ eAnimationController::eAnimationController(eGameObject * owner, const eAnimation
 }
 
 //************
+// eAnimationController::VerifyAdd
+// only one instance per eGameObject allowed
+// TODO: add a unique identifier for the eGameObject being added to
+// for more accurate debug logging
+//************
+bool eAnimationController::VerifyAdd() const {
+	if ( owner->GetComponent<eAnimationController>() != nullptr ) {
+		EVIL_ERROR_LOG.LogError( "Only one eAnimationController allowed per eGameObject.", __FILE__, __LINE__ );
+		return false;
+	}
+
+	return true;
+}
+
+//************
 // eAnimationController::CheckTransitionConditions
 // all conditions must be met for the transition to trigger
 //************

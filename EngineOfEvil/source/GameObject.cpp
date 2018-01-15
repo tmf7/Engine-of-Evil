@@ -34,6 +34,7 @@ ECLASS_DEFINITION(eClass, eGameObject)
 
 //**************
 // eGameObject::eGameObject
+// FIXME:  implement parent and children copying
 //**************
 eGameObject::eGameObject(const eGameObject & other) 
 	: orthoOrigin(other.orthoOrigin),
@@ -50,6 +51,7 @@ eGameObject::eGameObject(const eGameObject & other)
 
 //**************
 // eGameObject::eGameObject
+// FIXME:  implement parent and children moving
 //**************
 eGameObject::eGameObject(eGameObject && other)
 	: orthoOrigin(std::move(other.orthoOrigin)),
@@ -66,6 +68,7 @@ eGameObject::eGameObject(eGameObject && other)
 
 //**************
 // eGameObject::operator=
+// FIXME:  implement parent and children swapping
 //**************
 eGameObject & eGameObject::operator=(eGameObject other) {
 	std::swap(orthoOrigin, other.orthoOrigin);
@@ -86,6 +89,51 @@ void eGameObject::UpdateComponentsOwner(){
 	for (auto && component : components) {
 		if (component != nullptr)
 			component->SetOwner(this);
+	}
+}
+
+//*************
+// eGameObject::SetParent
+// FIXME: handle deleting the parent gameobject: do the children get deleted too?
+// FIXME: handle disabling the parent gameobject: do the children get disabled too?
+// FIXME: handle what a parent layer/tag means for its children's actions|interactions
+
+// TODO: if the parent is nullptr when calculating the eComponent eRectTransform offset, 
+// just use (0,0) and the main window size by default
+//*************
+void eGameObject::SetParent( eGameObject * newParent )	{
+	if ( newParent == this )
+		return;
+
+	// remove *this from its current list of siblings
+	if ( parent != nullptr ) {
+		auto & siblings = parent->children;
+		auto & self = std::find( siblings.begin(), siblings.end(), this );
+		siblings.erase( self );
+	}
+
+	if ( newParent != nullptr )
+		newParent->children.emplace_back( this );
+
+	parent = newParent;
+
+	// maintain worldspace coordinates and just change relativeOrigin
+	eVec2 parentOrigin = ( parent == nullptr ? vec2_zero : parent->orthoOrigin );
+	SetOrigin( orthoOrigin - parentOrigin );			
+}
+
+//*************
+// eGameObject::SetOrigin
+// sets origin with respect to any parent
+// or directly in worldspace
+//*************
+void eGameObject::SetOrigin( const eVec2 & newOrigin )	{
+	relativeOrigin = newOrigin;
+
+	if ( parent != nullptr ) {
+		orthoOrigin = parent->orthoOrigin + newOrigin;
+	} else {
+		orthoOrigin = newOrigin;
 	}
 }
 
