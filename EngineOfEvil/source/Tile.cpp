@@ -204,6 +204,9 @@ bool eTileImpl::LoadTileset(const char * tilesetFilename, bool appendNew) {
 // type is the index within the master tileSet vector
 // layer sets this->renderImage.renderBlock's base z-position (for draw-order sorting)
 // DEBUG: every tile is aligned with at least one cell no matter its size (ie: no freely-aligned tile-image origins)
+// FIXME(~): if an eImage that defines part of the eTileImpl::tileset is Unloaded, then SetType could fail,
+// however, the eTiles already part of the eMap would still draw because their eRenderImageIsometric use a std::shared_ptr to the unloaded eImage
+// also-also...the eImage::managerIndex would become invalid though...
 //************
 eTile::eTile(eGridCell * cellOwner, const eVec2 & origin, const int type, const Uint32 layer) 
 	: cellOwner(cellOwner) {

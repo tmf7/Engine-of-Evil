@@ -124,7 +124,7 @@ void eGame::Run() {
 		if (debugFlags.FRAMERATE)
 			DrawFPS();
 
-		renderer.FlushRegisteredTargets();
+		renderer.Flush();
 		renderer.Show();
 
 		gameTime = (float)SDL_GetTicks() / 1000.0f;

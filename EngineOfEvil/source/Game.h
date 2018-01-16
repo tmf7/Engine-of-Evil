@@ -78,7 +78,8 @@ public:
 
 public:
 
-		struct {
+	// TODO: move these flags to their respective systems/components
+	struct {
 		bool	GOAL_WAYPOINTS		= true;
 		bool	TRAIL_WAYPOINTS		= false;
 		bool	COLLISION			= false;

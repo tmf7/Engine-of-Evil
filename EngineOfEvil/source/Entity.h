@@ -40,7 +40,7 @@ namespace evil {
 
 //*************************************************
 //					eEntity
-// objects that dynamically interact with the game environment
+// objects that dynamically interact within an eMap environment
 //*************************************************
 class eEntity : public eGameObject, public eResource {
 
@@ -66,10 +66,10 @@ private:
 
 	// lifetimes handled in eGameObject base object
 	// FIXME/BUG: if *this is copied, then these dangle
-	eCollisionModel *					collisionModel;
-	eMovementPlanner *					movementPlanner;
-	eRenderImageIsometric *				renderImage;			// FIXME: assumes this isn't a eRenderImageBase
-	eAnimationController *				animationController;
+	eCollisionModel *					collisionModel			= nullptr;
+	eMovementPlanner *					movementPlanner			= nullptr;
+	eRenderImageIsometric *				renderImage				= nullptr;			// FIXME: assumes this isn't a eRenderImageBase
+	eAnimationController *				animationController		= nullptr;
 
 
 	eDictionary							spawnArgs;				// populated during eEntityPrefabManager::CreatePrefab, used for initialization in eCreateEntityPrefabStrategy::CreatePrefab-overridden methods

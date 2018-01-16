@@ -128,12 +128,10 @@ inline void eHashIndex::Add(const int hashkey, const int index) {
 // DEBUG: assert( index >= 0 && index < indexChain.size() )
 //*******************
 inline void eHashIndex::Remove(const int hashkey, const int index) {
-	int k;
-
 	if (hash.empty())
 		return;
-	
-	k = hashkey & hashMask;
+
+	int	k = hashkey & hashMask;
 	if (hash[k] == index) {
 		hash[k] = indexChain[index];
 	} else {
@@ -166,7 +164,7 @@ inline int eHashIndex::Next(const int index) const {
 
 //*******************
 // eHashIndex::Insertindex
-// insert an new index into the indexChain and add it to the hash, increasing all indexes >= index
+// insert a new index into the indexChain and add it to the hash, increasing all indexes >= index
 // useful for dynamically-sized array indexing
 // --ensure the source array has actually resized by one, making the key/index pair valid--
 // DEBUG: assert( index >= 0 )

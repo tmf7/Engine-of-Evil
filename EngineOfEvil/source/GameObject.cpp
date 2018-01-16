@@ -33,6 +33,28 @@ using namespace evil;
 ECLASS_DEFINITION(eClass, eGameObject)
 
 //**************
+// eGameObject::~eGameObject
+//**************
+eGameObject::~eGameObject() {
+	// TODO: *this is being destroyed
+	// make sure the children are taken care of
+	// but indeed let the component memory get destroyed too
+	for ( auto && child : children ) {
+		child->SetParent( nullptr );		// or parent (ie their grandparent)?
+		
+		// SOLUTION: make children std::unique_ptr that get std::move b/t parents, and that get DELETED along with their parents (ie parent handles lifetime of children)
+		// this also solves the issue of eGameObject copy ctor where if raw pointers to elsewhere-managed children would result in two parents pointing to the same children objects
+		// AND the issue of doing a deep copy of those pointers doesn't guarantee their lifetimes are properly handled (ie: needing to be re-added to the eMap, or eScene)
+		// SOLUTION: children auto-destroyed via std::unique_ptr dtor (ie: this dtor isn't needed)
+
+		// TODO: ultimately, this implies that eGameObject::AddChild( std::unique_ptr<eGameObject> && newChild ); would be necessary,
+		// but what would create that initial pointer? a Spawn? on an eMap??
+
+		// SOLUTION: like eTile....make eGameObject NOT designed to be copied|moved|assigned....perhaps even delete those fns?
+	}
+}
+
+//**************
 // eGameObject::eGameObject
 // FIXME:  implement parent and children copying
 //**************
@@ -94,8 +116,11 @@ void eGameObject::UpdateComponentsOwner(){
 
 //*************
 // eGameObject::SetParent
-// FIXME: handle deleting the parent gameobject: do the children get deleted too?
+// FIXME: handle deleting/COPYING/moving the parent gameobject: do the children get deleted too? or just re-parent them to something else...their grandparent, or nullptr
 // FIXME: handle disabling the parent gameobject: do the children get disabled too?
+// SOLUTION: make eGameObject::BaseThink and eComponent::BaseUpdate as template functions that call their virtual Think|Update, as well as any other basics (eg: UpdateComponents)
+// TODO: arguably certain SYSTEMS should update before others (eg: physics -> collision -> animation) regardless of how each gameobject's components list is arranged
+// ...though the overall goal is to allow for users to define their own systems [before|after|between|instead] of mine
 // FIXME: handle what a parent layer/tag means for its children's actions|interactions
 
 // TODO: if the parent is nullptr when calculating the eComponent eRectTransform offset, 
@@ -106,6 +131,9 @@ void eGameObject::SetParent( eGameObject * newParent )	{
 		return;
 
 	// remove *this from its current list of siblings
+	// FIXME: alternatively std::move it onto the back of the new parent (if non-nullptr)
+	// ...however that leaves the old parent's children vector with an unspecified element
+	// SOLUTION: std::move the last element into that spot then erase the back
 	if ( parent != nullptr ) {
 		auto & siblings = parent->children;
 		auto & self = std::find( siblings.begin(), siblings.end(), this );

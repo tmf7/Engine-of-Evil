@@ -82,7 +82,7 @@ bool eCanvas::Resize(int newWidth, int newHeight) {
 	if (canvasType != CanvasType::WORLD_SPACE)				// TODO: log an error "Trying to resize an eCamera|Screen overlay eCanvas"
 		return false;
 
-	// TODO: eCanvas::Resize should only be allowed for worldspace canvases, while overlay sizes a driven by their owners 
+	// TODO: eCanvas::Resize should only be allowed for worldspace canvases, while overlay sizes are driven by their owners 
 	// FIXME: resizing the renderTarget should also resize the renderImageIsometric's renderblock
 	// FIXME: resizing the worldspace eCanvas in Unity doesn't scale what's on it, only setting the child size|scale values (or parent scale value) does
 	// ... meaning the renderTarget DOES get resized, and the drawing scale of the canvas is additionally affected by the camSize (rel. to the window) as usual

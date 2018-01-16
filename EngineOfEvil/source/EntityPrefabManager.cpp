@@ -176,7 +176,6 @@ bool eEntityPrefabManager::LoadAndGet(const char * resourceFilename, std::shared
 	return prefabManagerIndex > 0;
 }
 
-
 //***************
 // eEntityPrefabManager::RegisterPrefab
 // ensures the resourceHash, prefabShortNameHash and resourceList are synchronized
@@ -200,7 +199,6 @@ void eEntityPrefabManager::RegisterPrefab(const std::shared_ptr<eEntity> & newPr
 // DEBUG: template-method design pattern that uses the Strategy design pattern
 //***************
 bool eEntityPrefabManager::CreatePrefab(const char * sourceFilename, const std::string & prefabShortName, const eDictionary & spawnArgs, int & prefabManagerIndex) {
-	std::shared_ptr<eEntity> newPrefab = nullptr;
 	prefabManagerIndex = resourceList.size();
 
 	// log
@@ -211,6 +209,7 @@ bool eEntityPrefabManager::CreatePrefab(const char * sourceFilename, const std::
 	message += ") prefab.";
 	EVIL_ERROR_LOG.LogError( message.c_str(), __FILE__, __LINE__ );
 
+	std::shared_ptr<eEntity> newPrefab = nullptr;
 	if (createPrefabStrategy->CreatePrefab(newPrefab, prefabShortName, spawnArgs) && newPrefab != nullptr) {
 		newPrefab->spawnArgs = std::move(spawnArgs);
 		newPrefab->InitResource(sourceFilename, prefabManagerIndex); 

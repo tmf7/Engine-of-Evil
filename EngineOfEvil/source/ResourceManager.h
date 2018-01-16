@@ -124,13 +124,19 @@ inline void eResourceManager<type>::Clear() {
 // DEBUG: user can compare resources used between levels/scenes
 // to unload only those resources that are no longer needed
 // to optimize runtime memory usage
-// DEBUG: relies on items in resourceList to have the function:
-// const std::string & GetNameHash() const;
+// DEBUG: relies on items in resourceList to have the functions:
+// int GetNameHash() const; and
+// const std::string & GetSourceFilename() const;
 //*************************
 template<class type>
 inline void eResourceManager<type>::Unload(int resourceID) {
-	resourceList.erase(resourceID);
-	resourceHash.RemoveIndex(resourceList[resourceID]->GetNameHash(), resourceID);
+	for ( int i = resourceHash.First( resourceList[ resourceID ]->GetNameHash() ); i != INVALID_ID; i = resourceHash.Next( i ) ) {
+		if ( resourceList[ i ]->GetSourceFilename() == resourceList[ resourceID ]->GetSourceFilename() ) {
+			resourceHash.RemoveIndex( resourceList[ resourceID ]->GetNameHash(), resourceID );
+			break;
+		}
+	}
+	resourceList.erase( resourceID );
 }
 
 //*************************

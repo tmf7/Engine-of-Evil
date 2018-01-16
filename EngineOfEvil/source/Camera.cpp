@@ -37,7 +37,7 @@ ECLASS_DEFINITION(eGameObject, eCamera)
 // DEBUG: automatically registers *this with the eGame->eRenderer object
 // FIXME: a user may neglect to call Init, leaving collisionModel undefined
 // SOLUTION: check for bool initialized or nullptr collisionModel in fns that use collisionModel
-// SOLUTION: collisionModel may need a default construction anyway (ie define eCamera::eCamera)
+// SOLUTION: do a local GetComponent<> always for such things instead (ie: in all eGameObject-derived classes)
 //***************
 void eCamera::Init(eMap * onMap, const eVec2 & size, const eVec2 & worldPosition, float zoomLevel, float panSpeed) {
 	this->panSpeed = panSpeed;

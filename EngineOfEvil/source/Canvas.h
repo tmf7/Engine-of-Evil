@@ -44,7 +44,7 @@ enum class CanvasType {
 
 //***********************************************
 //				eCanvas 
-// Mobile/Resizable 2D texture(?) for drawing eRenderImageBase objects.
+// Mobile/Resizable 2D texture for drawing eRenderImageBase objects.
 // Registered to either the main rendering context, or an eCamera as an overlay,
 // or given a eRenderImageIsometric that uses an eRenderTarget's texture as the eImage,
 // and a renderblock the size of the texture (with minimal depth)

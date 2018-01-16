@@ -102,7 +102,7 @@ inline int eTileImpl::TileType() const {
 
 //***********************************************
 //				eTile 
-// localized tile data that describes the game environment
+// localized tile data that describes an eMap environment
 //***********************************************
 class eTile : public eGameObject {
 

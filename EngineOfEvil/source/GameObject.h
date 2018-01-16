@@ -48,7 +48,7 @@ class eGameObject : public eClass {
 
 public:
 	
-	virtual									   ~eGameObject() = default;
+	virtual									   ~eGameObject();
 												eGameObject() = default;
 												eGameObject( const eGameObject & other );
 												eGameObject( eGameObject && other );
@@ -187,10 +187,7 @@ ComponentType * const	eGameObject::GetComponent() const {
 //***************
 // eGameObject::GetComponents
 // returns a vector of pointers to the the requested component template type following the same match criteria as GetComponent
-// DEGUG: the compiler has the option to copy-elide or move-construct componentsOfType into the return value here
-// TODO: pass in the number of elements desired (eg: up to 7, or only the first 2) which would allow a std::array return value,
-// except there'd need to be a separate fn for getting them *all* if the user doesn't know how many such Components the GameObject has
-// TODO: define a GetComponentAt<ComponentType, int>() that can directly grab up to the the n-th component of the requested type
+// DEBUG: the compiler has the option to copy-elide or move-construct componentsOfType into the return value here
 //***************
 template< class ComponentType >
 std::vector< ComponentType * > eGameObject::GetComponents() {
