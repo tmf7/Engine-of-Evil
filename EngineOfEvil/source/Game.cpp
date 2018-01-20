@@ -38,47 +38,47 @@ ECLASS_DEFINITION(eClass, eGame)
 bool eGame::InitSystem() {
 
 	if (SDL_Init(SDL_INIT_EVERYTHING) == -1) {
-		EVIL_ERROR_LOG.ErrorPopupWindow("SDL INIT FAILURE");
+		eErrorLogger::ErrorPopupWindow("SDL INIT FAILURE");
 		return false;
 	}
 
-	if (!EVIL_ERROR_LOG.Init())			// has its own error popup call
+	if (!eErrorLogger::Init())			// has its own error popup call
 		return false;
 
 	if (!renderer.Init()) {
-		EVIL_ERROR_LOG.ErrorPopupWindow("RENDERER INIT FAILURE");
+		eErrorLogger::ErrorPopupWindow("RENDERER INIT FAILURE");
 		return false;
 	}
 
 	if (!imageManager.Init()) {
-		EVIL_ERROR_LOG.ErrorPopupWindow("IMAGE MANAGER INIT FAILURE");
+		eErrorLogger::ErrorPopupWindow("IMAGE MANAGER INIT FAILURE");
 		return false;
 	}
 
 	if (!animationManager.Init()) {
-		EVIL_ERROR_LOG.ErrorPopupWindow("ANIMATION MANAGER INIT FAILURE");
+		eErrorLogger::ErrorPopupWindow("ANIMATION MANAGER INIT FAILURE");
 		return false;
 	}
 
 	if (!animationControllerManager.Init()) {
-		EVIL_ERROR_LOG.ErrorPopupWindow("ANIMATION CONTROLER MANAGER INIT FAILURE");
+		eErrorLogger::ErrorPopupWindow("ANIMATION CONTROLER MANAGER INIT FAILURE");
 		return false;
 	}
 
 	if (!audio.Init()) {
-		EVIL_ERROR_LOG.ErrorPopupWindow("AUDIO INIT FAILURE");
+		eErrorLogger::ErrorPopupWindow("AUDIO INIT FAILURE");
 		return false;
 	}
 
 	try {
 		input.Init();
 	} catch (...) {
-		EVIL_ERROR_LOG.ErrorPopupWindow("INPUT INIT FAILURE");
+		eErrorLogger::ErrorPopupWindow("INPUT INIT FAILURE");
 		throw;
 	}
 
 	if (!entityPrefabManager.Init()) {
-		EVIL_ERROR_LOG.ErrorPopupWindow("ENTITY PREFAB MANAGER INIT FAILURE");
+		eErrorLogger::ErrorPopupWindow("ENTITY PREFAB MANAGER INIT FAILURE");
 		return false;
 	}
 
@@ -93,6 +93,7 @@ bool eGame::InitSystem() {
 void eGame::ShutdownSystem() {
 	audio.Shutdown();
 	renderer.Shutdown();
+	eErrorLogger::Shutdown();
 	SDL_Quit();
 }
 

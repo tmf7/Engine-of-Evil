@@ -54,10 +54,10 @@ eMovementPlanner::eMovementPlanner(eGameObject * owner, float movementSpeed)
 //************
 bool eMovementPlanner::VerifyAdd() const {
 	if (owner->GetComponent<eCollisionModel>() == nullptr ) {
-		EVIL_ERROR_LOG.LogError( "eMovementPlanner requires an eCollisionModel prior to AddComponent.", __FILE__, __LINE__ );
+		eErrorLogger::LogError( "eMovementPlanner requires an eCollisionModel prior to AddComponent.", __FILE__, __LINE__ );
 		return false;
 	} else if ( owner->GetComponent<eMovementPlanner>() != nullptr ) {
-		EVIL_ERROR_LOG.LogError( "Only one eMovementPlanner allowed per eGameObject.", __FILE__, __LINE__ );
+		eErrorLogger::LogError( "Only one eMovementPlanner allowed per eGameObject.", __FILE__, __LINE__ );
 		return false;
 	}
 
@@ -337,7 +337,7 @@ bool eMovementPlanner::CheckVectorPath(decision_t & along) {
 
 	along.validSteps = 0.0f;
 	Collision_t collision;
-	if (ownerCollisionModel->FindApproachingCollision(along.vector, castLength, collision) && 
+	if (eCollision::FindApproachingCollision(owner->GetMap(), ownerCollisionModel->AbsBounds(), along.vector, castLength, collision) && 
 		collision.fraction < nearestFraction) {
 		nearestFraction = collision.fraction;
 	} else {

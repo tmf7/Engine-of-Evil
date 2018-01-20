@@ -73,7 +73,7 @@ eRenderTarget::eRenderTarget(eGameObject * owner, SDL_Renderer * context, int wi
 								height );
 
 	if (IsNull()) {
-		EVIL_ERROR_LOG.LogError("Failed to allocate new eRenderTarget texture.", __FILE__, __LINE__);
+		eErrorLogger::LogError("Failed to allocate new eRenderTarget texture.", __FILE__, __LINE__);
 		return;
 	}
 
@@ -96,7 +96,7 @@ eRenderTarget::~eRenderTarget() {
 //************
 bool eRenderTarget::VerifyAdd() const {
 	if ( owner->GetComponent<eRenderTarget>() != nullptr ) {
-		EVIL_ERROR_LOG.LogError( "Only one eRenderTarget allowed per eGameObject.", __FILE__, __LINE__ );
+		eErrorLogger::LogError( "Only one eRenderTarget allowed per eGameObject.", __FILE__, __LINE__ );
 		return false;
 	}
 
@@ -135,7 +135,7 @@ bool eRenderTarget::Resize(int newWidth, int newHeight) {
 		SDL_RenderCopy(context, target, nullptr, nullptr) == -1 ||
 		SDL_SetRenderTarget(context, currentTarget) == -1) {
 		SDL_DestroyTexture(newTarget);
-		EVIL_ERROR_LOG.LogError("Failed to allocate new eRenderTarget texture.", __FILE__, __LINE__);
+		eErrorLogger::LogError("Failed to allocate new eRenderTarget texture.", __FILE__, __LINE__);
 		return false;
 	}
 

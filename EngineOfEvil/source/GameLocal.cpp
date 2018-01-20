@@ -47,7 +47,7 @@ bool eGameLocal::Init() {
 	player.SetMap(&map);
 
 	if (!map.LoadMap("Graphics/Maps/EvilTown2.emap")) {
-		EVIL_ERROR_LOG.ErrorPopupWindow("MAP INIT FAILURE");
+		eErrorLogger::ErrorPopupWindow("MAP INIT FAILURE");
 		return false;
 	}
 	return true;

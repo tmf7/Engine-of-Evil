@@ -359,5 +359,11 @@
     <ClInclude Include="source\Canvas.h">
       <Filter>Core\GameObjects</Filter>
     </ClInclude>
+    <ClInclude Include="source\Hierarchy.h">
+      <Filter>Core\DataContainers</Filter>
+    </ClInclude>
+    <ClInclude Include="source\DynamicType.h">
+      <Filter>Core</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

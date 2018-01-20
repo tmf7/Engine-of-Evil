@@ -70,7 +70,6 @@ public:
 	bool										IsActive() const;
 	void										SetActive(bool active);
 	const std::vector<eGridCell *> &			Areas() const;
-	bool										FindApproachingCollision(const eVec2 & dir, const float length, Collision_t & result) const;
 
 	virtual void								Update() override;
 	virtual bool								VerifyAdd() const override;
@@ -93,8 +92,8 @@ private:
 	eVec2										ownerOriginOffset;		// offset from (eGameObject)owner::orthoOrigin (default: (0,0))
 	eVec2										oldVelocity;			// velocity of the prior frame
 	eVec2										velocity;				// DEBUG: never normalized, only rotated and scaled
-	std::vector<eGridCell *>					areas;					// currently occupied tileMap indexes (between 1 and 4)
-	bool										active = false;			// whether this participates in (dynamic or kinematic) collision detection
+	std::vector<eGridCell *>					areas;					// currently occupied tileMap indexes
+	bool										active = false;			// whether this gets added to the tileMap for collision detection
 
 };
 

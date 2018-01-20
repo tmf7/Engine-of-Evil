@@ -58,7 +58,7 @@ eCollisionModel::~eCollisionModel() {
 //************
 bool eCollisionModel::VerifyAdd() const {
 	if ( owner->GetComponent<eCollisionModel>() != nullptr ) {
-		EVIL_ERROR_LOG.LogError( "Only one eCollisionModel allowed per eGameObject.", __FILE__, __LINE__ );
+		eErrorLogger::LogError( "Only one eCollisionModel allowed per eGameObject.", __FILE__, __LINE__ );
 		return false;
 	}
 
@@ -73,11 +73,6 @@ void eCollisionModel::SetOrigin( const eVec2 & newOrigin ) {
 	origin = newOrigin;
 	absBounds = localBounds + origin + ownerOriginOffset;
 	center = absBounds.Center();
-
-	// sync the owner and collider positions
-	// FIXME: should owner->SetOrigin call anything else? (probably not. to prevent overflow) ???
-	// and/or should owner->SetOrigin even be called here???
-	owner->SetOrigin( newOrigin );
 }
 
 //*************
@@ -85,24 +80,34 @@ void eCollisionModel::SetOrigin( const eVec2 & newOrigin ) {
 // TODO: move velocity member to physics/rigidbody class
 // TODO: use ePhysics to also set the velocity (same as eMovementPlanner) while eCollisionModel alone updates origins
 
-// FIXME: eMovementPlanner::Update occurs before eCollisionModel::Update, meaning it works with the old
-// version of collisionModel.absBounds if the user called eGameObject::SetOrigin
-// SOLUTION: have eMovementPlanner call collisionModel.SetOrigin(owner->GetOrigin()) at the start of Update
-// FIXME/BUG(!!!): NO, eMovementPlanner::Update is NOT necessarily called before eCollisionModel::Update if 
-// the eCollisionModel component was added BEFORE the eMovementPlanner component!!
-// ...which results in eMovementPlanner being one frame behind where the eCollisionModel is
+// FIXME/BUG(!!!): eMovementPlanner::Update and eCollisionModel::Update order may be arbitrary, which could result
+// in eCollisionModel using a velocity set by eMovementPlanner in the previous frame, and not the CURRENT velocity
+// SOLUITON: this is a 1-frame lag, and doesn't affect collision detection...right?
+
+// FIXME: if a user calls eGameObject::SetOrigin (ie: outside eCollisionModel::Update) then
+// then an immdiate call to eCollision::FindApproachingCollision(collisionModel,...) will be using an out of sync absBounds
+// SOLUTION: have eGameObject::SetOrigin also call eComponent::SetOrigin...or eComponent::Update
+// ISSUE: not all eComponents have origins
+// ISSUE: eCollisionModel::Update causes the collisionModel to move 
+// (and forcing a SetVelocity(0) call may affect eMovmentPlanner,
+// and saving the current velocity, setting the origin, then resetting is costly)
+// ISSUE: also calling eAnimationController::Update for every eGameObject::SetOrigin causes the animation to run unnecessarily
+// FIXME: the same out-of-sync worldClip issue comes up for an eRenderImageBase::SetOrigin call
+// SOLUTION: get rid of public SetOrigin from eComponents and make them DRIVEN by their owner's orthoOrigin
+// ISSUE: better, but still doesn't solve the issue of de-synced absBounds and worldClips
+// SOLUTION: add a (virtual?) void eGameObject::SyncComponents() that calls virtual void eComponent::Sync() to allow each component their own syncronizing details
+// and call eGameObject::SyncComponents after an eGameObject fn call that may de-sync it from its components.
+// SOLUTION(?): re-calculate absBounds and worldClip everywhere they're used (via AbsBounds() and WorldClip())
+// SOLUTION: doom runs all origins through the physics object (which is driven by ai, and drives the clipModel)
 //*************
 void eCollisionModel::Update() {
-
-	// FIXME: if user called eGameObject::SetOrigin, then absBounds would be out of sync
-	// SOLUTION(?): create and eComponent::SyncOrigin called by eGameObject::SetOrigin
-	// SOLUTION(?): ...or call SetOrigin on each non-nullptr component? (would currently cause stack overflow)
-	// SetOrigin( owner->GetOrigin() );		// always work from the current owner.origin before casting/adjusting velocity
+//	SetOrigin( owner->GetOrigin() );		// BUGFIX: eGameObject::SetOrigin outside eCollisionModel::Update puts absBounds out of sync
 
 	if ( active )
-		AvoidCollisionSlide();		// TODO: alternatively, push the collider away if it can be moved (non-static)
+		AvoidCollisionSlide();				// TODO: alternatively, push the collider away if it can be moved (non-static)
 
 	SetOrigin( owner->GetOrigin() + velocity * game->GetDeltaTime() );
+	owner->SetOrigin( origin );				// sync the owner and collider positions
 
 	if ( active && origin != oldOrigin )
 		UpdateAreas();
@@ -153,31 +158,6 @@ void eCollisionModel::UpdateAreas() {
 }
 
 //***************
-// eCollisionModel::FindApproachingCollision
-// returns true and sets result to the nearest non-tangential collision along dir * length
-// returns false and leaves result unmodified otherwise
-// DEBUG: dir must be unit length
-//***************
-bool eCollisionModel::FindApproachingCollision(const eVec2 & dir, const float length, Collision_t & result) const {
-	static std::vector<Collision_t> collisions;		// FIXME(~): make this a private data member instead of per-fn, if more than one fn uses it
-	collisions.clear();								// DEBUG: lazy clearing
-
-	if(eCollision::BoxCast(owner->GetMap(), collisions, absBounds, dir, length)) {
-		for (auto & collision : collisions) {
-			float movingAway = collision.normal * dir;
-			float movingAwayThreshold = ((abs(collision.normal.x) < 1.0f && abs(collision.normal.y) < 1.0f) ? -0.707f : 0.0f); // vertex : edge
-			if (movingAway >= movingAwayThreshold) {
-				continue;
-			} else {
-				result = collision;
-				return true;
-			}
-		}
-	}
-	return false;
-}
-
-//***************
 // eCollisionModel::AvoidCollisionCorrection
 // truncates current velocity to prevent intersection with other colliders 
 //***************
@@ -187,7 +167,7 @@ void eCollisionModel::AvoidCollisionCorrection() {
 
 	Collision_t collision;
 	float length = velocity.Length();
-	if(FindApproachingCollision(velocity / length, length, collision))
+	if(eCollision::FindApproachingCollision(owner->GetMap(), absBounds, velocity / length, length, collision))
 		velocity *= collision.fraction;
 }
 
@@ -200,17 +180,12 @@ void eCollisionModel::AvoidCollisionSlide() {
 	if (velocity == vec2_zero)
 		return;
 
-//	FIXME: if a user calls eGameObject::SetOrigin, then collisionModel.FindApproachingCollision
-//	eg: during eGameObject::Think (before which UpdateComponents was called...)
-//	... then will FindAppColl be using the wrong absBounds?
-//	absBounds = localBounds + owner->GetOrigin() + ownerOriginOffset;
-
 	Collision_t collision;
 	eVec2 collisionTangent;
 	float remainingFraction = 0.0f;
 	float length = velocity.Length();
 
-	if (FindApproachingCollision(velocity / length, length, collision)) {
+	if (eCollision::FindApproachingCollision(owner->GetMap(), absBounds, velocity / length, length, collision)) {
 		remainingFraction = 1.0f - collision.fraction;
 		if (remainingFraction < 1.0f) {
 			velocity *= collision.fraction;
@@ -226,7 +201,7 @@ void eCollisionModel::AvoidCollisionSlide() {
 	if (remainingFraction == 1.0f) {
 		float slide = velocity * collisionTangent;
 		velocity = collisionTangent * slide;	
-		if (FindApproachingCollision(collisionTangent, slide, collision))
+		if (eCollision::FindApproachingCollision(owner->GetMap(), absBounds, collisionTangent, slide, collision))
 			velocity *= collision.fraction;
 	}
 }

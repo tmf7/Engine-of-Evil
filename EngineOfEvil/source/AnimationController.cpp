@@ -79,7 +79,7 @@ eAnimationController::eAnimationController(eGameObject * owner, const eAnimation
 //************
 bool eAnimationController::VerifyAdd() const {
 	if ( owner->GetComponent<eAnimationController>() != nullptr ) {
-		EVIL_ERROR_LOG.LogError( "Only one eAnimationController allowed per eGameObject.", __FILE__, __LINE__ );
+		eErrorLogger::LogError( "Only one eAnimationController allowed per eGameObject.", __FILE__, __LINE__ );
 		return false;
 	}
 

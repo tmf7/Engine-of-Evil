@@ -97,7 +97,7 @@ public:
 protected:
 
 	eGameObject *								owner		= nullptr;			// back-pointer to user managing the lifetime of *this
-	bool										enabled		= true;				// if *this should be updated
+	bool										enabled		= true;				// if *this should be Updated
 };
 
 }      /* evil */

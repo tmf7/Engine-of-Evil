@@ -28,7 +28,26 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 #define EVIL_CLASS_H
 
 #include "Definitions.h"
+#include "Hierarchy.h"
+#include "DynamicType.h"
 
+
+//****************
+// ECLASS_DECLARATION
+//
+// This macro must be included in the declaration of any subclass of eClass.
+// It declares variables used in type checking.
+//****************
+#define ECLASS_DECLARATION( classname )											\
+public:																			\
+	static eDynamicType						Type;								\
+	virtual eDynamicType *					GetType() const;					\
+
+// TODO: should IsType( eDynamicType * type ) be part of eClass and not the macro?
+
+
+
+/*
 //****************
 // ECLASS_DECLARATION
 //
@@ -56,10 +75,11 @@ bool classname::IsClassType( ClassType_t classType ) const	{					\
 		return true;															\
 	return parentclassname::IsClassType( classType );							\
 }																				\
-	
+*/
+
 namespace evil {
 
-using ClassType_t = const std::size_t;
+//using ClassType_t = const std::size_t;
 
 //*************************************************
 //					eClass

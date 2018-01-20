@@ -37,7 +37,7 @@ bool eSoundFx::Load(const char * sourceFilename) {
     if (soundFx == nullptr) {
 		std::string message = "Unable to load sound effect file: ";
 		message += sourceFilename;
-		EVIL_ERROR_LOG.LogError(message.c_str(), __FILE__, __LINE__);
+		eErrorLogger::LogError(message.c_str(), __FILE__, __LINE__);
         return false;
     }
 

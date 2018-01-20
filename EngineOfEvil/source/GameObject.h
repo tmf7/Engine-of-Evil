@@ -61,6 +61,8 @@ public:
 	void										SetParent( eGameObject * newParent );
 	eGameObject *								GetParent() const						{ return parent; }
 	eGameObject *								GetFirstChild() const					{ return ( children.empty() ? nullptr : children.front() ); }
+
+
 	eMap * const								GetMap()								{ return map; }
 	const eVec2 &								GetOrigin()								{ return orthoOrigin; }
 	void										SetOrigin( const eVec2 & newOrigin );

@@ -49,7 +49,7 @@ bool eCreateEntityPrefabUser::CreatePrefab( std::shared_ptr< eEntity > & newPref
 		std::string message;
 		message = "Invalid prefabShortName: ";
 		message += prefabShortName;
-		EVIL_ERROR_LOG.LogError( message.c_str(), __FILE__, __LINE__ );
+		eErrorLogger::LogError( message.c_str(), __FILE__, __LINE__ );
 		return false;
 	}
 

@@ -51,6 +51,9 @@ eGameObject::~eGameObject() {
 		// but what would create that initial pointer? a Spawn? on an eMap??
 
 		// SOLUTION: like eTile....make eGameObject NOT designed to be copied|moved|assigned....perhaps even delete those fns?
+		// SOLUTION: remove eGameObject inheritance from eTile, and just give it a static eRenderImageIsometric and eBounds absBounds,
+		// then make eGridCell store (eBounds *)|(eCollider *) instead of (eCollisionModel *) then allow eColliders to have/be in a hierarchy also (ie: composite colliders)
+		// such that each sub-collider still only gets added to the cells it overlaps
 	}
 }
 

@@ -32,8 +32,6 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 #include <fstream>
 #include <SDL.h>
 
-#define EVIL_ERROR_LOG (eErrorLogger::errorLog)
-
 namespace evil {
 
 //*******************************************
@@ -45,33 +43,18 @@ namespace evil {
 class eErrorLogger {
 public:
 									
-
-	bool							Init();
-	void							ErrorPopupWindow(const char * message);
-	void							LogError(const char * message, const char * sourceFilepath, int lineOfCode);
-	void							CheckSDLError(const char * sourceFilepath, int lineOfCode);
+	static bool						Init();
+	static void						Shutdown();
+	static void						ErrorPopupWindow(const char * message);
+	static void						LogError(const char * message, const char * sourceFilepath, int lineOfCode);
+	static void						CheckSDLError(const char * sourceFilepath, int lineOfCode);
 
 	friend void						AutoLogSDLError(void * userdata, int category, SDL_LogPriority priority, const char * message);
 
 private:
 
-									eErrorLogger();
-								   ~eErrorLogger();
-
-									eErrorLogger(const eErrorLogger & other) = delete;
-									eErrorLogger(eErrorLogger && other) = delete;
-
-	eErrorLogger &					operator=(const eErrorLogger & other) = delete;
-	eErrorLogger					operator=(eErrorLogger && other) = delete;
-
-public:
-
-	static eErrorLogger				errorLog;
-
-private:
-
-	std::ofstream					logStream;
-	std::string						logFilepath;
+	static std::ofstream			logStream;
+	static std::string				logFilepath;
 
 };
 

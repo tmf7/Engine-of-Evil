@@ -28,19 +28,13 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 
 using namespace evil;
 
-eErrorLogger eErrorLogger::errorLog;
+std::ofstream eErrorLogger::logStream;
+std::string	eErrorLogger::logFilepath("EngineOfEvil(");
 
 //******************
-// eErrorLogger::eErrorLogger
+// eErrorLogger::Shutdown
 //******************
-eErrorLogger::eErrorLogger()
-	: logFilepath("EngineOfEvil(") {
-}
-
-//-------------------
-// eErrorLogger::~eErrorLogger
-//------------------
-eErrorLogger::~eErrorLogger() {
+void eErrorLogger::Shutdown() {
 	if (logStream.is_open()) {
 		LogError("------------------------------ENDING RUN------------------------------", __FILE__, __LINE__);
 		logStream.close();
@@ -91,7 +85,6 @@ void eErrorLogger::LogError(const char * message, const char * sourceFilepath, i
 	logStream << "\nFile: " << sourceFilepath << "\nLine: " << lineOfCode;
 }
 
-
 //******************
 // eErrorLogger::CheckSDLError
 // manually check for any SDL errors, logs them, then clears them
@@ -111,5 +104,5 @@ void eErrorLogger::CheckSDLError(const char * sourceFilepath, int lineOfCode) {
 // callback given to SDL to log errors
 //******************
 void evil::AutoLogSDLError(void * userdata, int category, SDL_LogPriority priority, const char * message) {
-	EVIL_ERROR_LOG.logStream << "\n\n[SDL ERROR] Category: " << category << "\tPriority: " << priority << "\nMessage: " << message << "\n(See SDL Documentation for category/priority enums)";
+	eErrorLogger::logStream << "\n\n[SDL ERROR] Category: " << category << "\tPriority: " << priority << "\nMessage: " << message << "\n(See SDL Documentation for category/priority enums)";
 }

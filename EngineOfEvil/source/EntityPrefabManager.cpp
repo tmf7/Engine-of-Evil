@@ -207,7 +207,7 @@ bool eEntityPrefabManager::CreatePrefab(const char * sourceFilename, const std::
 	message += '_';
 	message += std::to_string( prefabManagerIndex );
 	message += ") prefab.";
-	EVIL_ERROR_LOG.LogError( message.c_str(), __FILE__, __LINE__ );
+	eErrorLogger::LogError( message.c_str(), __FILE__, __LINE__ );
 
 	std::shared_ptr<eEntity> newPrefab = nullptr;
 	if (createPrefabStrategy->CreatePrefab(newPrefab, prefabShortName, spawnArgs) && newPrefab != nullptr) {
@@ -248,7 +248,7 @@ bool eCreateEntityPrefabBasic::CreatePrefab( std::shared_ptr< eEntity > & newPre
 		std::string message;
 		message = "Invalid prefabShortName: ";
 		message += prefabShortName;
-		EVIL_ERROR_LOG.LogError( message.c_str(), __FILE__, __LINE__ );
+		eErrorLogger::LogError( message.c_str(), __FILE__, __LINE__ );
 		return false;
 	}
 

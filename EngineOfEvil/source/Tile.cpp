@@ -244,5 +244,5 @@ void eTile::SetType(int newType) {
 	isoRenderImage->SetRenderBlockSize(impl->renderBlockSize);
 
 	if (impl->collider != nullptr) 
-		AddComponent<eCollisionModel>(this, *(impl->collider), vec2_zero, true);		// currently no collider offset and all tile colliders are set active
+		AddComponent<eCollisionModel>(this, *(impl->collider), vec2_zero, true);		// currently collider offset is baked into the eTileImpl object localBounds, and all tile colliders are set active
 }

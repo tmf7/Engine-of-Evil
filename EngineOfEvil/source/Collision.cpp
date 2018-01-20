@@ -30,6 +30,12 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 
 using namespace evil;
 
+std::unordered_map<const eBounds *, const eBounds *>		eCollision::alreadyTested;
+std::vector<eGridCell *>									eCollision::broadAreaCells;
+std::deque<eGridCell *>										eCollision::openSet;
+std::vector<eGridCell *>									eCollision::closedSet;
+std::vector<eGridCell *>									eCollision::neighbors;
+
 //***************
 // eCollision::OBBOBBTest
 // test for a separating axis using 
@@ -148,11 +154,14 @@ bool eCollision::SegmentAABBTest(const eVec2 & begin, const eVec2 & end, const e
 // TODO: add a collision mask param to filter collisions
 //***************
 bool eCollision::BoxCast(eMap * onMap, std::vector<Collision_t> & collisions, const eBounds & bounds, const eVec2 & dir, const float length) {
-	static std::unordered_map<const eBounds *, const eBounds *> alreadyTested;
-	static std::vector<eGridCell *> broadAreaCells;					// DEBUG(performance): static to reduce dynamic allocations
+	// DEBUG: lazy clearing
+	alreadyTested.clear();
+	broadAreaCells.clear();
+
+	// ignore self collision
+	alreadyTested[&bounds] = &bounds;								
 
 	GetAreaCells(onMap, bounds, dir, length, broadAreaCells);
-	alreadyTested[&bounds] = &bounds;								// ignore self collision
 	for (auto & cell : broadAreaCells) {
 		for (auto && kvPair : cell->CollisionContents()) {
 			auto & collider = kvPair.second;
@@ -165,14 +174,12 @@ bool eCollision::BoxCast(eMap * onMap, std::vector<Collision_t> & collisions, co
 			alreadyTested[otherBounds] = otherBounds;
 			Collision_t collision;
 			if (MovingAABBAABBTest(bounds, dir, length, *otherBounds, collision.fraction)) {
-				collision.owner = collider;
+				collision.owner = collider->Owner();
 				GetCollisionNormal(bounds, dir, length, *otherBounds, collision);
 				collisions.emplace_back(std::move(collision));
 			}
 		}
 	}
-	alreadyTested.clear();
-	broadAreaCells.clear();
 
 	// DEBUG: prioritize edge collisions over vertex collisions with the same fraction
 	QuickSort(	collisions.data(), 
@@ -197,11 +204,8 @@ bool eCollision::BoxCast(eMap * onMap, std::vector<Collision_t> & collisions, co
 //***************
 void eCollision::GetAreaCells(eMap * onMap, const eBox & area, std::vector<eGridCell *> & areaCells) {
 	auto & tileMap = onMap->TileMap();
-	static std::deque<eGridCell *> openSet;							// first-come-first-served testing
-	static std::vector<eGridCell *> closedSet;
-	static std::vector<eGridCell *> neighbors;
-	
 	auto & initialCell = tileMap.IndexValidated(area.Center());		// guaranteed hit b/t first cell and area
+
 	openSet.emplace_back(&initialCell);
 	initialCell.inOpenSet = true;
 
@@ -261,11 +265,8 @@ void eCollision::GetAreaCells(eMap * onMap, const eBounds & area, std::vector<eG
 //***************
 void eCollision::GetAreaCells(eMap * onMap, const eBounds & bounds, const eVec2 & dir, const float length, std::vector<eGridCell *> & areaCells) {
 	auto & tileMap = onMap->TileMap();
-	static std::deque<eGridCell *> openSet;							// first-come-first-served testing
-	static std::vector<eGridCell *> closedSet;
-	static std::vector<eGridCell *> neighbors;
-	
 	auto & initialCell = tileMap.IndexValidated(bounds.Center());	// guaranteed hit b/t first cell and area
+
 	openSet.emplace_back(&initialCell);
 	initialCell.inOpenSet = true;
 
@@ -304,11 +305,8 @@ void eCollision::GetAreaCells(eMap * onMap, const eBounds & bounds, const eVec2 
 //***************
 void eCollision::GetAreaCells(eMap * onMap, const eVec2 & begin, const eVec2 & dir, const float length, std::vector<eGridCell *> & areaCells) {
 	auto & tileMap = onMap->TileMap();
-	static std::deque<eGridCell *> openSet;					// first-come-first-served testing
-	static std::vector<eGridCell *> closedSet;
-	static std::vector<eGridCell *> neighbors;
-	
 	auto & initialCell = tileMap.IndexValidated(begin);		// guaranteed hit b/t first cell and directed-segment
+
 	openSet.emplace_back(&initialCell);
 	initialCell.inOpenSet = true;
 
@@ -555,30 +553,30 @@ bool eCollision::RayAABBTest(const eVec2 & begin, const eVec2 & dir, const float
 // TODO: add a collision mask param to filter collisions
 //***************
 bool eCollision::RayCast(eMap * onMap, std::vector<Collision_t> & collisions, const eVec2 & begin, const eVec2 & dir, const float length, bool ignoreStartInCollision) {
-	static std::unordered_map<const eCollisionModel *, const eCollisionModel *> alreadyTested;
-	static std::vector<eGridCell *> broadAreaCells;							// DEBUG(performance): static to reduce dynamic allocations
+	// DEBUG: lazy clearing
+	alreadyTested.clear();
+	broadAreaCells.clear();
 
 	GetAreaCells(onMap, begin, dir, length, broadAreaCells);
 	for (auto & cell : broadAreaCells) {
 		for (auto & kvPair : cell->CollisionContents()) {
 			auto & collider = kvPair.second;
+			const auto & colliderBounds = &collider->AbsBounds();
 
 			// don't test the same collider twice
-			if (alreadyTested.find(collider) != alreadyTested.end())
+			if (alreadyTested.find(colliderBounds) != alreadyTested.end())
 				continue;
 
-			alreadyTested[collider] = collider;
+			alreadyTested[colliderBounds] = colliderBounds;
 			Collision_t collision;
-			if (RayAABBTest(begin, dir, length, collider->AbsBounds(), collision.fraction) && !(collision.fraction == 0.0f && ignoreStartInCollision)) {
-				collision.owner = collider;
+			if (RayAABBTest(begin, dir, length, *colliderBounds, collision.fraction) && !(collision.fraction == 0.0f && ignoreStartInCollision)) {
+				collision.owner = collider->Owner();
 				eVec2 touchPoint = begin + dir * collision.fraction;
-				GetCollisionNormal(touchPoint, collider->AbsBounds(), collision.normal);
+				GetCollisionNormal(touchPoint, *colliderBounds, collision.normal);
 				collisions.emplace_back(std::move(collision));
 			}
 		}
 	}
-	alreadyTested.clear();
-	broadAreaCells.clear();
 
 	QuickSort(	collisions.data(), 
 				collisions.size(), 
@@ -588,4 +586,29 @@ bool eCollision::RayCast(eMap * onMap, std::vector<Collision_t> & collisions, co
 					return 0;
 	});
 	return !collisions.empty();
+}
+
+//***************
+// eCollision::FindApproachingCollision
+// returns true and sets result to the nearest non-tangential collision along dir * length
+// returns false and leaves result unmodified otherwise
+// DEBUG: dir must be unit length
+//***************
+bool eCollision::FindApproachingCollision(eMap * onMap, const eBounds & bounds, const eVec2 & dir, const float length, Collision_t & result) {
+	static std::vector<Collision_t> collisions;		// FIXME(~): make this a private data member instead of per-fn, if more than one fn uses it
+	collisions.clear();								// DEBUG: // DEBUG: lazy clearing clearing
+
+	if(eCollision::BoxCast(onMap, collisions, bounds, dir, length)) {
+		for (auto & collision : collisions) {
+			float movingAway = collision.normal * dir;
+			float movingAwayThreshold = ((abs(collision.normal.x) < 1.0f && abs(collision.normal.y) < 1.0f) ? -0.707f : 0.0f); // vertex : edge
+			if (movingAway >= movingAwayThreshold) {
+				continue;
+			} else {
+				result = collision;
+				return true;
+			}
+		}
+	}
+	return false;
 }

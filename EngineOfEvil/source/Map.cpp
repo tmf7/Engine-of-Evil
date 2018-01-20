@@ -229,7 +229,7 @@ bool eMap::LoadMap(const char * mapFilename) {
 			std::string message = "Invalid prefabShortName (";
 			message += prefabShortName;
 			message += "), or invalid prefab file contents.";
-			EVIL_ERROR_LOG.LogError(message.c_str(), __FILE__, __LINE__);
+			eErrorLogger::LogError(message.c_str(), __FILE__, __LINE__);
 		}
 	}
 

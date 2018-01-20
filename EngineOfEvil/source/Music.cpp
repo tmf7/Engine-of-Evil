@@ -36,7 +36,7 @@ bool eMusic::Load(const char * sourceFilename) {
     if (music == nullptr) {
 		std::string message = "Unable to load music file: ";
 		message += sourceFilename;
-		EVIL_ERROR_LOG.LogError(message.c_str(), __FILE__, __LINE__);
+		eErrorLogger::LogError(message.c_str(), __FILE__, __LINE__);
         return false;
     }
 

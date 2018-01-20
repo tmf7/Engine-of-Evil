@@ -34,7 +34,7 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 
 namespace evil {
 
-class eCollisionModel;
+class eGameObject;
 class eGridCell;
 class eMap;
 
@@ -44,7 +44,7 @@ class eMap;
 typedef struct Collision_s {
 	eVec2				normal;					// surface normal of collided object (default ctor: x = 0.0f, y = 0.0f)
 	float				fraction = -1.0f;		// fraction along a movement to first contact
-	eCollisionModel *	owner = nullptr;		// collided object
+	eGameObject *		owner = nullptr;		// collided object
 } Collision_t;
 
 
@@ -78,6 +78,7 @@ public:
 
 	static bool				RayCast(eMap * onMap, std::vector<Collision_t> & collisions, const eVec2 & begin, const eVec2 & dir, const float length = FLT_MAX, bool ignoreStartInCollision = true);
 	static bool				BoxCast(eMap * onMap, std::vector<Collision_t> & collisions, const eBounds & bounds, const eVec2 & dir, const float length);
+	static bool				FindApproachingCollision(eMap * onMap, const eBounds & bounds, const eVec2 & dir, const float length, Collision_t & result);
 
 	static bool				IsAABB3DInIsometricFront(const eBounds3D & self, const eBounds3D & other);
 
@@ -94,6 +95,13 @@ private:
 		BOTTOM	= 8
 	} eNormalDir_t;
 
+	// DEBUG(performance): static to reduce dynamic allocations
+	// DEBUG(performance: this design limits the fns that use them to one executing stack frame on one thread
+	static std::unordered_map<const eBounds *, const eBounds *>		alreadyTested;
+	static std::vector<eGridCell *>									broadAreaCells;	
+	static std::deque<eGridCell *>									openSet;							// first-come-first-served testing
+	static std::vector<eGridCell *>									closedSet;
+	static std::vector<eGridCell *>									neighbors;
 	
 };
 
