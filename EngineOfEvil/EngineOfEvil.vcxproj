@@ -189,7 +189,6 @@
     <ClInclude Include="source\Canvas.h" />
     <ClInclude Include="source\CreatePrefabStrategies.h" />
     <ClInclude Include="source\Dictionary.h" />
-    <ClInclude Include="source\DynamicType.h" />
     <ClInclude Include="source\ErrorLogger.h" />
     <ClInclude Include="source\GameLocal.h" />
     <ClInclude Include="source\GridIndex.h" />

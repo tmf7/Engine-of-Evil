@@ -31,7 +31,7 @@ using namespace evil;
 //********************
 // eDictionary::GetVec2
 //********************
-eVec2 eDictionary::GetVec2( const char *key, const char *defaultString ) const {
+eVec2 eDictionary::GetVec2( const char * key, const char * defaultString ) const {
 	eVec2			result;
 	const char *	resultString;
 	
@@ -46,14 +46,14 @@ eVec2 eDictionary::GetVec2( const char *key, const char *defaultString ) const {
 //********************
 // eDictionary::GetVec3
 //********************
-eVec3 eDictionary::GetVec3( const char *key, const char *defaultString) const {
+eVec3 eDictionary::GetVec3( const char * key, const char * defaultString ) const {
 	eVec3		 result;
 	const char * resultString;
 	
 	if (!defaultString)
 		defaultString = "0 0 0";
 
-	resultString = GetString(key, defaultString);
+	resultString = GetString( key, defaultString );
 	sscanf_s(resultString, "%f %f %f", &result.x, &result.y, &result.z);
 	return result;
 }
@@ -61,7 +61,7 @@ eVec3 eDictionary::GetVec3( const char *key, const char *defaultString) const {
 //********************
 // eDictionary::GetVec4
 //********************
-eQuat eDictionary::GetVec4( const char *key, const char *defaultString) const {
+eQuat eDictionary::GetVec4( const char * key, const char * defaultString ) const {
 	eQuat		 result;
 	const char * resultString;
 	
