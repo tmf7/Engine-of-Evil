@@ -1,0 +1,19 @@
+32.0 32.0 148.0	(houses)
+16.0 16.0 110.0 (tree)
+
+32.0 32.0 0.0 (dungeon floor, grass/water, castle_walls 0)	# 0
+
+32.0 32.0 128.0 (castle_walls 1)				# 1
+16.0 32.0 128.0 (castle_walls 2)				# 2
+32.0 16.0 128.0 (castle_walls 3)				# 3
+
+32.0 32.0 112.0 (castle_walls 4)				# 4
+32.0 16.0 112.0 (castle_walls 5)				# 5
+
+32.0 32.0 96.0 (castle_walls 6)					# 6
+16.0 32.0 96.0 (castle_walls 7)					# 7
+32.0 16.0 96.0 (castle_walls 8)					# 8
+
+32.0 32.0 64.0 (castle_walls 9)					# 9
+16.0 32.0 64.0 (castle_walls 10)				# 10
+32.0 16.0 64.0 (castle_walls 11)				# 11

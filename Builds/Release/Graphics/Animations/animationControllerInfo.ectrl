@@ -1,0 +1,49 @@
+imagesUsedBatchFilename																		(filename order matters here: first images, then animations)
+animationsUsedBatchFilename
+initialStateName																			(used to set initial currentState index)
+numStateNodes numTransitions numIntParams numFloatParams numBoolParams numTriggerParams		(used initialize the eHashIndexes, numStateNodes == num Animation_States + num Blend_States)
+
+Controller_Parameters {
+paramType paramName paramInitialValue														(always list 1 or 2 params if theres at least one Blend_state)
+paramType1 paramName1 paramInitialValue1
+(repeat adding parameters)
+}
+
+Animation_States {
+stateName singleAnimationName stateSpeed
+stateName1 singleAnimationName1 stateSpeed1
+(repeat adding states)
+}
+
+Blend_States {
+{
+stateName numAnimationsInState dimension stateSpeed											(dimension will be: 1 or 2 for SIMPLE_1D or FREEFORM_2D, to decide which float param(s) will be used)
+controllerFloatParam1 controllerFloatParam													(always list two param names here, even if repeated)
+animationName controllerFloatParam1Value controllerFloatParam2Value							(max of 2, min of 0, but it defaults to evenly distributed values)
+animationName1 controllerFloatParam1Value1 controllerFloatParam2Value1
+(repeat adding animations)
+}
+{
+stateName numAnimationsInState dimension stateSpeed
+controllerFloatParam1 controllerFloatParam2
+animationName controllerFloatParam1Value controllerFloatParam2Value	
+animationName1 controllerFloatParam1Value1 controllerFloatParam2Value1	
+}
+(repeat adding states)
+}
+
+State_Transitions {
+{
+transitionName fromStateName toStateName anyStateBool exitTimeNormalized offsetNormalized	(names get converted to indexes, last three params are int float float)
+controllerParamType controllerParamName compareEnumName	transitionValue						(type will be: int/float/bool/trigger, if bool then don't look for compareEnumName)
+controllerParamType1 controllerParamName1 compareEnumName1 transitionValue1					(compare will be: greater/greaterEqual/less/lessEqual/equal/notEqual)
+(repeat adding parameter-value-compare tuples)
+}
+{
+transitionName1 fromStateName1 toStateName1 anyStateBool1 exitTimeNormalized1 offsetNormalized1
+controllerParamType controllerParamName compareEnumName	transitionValue
+controllerParamType1 controllerParamName1 compareEnumName1 transitionValue
+(repeat adding parameter-value-compare tuples)
+}
+(repeat adding transitions)
+}

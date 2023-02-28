@@ -1,0 +1,18 @@
+# leave spriteFilename, animationController, renderBlockSize, and imageColliderOffset empty if entity has no visuals. 
+# entity can have a spriteFilename and a blank animationController if its just a non-animated image
+# initialSpriteFrame indicates which subframe of the spriteFilename.eimg to start on. This will be ignored if spriteFilename is empty.
+# if there is an animationController then a default/starting spriteFilename, localBounds, and renderBlockSize must be set
+# Set localBounds mins > maxs if entity has no collision, if so then collisionActive and movementSpeed lines will be ignored. 
+# Set movementSpeed to 0 to avoid allocating an eMovement. 
+prefabShortName: bArcher
+spriteFilename: Graphics/Animations/bArcher/bArcher_Idle/Textures/Image_defs/bArcher_Idle_All.eimg
+initialSpriteFrame: 0
+animationController: Graphics/Animations/bArcher/Controller_defs/bArcher.ectrl
+renderBlockSize: 32.0 32.0 300.0
+renderImageOffset: -64.0 -125.0
+playerSelectable: 1
+isStatic: 0
+localBounds: -16.0 -16.0 16.0 16.0
+colliderOffset: 64 40		# 72 50 / 64 40 / 55 35
+movementSpeed: 6.0
+collisionActive: 1

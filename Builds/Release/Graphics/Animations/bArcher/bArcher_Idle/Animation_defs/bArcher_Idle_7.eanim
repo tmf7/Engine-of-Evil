@@ -1,0 +1,4 @@
+1 1 2			# numAnimationFrames,framesPerSecond, loop [1 = once, 2 = repeat]
+Graphics/Animations/bArcher/bArcher_Idle/Textures/Image_defs/bArcher_Idle_All.eimg{
+7 0.0			# subframe index within image, normalizedTime	# animationFrame 0
+}
