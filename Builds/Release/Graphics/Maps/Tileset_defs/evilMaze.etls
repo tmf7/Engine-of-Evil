@@ -1,0 +1,116 @@
+# tileset master image batch file
+Graphics/Maps/Tileset_defs/tilesetFrames.bimg
+# pre-defined colliders (0: no collider; non-0: value-1 for listed collider)
+eBounds: 32 32 0 0		# 0 (width height offset.x offset.y)
+eBounds: 16 32 8 0		# 1
+eBounds: 32 16 0 8		# 2
+eBounds: 16 16 32 10		# 3 (tree)
+eBounds: 16 32 0 0		# 4
+eBounds: 32 16 0 0		# 5
+eBounds: 16 16 0 0		# 6
+eBounds: 20 20 8 8		# 7
+eBounds: 16 20 0 8		# 8
+eBounds: 20 16 8 0		# 9
+# pre-defined renderBlocks, size-only not world position (0: no renderBlock; non-0: value-1 for listed renderBlock)
+floors: 32 32 0			# 0
+cwalls1: 32 32 96		# 1
+cwalls2: 16 32 96		# 2
+cwalls3: 32 16 96		# 3
+cwalls4: 32 32 64		# 4
+cwalls5: 16 32 64		# 5
+cwalls6: 32 16 64		# 6
+cwalls7: 32 32 32		# 7
+cwalls8: 16 32 32		# 8
+cwalls9: 32 16 32		# 9
+cwalls10: 32 32 16		# 10
+cwalls11: 16 32 16		# 11
+cwalls12: 32 16 16		# 12
+houses: 32 32 112		# 13
+tree: 16 16 110			# 14
+floors2: 16 16 0		# 15 (used for floors with offset colliders causeing renderBlock overlap)
+# begin tile type definitions
+num_tiles: 80
+Graphics/Textures/Image_defs/grass_and_water.eimg
+0 0 16	# 0 subframe, default collider, default renderBlockSize
+1 0 16	# 1
+2 0 16	# 2
+3 0 16	# 3 lr1
+4 8 16	# 4 was eBounds 7 for testing
+5 9 16	# 5
+6 7 16	# 6
+7 10 16	# 7 lr2
+8 8 16	# 8 was eBounds 1 for testing
+9 8 16	# 9
+10 8 16	# 10
+11 8 16	# 11 lr3
+12 3 16	# 12
+13 5 16	# 13
+14 6 16	# 14
+15 2 16	# 15 lr4
+16 3 16	# 16
+17 5 16	# 17
+18 6 16	# 18
+19 2 16	# 19 lr5
+20 8 16	# 20
+21 8 16	# 21
+22 0 16	# 22
+23 0 16	# 23 lr6
+# (end of tileset 1)
+Graphics/Textures/Image_defs/castle_walls.eimg
+0 2 3	# 24
+1 0 3	# 25
+2 2 3	# 26
+3 3 4	# 27
+4 0 4	# 28
+5 3 4	# 29
+6 2 3	# 30
+7 3 4	# 31 lr1
+8 1 5	# 32
+9 3 7	# 33
+10 1 5	# 34
+11 2 6	# 35
+12 1 11	# 36
+13 3 4	# 37
+14 3 4	# 38
+15 3 4	# 39 lr2
+16 3 7	# 40
+17 2 6	# 41
+18 1 11	# 42
+19 1 11	# 43
+20 3 13	# 44
+21 2 12	# 45
+22 2 3	# 46
+23 2 3	# 47 lr3
+24 1 5	# 48
+25 1 5	# 49 
+26 1 11	# 50
+27 1 2	# 51
+28 2 3	# 52
+29 1 11	# 53
+30 1 11	# 54
+31 1 11	# 55 lr4
+32 0 1	# 56
+33 0 1	# 57
+34 0 1	# 58
+35 0 1	# 59
+36 1 2	# 60
+37 1 2	# 61
+38 1 2	# 62
+39 1 2	# 63 lr5
+40 1 8	# 64
+41 1 8	# 65
+42 1 8	# 66
+43 1 8	# 67
+44 3 4	# 68
+45 2 3	# 69
+46 2 3	# 70
+47 3 4	# 71 lr6
+48 2 9	# 72
+49 3 10	# 73
+50 3 10	# 74
+51 2 9	# 75
+52 2 9	# 76
+53 3 10	# 77
+54 3 10	# 78
+55 2 9	# 79 lr7
+# (end of tileset 2)

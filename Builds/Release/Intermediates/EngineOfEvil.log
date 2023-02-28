@@ -1,0 +1,45 @@
+﻿  AnimationController.cpp
+  AnimationControllerManager.cpp
+  AnimationManager.cpp
+  AnimationState.cpp
+  Audio.cpp
+  BlendState.cpp
+  Bounds.cpp
+  Bounds3D.cpp
+  Box.cpp
+  Camera.cpp
+  Collision.cpp
+  CollisionModel.cpp
+  CreateEntityPrefabStrategies.cpp
+  Dictionary.cpp
+  Entity.cpp
+  EntityPrefabManager.cpp
+  ErrorLogger.cpp
+  Game.cpp
+D:\Portfolio\EoE\EngineOfEvil\source\Game.cpp(40,3): warning C4390: ';': empty controlled statement found; is this the intent?
+  GameLocal.cpp
+  GameObject.cpp
+  Compiling...
+  GridCell.cpp
+  HashIndex.cpp
+  ImageManager.cpp
+  Input.cpp
+  main.cpp
+  Map.cpp
+  Movement.cpp
+  Music.cpp
+  Player.cpp
+  Renderer.cpp
+D:\Portfolio\EoE\EngineOfEvil\source\Renderer.cpp(157,29): warning C4244: 'argument': conversion from 'int' to 'const float', possible loss of data
+  RenderImage.cpp
+  RenderTarget.cpp
+  sHero.cpp
+  SoundFx.cpp
+  StateNode.cpp
+  Tile.cpp
+  Vector.cpp
+  Generating code
+  Previous IPDB not found, fall back to full compilation.
+  All 4129 functions were compiled because no usable IPDB/IOBJ from previous compilation was found.
+  Finished generating code
+  EngineOfEvil.vcxproj -> D:\Portfolio\EoE\Builds\Release\EngineOfEvil.exe
