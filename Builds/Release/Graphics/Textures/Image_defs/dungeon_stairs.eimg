@@ -1,7 +1,0 @@
-Graphics/Textures/dungeon_stairs.png
-0 4
-
-0 0 256 256		# 0
-256 0 256 256		# 1
-512 0 256 256		# 2
-768 0 256 256		# 3 eof
