@@ -35,6 +35,7 @@ const SDL_Color blueColor			= { 0, 0, 255, SDL_ALPHA_OPAQUE };
 const SDL_Color pinkColor			= { 255, 0, 255, SDL_ALPHA_OPAQUE };
 const SDL_Color lightBlueColor		= { 0, 255, 255, SDL_ALPHA_OPAQUE };
 const SDL_Color yellowColor			= { 255, 255, 0, SDL_ALPHA_OPAQUE };
+const SDL_Color whiteColor			= { 255, 255, 255, SDL_ALPHA_OPAQUE };
 
 //***************************
 // eRenderTarget::InitDefault

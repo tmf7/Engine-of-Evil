@@ -84,5 +84,6 @@ extern const SDL_Color blueColor;
 extern const SDL_Color pinkColor;
 extern const SDL_Color lightBlueColor;
 extern const SDL_Color yellowColor;
+extern const SDL_Color whiteColor;
 
 #endif /* EVIL_RENDER_TARGET_H */

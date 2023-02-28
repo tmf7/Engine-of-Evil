@@ -1,2 +1,2 @@
-#TargetFrameworkVersion=v4.0:PlatformToolSet=v141:EnableManagedIncrementalBuild=false:VCToolArchitecture=Native32Bit:WindowsTargetPlatformVersion=10.0.16299.0
-Release|Win32|C:\Users\Tom\Desktop\EngineOfEvil\|
+PlatformToolSet=v142:VCToolArchitecture=Native32Bit:VCToolsVersion=14.29.30133:VCServicingVersionMFC=14.29.30136:TargetPlatformVersion=10.0.19041.0:
+Release|Win32|D:\Portfolio\EoE\|

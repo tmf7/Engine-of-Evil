@@ -43,13 +43,14 @@ public:
 
 	struct {
 		bool	GOAL_WAYPOINTS		= true;
-		bool	TRAIL_WAYPOINTS		= false;
-		bool	COLLISION			= false;
-		bool	RENDERBLOCKS		= false;
-		bool	KNOWN_MAP_DRAW		= false;
+		bool	TRAIL_WAYPOINTS		= true;
+		bool	COLLISION			= true;
+		bool	RENDERBLOCKS		= true;
+		bool	KNOWN_MAP_DRAW		= true;
 		bool	KNOWN_MAP_CLEAR		= true;
 		bool	FRAMERATE			= true;
-		bool	GRID_OCCUPANCY		= false;
+		bool	GRID_OCCUPANCY		= true;
+		bool	FLAGS				= true;
 	} debugFlags;
 
 public:
@@ -78,7 +79,6 @@ public:
 	Uint32											GetDynamicFPS() const;
 	Uint32											GetDeltaTime() const;
 	Uint32											GetGameTime() const;
-	void											DrawFPS();
 
 	virtual int										GetClassType() const override				{ return CLASS_GAME; }
 	virtual bool									IsClassType(int classType) const override	{ 
@@ -86,6 +86,26 @@ public:
 															return true; 
 														return eClass::IsClassType(classType); 
 													}
+private:
+
+	void											ReadDebugInput();
+	void											ToggleSelectedDebugFlag();
+	void											DrawFPS();
+	void											DrawDebugFlags();
+
+private:
+
+	enum DEBUG_FLAGS : int {
+		GOAL_WAYPOINTS,
+		TRAIL_WAYPOINTS,
+		COLLISION,
+		RENDERBLOCKS,
+		KNOWN_MAP_DRAW,
+		KNOWN_MAP_CLEAR,
+		FRAMERATE,
+		GRID_OCCUPANCY,
+		FLAGS
+	};
 
 private:
 
@@ -103,6 +123,7 @@ private:
 	Uint32											deltaTime;			// actual time a frame takes to execute (to the nearest millisecond)
 	Uint32											gameTime;			// time elapsed since execution began (updated at the end of each frame)
 	bool											isRunning = false;	// determines whether the game shuts down or continues
+	DEBUG_FLAGS										selectedDebugFlag = GOAL_WAYPOINTS;
 };
 
 extern eGame *	game;								// the rest of the engine will only reference this, while all local/derived aspects stay hidden

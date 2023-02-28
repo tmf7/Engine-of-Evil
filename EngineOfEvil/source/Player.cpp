@@ -38,11 +38,11 @@ void ePlayer::Think() {
 	if (input.MouseMoved())
 		selectionPoints[1] = screenPosition;
 
-	if (input.MousePressed(SDL_BUTTON_LEFT)) {
+	if (input.MousePressed(static_cast<SDL_Scancode>(SDL_BUTTON_LEFT))) {
 		selectionPoints[0] = screenPosition;
 		beginSelection = groupSelection.empty();
 
-	} else if (input.MouseReleased(SDL_BUTTON_LEFT)) {
+	} else if (input.MouseReleased(static_cast<SDL_Scancode>(SDL_BUTTON_LEFT))) {
 		if (beginSelection) {
 			beginSelection = false;
 			SelectGroup();
@@ -60,7 +60,6 @@ void ePlayer::Think() {
 			}
 */
 		}
-
 	}
 
 	for (auto & entity : groupSelection) {	

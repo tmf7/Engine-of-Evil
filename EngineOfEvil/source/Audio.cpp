@@ -31,7 +31,7 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 // TODO: allow user to configure the number of audio channels
 //*********************
 bool eAudio::Init() {
-    return (Mix_OpenAudio( 22050, MIX_DEFAULT_FORMAT, 2, 2048 ) != -1 );
+    return (Mix_OpenAudio(MIX_DEFAULT_FREQUENCY, MIX_DEFAULT_FORMAT, MIX_DEFAULT_CHANNELS, 2048 ) != -1 );
 }
 
 //*********************

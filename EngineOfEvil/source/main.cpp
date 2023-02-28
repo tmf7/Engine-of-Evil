@@ -42,7 +42,7 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 	// all the while logging errors (if any)
 
 	//-------------------------------------------------------------------------
-	// TODO: the goal is the have a user create a small main() entry point
+	// TODO: the goal is to have a user create a small main() entry point
 	// then freely define classes that extend/use the EngineOfEvil functionality
 	//-------------------------------------------------------------------------
 

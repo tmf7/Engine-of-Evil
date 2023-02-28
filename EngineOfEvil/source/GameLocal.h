@@ -31,6 +31,8 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 #include "Player.h"
 #include "Map.h"
 #include "Camera.h"
+#include "Music.h"
+#include "SoundFx.h"
 
 //*************************************************
 //					eGameLocal
@@ -41,13 +43,15 @@ public:
 
 	virtual bool									Init() override;
 	virtual void									Update() override;
-	virtual void									Shutdown() override		{}
+	virtual void									Shutdown() override { music.Free(); }
 
 private:
 
 	eMap											map;				// FIXME(?): one map instance per game, use eMap::LoadMap/UnloadMap as needed
 	eCamera											camera;				// DEBUG: the main viewport camera
 	ePlayer											player;
+	eMusic											music;
+	eSoundFx										soundFx;
 
 };
 

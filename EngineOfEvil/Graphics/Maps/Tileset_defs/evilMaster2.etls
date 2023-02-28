@@ -12,6 +12,8 @@ eBounds: 20 20 8 8		# 7
 eBounds: 16 20 0 8		# 8
 eBounds: 20 16 8 0		# 9
 eBounds: 64 64 0 0		# 10 (dungeon stairs)
+eBounds: 16 16 8 16		# 11 (test castle rubble arch 1)
+eBounds: 16 28 8 0		# 12 (test castle rubble arch 2)
 # pre-defined renderBlocks, size-only not world position (0: no renderBlock; non-0: value-1 for listed renderBlock)
 floors: 32 32 0			# 0
 cwalls1: 32 32 96		# 1
@@ -107,8 +109,8 @@ Graphics/Textures/Image_defs/town_grass.eimg
 Graphics/Textures/Image_defs/TileObjectsRubbleWalls.eimg
 0 2 3	# 44
 1 0 3	# 45
-2 2 3	# 46
-3 3 4	# 47
+2 12 3	# 46 eBounds modified from 2 (fit) to 12 (smaller)
+3 12 4	# 47 eBounds modified from 3 (fit) to 12 (smaller)
 4 0 4	# 48
 5 3 4	# 49
 6 2 3	# 50
@@ -119,16 +121,16 @@ Graphics/Textures/Image_defs/TileObjectsRubbleWalls.eimg
 11 2 6	# 55
 12 1 11	# 56
 13 3 4	# 57
-14 3 4	# 58
-15 3 4	# 59
+14 12 4	# 58 eBounds modified from 3 (fit) to 12 (smaller)
+15 12 4	# 59 eBounds modified from 3 (fit) to 12 (smaller)
 16 3 7	# 60
 17 2 6	# 61
 18 1 11	# 62
 19 1 11	# 63
 20 3 13	# 64
 21 2 12	# 65
-22 2 3	# 66
-23 2 3	# 67
+22 12 3	# 66 eBounds modified from 2 (fit) to 12 (smaller)
+23 13 3	# 67 eBounds modified from 2 (fit) to 13 (smaller)
 24 1 5	# 68
 25 1 5	# 69
 26 1 11	# 70

@@ -39,7 +39,6 @@ bool eGameLocal::Init() {
 	auto windowSize = game->GetRenderer().ViewArea();
 	camera.Init(eVec2((float)windowSize.w, (float)windowSize.h), vec2_zero);
 	game->GetRenderer().RegisterCamera(&camera);
-
 	game->GetEntityPrefabManager().SetCreatePrefabStrategy(std::make_shared<eCreateEntityPrefabUser>());
 
 	map.SetViewCamera(&camera);
@@ -50,6 +49,20 @@ bool eGameLocal::Init() {
 		EVIL_ERROR_LOG.ErrorPopupWindow("MAP INIT FAILURE");
 		return false;
 	}
+
+	//if (!music.Load("Audio/Music/music_modern_war.wav")) {
+	//	EVIL_ERROR_LOG.ErrorPopupWindow("MUSIC LOAD FAILURE");
+	//	return false;
+	//}
+
+	//if (!soundFx.Load("Audio/Music/music_modern_war.wav")) {
+	//	EVIL_ERROR_LOG.ErrorPopupWindow("SOUNDFX LOAD FAILURE");
+	//	return false;
+	//}
+
+	//music.Play();
+	//soundFx.Play();
+
 	return true;
 }
 

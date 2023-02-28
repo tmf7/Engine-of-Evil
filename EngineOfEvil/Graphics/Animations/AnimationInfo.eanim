@@ -11,7 +11,7 @@ AnimationFrame_t == { imageManagerIndex subFrameIndex normalizedTime }
 example of a more simple, single-image animation
 --------------------------------------------------------
 
-15 30 2			# number of animationFrames for the entire animation, framesPerSecond, loop [1 = once, 2 = repeat]
+15 30 2										# number of animationFrames for the entire animation, framesPerSecond, loop [1 = once, 2 = repeat]
 imagefile: graphics\Run\Hero_Run_0.png		# all frames' below this have imageManagerIndex == const int index eImageManager::GetImage(filename).GetImageManagerIndex()
 {
 0 0.0			# subframe index within image, normalizedTime	# animationFrame 0

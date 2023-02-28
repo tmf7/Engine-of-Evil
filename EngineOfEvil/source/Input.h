@@ -52,13 +52,13 @@ public:
 	void				Init();
 	void				Update();
 
-	int					KeyHeld(int key) const;
-	int					KeyPressed(int key) const;
-	int					KeyReleased(int key) const;
+	int					KeyHeld(SDL_Scancode key) const;
+	int					KeyPressed(SDL_Scancode key) const;
+	int					KeyReleased(SDL_Scancode key) const;
 
-	int					MouseHeld(int button) const;
-	int					MousePressed(int button) const;
-	int					MouseReleased(int button) const;
+	int					MouseHeld(SDL_Scancode button) const;
+	int					MousePressed(SDL_Scancode button) const;
+	int					MouseReleased(SDL_Scancode button) const;
 	bool				MouseMoved() const;
 	int					GetMouseX() const;
 	int					GetMouseY() const;

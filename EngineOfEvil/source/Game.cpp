@@ -90,34 +90,24 @@ void eGame::ShutdownSystem() {
 	SDL_Quit();
 }
 
-
-//****************
-// eGame::DrawFPS
-// add fps text to the renderPool
-//****************
-void eGame::DrawFPS() {
-	std::string fraps = "FPS: ";
-	fraps += std::to_string(fixedFPS);
-	fraps += "/";
-	fraps += std::to_string(GetDynamicFPS());
-	renderer.DrawOutlineText(renderer.GetDebugOverlayTarget(), fraps.c_str(), vec2_zero, redColor, true);
-}
-
 //****************
 // eGame::Run
 //****************
-void eGame::Run() {	
+void eGame::Run() {
 	isRunning = true;
 	while (isRunning) {
 		Uint32 startTime = SDL_GetTicks();
 
 		// system updates
 		input.Update();
+		ReadDebugInput();
 		Update();
 
 		// draw static debug information
 		if (debugFlags.FRAMERATE)
 			DrawFPS();
+		if (debugFlags.FLAGS)
+			DrawDebugFlags();
 
 		renderer.Flush();
 		renderer.Show();
@@ -136,4 +126,125 @@ void eGame::Run() {
 	}
 	Shutdown();
 	ShutdownSystem();
+}
+
+//****************
+// eGame::DrawFPS
+// add fps text to the renderPool
+//****************
+void eGame::DrawFPS() {
+	std::string fraps = "FPS: ";
+	fraps += std::to_string(fixedFPS);
+	fraps += "/";
+	fraps += std::to_string(GetDynamicFPS());
+	renderer.DrawOutlineText(renderer.GetDebugOverlayTarget(), fraps.c_str(), vec2_zero, redColor, true);
+}
+
+//****************
+// eGame::DrawDebugFlags
+// add debugFlags text to the renderPool
+//****************
+void eGame::DrawDebugFlags() {
+	std::string flags;
+
+	const float NEWLINE_FONT_OFFSET = 24.0f;
+	const eVec2 ORIGIN_OFFSET(0, NEWLINE_FONT_OFFSET);
+	eVec2 origin(0, NEWLINE_FONT_OFFSET);
+
+	renderer.DrawOutlineText(renderer.GetDebugOverlayTarget(), "SHOW:", origin, whiteColor, true);
+
+	flags = "GOAL_WAYPOINTS: ";
+	flags += (debugFlags.GOAL_WAYPOINTS ? "true" : "false");
+	origin += ORIGIN_OFFSET;
+	renderer.DrawOutlineText(renderer.GetDebugOverlayTarget(), flags.c_str(), origin, (selectedDebugFlag == GOAL_WAYPOINTS ? redColor : whiteColor), false);
+
+	flags = "TRAIL_WAYPOINTS: ";
+	flags += (debugFlags.TRAIL_WAYPOINTS ? "true" : "false");
+	origin += ORIGIN_OFFSET;
+	renderer.DrawOutlineText(renderer.GetDebugOverlayTarget(), flags.c_str(), origin, (selectedDebugFlag == TRAIL_WAYPOINTS ? redColor : whiteColor), false);
+
+	flags = "COLLISION: ";
+	flags += (debugFlags.COLLISION ? "true" : "false");
+	origin += ORIGIN_OFFSET;
+	renderer.DrawOutlineText(renderer.GetDebugOverlayTarget(), flags.c_str(), origin, (selectedDebugFlag == COLLISION ? redColor : whiteColor), false);
+
+	flags = "RENDERBLOCKS: ";
+	flags += (debugFlags.RENDERBLOCKS ? "true" : "false");
+	origin += ORIGIN_OFFSET;
+	renderer.DrawOutlineText(renderer.GetDebugOverlayTarget(), flags.c_str(), origin, (selectedDebugFlag == RENDERBLOCKS ? redColor : whiteColor), false);
+
+	flags = "KNOWN_MAP_DRAW: ";
+	flags += (debugFlags.KNOWN_MAP_DRAW ? "true" : "false");
+	origin += ORIGIN_OFFSET;
+	renderer.DrawOutlineText(renderer.GetDebugOverlayTarget(), flags.c_str(), origin, (selectedDebugFlag == KNOWN_MAP_DRAW ? redColor : whiteColor), false);
+
+	flags = "KNOWN_MAP_CLEAR: ";
+	flags += (debugFlags.KNOWN_MAP_CLEAR ? "true" : "false");
+	origin += ORIGIN_OFFSET;
+	renderer.DrawOutlineText(renderer.GetDebugOverlayTarget(), flags.c_str(), origin, (selectedDebugFlag == KNOWN_MAP_CLEAR ? redColor : whiteColor), false);
+
+	flags = "FRAMERATE: ";
+	flags += (debugFlags.FRAMERATE ? "true" : "false");
+	origin += ORIGIN_OFFSET;
+	renderer.DrawOutlineText(renderer.GetDebugOverlayTarget(), flags.c_str(), origin, (selectedDebugFlag == FRAMERATE ? redColor : whiteColor), false);
+
+	flags = "GRID_OCCUPANCY: ";
+	flags += (debugFlags.GRID_OCCUPANCY ? "true" : "false");
+	origin += ORIGIN_OFFSET;
+	renderer.DrawOutlineText(renderer.GetDebugOverlayTarget(), flags.c_str(), origin, (selectedDebugFlag == GRID_OCCUPANCY ? redColor : whiteColor), false);
+}
+
+void eGame::ToggleSelectedDebugFlag() {
+	switch (selectedDebugFlag) {
+		case GOAL_WAYPOINTS: 
+			debugFlags.GOAL_WAYPOINTS = !debugFlags.GOAL_WAYPOINTS;
+			break;
+		case TRAIL_WAYPOINTS: 
+			debugFlags.TRAIL_WAYPOINTS = !debugFlags.TRAIL_WAYPOINTS;
+			break;
+		case COLLISION: 
+			debugFlags.COLLISION = !debugFlags.COLLISION;
+			break;
+		case RENDERBLOCKS: 
+			debugFlags.RENDERBLOCKS = !debugFlags.RENDERBLOCKS;
+			break;
+		case KNOWN_MAP_DRAW: 
+			debugFlags.KNOWN_MAP_DRAW = !debugFlags.KNOWN_MAP_DRAW;
+			break;
+		case KNOWN_MAP_CLEAR: 
+			debugFlags.KNOWN_MAP_CLEAR = !debugFlags.KNOWN_MAP_CLEAR;
+			break;
+		case FRAMERATE: 
+			debugFlags.FRAMERATE = !debugFlags.FRAMERATE;
+			break;
+		case GRID_OCCUPANCY: 
+			debugFlags.GRID_OCCUPANCY = !debugFlags.GRID_OCCUPANCY;
+			break;
+	}
+}
+
+//****************
+// eGame::UpdateDebugFlags
+// modifies debug flags according to user input
+//****************
+void eGame::ReadDebugInput() {
+	if (input.KeyReleased(SDL_SCANCODE_TAB)) 
+		debugFlags.FLAGS = !debugFlags.FLAGS;
+
+	if (debugFlags.FLAGS) {
+		if (input.KeyReleased(SDL_SCANCODE_LCTRL) || input.KeyReleased(SDL_SCANCODE_RCTRL))
+			ToggleSelectedDebugFlag();
+
+		int nextFlag = (int)selectedDebugFlag;
+		if (input.KeyReleased(SDL_SCANCODE_UP))
+			nextFlag--;
+		else if (input.KeyReleased(SDL_SCANCODE_DOWN))
+			nextFlag++;
+
+		if (nextFlag < 0)
+			nextFlag = DEBUG_FLAGS::FLAGS - 1;
+
+		nextFlag %= DEBUG_FLAGS::FLAGS;
+		selectedDebugFlag = (DEBUG_FLAGS)nextFlag;
+	}
 }

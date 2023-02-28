@@ -43,7 +43,7 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 class eRenderer : public eClass {
 public:
 					
-	bool								Init(const char * name = "Engine of Evil", int windowWidth = 1500, int windowHeight = 800);
+	bool								Init(const char * name = "Engine of Evil", int windowWidth = 1280, int windowHeight = 720);
 	void								Shutdown() const;
 	void								Show() const;
 	SDL_Rect							ViewArea() const;

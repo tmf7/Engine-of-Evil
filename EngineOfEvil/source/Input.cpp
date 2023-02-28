@@ -109,7 +109,7 @@ void eInput::Update() {
 // eInput::KeyHeld
 // returns 1 if the key is currently being pressed, 0 if not, -1 if invalid key
 //***************
-int eInput::KeyHeld(int key) const {
+int eInput::KeyHeld(SDL_Scancode key) const {
 	if (key < 0 || key > numKeys)
 		return -1;
 
@@ -120,7 +120,7 @@ int eInput::KeyHeld(int key) const {
 // eInput::KeyPressed
 // returns 1 if the key changed state from released to pressed, 0 otherwise, -1 if invalid key
 //***************
-int eInput::KeyPressed(int key) const {
+int eInput::KeyPressed(SDL_Scancode key) const {
 	if (key < 0 || key > numKeys)
 		return -1;
 
@@ -131,7 +131,7 @@ int eInput::KeyPressed(int key) const {
 // eInput::KeyReleased
 // returns 1 if the key changed state from pressed to released, 0 otherwise, -1 if invalid key
 //***************
-int eInput::KeyReleased(int key) const {
+int eInput::KeyReleased(SDL_Scancode key) const {
 	if (key < 0 || key > numKeys)
 		return -1;
 
@@ -142,7 +142,7 @@ int eInput::KeyReleased(int key) const {
 // eInput::MouseHeld
 // returns 1 if the button is currently being pressed, 0 if not, -1 if invalid button
 //***************
-int eInput::MouseHeld(int button) const {
+int eInput::MouseHeld(SDL_Scancode button) const {
 	if (button < SDL_BUTTON_LEFT || button > SDL_BUTTON_RIGHT)
 		return -1;
 
@@ -153,7 +153,7 @@ int eInput::MouseHeld(int button) const {
 // eInput::MousePressed
 // returns 1 if the button changed state from released to pressed, 0 if not, -1 if invalid button
 //***************
-int eInput::MousePressed(int button) const {
+int eInput::MousePressed(SDL_Scancode button) const {
 	if (button < SDL_BUTTON_LEFT || button > SDL_BUTTON_RIGHT)
 		return -1;
 
@@ -164,7 +164,7 @@ int eInput::MousePressed(int button) const {
 // eInput::MouseReleased
 // returns 1 if the button changed state from pressed to released, 0 if not, -1 if invalid button
 //***************
-int eInput::MouseReleased(int button) const {
+int eInput::MouseReleased(SDL_Scancode button) const {
 	if (button < 1 || button > 3)
 		return -1;
 

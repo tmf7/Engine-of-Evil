@@ -108,21 +108,21 @@ inline const std::vector<eTile> & eGridCell::TilesOwned() const {
 }
 
 //************
-// eGridCell::TilesToDraw
+// eGridCell::RenderContents
 //************
 inline std::unordered_map<eRenderImage *, eRenderImage *> & eGridCell::RenderContents() {
 	return renderContents;
 }
 
 //************
-// eGridCell::TilesOwned
+// eGridCell::RenderContents
 //************
 inline const std::unordered_map<eRenderImage *, eRenderImage *> & eGridCell::RenderContents() const {
 	return renderContents;
 }
 
 //************
-// eGridCell::Contents
+// eGridCell::CollisionContents
 //************
 inline std::unordered_map<eCollisionModel *, eCollisionModel *> & eGridCell::CollisionContents() {
 	return collisionContents;

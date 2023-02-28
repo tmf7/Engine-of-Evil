@@ -33,7 +33,7 @@ If you have questions concerning this license, you may contact Thomas Freehill a
 //**************
 bool eMap::Init () {
 	entities.reserve(MAX_ENTITIES);
-	return LoadMap("Graphics/Maps/EvilTown2.emap");
+	return LoadMap("Graphics/Maps/EvilMaze.emap");
 }
 
 //**************

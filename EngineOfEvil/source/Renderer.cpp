@@ -91,40 +91,71 @@ void eRenderer::Shutdown() const {
 		SDL_DestroyWindow(window);
 }
 
+
 //***************
 // eRenderer::DrawOutlineText
 // param constText caches the text image to accelerate redraw
 // DEBUG: immediatly draws to the given render target
+// returns the SDL_Rect where the text is positioned on the given eRenderTarget
 //***************
-void eRenderer::DrawOutlineText(eRenderTarget * target, const char * text, eVec2 & point, const SDL_Color & color, bool constText) {
+void eRenderer::DrawOutlineText(eRenderTarget * target, const char * text, eVec2 & origin, const SDL_Color & color, bool constText) {
 	SDL_Texture * renderedText = NULL;
-	if (constText) {
-		// check if the image already exists, if not then load it and set result
-		std::shared_ptr<eImage> result;
-		game->GetImageManager().LoadAndGetConstantText(font, text, color, result);
-		renderedText = result->Source();
-	} else {
-		SDL_Surface * surfaceText = TTF_RenderText_Solid(font, text, color);
-		if (surfaceText == NULL)
-			return;
+	eVec2 newlineOrigin = origin - target->origin;
+	int renderedTextHeight = 0;
 
-		renderedText = SDL_CreateTextureFromSurface(internal_renderer, surfaceText);
-		SDL_FreeSurface(surfaceText);
-		if (renderedText == NULL)
-			return;
+	std::string strText(text);
+	std::vector<std::string> newlineText;
+	std::string subString;
 
-		SDL_SetTextureBlendMode(renderedText, SDL_BLENDMODE_BLEND);
+	for (auto it = strText.cbegin(); it != strText.cend(); ++it) {
+		if (*it != '\n') {
+			subString += *it;
+		}
+		else {
+			//subString += '\0';
+			newlineText.emplace_back(subString);
+			subString.clear();
+		}
 	}
-	
-	point -= target->origin;
-	point.SnapInt();
-	SDL_Rect dstRect = { (int)point.x, (int)point.y, 0, 0 };
-	SDL_QueryTexture(renderedText, NULL, NULL, &dstRect.w, &dstRect.h);
-	SetRenderTarget(target);
-	SDL_RenderCopy(internal_renderer, renderedText, nullptr, &dstRect);
 
-	if (!constText)
-		SDL_DestroyTexture(renderedText);
+	if (!subString.empty())
+		newlineText.emplace_back(subString);
+	
+	for (auto it = newlineText.cbegin(); it != newlineText.cend(); ++it) {
+		if (!(*it).empty()) {
+			if (constText) {
+				// check if the image already exists, if not then load it and set result
+				std::shared_ptr<eImage> result;
+				game->GetImageManager().LoadAndGetConstantText(font, (*it).c_str(), color, result);
+				renderedText = result->Source();
+			}
+			else {
+				SDL_Surface* surfaceText = TTF_RenderText_Solid(font, (*it).c_str(), color);
+				if (surfaceText == NULL)
+					return;
+
+				renderedText = SDL_CreateTextureFromSurface(internal_renderer, surfaceText);
+				SDL_FreeSurface(surfaceText);
+				if (renderedText == NULL)
+					return;
+
+				SDL_SetTextureBlendMode(renderedText, SDL_BLENDMODE_BLEND);
+			}
+
+			newlineOrigin.SnapInt();
+			SDL_Rect dstRect = { (int)newlineOrigin.x, (int)newlineOrigin.y, 0, 0 };
+			SDL_QueryTexture(renderedText, NULL, NULL, &dstRect.w, &dstRect.h);
+			SetRenderTarget(target);
+			SDL_RenderCopy(internal_renderer, renderedText, nullptr, &dstRect);
+
+			renderedTextHeight = dstRect.h;
+
+			if (!constText)
+				SDL_DestroyTexture(renderedText);
+		}
+
+		newlineOrigin += eVec2(0, renderedTextHeight);
+	}
 }
 
 //***************
@@ -422,7 +453,6 @@ void eRenderer::Flush() {
 // DEBUG: this unstable quicksort may put renderImages at random draw orders if they have equal priority
 //***************
 void eRenderer::FlushCameraPool(eCamera * registeredCamera) {
-
 	auto & cameraPool = registeredCamera->cameraPool;
 	auto & cameraPoolInserts = registeredCamera->cameraPoolInserts;
 
