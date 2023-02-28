@@ -14,15 +14,15 @@ Art assets are from opengameart.org.
 
 Learn more at https://www.tomfreehill.com
 
-![EoE Entity Controls](C:\Users\Tom Freehill\Desktop\GIFS\EoE_WaypointEntityControl.gif)
+![EoE Entity Controls](https://github.com/tmf7/Engine-of-Evil/blob/master/Readme_Images/EoE_WaypointEntityControl.gif)
 
-![EoE Collision](C:\Users\Tom Freehill\Desktop\GIFS\EoE_Collision.gif)
+![EoE Collision](https://github.com/tmf7/Engine-of-Evil/blob/master/Readme_Images/EoE_Collision.gif)
 
-![EoE Navigation](C:\Users\Tom Freehill\Desktop\GIFS\EoE_Navigation.gif)
+![EoE Navigation](https://github.com/tmf7/Engine-of-Evil/blob/master/Readme_Images/EoE_Navigation.gif)
 
-![EoE 3D Renderbounds](C:\Users\Tom Freehill\Desktop\GIFS\EoE_RenderBounds.gif)
+![EoE 3D Renderbounds](https://github.com/tmf7/Engine-of-Evil/blob/master/Readme_Images/EoE_RenderBounds.gif)
 
-![EoE Entity Prefabs](C:\Users\Tom Freehill\Desktop\GIFS\EoE_EntityPrefabs.gif)
+![EoE Entity Prefabs](https://github.com/tmf7/Engine-of-Evil/blob/master/Readme_Images/EoE_EntityPrefabs.gif)
 
 
 
